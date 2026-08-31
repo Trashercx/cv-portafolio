@@ -1,0 +1,24 @@
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cvportafolio
+      POSTGRES_PASSWORD: cvportafolio
+      POSTGRES_DB: cvportafolio
+    ports:
+      # 5433 en el host: evita chocar con un PostgreSQL nativo que ya use 5432 en Windows.
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  adminer:
+    image: adminer
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_data:
