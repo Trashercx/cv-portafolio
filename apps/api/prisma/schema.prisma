@@ -1,0 +1,260 @@
+// Esquema de datos del portafolio/CV.
+//
+// Única fuente de verdad: docs/plan-portafolio.md, sección "Modelo de datos y diagrama ER"
+// (bloque ```mermaid```). No agregues entidades/columnas/relaciones aquí sin que primero
+// existan en ese documento. Nombres de tabla y columna en español y snake_case, igual que
+// en el diagrama ER (@@map/nombre de campo reproducen el nombre exacto de la tabla/columna).
+//
+// USUARIO_ADMIN.intentos_fallidos / bloqueado_hasta: agregadas en el plan para cumplir el
+// criterio de aceptación de UC-01 (bloqueo tras 3 intentos fallidos de login), ver Sprint 0.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  // La URL de conexión vive en prisma7.config.ts (Prisma 7 movió `url` fuera de schema.prisma).
+}
+
+/// Administrador único del panel (preparado para más de un admin en el futuro vía `rol`).
+model UsuarioAdmin {
+  id                String    @id @default(uuid()) @db.Uuid
+  email             String    @unique
+  password_hash     String
+  nombre            String
+  rol               String    @default("admin")
+  intentos_fallidos Int       @default(0)
+  bloqueado_hasta   DateTime?
+  created_at        DateTime  @default(now())
+
+  perfil          Perfil?
+  medias          Media[]
+  proyectos       Proyecto[]
+  certificaciones Certificacion[]
+  logros          Logro[]
+  redes_sociales  RedSocial[]
+  secciones       Seccion[]
+  temas           Tema[]
+  versiones_sitio VersionSitio[]
+
+  @@map("usuario_admin")
+}
+
+/// Datos de la sección "Sobre mí" (UC-02). Uno por administrador.
+model Perfil {
+  id                 String   @id @default(uuid()) @db.Uuid
+  usuario_admin_id   String   @unique @db.Uuid
+  nombre_completo    String
+  titulo_profesional String
+  resumen_bio        String   @db.Text
+  imagen_perfil_id   String?  @db.Uuid
+  cv_media_id        String?  @db.Uuid
+  ubicacion          String
+  updated_at         DateTime @updatedAt
+
+  usuario_admin UsuarioAdmin @relation(fields: [usuario_admin_id], references: [id])
+  imagen_perfil Media?       @relation("PerfilImagenPerfil", fields: [imagen_perfil_id], references: [id])
+  cv_media      Media?       @relation("PerfilCvMedia", fields: [cv_media_id], references: [id])
+
+  @@map("perfil")
+}
+
+/// Biblioteca multimedia (UC-09): catálogo de archivos subidos a S3, reutilizable
+/// desde perfil, certificaciones y galería de proyectos.
+model Media {
+  id               String   @id @default(uuid()) @db.Uuid
+  usuario_admin_id String   @db.Uuid
+  url              String
+  s3_key           String
+  tipo             String
+  ancho            Int?
+  alto             Int?
+  alt_text         String?
+  created_at       DateTime @default(now())
+
+  usuario_admin     UsuarioAdmin     @relation(fields: [usuario_admin_id], references: [id])
+  perfiles_imagen   Perfil[]         @relation("PerfilImagenPerfil")
+  perfiles_cv       Perfil[]         @relation("PerfilCvMedia")
+  certificaciones   Certificacion[]  @relation("CertificacionLogo")
+  proyecto_imagenes ProyectoImagen[]
+
+  @@map("media")
+}
+
+/// Proyectos del portafolio (UC-03).
+model Proyecto {
+  id               String    @id @default(uuid()) @db.Uuid
+  usuario_admin_id String    @db.Uuid
+  titulo           String
+  descripcion      String    @db.Text
+  url_demo         String?
+  url_repositorio  String?
+  fecha_inicio     DateTime  @db.Date
+  fecha_fin        DateTime? @db.Date
+  estado           String
+  destacado        Boolean   @default(false)
+  orden            Int
+
+  usuario_admin UsuarioAdmin         @relation(fields: [usuario_admin_id], references: [id])
+  imagenes      ProyectoImagen[]
+  tecnologias   ProyectoTecnologia[]
+
+  @@map("proyecto")
+}
+
+/// Galería de imágenes de un proyecto (tabla de unión proyecto <-> media, con orden propio).
+model ProyectoImagen {
+  proyecto_id String @db.Uuid
+  media_id    String @db.Uuid
+  orden       Int
+
+  proyecto Proyecto @relation(fields: [proyecto_id], references: [id], onDelete: Cascade)
+  media    Media    @relation(fields: [media_id], references: [id])
+
+  @@id([proyecto_id, media_id])
+  @@map("proyecto_imagen")
+}
+
+/// Catálogo reutilizable de tecnologías (evita repetir texto libre por proyecto).
+model Tecnologia {
+  id     String @id @default(uuid()) @db.Uuid
+  nombre String @unique
+
+  proyectos ProyectoTecnologia[]
+
+  @@map("tecnologia")
+}
+
+/// Tecnologías usadas por proyecto (tabla de unión proyecto <-> tecnologia).
+model ProyectoTecnologia {
+  proyecto_id   String @db.Uuid
+  tecnologia_id String @db.Uuid
+
+  proyecto   Proyecto   @relation(fields: [proyecto_id], references: [id], onDelete: Cascade)
+  tecnologia Tecnologia @relation(fields: [tecnologia_id], references: [id])
+
+  @@id([proyecto_id, tecnologia_id])
+  @@map("proyecto_tecnologia")
+}
+
+/// Certificaciones (UC-04).
+model Certificacion {
+  id                String    @id @default(uuid()) @db.Uuid
+  usuario_admin_id  String    @db.Uuid
+  nombre            String
+  institucion       String
+  fecha_emision     DateTime  @db.Date
+  fecha_expiracion  DateTime? @db.Date
+  url_verificacion  String
+  credencial_id     String?
+  logo_media_id     String?   @db.Uuid
+  orden             Int
+
+  usuario_admin UsuarioAdmin @relation(fields: [usuario_admin_id], references: [id])
+  logo          Media?       @relation("CertificacionLogo", fields: [logo_media_id], references: [id])
+
+  @@map("certificacion")
+}
+
+/// Logros y reconocimientos (UC-05).
+model Logro {
+  id               String   @id @default(uuid()) @db.Uuid
+  usuario_admin_id String   @db.Uuid
+  titulo           String
+  descripcion      String   @db.Text
+  fecha            DateTime @db.Date
+  categoria        String
+  url_referencia   String?
+  orden            Int
+
+  usuario_admin UsuarioAdmin @relation(fields: [usuario_admin_id], references: [id])
+
+  @@map("logro")
+}
+
+/// Catálogo reutilizable de plataformas de red social (LinkedIn, GitHub, etc.).
+model PlataformaRed {
+  id            String @id @default(uuid()) @db.Uuid
+  nombre        String @unique
+  icono_defecto String
+
+  redes_sociales RedSocial[]
+
+  @@map("plataforma_red")
+}
+
+/// Enlaces de redes del administrador (UC-06).
+model RedSocial {
+  id               String @id @default(uuid()) @db.Uuid
+  usuario_admin_id String @db.Uuid
+  plataforma_id    String @db.Uuid
+  url              String
+  orden            Int
+
+  usuario_admin UsuarioAdmin  @relation(fields: [usuario_admin_id], references: [id])
+  plataforma    PlataformaRed @relation(fields: [plataforma_id], references: [id])
+
+  @@map("red_social")
+}
+
+/// Secciones del editor visual de arrastrar y soltar (UC-07). `configuracion` es JSONB
+/// a propósito: la forma de un bloque varía según `tipo_seccion` (excepción documentada
+/// en plan-portafolio.md sección 4, no rompe 3FN porque no es una lista de valores atómicos
+/// repetidos sino la configuración completa y variable de un único bloque).
+model Seccion {
+  id               String  @id @default(uuid()) @db.Uuid
+  usuario_admin_id String  @db.Uuid
+  tipo_seccion     String
+  titulo_visible   String
+  orden            Int
+  visible          Boolean @default(true)
+  configuracion    Json
+
+  usuario_admin UsuarioAdmin @relation(fields: [usuario_admin_id], references: [id])
+
+  @@map("seccion")
+}
+
+/// Temas visuales (UC-08).
+///
+/// Regla de negocio (plan-portafolio.md sección 4): solo un TEMA por administrador puede
+/// tener `activo = true` a la vez. Prisma no soporta índices únicos parciales de forma
+/// declarativa (no existe una cláusula WHERE en `@@unique`), así que esa restricción NO
+/// queda expresada en este archivo. Se resuelve en la migración generada por
+/// `prisma migrate dev --create-only`, editando a mano el SQL para agregar:
+//    CREATE UNIQUE INDEX tema_admin_activo_unico ON tema (usuario_admin_id) WHERE activo = true;
+/// Ver también la migración correspondiente en prisma/migrations/. Reforzar además en
+/// TemaService con una transacción que desactive el tema previo antes de activar el nuevo.
+model Tema {
+  id                String  @id @default(uuid()) @db.Uuid
+  usuario_admin_id  String  @db.Uuid
+  nombre            String
+  color_primario    String
+  color_secundario  String
+  color_fondo       String
+  color_texto       String
+  fuente_principal  String
+  modo              String
+  activo            Boolean @default(false)
+
+  usuario_admin UsuarioAdmin @relation(fields: [usuario_admin_id], references: [id])
+
+  @@map("tema")
+}
+
+/// Snapshots de publicación (UC-10, UC-11). `snapshot` es JSONB por la misma razón que
+/// `SECCION.configuracion`: es una foto completa del sitio (secciones + tema + contenido)
+/// para poder revertir sin rediseñar el esquema cada vez.
+model VersionSitio {
+  id               String    @id @default(uuid()) @db.Uuid
+  usuario_admin_id String    @db.Uuid
+  estado           String
+  snapshot         Json
+  publicado_en     DateTime?
+
+  usuario_admin UsuarioAdmin @relation(fields: [usuario_admin_id], references: [id])
+
+  @@map("version_sitio")
+}
