@@ -15,6 +15,8 @@ import { TemaService } from '../tema/tema.service';
 import {
   ESTADO_BORRADOR,
   ESTADO_PUBLICADO,
+  SnapshotMedia,
+  SnapshotSeccion,
   SnapshotSitio,
 } from './snapshot.types';
 
@@ -75,12 +77,79 @@ export class VersionesSitioService {
     return {
       perfil,
       tema,
-      secciones,
+      secciones: await this.resolverImagenesFondoHero(secciones),
       proyectos,
       certificaciones,
       logros,
       redes_sociales,
     } as unknown as SnapshotSitio;
+  }
+
+  /**
+   * Resuelve `configuracion.imagen_fondo_media_id` a una `Media` completa
+   * para cada sección `tipo_seccion='hero'` (mismo patrón que
+   * `perfil.imagen_perfil`/`certificacion.logo`: el snapshot público nunca
+   * debe requerir que el consumidor busque un id de media por su cuenta).
+   *
+   * Una sola consulta batch (`findMany` con `id: { in: [...] }`) para todas
+   * las secciones hero de una vez, en vez de una consulta por sección. Un id
+   * que no corresponda a ningún `Media` existente (referencia rota) se omite
+   * en silencio: `imagen_fondo` simplemente no se agrega, sin lanzar
+   * excepción — el resto de `armarSnapshot()` ya trata así las referencias
+   * de media opcionales.
+   */
+  private async resolverImagenesFondoHero(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    secciones: any[],
+  ): Promise<SnapshotSeccion[]> {
+    const idsImagenFondo = [
+      ...new Set(
+        secciones
+          .filter((seccion) => seccion.tipo_seccion === 'hero')
+          .map(
+            (seccion) =>
+              (seccion.configuracion as Record<string, unknown> | null)
+                ?.imagen_fondo_media_id,
+          )
+          .filter(
+            (id): id is string => typeof id === 'string' && id.length > 0,
+          ),
+      ),
+    ];
+
+    const mediaPorId = new Map<string, SnapshotMedia>();
+
+    if (idsImagenFondo.length > 0) {
+      const medias = await this.prisma.media.findMany({
+        where: { id: { in: idsImagenFondo } },
+      });
+
+      medias.forEach((media) =>
+        mediaPorId.set(media.id, media as unknown as SnapshotMedia),
+      );
+    }
+
+    return secciones.map((seccion) => {
+      if (seccion.tipo_seccion !== 'hero') {
+        return seccion as SnapshotSeccion;
+      }
+
+      const configuracion = seccion.configuracion as Record<string, unknown>;
+      const imagenFondoMediaId = configuracion?.imagen_fondo_media_id;
+      const imagenFondo =
+        typeof imagenFondoMediaId === 'string'
+          ? mediaPorId.get(imagenFondoMediaId)
+          : undefined;
+
+      if (!imagenFondo) {
+        return seccion as SnapshotSeccion;
+      }
+
+      return {
+        ...seccion,
+        configuracion: { ...configuracion, imagen_fondo: imagenFondo },
+      } as SnapshotSeccion;
+    });
   }
 
   /**

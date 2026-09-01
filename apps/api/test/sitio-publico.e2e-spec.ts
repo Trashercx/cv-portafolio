@@ -44,6 +44,7 @@ describe('Versiones del sitio y sitio público (e2e, UC-10 a UC-14)', () => {
   const idsVersionesCreadas: string[] = [];
   const idsMediaCreada: string[] = [];
   const keysMediaCreada: string[] = [];
+  const idsSeccionesCreadas: string[] = [];
 
   const dtoProyectoBase = {
     descripcion: 'Proyecto de prueba generado por el e2e de Sprint 4.',
@@ -78,6 +79,9 @@ describe('Versiones del sitio y sitio público (e2e, UC-10 a UC-14)', () => {
   });
 
   afterAll(async () => {
+    await prisma.seccion.deleteMany({
+      where: { id: { in: idsSeccionesCreadas } },
+    });
     await prisma.redSocial.deleteMany({
       where: { id: { in: idsRedesCreadas } },
     });
@@ -448,5 +452,51 @@ describe('Versiones del sitio y sitio público (e2e, UC-10 a UC-14)', () => {
     const respuesta = await request(app.getHttpServer()).get('/cv');
     expect(respuesta.status).toBe(302);
     expect(respuesta.headers.location).toBe(media.body.url);
+  });
+
+  // -----------------------------------------------------------------------
+  // UC-07 + UC-12: la imagen de fondo de una sección hero se resuelve en el
+  // snapshot publicado (bug fijado: antes solo se resolvía media en
+  // perfil/proyectos/certificaciones, nunca en `Seccion.configuracion`).
+  // -----------------------------------------------------------------------
+
+  it('GET /sitio resuelve imagen_fondo_media_id de una sección hero a una Media completa, aunque esa imagen no se use en ningún otro lugar del snapshot', async () => {
+    const sufijo = Date.now();
+
+    const media = await agent
+      .post('/admin/media')
+      .attach('file', Buffer.from('fondo hero e2e'), 'fondo-hero.png')
+      .expect(201);
+    idsMediaCreada.push(media.body.id);
+    keysMediaCreada.push(media.body.s3_key);
+
+    const seccion = await agent
+      .post('/admin/secciones')
+      .send({
+        tipo_seccion: 'hero',
+        titulo_visible: `Hero e2e ${sufijo}`,
+        orden: 9605,
+        configuracion: {
+          titulo: `Titulo hero e2e ${sufijo}`,
+          subtitulo: 'Subtitulo hero e2e',
+          imagen_fondo_media_id: media.body.id,
+        },
+      })
+      .expect(201);
+    idsSeccionesCreadas.push(seccion.body.id);
+
+    const version = await agent.post('/admin/versiones/publicar').expect(201);
+    idsVersionesCreadas.push(version.body.id);
+
+    const sitio = await request(app.getHttpServer()).get('/sitio').expect(200);
+    const seccionEnSnapshot = sitio.body.secciones.find(
+      (s: { id: string }) => s.id === seccion.body.id,
+    );
+
+    expect(seccionEnSnapshot).toBeDefined();
+    expect(seccionEnSnapshot.configuracion.imagen_fondo).toMatchObject({
+      id: media.body.id,
+      url: media.body.url,
+    });
   });
 });

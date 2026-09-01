@@ -8,6 +8,7 @@ import { ProyectosService } from '../proyectos/proyectos.service';
 import { RedesSocialesService } from '../redes-sociales/redes-sociales.service';
 import { SeccionesService } from '../secciones/secciones.service';
 import { TemaService } from '../tema/tema.service';
+import { SnapshotSitio } from './snapshot.types';
 import { VersionesSitioService } from './versiones-sitio.service';
 
 describe('VersionesSitioService (UC-10 Previsualizar, UC-11 Publicar/revertir)', () => {
@@ -17,6 +18,9 @@ describe('VersionesSitioService (UC-10 Previsualizar, UC-11 Publicar/revertir)',
       create: jest.Mock;
       findUnique: jest.Mock;
       findFirst: jest.Mock;
+      findMany: jest.Mock;
+    };
+    media: {
       findMany: jest.Mock;
     };
   };
@@ -45,6 +49,9 @@ describe('VersionesSitioService (UC-10 Previsualizar, UC-11 Publicar/revertir)',
         findUnique: jest.fn(),
         findFirst: jest.fn(),
         findMany: jest.fn(),
+      },
+      media: {
+        findMany: jest.fn().mockResolvedValue([]),
       },
     };
     perfilService = {
@@ -114,6 +121,90 @@ describe('VersionesSitioService (UC-10 Previsualizar, UC-11 Publicar/revertir)',
         },
       });
       expect(resultado.snapshot).toEqual(snapshotEsperado);
+    });
+  });
+
+  describe('armarSnapshot - imagen de fondo de una sección hero (UC-10/UC-11)', () => {
+    const mediaResuelta = {
+      id: 'media-fondo-1',
+      url: 'https://cdn.example.com/media-fondo-1.jpg',
+      s3_key: 'secciones/media-fondo-1.jpg',
+      tipo: 'imagen',
+      ancho: 1920,
+      alto: 1080,
+      alt_text: null,
+    };
+
+    it('resuelve imagen_fondo_media_id a la Media completa, conservando el resto de la configuración', async () => {
+      const seccionHero = {
+        id: 'seccion-hero-1',
+        tipo_seccion: 'hero',
+        configuracion: {
+          titulo: 'Hola',
+          subtitulo: 'Mundo',
+          imagen_fondo_media_id: 'media-fondo-1',
+        },
+      };
+      seccionesService.listar.mockResolvedValue([seccionHero]);
+      prisma.media.findMany.mockResolvedValue([mediaResuelta]);
+      prisma.versionSitio.create.mockImplementation(({ data }) =>
+        Promise.resolve({ id: 'v1', ...data }),
+      );
+
+      const resultado = await service.preview('admin-1');
+      const snapshot = resultado.snapshot as unknown as SnapshotSitio;
+
+      expect(prisma.media.findMany).toHaveBeenCalledWith({
+        where: { id: { in: ['media-fondo-1'] } },
+      });
+      const configuracionResuelta = snapshot.secciones[0].configuracion;
+      expect(configuracionResuelta.imagen_fondo).toEqual(mediaResuelta);
+      expect(configuracionResuelta.titulo).toBe('Hola');
+      expect(configuracionResuelta.subtitulo).toBe('Mundo');
+      expect(configuracionResuelta.imagen_fondo_media_id).toBe('media-fondo-1');
+    });
+
+    it('una sección hero sin imagen_fondo_media_id no agrega imagen_fondo ni consulta Media', async () => {
+      const seccionHeroSinImagen = {
+        id: 'seccion-hero-2',
+        tipo_seccion: 'hero',
+        configuracion: { titulo: 'Hola', subtitulo: 'Mundo' },
+      };
+      seccionesService.listar.mockResolvedValue([seccionHeroSinImagen]);
+      prisma.versionSitio.create.mockImplementation(({ data }) =>
+        Promise.resolve({ id: 'v1', ...data }),
+      );
+
+      const resultado = await service.preview('admin-1');
+      const snapshot = resultado.snapshot as unknown as SnapshotSitio;
+
+      expect(prisma.media.findMany).not.toHaveBeenCalled();
+      expect(snapshot.secciones[0].configuracion.imagen_fondo).toBeUndefined();
+    });
+
+    it('una sección hero con imagen_fondo_media_id inexistente en Media se omite sin lanzar error', async () => {
+      const seccionHeroRota = {
+        id: 'seccion-hero-3',
+        tipo_seccion: 'hero',
+        configuracion: {
+          titulo: 'Hola',
+          subtitulo: 'Mundo',
+          imagen_fondo_media_id: 'media-inexistente',
+        },
+      };
+      seccionesService.listar.mockResolvedValue([seccionHeroRota]);
+      prisma.media.findMany.mockResolvedValue([]);
+      prisma.versionSitio.create.mockImplementation(({ data }) =>
+        Promise.resolve({ id: 'v1', ...data }),
+      );
+
+      const resultado = await service.preview('admin-1');
+      const snapshot = resultado.snapshot as unknown as SnapshotSitio;
+
+      expect(prisma.media.findMany).toHaveBeenCalledWith({
+        where: { id: { in: ['media-inexistente'] } },
+      });
+      expect(snapshot.secciones[0].configuracion.imagen_fondo).toBeUndefined();
     });
   });
 
