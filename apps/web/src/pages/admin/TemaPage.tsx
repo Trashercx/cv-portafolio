@@ -1,4 +1,3 @@
-import type { CSSProperties } from 'react'
 import { ConfirmDeleteDialog } from '@/components/shared/ConfirmDeleteDialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -6,6 +5,7 @@ import { TemaFormDialog } from '@/features/tema/TemaFormDialog'
 import { useActivarTema, useEliminarTema, useTemas } from '@/features/tema/useTemas'
 import type { Tema } from '@/features/tema/types'
 import { ApiError } from '@/lib/api-client'
+import { temaComoVariablesCss } from '@/lib/tema-css'
 
 const SWATCH_KEYS: Array<{ key: keyof Tema; label: string }> = [
   { key: 'color_primario', label: 'Primario' },
@@ -13,24 +13,6 @@ const SWATCH_KEYS: Array<{ key: keyof Tema; label: string }> = [
   { key: 'color_fondo', label: 'Fondo' },
   { key: 'color_texto', label: 'Texto' },
 ]
-
-/**
- * Variables CSS del tema, aplicadas sobre el contenedor de vista previa
- * (UC-08). Alcance de "vista previa" en este sprint: una tarjeta de ejemplo
- * dentro de esta misma pantalla de administración (texto, fondo y botones
- * usando estas variables) — el sitio público real todavía no existe
- * (llega en Sprint 4, leyendo el snapshot publicado), así que no hay una
- * página pública que repintar todavía.
- */
-function variablesTema(tema: Tema): CSSProperties {
-  return {
-    '--color-primario': tema.color_primario,
-    '--color-secundario': tema.color_secundario,
-    '--color-fondo': tema.color_fondo,
-    '--color-texto': tema.color_texto,
-    fontFamily: tema.fuente_principal,
-  } as CSSProperties
-}
 
 /** UC-08 (Personalizar tema visual): listado, creación, activación exclusiva y borrado. */
 export function TemaPage() {
@@ -87,7 +69,7 @@ export function TemaPage() {
         </h2>
         {temaActivo ? (
           <div
-            style={variablesTema(temaActivo)}
+            style={temaComoVariablesCss(temaActivo)}
             className="rounded-lg border p-6"
           >
             <div

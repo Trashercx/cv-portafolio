@@ -1,3 +1,5 @@
+import type { Media } from '@/features/media/types'
+
 /**
  * UC-07 (Editar estructura visual). Los 6 tipos de bloque decididos en
  * docs/plan-tecnico.md sección 5 — `Seccion.tipo_seccion` solo puede ser uno
@@ -29,6 +31,14 @@ export type HeroConfiguracion = {
   titulo: string
   subtitulo: string
   imagen_fondo_media_id?: string
+  /**
+   * Solo presente cuando esta `Seccion` viene dentro de un `SnapshotSitio`
+   * (UC-12/UC-10): `VersionesSitioService.armarSnapshot` resuelve
+   * `imagen_fondo_media_id` a la `Media` completa (mismo patrón que
+   * `perfil.imagen_perfil` o `certificacion.logo`). En el editor admin
+   * (`GET /admin/secciones`) esto no viene y solo existe `imagen_fondo_media_id`.
+   */
+  imagen_fondo?: Media
   texto_boton?: string
   enlace_boton?: string
 }

@@ -11,9 +11,12 @@ import { MediaLibraryPage } from '@/pages/admin/MediaLibraryPage'
 import { PerfilPage } from '@/pages/admin/PerfilPage'
 import { ProyectosListPage } from '@/pages/admin/ProyectosListPage'
 import { ProyectoFormPage } from '@/pages/admin/ProyectoFormPage'
+import { PublicacionPage } from '@/pages/admin/PublicacionPage'
 import { RedesListPage } from '@/pages/admin/RedesListPage'
 import { RedFormPage } from '@/pages/admin/RedFormPage'
 import { TemaPage } from '@/pages/admin/TemaPage'
+import { CertificacionDetallePage } from '@/pages/public/CertificacionDetallePage'
+import { ProyectoDetallePage } from '@/pages/public/ProyectoDetallePage'
 import { PublicHomePage } from '@/pages/public/PublicHomePage'
 
 function App() {
@@ -21,6 +24,11 @@ function App() {
     <Routes>
       {/* Rutas públicas */}
       <Route path="/" element={<PublicHomePage />} />
+      <Route path="/proyecto/:id" element={<ProyectoDetallePage />} />
+      <Route
+        path="/certificacion/:id"
+        element={<CertificacionDetallePage />}
+      />
 
       {/* Zona de administración */}
       <Route path="/admin/login" element={<LoginPage />} />
@@ -64,6 +72,7 @@ function App() {
         <Route path="editor" element={<EditorSeccionesPage />} />
         <Route path="tema" element={<TemaPage />} />
         <Route path="media" element={<MediaLibraryPage />} />
+        <Route path="publicacion" element={<PublicacionPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
