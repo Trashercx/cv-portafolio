@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -25,8 +25,10 @@ import { useAuthStore } from '@/store/auth-store'
 
 export function LoginPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const setAdmin = useAuthStore((state) => state.setAdmin)
   const login = useLogin()
+  const sesionExpirada = searchParams.get('sesion') === 'expirada'
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -65,6 +67,11 @@ export function LoginPage() {
               noValidate
               className="grid gap-4"
             >
+              {sesionExpirada ? (
+                <p className="text-sm text-muted-foreground">
+                  Tu sesión expiró. Inicia sesión de nuevo.
+                </p>
+              ) : null}
               <FormField
                 control={form.control}
                 name="email"
