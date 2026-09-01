@@ -3,14 +3,17 @@ import { AdminLayout } from '@/components/layout/AdminLayout'
 import { RequireAuth } from '@/features/auth/RequireAuth'
 import { CertificacionesListPage } from '@/pages/admin/CertificacionesListPage'
 import { CertificacionFormPage } from '@/pages/admin/CertificacionFormPage'
+import { EditorSeccionesPage } from '@/pages/admin/EditorSeccionesPage'
 import { LoginPage } from '@/pages/admin/LoginPage'
 import { LogrosListPage } from '@/pages/admin/LogrosListPage'
 import { LogroFormPage } from '@/pages/admin/LogroFormPage'
+import { MediaLibraryPage } from '@/pages/admin/MediaLibraryPage'
 import { PerfilPage } from '@/pages/admin/PerfilPage'
 import { ProyectosListPage } from '@/pages/admin/ProyectosListPage'
 import { ProyectoFormPage } from '@/pages/admin/ProyectoFormPage'
 import { RedesListPage } from '@/pages/admin/RedesListPage'
 import { RedFormPage } from '@/pages/admin/RedFormPage'
+import { TemaPage } from '@/pages/admin/TemaPage'
 import { PublicHomePage } from '@/pages/public/PublicHomePage'
 
 function App() {
@@ -57,6 +60,10 @@ function App() {
         <Route path="redes" element={<RedesListPage />} />
         <Route path="redes/nuevo" element={<RedFormPage />} />
         <Route path="redes/:id" element={<RedFormPage />} />
+
+        <Route path="editor" element={<EditorSeccionesPage />} />
+        <Route path="tema" element={<TemaPage />} />
+        <Route path="media" element={<MediaLibraryPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
