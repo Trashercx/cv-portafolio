@@ -9,12 +9,33 @@ if (!API_URL) {
 
 export class ApiError extends Error {
   status: number
+  /**
+   * Ruta solicitada (p. ej. "/admin/proyectos"). Permite distinguir, en un
+   * manejador global de errores, un 401 de una ruta admin (sesión expirada)
+   * de un 401 de `/auth/login` (credenciales inválidas, no debe redirigir).
+   */
+  path: string
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, path: string = '') {
     super(message)
     this.name = 'ApiError'
     this.status = status
+    this.path = path
   }
+}
+
+async function extraerError(response: Response, path: string): Promise<ApiError> {
+  const isJson = response.headers
+    .get('content-type')
+    ?.includes('application/json')
+  const data = isJson ? await response.json().catch(() => undefined) : undefined
+
+  const message =
+    (data && typeof data === 'object' && 'message' in data
+      ? String((data as { message: unknown }).message)
+      : undefined) ?? 'Ocurrió un error inesperado. Intenta de nuevo.'
+
+  return new ApiError(message, response.status, path)
 }
 
 type ApiFetchOptions = Omit<RequestInit, 'body'> & {
@@ -43,18 +64,39 @@ export async function apiFetch<T>(
     body: body !== undefined ? JSON.stringify(body) : undefined,
   })
 
+  if (!response.ok) {
+    throw await extraerError(response, path)
+  }
+
   const isJson = response.headers
     .get('content-type')
     ?.includes('application/json')
   const data = isJson ? await response.json() : undefined
 
+  return data as T
+}
+
+/**
+ * Variante de `apiFetch` para `multipart/form-data` (subida de archivos).
+ * No fija `Content-Type`: el navegador debe generarlo con el boundary
+ * correcto a partir del `FormData`. Usada por `MediaUploadField` para
+ * `POST /admin/media`.
+ */
+export async function apiUpload<T>(path: string, formData: FormData): Promise<T> {
+  const response = await fetch(`${API_URL ?? ''}${path}`, {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+  })
+
   if (!response.ok) {
-    const message =
-      (data && typeof data === 'object' && 'message' in data
-        ? String((data as { message: unknown }).message)
-        : undefined) ?? 'Ocurrió un error inesperado. Intenta de nuevo.'
-    throw new ApiError(message, response.status)
+    throw await extraerError(response, path)
   }
+
+  const isJson = response.headers
+    .get('content-type')
+    ?.includes('application/json')
+  const data = isJson ? await response.json() : undefined
 
   return data as T
 }
