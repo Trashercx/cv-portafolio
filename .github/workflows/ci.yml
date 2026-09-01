@@ -66,14 +66,19 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      # GHCR exige el nombre del repositorio en minúsculas; github.repository
+      # conserva las mayúsculas del owner/nombre real (Trashercx/cv-portafolio),
+      # lo que hacía fallar el tag con "repository name must be lowercase".
+      - name: Nombre de repo en minúsculas para el tag de GHCR
+        run: echo "REPO_LC=${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
       - uses: docker/build-push-action@v6
         with:
           context: .
           file: apps/api/Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}/api:latest
-            ghcr.io/${{ github.repository }}/api:${{ github.sha }}
+            ghcr.io/${{ env.REPO_LC }}/api:latest
+            ghcr.io/${{ env.REPO_LC }}/api:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -92,6 +97,11 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      # GHCR exige el nombre del repositorio en minúsculas; github.repository
+      # conserva las mayúsculas del owner/nombre real (Trashercx/cv-portafolio),
+      # lo que hacía fallar el tag con "repository name must be lowercase".
+      - name: Nombre de repo en minúsculas para el tag de GHCR
+        run: echo "REPO_LC=${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
       - uses: docker/build-push-action@v6
         with:
           context: .
@@ -103,8 +113,8 @@ jobs:
           build-args: |
             VITE_API_URL=${{ secrets.VITE_API_URL_PRODUCCION }}
           tags: |
-            ghcr.io/${{ github.repository }}/web:latest
-            ghcr.io/${{ github.repository }}/web:${{ github.sha }}
+            ghcr.io/${{ env.REPO_LC }}/web:latest
+            ghcr.io/${{ env.REPO_LC }}/web:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
