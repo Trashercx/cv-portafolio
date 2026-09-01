@@ -11,6 +11,11 @@ import { agenteAutenticado, crearAppDePrueba } from './utils/test-app';
  *
  * Criterio de aceptación (docs/plan-portafolio.md): "Cada enlace abre la red
  * social correcta y respeta el orden e ícono configurado."
+ *
+ * Desde Sprint 4 (UC-14, ver docs/plan-tecnico.md) `GET /redes` para el
+ * visitante se sirve desde `PublicoModule` contra el snapshot publicado
+ * (ver `test/publico.e2e-spec.ts`); aquí se verifica el CRUD de
+ * administración contra `/admin/redes-sociales`.
  */
 describe('Redes sociales (e2e, UC-06)', () => {
   let app: INestApplication;
@@ -100,7 +105,7 @@ describe('Redes sociales (e2e, UC-06)', () => {
     expect(respuesta.body[0]).toHaveProperty('icono_defecto');
   });
 
-  it('crea, lista (público, con plataforma e ícono), edita y elimina un enlace de red', async () => {
+  it('crea, lista (admin, con plataforma e ícono), edita y elimina un enlace de red', async () => {
     const sufijo = Date.now();
     const urlOriginal = `https://example.com/perfil-${sufijo}`;
 
@@ -116,39 +121,37 @@ describe('Redes sociales (e2e, UC-06)', () => {
       icono_defecto: plataforma.icono_defecto,
     });
 
-    // Lista pública: incluye la plataforma (nombre + ícono) y respeta la URL configurada.
-    const listaPublica = await request(app.getHttpServer())
-      .get('/redes')
-      .expect(200);
-    const enListaPublica = listaPublica.body.find(
+    // Listado de administración: incluye la plataforma (nombre + ícono) y
+    // respeta la URL configurada. El listado público (UC-14) se verifica
+    // contra el snapshot publicado en test/publico.e2e-spec.ts.
+    const lista = await agent.get('/admin/redes-sociales').expect(200);
+    const enLista = lista.body.find(
       (r: { id: string }) => r.id === creada.body.id,
     );
-    expect(enListaPublica).toBeDefined();
-    expect(enListaPublica.url).toBe(urlOriginal);
-    expect(enListaPublica.plataforma.icono_defecto).toBe(
-      plataforma.icono_defecto,
-    );
+    expect(enLista).toBeDefined();
+    expect(enLista.url).toBe(urlOriginal);
+    expect(enLista.plataforma.icono_defecto).toBe(plataforma.icono_defecto);
 
-    // Editar la URL se refleja en la lista pública.
+    // Editar la URL se refleja al leerlo de nuevo.
     const urlEditada = `https://example.com/perfil-editado-${sufijo}`;
     await agent
       .patch(`/admin/redes-sociales/${creada.body.id}`)
       .send({ url: urlEditada })
       .expect(200);
 
-    const listaTrasEditar = await request(app.getHttpServer())
-      .get('/redes')
+    const listaTrasEditar = await agent
+      .get('/admin/redes-sociales')
       .expect(200);
     expect(
       listaTrasEditar.body.find((r: { id: string }) => r.id === creada.body.id)
         .url,
     ).toBe(urlEditada);
 
-    // Eliminar la saca de la lista pública.
+    // Eliminar la saca del listado.
     await agent.delete(`/admin/redes-sociales/${creada.body.id}`).expect(200);
 
-    const listaTrasEliminar = await request(app.getHttpServer())
-      .get('/redes')
+    const listaTrasEliminar = await agent
+      .get('/admin/redes-sociales')
       .expect(200);
     expect(
       listaTrasEliminar.body.some(

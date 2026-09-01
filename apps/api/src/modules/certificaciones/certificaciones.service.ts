@@ -32,6 +32,18 @@ export class CertificacionesService {
     });
   }
 
+  /**
+   * UC-10/UC-11 (Sprint 4): variante de `listar()` con el logo (`Media`)
+   * resuelto, usada por `VersionesSitioService.armarSnapshot()` — el
+   * snapshot publicado debe traer la URL del logo, no solo `logo_media_id`.
+   */
+  async listarConLogo() {
+    return this.prisma.certificacion.findMany({
+      orderBy: ORDEN_CERTIFICACIONES,
+      include: { logo: true },
+    });
+  }
+
   async obtener(id: string) {
     const certificacion = await this.prisma.certificacion.findUnique({
       where: { id },
