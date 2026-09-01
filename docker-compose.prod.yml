@@ -1,0 +1,72 @@
+# Definición de servicios para despliegue en un VPS con Dokploy o Coolify
+# (Sprint 5 — ver docs/plan-portafolio.md, "Hosting", y docs/despliegue.md).
+#
+# Ambas plataformas soportan desplegar un proyecto "Docker Compose"
+# directamente desde este archivo: apuntan el proyecto a este repo, a este
+# path, y gestionan las variables de entorno (`env_file`/secretos) desde su
+# propio panel en vez de un `.env` en el servidor.
+#
+# `apps/api` y `apps/web` se construyen con sus Dockerfiles ya existentes
+# (`apps/api/Dockerfile`, `apps/web/Dockerfile`); el contexto de build es la
+# raíz del repo en ambos casos (monorepo con npm workspaces, un solo
+# package-lock.json). Ninguna credencial vive en este archivo: todo llega
+# por variables de entorno que Dokploy/Coolify inyectan en runtime (o, para
+# `VITE_API_URL`, como build arg — ver comentario en el servicio `web`).
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-cvportafolio}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?falta POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-cvportafolio}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cvportafolio}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: ${PORT:-3000}
+      DATABASE_URL: ${DATABASE_URL:?falta DATABASE_URL}
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:?falta FRONTEND_ORIGIN}
+      JWT_SECRET: ${JWT_SECRET:?falta JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-15m}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:?falta AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:?falta AWS_SECRET_ACCESS_KEY}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      S3_BUCKET_NAME: ${S3_BUCKET_NAME:?falta S3_BUCKET_NAME}
+      CLOUDFRONT_DOMAIN: ${CLOUDFRONT_DOMAIN:-}
+    ports:
+      - "${API_PUBLIC_PORT:-3000}:3000"
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      # VITE_API_URL queda incrustado en el JS en tiempo de build (ver
+      # apps/web/Dockerfile) — Dokploy/Coolify deben pasar este build arg
+      # con la URL pública real de `api` (p. ej. https://api.tudominio.com)
+      # antes de construir la imagen; no puede cambiarse luego en runtime.
+      args:
+        VITE_API_URL: ${VITE_API_URL:?falta VITE_API_URL}
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "${WEB_PUBLIC_PORT:-8081}:80"
+
+volumes:
+  postgres_data:

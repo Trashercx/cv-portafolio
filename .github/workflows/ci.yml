@@ -40,3 +40,84 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run build
+
+  # --- CD (Sprint 5) ---------------------------------------------------
+  # `needs: [api, web]` obliga a que ambos jobs de CI ya hayan pasado; por
+  # eso el build-and-push vive en este mismo workflow y no en uno aparte
+  # ("needs" no puede referenciar jobs de otro workflow). Solo corre en
+  # push a main (nunca en pull_request) para no publicar imágenes por cada
+  # PR abierto.
+  build-and-push-api:
+    needs: [api, web]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}/api:latest
+            ghcr.io/${{ github.repository }}/api:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-and-push-web:
+    needs: [api, web]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          push: true
+          # VITE_API_URL queda incrustado en el JS en tiempo de build (ver
+          # apps/web/Dockerfile) — este secreto debe apuntar a la URL
+          # pública real de la API en producción.
+          build-args: |
+            VITE_API_URL=${{ secrets.VITE_API_URL_PRODUCCION }}
+          tags: |
+            ghcr.io/${{ github.repository }}/web:latest
+            ghcr.io/${{ github.repository }}/web:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # Paso opcional: si el repo tiene configurado un webhook de despliegue de
+  # Dokploy/Coolify (secreto DEPLOY_WEBHOOK_URL), lo dispara después de
+  # publicar ambas imágenes. Si el secreto no existe, este job se salta
+  # solo (no rompe el pipeline) — activarlo es una decisión de
+  # infraestructura posterior a este sprint, ver docs/despliegue.md.
+  trigger-deploy:
+    needs: [build-and-push-api, build-and-push-web]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Disparar webhook de despliegue (si está configurado)
+        env:
+          DEPLOY_WEBHOOK_URL: ${{ secrets.DEPLOY_WEBHOOK_URL }}
+        run: |
+          if [ -z "${DEPLOY_WEBHOOK_URL:-}" ]; then
+            echo "DEPLOY_WEBHOOK_URL no está configurado; se omite el disparo automático de despliegue."
+            exit 0
+          fi
+          curl -sf -X POST "$DEPLOY_WEBHOOK_URL"
