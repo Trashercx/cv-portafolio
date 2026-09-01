@@ -3,3 +3,8 @@ node_modules
 .env
 
 /generated/prisma
+
+# Archivos subidos por el stub local de `media` (LocalMediaStorageService).
+# Se reemplaza por S3 real cuando haya credenciales de AWS — ver
+# src/modules/media/storage/local-media-storage.service.ts.
+/uploads

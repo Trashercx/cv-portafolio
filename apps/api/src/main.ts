@@ -5,12 +5,20 @@ import 'dotenv/config';
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import * as cookieParser from 'cookie-parser';
+import * as express from 'express';
+import { join } from 'path';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.use(cookieParser());
+
+  // Sirve los archivos subidos por LocalMediaStorageService (stub temporal
+  // del módulo `media`, ver src/modules/media/storage/local-media-storage.service.ts).
+  // Borrar este bloque junto con esa clase cuando la implementación de S3
+  // reemplace al stub local.
+  app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
 
   // CORS: el frontend (Vite) corre en http://localhost:5173 por defecto.
   // Hardcodeado a propósito para desarrollo — parametrizar vía variable de

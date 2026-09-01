@@ -110,7 +110,9 @@ Endpoints:
 - **Logros:** `GET /logros` (público); CRUD `/admin/logros`.
 - **Redes:** `GET /redes` (público, UC-14); CRUD `/admin/redes-sociales`; `GET /admin/plataformas-red` (catálogo seedeado).
 
-**Ajuste técnico:** `PERFIL` referencia `MEDIA` (`imagen_perfil_id`, `cv_media_id`) y `CERTIFICACION` referencia `MEDIA` (`logo_media_id`), pero la biblioteca completa (UC-09) está agendada recién en el Sprint 3. Se incluye aquí un módulo `media` **mínimo**: entidad + `POST /admin/media` con multer-s3, sin galería ni gestión de "usado en". La biblioteca completa (listado, reemplazo seguro, validación de referencias) se cierra en Sprint 3.
+**Ajuste técnico:** `PERFIL` referencia `MEDIA` (`imagen_perfil_id`, `cv_media_id`) y `CERTIFICACION` referencia `MEDIA` (`logo_media_id`), pero la biblioteca completa (UC-09) está agendada recién en el Sprint 3. Se incluye aquí un módulo `media` **mínimo**: entidad + `POST /admin/media`, sin galería ni gestión de "usado en". La biblioteca completa (listado, reemplazo seguro, validación de referencias) se cierra en Sprint 3.
+
+**Excepción temporal aprobada (Sprint 1):** todavía no hay credenciales de AWS configuradas en `.env`, así que `POST /admin/media` no integra `@aws-sdk/client-s3`/multer-s3 todavía. Se implementó detrás de una interfaz `MediaStorageService` (un solo método `upload`) con un `LocalMediaStorageService` que guarda en `apps/api/uploads/` (gitignorado) como stub temporal, dejando el reemplazo por `S3MediaStorageService` como cambio de una línea en `media.module.ts` sin tocar `MediaService` ni los controladores. Ningún criterio de aceptación de UC-02/03/04 depende de que el archivo esté físicamente en S3, solo de que `Media` tenga una URL/key coherente. Reemplazar por S3 real en cuanto existan credenciales — antes de Sprint 3 (biblioteca de media) o de desplegar a producción, lo que ocurra primero.
 
 Pruebas: Jest por servicio (validaciones, orden); Supertest e2e por endpoint contra el criterio de aceptación exacto del UC; un test que confirme 401 en rutas admin sin token.
 
@@ -183,7 +185,7 @@ Dockerfiles multi-stage para `apps/api` y `apps/web`; definición de servicios e
 - DTOs con `class-validator`, cero campos fuera del DTO.
 - Acceso a datos exclusivamente vía Prisma.
 - Rutas admin con `JwtAuthGuard`; rutas de visitante (UC-12 a UC-14) siempre públicas.
-- Subida de archivos solo por `@aws-sdk/client-s3` + multer-s3 (+ sharp para miniaturas), nunca a disco local.
+- Subida de archivos solo por `@aws-sdk/client-s3` + multer-s3 (+ sharp para miniaturas), nunca a disco local. **Excepción temporal Sprint 1:** sin credenciales de AWS todavía, `media` usa un stub local (`LocalMediaStorageService`) detrás de la interfaz `MediaStorageService` — ver Sección 2, Sprint 1. Reemplazar por S3 real antes de Sprint 3 o de producción.
 
 **Frontend**
 - Tailwind CSS + shadcn/ui; el tema se lee dinámicamente del tema activo, nunca hardcodeado.
