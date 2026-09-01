@@ -12,6 +12,12 @@ import { agenteAutenticado, crearAppDePrueba } from './utils/test-app';
  * Criterio de aceptación (docs/plan-portafolio.md): "Un proyecto creado,
  * editado o eliminado se refleja en la lista de proyectos respetando el
  * orden definido."
+ *
+ * Desde Sprint 4 (UC-12/UC-13, ver docs/plan-tecnico.md) esta verificación
+ * se hace contra `/admin/proyectos` (panel), no contra un endpoint público:
+ * el visitante deja de leer esta tabla en vivo y pasa a leer siempre el
+ * snapshot publicado — ver `test/publico.e2e-spec.ts` para esa parte del
+ * criterio.
  */
 describe('Proyectos y tecnologías (e2e, UC-03)', () => {
   let app: INestApplication;
@@ -131,10 +137,10 @@ describe('Proyectos y tecnologías (e2e, UC-03)', () => {
     expect(segundaRespuesta.body.id).toBe(respuesta.body.id);
   });
 
-  it('crea proyectos, los lista en /proyectos (público) respetando el orden, los edita y elimina reflejando el cambio', async () => {
+  it('crea proyectos, los lista en /admin/proyectos respetando el orden, los edita y elimina reflejando el cambio', async () => {
     const sufijo = Date.now();
 
-    // 1) Crear dos proyectos con orden A > B, para verificar el orden en la lista pública.
+    // 1) Crear dos proyectos con orden A > B, para verificar el orden en el listado.
     const proyectoA = await agent
       .post('/admin/proyectos')
       .send({
@@ -155,34 +161,33 @@ describe('Proyectos y tecnologías (e2e, UC-03)', () => {
       .expect(201);
     idsProyectosCreados.push(proyectoB.body.id);
 
-    // 2) La lista pública respeta el orden (A antes que B).
-    const listaPublica1 = await request(app.getHttpServer())
-      .get('/proyectos')
-      .expect(200);
+    // 2) El listado de administración respeta el orden (A antes que B).
+    const lista1 = await agent.get('/admin/proyectos').expect(200);
     const idsDePrueba = new Set(idsProyectosCreados);
-    const ordenObservado1 = listaPublica1.body
+    const ordenObservado1 = lista1.body
       .filter((p: { id: string }) => idsDePrueba.has(p.id))
       .map((p: { id: string }) => p.id);
     expect(ordenObservado1).toEqual([proyectoA.body.id, proyectoB.body.id]);
 
-    // 3) El detalle público es accesible individualmente (UC-13 soportado por UC-03).
-    const detallePublico = await request(app.getHttpServer())
-      .get(`/proyectos/${proyectoA.body.id}`)
+    // 3) El detalle es accesible individualmente (UC-13 se verifica contra el
+    // snapshot publicado en test/publico.e2e-spec.ts, no aquí).
+    const detalle = await agent
+      .get(`/admin/proyectos/${proyectoA.body.id}`)
       .expect(200);
-    expect(detallePublico.body.titulo).toBe(`Proyecto A e2e ${sufijo}`);
+    expect(detalle.body.titulo).toBe(`Proyecto A e2e ${sufijo}`);
 
-    // 4) Editar un proyecto se refleja en la lista pública.
+    // 4) Editar un proyecto se refleja al leerlo de nuevo.
     await agent
       .patch(`/admin/proyectos/${proyectoA.body.id}`)
       .send({ titulo: `Proyecto A editado ${sufijo}` })
       .expect(200);
 
-    const detalleTrasEditar = await request(app.getHttpServer())
-      .get(`/proyectos/${proyectoA.body.id}`)
+    const detalleTrasEditar = await agent
+      .get(`/admin/proyectos/${proyectoA.body.id}`)
       .expect(200);
     expect(detalleTrasEditar.body.titulo).toBe(`Proyecto A editado ${sufijo}`);
 
-    // 5) Reordenar invierte el orden observado en la lista pública.
+    // 5) Reordenar invierte el orden observado en el listado.
     await agent
       .patch('/admin/proyectos/reordenar')
       .send([
@@ -191,10 +196,8 @@ describe('Proyectos y tecnologías (e2e, UC-03)', () => {
       ])
       .expect(200);
 
-    const listaPublica2 = await request(app.getHttpServer())
-      .get('/proyectos')
-      .expect(200);
-    const ordenObservado2 = listaPublica2.body
+    const lista2 = await agent.get('/admin/proyectos').expect(200);
+    const ordenObservado2 = lista2.body
       .filter((p: { id: string }) => idsDePrueba.has(p.id))
       .map((p: { id: string }) => p.id);
     expect(ordenObservado2).toEqual([proyectoB.body.id, proyectoA.body.id]);
@@ -208,8 +211,8 @@ describe('Proyectos y tecnologías (e2e, UC-03)', () => {
         )
         .expect(201);
 
-      const detalleConTecnologia = await request(app.getHttpServer())
-        .get(`/proyectos/${proyectoA.body.id}`)
+      const detalleConTecnologia = await agent
+        .get(`/admin/proyectos/${proyectoA.body.id}`)
         .expect(200);
       expect(
         detalleConTecnologia.body.tecnologias.some(
@@ -224,13 +227,11 @@ describe('Proyectos y tecnologías (e2e, UC-03)', () => {
         .expect(200);
     }
 
-    // 7) Eliminar un proyecto lo saca de la lista pública.
+    // 7) Eliminar un proyecto lo saca del listado.
     await agent.delete(`/admin/proyectos/${proyectoB.body.id}`).expect(200);
 
-    const listaPublica3 = await request(app.getHttpServer())
-      .get('/proyectos')
-      .expect(200);
-    const idsRestantes = listaPublica3.body.map((p: { id: string }) => p.id);
+    const lista3 = await agent.get('/admin/proyectos').expect(200);
+    const idsRestantes = lista3.body.map((p: { id: string }) => p.id);
     expect(idsRestantes).not.toContain(proyectoB.body.id);
     expect(idsRestantes).toContain(proyectoA.body.id);
 

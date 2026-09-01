@@ -11,6 +11,18 @@ export class TemaService {
     return this.prisma.tema.findMany({ orderBy: { nombre: 'asc' } });
   }
 
+  /**
+   * UC-10/UC-11 (Sprint 4): el tema activo (o `null` si ninguno lo está) tal
+   * como lo necesita `VersionesSitioService.armarSnapshot()` — un snapshot
+   * siempre refleja el tema vigente en el momento de armarlo, nunca "el
+   * primero de la lista".
+   */
+  async obtenerActivo(usuarioAdminId: string) {
+    return this.prisma.tema.findFirst({
+      where: { usuario_admin_id: usuarioAdminId, activo: true },
+    });
+  }
+
   async obtener(id: string) {
     const tema = await this.prisma.tema.findUnique({ where: { id } });
 

@@ -247,6 +247,17 @@ model Tema {
 /// Snapshots de publicación (UC-10, UC-11). `snapshot` es JSONB por la misma razón que
 /// `SECCION.configuracion`: es una foto completa del sitio (secciones + tema + contenido)
 /// para poder revertir sin rediseñar el esquema cada vez.
+///
+/// `estado` se mantiene como String libre (no enum de Postgres), igual que `Proyecto.estado`:
+/// el proyecto no usa enums en ningún modelo, así que se sigue ese mismo patrón por consistencia;
+/// los valores válidos ('borrador' | 'publicado') se validan en el DTO del backend, no en la BD.
+///
+/// Índice (Sprint 4, UC-12): `GET /sitio` resuelve en cada visita pública contra "la fila con
+/// estado='publicado' de publicado_en más reciente". Sin índice, esa consulta sería un full scan
+/// de la tabla en cada visita del sitio público (a diferencia de las demás FK de usuario_admin_id,
+/// que solo se consultan desde el panel admin de bajo tráfico). No agrega columnas ni cambia el
+/// diagrama ER, así que no requiere tocar el bloque mermaid (mismo criterio ya usado en `Tema`
+/// para su índice único parcial, que tampoco figura en el ER).
 model VersionSitio {
   id               String    @id @default(uuid()) @db.Uuid
   usuario_admin_id String    @db.Uuid
@@ -256,5 +267,6 @@ model VersionSitio {
 
   usuario_admin UsuarioAdmin @relation(fields: [usuario_admin_id], references: [id])
 
+  @@index([usuario_admin_id, estado, publicado_en])
   @@map("version_sitio")
 }

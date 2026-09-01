@@ -18,6 +18,21 @@ export class PerfilService {
   }
 
   /**
+   * UC-10/UC-11 (Sprint 4): variante de `obtener()` con las relaciones de
+   * media resueltas (`imagen_perfil`, `cv_media`), usada por
+   * `VersionesSitioService.armarSnapshot()` para que el snapshot publicado
+   * traiga la URL de la foto de perfil y del CV sin que el consumidor del
+   * snapshot (panel de preview o sitio público) tenga que resolver el id
+   * contra `Media` por su cuenta.
+   */
+  async obtenerConMedia(usuarioAdminId: string) {
+    return this.prisma.perfil.findUnique({
+      where: { usuario_admin_id: usuarioAdminId },
+      include: { imagen_perfil: true, cv_media: true },
+    });
+  }
+
+  /**
    * Upsert real: crea la fila si no existe, la actualiza si ya existe.
    * Nunca puede terminar en dos filas para el mismo admin porque
    * `usuario_admin_id` es `@unique` en el esquema y Prisma resuelve el

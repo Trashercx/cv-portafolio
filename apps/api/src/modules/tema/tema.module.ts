@@ -5,5 +5,6 @@ import { TemaService } from './tema.service';
 @Module({
   controllers: [TemaController],
   providers: [TemaService],
+  exports: [TemaService],
 })
 export class TemaModule {}

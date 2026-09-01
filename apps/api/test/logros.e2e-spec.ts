@@ -10,7 +10,11 @@ import { agenteAutenticado, crearAppDePrueba } from './utils/test-app';
  * Criterio de aceptación (docs/plan-portafolio.md): "Un logro nuevo aparece
  * en la sección correspondiente sin necesidad de despliegue de código." Se
  * verifica creando un logro vía la API de administración y comprobando que
- * aparece de inmediato en `GET /logros` (público), sin ningún paso extra.
+ * aparece de inmediato en `GET /admin/logros`, sin ningún paso extra.
+ *
+ * Desde Sprint 4 (UC-12, ver docs/plan-tecnico.md) el visitante deja de leer
+ * esta tabla en vivo directamente: los logros publicados se sirven como
+ * parte del snapshot en `GET /sitio` — ver `test/publico.e2e-spec.ts`.
  */
 describe('Logros (e2e, UC-05)', () => {
   let app: INestApplication;
@@ -79,13 +83,11 @@ describe('Logros (e2e, UC-05)', () => {
   // Caso feliz + criterio de aceptación de UC-05
   // -----------------------------------------------------------------------
 
-  it('un logro creado por el admin aparece de inmediato en la lista pública', async () => {
+  it('un logro creado por el admin aparece de inmediato en /admin/logros, sin despliegue de código', async () => {
     const sufijo = Date.now();
     const titulo = `Logro e2e ${sufijo}`;
 
-    const listaAntes = await request(app.getHttpServer())
-      .get('/logros')
-      .expect(200);
+    const listaAntes = await agent.get('/admin/logros').expect(200);
     expect(
       listaAntes.body.some((l: { titulo: string }) => l.titulo === titulo),
     ).toBe(false);
@@ -96,9 +98,7 @@ describe('Logros (e2e, UC-05)', () => {
       .expect(201);
     idsCreados.push(creado.body.id);
 
-    const listaDespues = await request(app.getHttpServer())
-      .get('/logros')
-      .expect(200);
+    const listaDespues = await agent.get('/admin/logros').expect(200);
     const logroEnLista = listaDespues.body.find(
       (l: { id: string }) => l.id === creado.body.id,
     );
@@ -113,20 +113,16 @@ describe('Logros (e2e, UC-05)', () => {
       .send({ titulo: `${titulo} editado` })
       .expect(200);
 
-    const listaTrasEditar = await request(app.getHttpServer())
-      .get('/logros')
-      .expect(200);
+    const listaTrasEditar = await agent.get('/admin/logros').expect(200);
     expect(
       listaTrasEditar.body.find((l: { id: string }) => l.id === creado.body.id)
         .titulo,
     ).toBe(`${titulo} editado`);
 
-    // Eliminar lo saca de la lista pública.
+    // Eliminar lo saca del listado.
     await agent.delete(`/admin/logros/${creado.body.id}`).expect(200);
 
-    const listaTrasEliminar = await request(app.getHttpServer())
-      .get('/logros')
-      .expect(200);
+    const listaTrasEliminar = await agent.get('/admin/logros').expect(200);
     expect(
       listaTrasEliminar.body.some(
         (l: { id: string }) => l.id === creado.body.id,

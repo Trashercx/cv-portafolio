@@ -10,6 +10,11 @@ import { agenteAutenticado, crearAppDePrueba } from './utils/test-app';
  * Criterio de aceptación (docs/plan-portafolio.md): "Las certificaciones se
  * listan ordenadas por fecha u orden manual, con enlace de verificación
  * funcional."
+ *
+ * Desde Sprint 4 (UC-12/UC-13, ver docs/plan-tecnico.md) esta verificación
+ * se hace contra `/admin/certificaciones` (panel), no contra un endpoint
+ * público: el visitante deja de leer esta tabla en vivo y pasa a leer
+ * siempre el snapshot publicado — ver `test/publico.e2e-spec.ts`.
  */
 describe('Certificaciones (e2e, UC-04)', () => {
   let app: INestApplication;
@@ -107,38 +112,38 @@ describe('Certificaciones (e2e, UC-04)', () => {
       .expect(201);
     idsCreados.push(certB.body.id);
 
-    // Listado público, ordenado por `orden` ascendente.
-    const listaPublica = await request(app.getHttpServer())
-      .get('/certificaciones')
-      .expect(200);
+    // Listado de administración, ordenado por `orden` ascendente.
+    const lista = await agent.get('/admin/certificaciones').expect(200);
     const idsDePrueba = new Set(idsCreados);
-    const ordenObservado = listaPublica.body
+    const ordenObservado = lista.body
       .filter((c: { id: string }) => idsDePrueba.has(c.id))
       .map((c: { id: string }) => c.id);
     expect(ordenObservado).toEqual([certA.body.id, certB.body.id]);
 
-    // Detalle público con enlace de verificación funcional (URL persistida tal cual).
-    const detallePublico = await request(app.getHttpServer())
-      .get(`/certificaciones/${certA.body.id}`)
+    // Detalle con enlace de verificación funcional (URL persistida tal cual).
+    // El detalle público (UC-13) se verifica contra el snapshot publicado en
+    // test/publico.e2e-spec.ts, no aquí.
+    const detalle = await agent
+      .get(`/admin/certificaciones/${certA.body.id}`)
       .expect(200);
-    expect(detallePublico.body.url_verificacion).toBe(
+    expect(detalle.body.url_verificacion).toBe(
       'https://verificacion.example.com/cert-a',
     );
 
-    // Editar se refleja en el detalle público.
+    // Editar se refleja al leerlo de nuevo.
     await agent
       .patch(`/admin/certificaciones/${certA.body.id}`)
       .send({ nombre: `Certificación A editada ${sufijo}` })
       .expect(200);
 
-    const detalleTrasEditar = await request(app.getHttpServer())
-      .get(`/certificaciones/${certA.body.id}`)
+    const detalleTrasEditar = await agent
+      .get(`/admin/certificaciones/${certA.body.id}`)
       .expect(200);
     expect(detalleTrasEditar.body.nombre).toBe(
       `Certificación A editada ${sufijo}`,
     );
 
-    // Reordenar invierte el orden observado en la lista pública.
+    // Reordenar invierte el orden observado en el listado.
     await agent
       .patch(`/admin/certificaciones/${certA.body.id}`)
       .send({ orden: 9003 })
@@ -148,21 +153,17 @@ describe('Certificaciones (e2e, UC-04)', () => {
       .send({ orden: 9000 })
       .expect(200);
 
-    const listaPublica2 = await request(app.getHttpServer())
-      .get('/certificaciones')
-      .expect(200);
-    const ordenObservado2 = listaPublica2.body
+    const lista2 = await agent.get('/admin/certificaciones').expect(200);
+    const ordenObservado2 = lista2.body
       .filter((c: { id: string }) => idsDePrueba.has(c.id))
       .map((c: { id: string }) => c.id);
     expect(ordenObservado2).toEqual([certB.body.id, certA.body.id]);
 
-    // Eliminar la saca de la lista pública.
+    // Eliminar la saca del listado.
     await agent.delete(`/admin/certificaciones/${certB.body.id}`).expect(200);
 
-    const listaPublica3 = await request(app.getHttpServer())
-      .get('/certificaciones')
-      .expect(200);
-    const idsRestantes = listaPublica3.body.map((c: { id: string }) => c.id);
+    const lista3 = await agent.get('/admin/certificaciones').expect(200);
+    const idsRestantes = lista3.body.map((c: { id: string }) => c.id);
     expect(idsRestantes).not.toContain(certB.body.id);
     expect(idsRestantes).toContain(certA.body.id);
   });
