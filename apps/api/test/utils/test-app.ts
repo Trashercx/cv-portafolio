@@ -1,5 +1,5 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test, TestingModuleBuilder } from '@nestjs/testing';
 import * as cookieParser from 'cookie-parser';
 import * as request from 'supertest';
 import { AppModule } from '../../src/app.module';
@@ -9,11 +9,19 @@ import { AppModule } from '../../src/app.module';
  * ValidationPipe con whitelist/forbidNonWhitelisted/transform) para las pruebas
  * e2e de Sprint 1. Se usa en lugar de un mock porque los criterios de aceptación
  * de UC-02 a UC-06 dependen de comportamiento real (guards, DTOs, Prisma).
+ *
+ * `configurar` permite sobreescribir providers antes de compilar el módulo
+ * (p. ej. `MEDIA_STORAGE_SERVICE` en `media.e2e-spec.ts`, para que ningún
+ * test le pegue a S3 real) sin tener que duplicar todo el bootstrap.
  */
-export async function crearAppDePrueba(): Promise<INestApplication> {
-  const moduleFixture: TestingModule = await Test.createTestingModule({
-    imports: [AppModule],
-  }).compile();
+export async function crearAppDePrueba(
+  configurar?: (builder: TestingModuleBuilder) => TestingModuleBuilder,
+): Promise<INestApplication> {
+  let builder = Test.createTestingModule({ imports: [AppModule] });
+  if (configurar) {
+    builder = configurar(builder);
+  }
+  const moduleFixture = await builder.compile();
 
   const app = moduleFixture.createNestApplication();
   app.use(cookieParser());
