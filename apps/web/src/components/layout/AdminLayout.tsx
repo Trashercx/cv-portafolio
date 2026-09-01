@@ -12,12 +12,13 @@ const NAV_ITEMS = [
   { to: '/admin/editor', label: 'Editor visual' },
   { to: '/admin/tema', label: 'Tema' },
   { to: '/admin/media', label: 'Biblioteca de medios' },
+  { to: '/admin/publicacion', label: 'Publicación' },
 ]
 
 /**
  * Layout de administración: navegación superior a las 5 secciones de
  * contenido (UC-02 a UC-06), el editor visual/tema/biblioteca (UC-07 a
- * UC-09) + botón de cerrar sesión.
+ * UC-09), publicación (UC-10, UC-11) + botón de cerrar sesión.
  *
  * "Cerrar sesión" en Sprint 2 solo limpia el auth store (en memoria) y
  * redirige a `/admin/login` — no hay endpoint de logout real en el backend

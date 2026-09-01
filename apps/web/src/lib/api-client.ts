@@ -7,6 +7,14 @@ if (!API_URL) {
   )
 }
 
+/**
+ * Base pública de la API, para los pocos casos donde se necesita una URL
+ * completa en vez de pasar por `apiFetch` (p. ej. `href` de descarga del CV,
+ * `GET /cv`, que es un redirect 302 binario y nunca debe pedirse por
+ * `fetch`).
+ */
+export const API_BASE_URL = API_URL ?? ''
+
 export class ApiError extends Error {
   status: number
   /**
@@ -40,6 +48,15 @@ async function extraerError(response: Response, path: string): Promise<ApiError>
 
 type ApiFetchOptions = Omit<RequestInit, 'body'> & {
   body?: unknown
+  /**
+   * `true` por defecto: manda la cookie httpOnly de sesión del admin
+   * (`credentials: 'include'`), necesaria para todo `/admin/*`. Los hooks
+   * del árbol `publico` (`features/publico/usePublico.ts`, UC-12/13/14)
+   * deben pasar `false` explícitamente — esos endpoints son de acceso
+   * anónimo por diseño y no deben filtrar la cookie de sesión del admin a
+   * un visitante ni a caches intermedias.
+   */
+  conCredenciales?: boolean
 }
 
 /**
@@ -47,16 +64,16 @@ type ApiFetchOptions = Omit<RequestInit, 'body'> & {
  *
  * La sesión del administrador vive en una cookie httpOnly (`access_token`)
  * seteada por el backend: este cliente nunca lee ni guarda el token, solo
- * garantiza `credentials: 'include'` en cada request para que la cookie
- * viaje de ida y vuelta.
+ * garantiza `credentials: 'include'` (salvo que se pida lo contrario con
+ * `conCredenciales: false`) para que la cookie viaje de ida y vuelta.
  */
 export async function apiFetch<T>(
   path: string,
-  { body, headers, ...options }: ApiFetchOptions = {},
+  { body, headers, conCredenciales = true, ...options }: ApiFetchOptions = {},
 ): Promise<T> {
   const response = await fetch(`${API_URL ?? ''}${path}`, {
     ...options,
-    credentials: 'include',
+    credentials: conCredenciales ? 'include' : 'omit',
     headers: {
       ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
       ...headers,
