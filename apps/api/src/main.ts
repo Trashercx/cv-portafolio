@@ -14,10 +14,11 @@ async function bootstrap() {
 
   app.use(cookieParser());
 
-  // Sirve los archivos subidos por LocalMediaStorageService (stub temporal
-  // del módulo `media`, ver src/modules/media/storage/local-media-storage.service.ts).
-  // Borrar este bloque junto con esa clase cuando la implementación de S3
-  // reemplace al stub local.
+  // Sirve los archivos subidos por LocalMediaStorageService, que desde
+  // Sprint 3 ya no es el provider por defecto de `media` (lo es
+  // S3MediaStorageService) pero se conserva como fallback de desarrollo sin
+  // credenciales de AWS y como stub en tests. Ver
+  // src/modules/media/storage/local-media-storage.service.ts.
   app.use('/uploads', express.static(join(process.cwd(), 'uploads')));
 
   // CORS: el frontend (Vite) corre en http://localhost:5173 por defecto.

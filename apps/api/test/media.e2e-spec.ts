@@ -3,15 +3,18 @@ import { promises as fs } from 'fs';
 import { join } from 'path';
 import * as request from 'supertest';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { LocalMediaStorageService } from '../src/modules/media/storage/local-media-storage.service';
+import { MEDIA_STORAGE_SERVICE } from '../src/modules/media/storage/media-storage.interface';
 import { agenteAutenticado, crearAppDePrueba } from './utils/test-app';
 
 /**
- * Módulo `media` (prerequisito de UC-02/UC-03/UC-04, ver
- * docs/plan-tecnico.md Sprint 1: la biblioteca completa es UC-09, Sprint 3).
- * Cubre subida vía `POST /admin/media`, protegida por JwtAuthGuard, con el
- * stub local de almacenamiento (LocalMediaStorageService).
+ * Módulo `media` (UC-02/UC-03/UC-04 dependen de él como FK; biblioteca
+ * completa es UC-09, Sprint 3). El provider por defecto de `MediaModule` es
+ * `S3MediaStorageService` (sube a S3 real), así que aquí se sobreescribe con
+ * `LocalMediaStorageService` (guarda en disco) para que ningún test le
+ * pegue a S3 real ni dependa de red/credenciales de AWS.
  */
-describe('Media admin (e2e, soporte de UC-02/UC-03/UC-04)', () => {
+describe('Media admin (e2e, UC-02/UC-03/UC-04 + biblioteca UC-09)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
   let agent: Awaited<ReturnType<typeof agenteAutenticado>>;
@@ -20,7 +23,11 @@ describe('Media admin (e2e, soporte de UC-02/UC-03/UC-04)', () => {
   const keysCreadas: string[] = [];
 
   beforeAll(async () => {
-    app = await crearAppDePrueba();
+    app = await crearAppDePrueba((builder) =>
+      builder
+        .overrideProvider(MEDIA_STORAGE_SERVICE)
+        .useClass(LocalMediaStorageService),
+    );
     prisma = app.get(PrismaService);
     agent = await agenteAutenticado(app);
   });
@@ -49,7 +56,15 @@ describe('Media admin (e2e, soporte de UC-02/UC-03/UC-04)', () => {
     await agent
       .post('/admin/media')
       .field('alt_text', 'texto alternativo')
-      .field('carpeta', 'no-declarado')
+      .field('campo_invalido', 'no-declarado')
+      .attach('file', Buffer.from('contenido de prueba'), 'prueba.txt')
+      .expect(400);
+  });
+
+  it('POST /admin/media rechaza un valor de "carpeta" fuera del catálogo válido', async () => {
+    await agent
+      .post('/admin/media')
+      .field('carpeta', 'no-es-una-carpeta-valida')
       .attach('file', Buffer.from('contenido de prueba'), 'prueba.txt')
       .expect(400);
   });
@@ -98,5 +113,158 @@ describe('Media admin (e2e, soporte de UC-02/UC-03/UC-04)', () => {
 
     idsCreados.push(respuesta.body.id);
     keysCreadas.push(respuesta.body.s3_key);
+  });
+
+  // ---------------------------------------------------------------------
+  // UC-09: biblioteca multimedia completa
+  // ---------------------------------------------------------------------
+
+  describe('biblioteca (UC-09)', () => {
+    it('GET /admin/media sin cookie responde 401', async () => {
+      await request(app.getHttpServer()).get('/admin/media').expect(401);
+    });
+
+    it('GET /admin/media lista y filtra por tipo', async () => {
+      const subida = await agent
+        .post('/admin/media')
+        .field('tipo', 'imagen')
+        .attach('file', Buffer.from('imagen biblioteca'), 'biblioteca.png')
+        .expect(201);
+      idsCreados.push(subida.body.id);
+      keysCreadas.push(subida.body.s3_key);
+
+      const listaCompleta = await agent.get('/admin/media').expect(200);
+      expect(
+        listaCompleta.body.some((m: { id: string }) => m.id === subida.body.id),
+      ).toBe(true);
+
+      const listaFiltrada = await agent
+        .get('/admin/media')
+        .query({ tipo: 'imagen' })
+        .expect(200);
+      expect(
+        listaFiltrada.body.every((m: { tipo: string }) => m.tipo === 'imagen'),
+      ).toBe(true);
+      expect(
+        listaFiltrada.body.some((m: { id: string }) => m.id === subida.body.id),
+      ).toBe(true);
+    });
+
+    it('PATCH /admin/media/:id edita el alt_text', async () => {
+      const subida = await agent
+        .post('/admin/media')
+        .attach('file', Buffer.from('editable'), 'editable.png')
+        .expect(201);
+      idsCreados.push(subida.body.id);
+      keysCreadas.push(subida.body.s3_key);
+
+      const actualizado = await agent
+        .patch(`/admin/media/${subida.body.id}`)
+        .send({ alt_text: 'Texto alternativo editado' })
+        .expect(200);
+
+      expect(actualizado.body.alt_text).toBe('Texto alternativo editado');
+    });
+
+    it('PATCH /admin/media/:id rechaza campos fuera del DTO', async () => {
+      const subida = await agent
+        .post('/admin/media')
+        .attach('file', Buffer.from('rechazo'), 'rechazo.png')
+        .expect(201);
+      idsCreados.push(subida.body.id);
+      keysCreadas.push(subida.body.s3_key);
+
+      await agent
+        .patch(`/admin/media/${subida.body.id}`)
+        .send({ url: 'https://otra-url.example.com/hack.png' })
+        .expect(400);
+    });
+
+    it('DELETE /admin/media/:id borra un archivo que no está en uso', async () => {
+      const subida = await agent
+        .post('/admin/media')
+        .attach('file', Buffer.from('borrable'), 'borrable.png')
+        .expect(201);
+      keysCreadas.push(subida.body.s3_key);
+
+      await agent.delete(`/admin/media/${subida.body.id}`).expect(200);
+
+      const enBaseDeDatos = await prisma.media.findUnique({
+        where: { id: subida.body.id },
+      });
+      expect(enBaseDeDatos).toBeNull();
+    });
+
+    it('DELETE /admin/media/:id responde 409 si el archivo está referenciado en un proyecto', async () => {
+      const admin = await prisma.usuarioAdmin.findUniqueOrThrow({
+        where: { email: process.env.ADMIN_EMAIL },
+      });
+
+      const subida = await agent
+        .post('/admin/media')
+        .attach('file', Buffer.from('en-uso'), 'en-uso.png')
+        .expect(201);
+      idsCreados.push(subida.body.id);
+      keysCreadas.push(subida.body.s3_key);
+
+      const proyecto = await prisma.proyecto.create({
+        data: {
+          usuario_admin_id: admin.id,
+          titulo: `Proyecto media e2e ${Date.now()}`,
+          descripcion: 'Proyecto de prueba para el chequeo de "usado en"',
+          fecha_inicio: new Date('2024-01-01'),
+          estado: 'en-progreso',
+          orden: 9999,
+        },
+      });
+
+      await prisma.proyectoImagen.create({
+        data: { proyecto_id: proyecto.id, media_id: subida.body.id, orden: 1 },
+      });
+
+      await agent.delete(`/admin/media/${subida.body.id}`).expect(409);
+
+      // Limpieza: primero la relación, luego el proyecto (Media queda para el afterAll).
+      await prisma.proyectoImagen.deleteMany({
+        where: { proyecto_id: proyecto.id },
+      });
+      await prisma.proyecto.delete({ where: { id: proyecto.id } });
+    });
+
+    it('PATCH /admin/media/:id/reemplazar mantiene el mismo id y actualiza url/s3_key', async () => {
+      const subida = await agent
+        .post('/admin/media')
+        .attach('file', Buffer.from('version original'), 'original.png')
+        .expect(201);
+      idsCreados.push(subida.body.id);
+      keysCreadas.push(subida.body.s3_key);
+
+      const reemplazo = await agent
+        .patch(`/admin/media/${subida.body.id}/reemplazar`)
+        .attach('file', Buffer.from('version nueva'), 'nueva.png')
+        .expect(200);
+
+      expect(reemplazo.body.id).toBe(subida.body.id);
+      expect(reemplazo.body.s3_key).not.toBe(subida.body.s3_key);
+      keysCreadas.push(reemplazo.body.s3_key);
+
+      const enBaseDeDatos = await prisma.media.findUnique({
+        where: { id: subida.body.id },
+      });
+      expect(enBaseDeDatos?.s3_key).toBe(reemplazo.body.s3_key);
+    });
+
+    it('PATCH /admin/media/:id/reemplazar sin archivo responde 400', async () => {
+      const subida = await agent
+        .post('/admin/media')
+        .attach('file', Buffer.from('sin-reemplazo'), 'sin-reemplazo.png')
+        .expect(201);
+      idsCreados.push(subida.body.id);
+      keysCreadas.push(subida.body.s3_key);
+
+      await agent
+        .patch(`/admin/media/${subida.body.id}/reemplazar`)
+        .expect(400);
+    });
   });
 });

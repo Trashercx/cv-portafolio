@@ -8,39 +8,21 @@ import {
 } from './media-storage.interface';
 
 /**
- * STUB TEMPORAL — Sprint 1 (docs/plan-tecnico.md).
+ * STUB LOCAL — ya no es la implementación por defecto desde Sprint 3.
  *
- * `docs/plan-portafolio.md` y `CLAUDE.md` piden `@aws-sdk/client-s3` +
- * multer-s3 (+ sharp para miniaturas/dimensiones) para subir archivos.
- * Todavía no existen credenciales de AWS configuradas (`AWS_ACCESS_KEY_ID`,
- * `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`, `S3_BUCKET_NAME` en `.env.example`
- * están vacías), y bloquear el Sprint 1 completo por eso no vale la pena:
- * ningún caso de uso de este sprint depende de que el archivo esté
- * realmente en S3, solo de que `Media` tenga una URL y una key coherentes.
+ * Reemplazada como provider real por `S3MediaStorageService` (UC-09, ver ese
+ * archivo) en `media.module.ts`, ahora que existen credenciales de AWS.
+ * Esta clase se conserva por dos motivos:
  *
- * Por eso esta implementación guarda el archivo en disco local
- * (`apps/api/uploads/`, listada en `.gitignore`, nunca se commitea) y arma
- * una URL servida por el propio Nest (`main.ts` expone `/uploads` como
- * carpeta estática). El contrato (`MediaStorageService.upload`) es
- * exactamente el mismo que tendrá la implementación real, así que
- * reemplazarla no requiere tocar `MediaService` ni los controladores.
+ * 1. Referencia de cómo se veía la implementación mínima de Sprint 1.
+ * 2. Fake/stub inyectado en los tests (unitarios y e2e) vía
+ *    `overrideProvider(MEDIA_STORAGE_SERVICE)` para que ninguna prueba le
+ *    pegue a S3 real ni dependa de red/credenciales (ver
+ *    `test/media.e2e-spec.ts` y `media.service.spec.ts`).
  *
- * QUÉ REEMPLAZAR CUANDO HAYA CREDENCIALES DE AWS REALES:
- * 1. Crear `S3MediaStorageService implements MediaStorageService` en este
- *    mismo directorio, usando `@aws-sdk/client-s3` (`PutObjectCommand`)
- *    para subir el buffer al bucket (`S3_BUCKET_NAME`), con key
- *    `{carpeta}/{uuid}.{extension}` según la convención de
- *    `docs/plan-tecnico.md` sección 5 (`perfil/`, `proyectos/`,
- *    `certificaciones/`, `logros/`, `backups/`).
- * 2. Usar `sharp` sobre el buffer para leer `width`/`height` reales cuando
- *    el archivo es una imagen (esta implementación local los deja
- *    `undefined` porque no procesa el archivo).
- * 3. Devolver `url` como la URL pública de S3 (o de CloudFront si
- *    `CLOUDFRONT_DOMAIN` está configurado) y `key` como el `s3_key` usado.
- * 4. Cambiar el `provide: MEDIA_STORAGE_SERVICE` en `media.module.ts` de
- *    `LocalMediaStorageService` a `S3MediaStorageService`. Nada más cambia.
- * 5. Borrar este archivo y la carpeta `uploads/` (y el `express.static` de
- *    `main.ts`) una vez que S3 sea la única implementación en uso.
+ * Si se usa fuera de tests (p. ej. desarrollo local sin credenciales), sigue
+ * guardando el archivo en disco (`apps/api/uploads/`, gitignorado) y sirve
+ * una URL local (`main.ts` expone `/uploads` como carpeta estática).
  */
 @Injectable()
 export class LocalMediaStorageService implements MediaStorageService {

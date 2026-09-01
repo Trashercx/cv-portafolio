@@ -17,13 +17,25 @@ export interface UploadedMediaResult {
  * interfaz, nunca contra un proveedor concreto, para poder reemplazar la
  * implementación sin tocar `MediaService` ni los controladores.
  *
- * Implementación actual: `LocalMediaStorageService` (stub temporal, ver ese
- * archivo). Implementación pendiente para producción: `S3MediaStorageService`
- * con `@aws-sdk/client-s3` + `sharp` (no hay credenciales de AWS todavía,
- * ver `docs/plan-tecnico.md` Sprint 1).
+ * Implementación real (Sprint 3, UC-09): `S3MediaStorageService`, usando
+ * `@aws-sdk/client-s3` + `sharp` para extraer dimensiones de imágenes.
+ * `LocalMediaStorageService` queda en el código como referencia/fallback
+ * de desarrollo sin credenciales de AWS, y como stub inyectado en los tests
+ * (ver `media.module.ts` y `test/media.e2e-spec.ts`), pero ya no es la
+ * implementación por defecto.
+ *
+ * `carpeta` es el prefijo de "carpeta" del bucket S3 (`perfil/`,
+ * `proyectos/`, `certificaciones/`, `logros/`, ver
+ * `docs/plan-tecnico.md` sección 5). Es opcional porque `POST /admin/media`
+ * sube el archivo antes de saber en qué entidad se usará (la asociación con
+ * perfil/proyecto/certificación ocurre después, vía `media_id`); cuando no
+ * se indica, la implementación usa un prefijo genérico.
  */
 export interface MediaStorageService {
-  upload(file: Express.Multer.File): Promise<UploadedMediaResult>;
+  upload(
+    file: Express.Multer.File,
+    carpeta?: string,
+  ): Promise<UploadedMediaResult>;
 }
 
 /** Token de inyección: `MediaStorageService` es una interfaz, no una clase. */
