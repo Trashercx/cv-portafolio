@@ -8,7 +8,9 @@ import { MediaModule } from './modules/media/media.module';
 import { PerfilModule } from './modules/perfil/perfil.module';
 import { ProyectosModule } from './modules/proyectos/proyectos.module';
 import { RedesSocialesModule } from './modules/redes-sociales/redes-sociales.module';
+import { SeccionesModule } from './modules/secciones/secciones.module';
 import { TecnologiasModule } from './modules/tecnologias/tecnologias.module';
+import { TemaModule } from './modules/tema/tema.module';
 import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
@@ -22,6 +24,8 @@ import { PrismaModule } from './prisma/prisma.module';
     CertificacionesModule,
     LogrosModule,
     RedesSocialesModule,
+    SeccionesModule,
+    TemaModule,
   ],
   controllers: [AppController],
   providers: [AppService],
