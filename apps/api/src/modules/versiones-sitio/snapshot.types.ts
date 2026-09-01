@@ -38,10 +38,29 @@ export interface SnapshotConId {
   [key: string]: unknown;
 }
 
+/**
+ * `Seccion.configuracion` una vez resuelta para el snapshot: sigue siendo
+ * JSON dinámico (varía según `tipo_seccion`, ver
+ * `secciones/dto/configuracion`), pero cuando `tipo_seccion='hero'` y trae
+ * `imagen_fondo_media_id`, `armarSnapshot()` agrega `imagen_fondo` con la
+ * `Media` completa resuelta (mismo patrón que `perfil.imagen_perfil` y
+ * `certificacion.logo`), para que el sitio público nunca tenga que resolver
+ * ids de media por su cuenta.
+ */
+export interface SnapshotSeccionConfiguracion {
+  imagen_fondo?: SnapshotMedia;
+  [key: string]: unknown;
+}
+
+export interface SnapshotSeccion extends SnapshotConId {
+  tipo_seccion: string;
+  configuracion: SnapshotSeccionConfiguracion;
+}
+
 export interface SnapshotSitio {
   perfil: SnapshotPerfil | null;
   tema: Record<string, unknown> | null;
-  secciones: SnapshotConId[];
+  secciones: SnapshotSeccion[];
   proyectos: SnapshotConId[];
   certificaciones: SnapshotConId[];
   logros: SnapshotConId[];
