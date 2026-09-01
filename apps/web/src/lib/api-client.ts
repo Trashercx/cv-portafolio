@@ -80,11 +80,16 @@ export async function apiFetch<T>(
  * Variante de `apiFetch` para `multipart/form-data` (subida de archivos).
  * No fija `Content-Type`: el navegador debe generarlo con el boundary
  * correcto a partir del `FormData`. Usada por `MediaUploadField` para
- * `POST /admin/media`.
+ * `POST /admin/media`, y por la biblioteca de media (UC-09) para
+ * `PATCH /admin/media/:id/reemplazar`.
  */
-export async function apiUpload<T>(path: string, formData: FormData): Promise<T> {
+export async function apiUpload<T>(
+  path: string,
+  formData: FormData,
+  method: 'POST' | 'PATCH' = 'POST',
+): Promise<T> {
   const response = await fetch(`${API_URL ?? ''}${path}`, {
-    method: 'POST',
+    method,
     credentials: 'include',
     body: formData,
   })
