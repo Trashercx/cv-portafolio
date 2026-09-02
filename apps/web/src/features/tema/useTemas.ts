@@ -20,6 +20,10 @@ export function useCrearTema() {
   return useMutation({
     mutationFn: (payload: TemaFormValues) =>
       apiFetch<Tema>('/admin/temas', { method: 'POST', body: payload }),
+    meta: {
+      mensajeExito: 'Tema creado correctamente.',
+      mensajeError: 'No se pudo crear el tema. Intenta de nuevo.',
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: TEMAS_QUERY_KEY })
     },
@@ -33,6 +37,10 @@ export function useActualizarTema(id: string) {
   return useMutation({
     mutationFn: (payload: Partial<TemaFormValues>) =>
       apiFetch<Tema>(`/admin/temas/${id}`, { method: 'PATCH', body: payload }),
+    meta: {
+      mensajeExito: 'Tema guardado correctamente.',
+      mensajeError: 'No se pudo guardar el tema. Intenta de nuevo.',
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: TEMAS_QUERY_KEY })
     },
@@ -48,6 +56,10 @@ export function useEliminarTema() {
       apiFetch<{ eliminado: boolean }>(`/admin/temas/${id}`, {
         method: 'DELETE',
       }),
+    meta: {
+      mensajeExito: 'Tema eliminado correctamente.',
+      mensajeError: 'No se pudo eliminar el tema. Intenta de nuevo.',
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: TEMAS_QUERY_KEY })
     },
@@ -65,6 +77,10 @@ export function useActivarTema() {
   return useMutation({
     mutationFn: (id: string) =>
       apiFetch<Tema>(`/admin/temas/${id}/activar`, { method: 'PATCH' }),
+    meta: {
+      mensajeExito: 'Tema activado correctamente.',
+      mensajeError: 'No se pudo activar el tema. Intenta de nuevo.',
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: TEMAS_QUERY_KEY })
     },

@@ -38,7 +38,9 @@ export function MediaLibraryPage() {
   return (
     <div className="grid gap-4">
       <div className="flex items-center justify-between gap-4">
-        <h1 className="text-xl font-semibold">Biblioteca de medios</h1>
+        <h1 className="font-heading text-xl font-semibold">
+          Biblioteca de medios
+        </h1>
         <Select value={tipo} onValueChange={setTipo}>
           <SelectTrigger className="w-48">
             <SelectValue />

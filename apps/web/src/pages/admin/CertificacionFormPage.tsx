@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { useNavigate, useParams } from 'react-router-dom'
-import { MediaUploadField } from '@/components/media/MediaUploadField'
+import { MediaField } from '@/components/media/MediaField'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -23,7 +23,6 @@ import {
   useCertificacion,
   useCrearCertificacion,
 } from '@/features/certificaciones/useCertificaciones'
-import { ApiError } from '@/lib/api-client'
 
 const DEFAULT_VALUES: CertificacionFormValues = {
   nombre: '',
@@ -91,13 +90,6 @@ export function CertificacionFormPage() {
     }
   }
 
-  const errorMessage =
-    mutacionActiva.error instanceof ApiError
-      ? mutacionActiva.error.message
-      : mutacionActiva.error
-        ? 'No se pudo guardar la certificación. Intenta de nuevo.'
-        : null
-
   if (!esNuevo && isLoading) {
     return (
       <p className="text-sm text-muted-foreground">
@@ -109,7 +101,7 @@ export function CertificacionFormPage() {
   return (
     <Card className="max-w-2xl">
       <CardHeader>
-        <CardTitle>
+        <CardTitle className="font-heading text-xl">
           {esNuevo ? 'Nueva certificación' : 'Editar certificación'}
         </CardTitle>
       </CardHeader>
@@ -220,10 +212,8 @@ export function CertificacionFormPage() {
               )}
             />
 
-            <MediaUploadField
+            <MediaField
               label="Logo (opcional)"
-              accept="image/*"
-              tipo="imagen"
               currentMediaId={form.watch('logo_media_id')}
               onUploaded={(media) =>
                 form.setValue('logo_media_id', media.id, {
@@ -236,12 +226,6 @@ export function CertificacionFormPage() {
                 })
               }
             />
-
-            {errorMessage ? (
-              <p role="alert" className="text-sm text-destructive">
-                {errorMessage}
-              </p>
-            ) : null}
 
             <Button
               type="submit"

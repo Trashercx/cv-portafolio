@@ -23,7 +23,6 @@ import {
   useCrearLogro,
   useLogro,
 } from '@/features/logros/useLogros'
-import { ApiError } from '@/lib/api-client'
 
 const DEFAULT_VALUES: LogroFormValues = {
   titulo: '',
@@ -64,6 +63,15 @@ export function LogroFormPage() {
 
   const mutacionActiva = esNuevo ? crear : actualizar
 
+  // Reutiliza el mismo schema de Zod que ya valida el campo (nunca duplica
+  // el formato de URL): solo se muestra el link si hay contenido Y pasa esa
+  // misma validación. Si está vacío o es inválido, `<FormMessage />` ya
+  // cubre el caso de error — el link simplemente no aparece.
+  const urlReferencia = form.watch('url_referencia')
+  const urlReferenciaValida =
+    Boolean(urlReferencia) &&
+    logroSchema.shape.url_referencia.safeParse(urlReferencia).success
+
   const onSubmit = (values: LogroFormValues) => {
     const payload = {
       titulo: values.titulo,
@@ -81,13 +89,6 @@ export function LogroFormPage() {
     }
   }
 
-  const errorMessage =
-    mutacionActiva.error instanceof ApiError
-      ? mutacionActiva.error.message
-      : mutacionActiva.error
-        ? 'No se pudo guardar el logro. Intenta de nuevo.'
-        : null
-
   if (!esNuevo && isLoading) {
     return <p className="text-sm text-muted-foreground">Cargando logro…</p>
   }
@@ -95,7 +96,9 @@ export function LogroFormPage() {
   return (
     <Card className="max-w-2xl">
       <CardHeader>
-        <CardTitle>{esNuevo ? 'Nuevo logro' : 'Editar logro'}</CardTitle>
+        <CardTitle className="font-heading text-xl">
+          {esNuevo ? 'Nuevo logro' : 'Editar logro'}
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -168,6 +171,16 @@ export function LogroFormPage() {
                     <Input {...field} />
                   </FormControl>
                   <FormMessage />
+                  {urlReferenciaValida ? (
+                    <a
+                      href={urlReferencia}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-sm text-primary underline"
+                    >
+                      Ver enlace ↗
+                    </a>
+                  ) : null}
                 </FormItem>
               )}
             />
@@ -190,12 +203,6 @@ export function LogroFormPage() {
                 </FormItem>
               )}
             />
-
-            {errorMessage ? (
-              <p role="alert" className="text-sm text-destructive">
-                {errorMessage}
-              </p>
-            ) : null}
 
             <Button
               type="submit"

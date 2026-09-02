@@ -1,6 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
+import { MediaField } from '@/components/media/MediaField'
 import { MediaUploadField } from '@/components/media/MediaUploadField'
 import { Button } from '@/components/ui/button'
 import {
@@ -23,7 +24,6 @@ import { Textarea } from '@/components/ui/textarea'
 import { perfilSchema, type PerfilFormValues } from '@/features/perfil/perfil-schema'
 import { usePerfil } from '@/features/perfil/usePerfil'
 import { useUpsertPerfil } from '@/features/perfil/useUpsertPerfil'
-import { ApiError } from '@/lib/api-client'
 
 const DEFAULT_VALUES: PerfilFormValues = {
   nombre_completo: '',
@@ -67,13 +67,6 @@ export function PerfilPage() {
     })
   }
 
-  const errorMessage =
-    upsertPerfil.error instanceof ApiError
-      ? upsertPerfil.error.message
-      : upsertPerfil.error
-        ? 'No se pudo guardar el perfil. Intenta de nuevo.'
-        : null
-
   if (isLoading) {
     return <p className="text-sm text-muted-foreground">Cargando perfil…</p>
   }
@@ -81,7 +74,7 @@ export function PerfilPage() {
   return (
     <Card className="max-w-2xl">
       <CardHeader>
-        <CardTitle>Perfil</CardTitle>
+        <CardTitle className="font-heading text-xl">Perfil</CardTitle>
         <CardDescription>
           Esta información alimenta la sección "Sobre mí" del sitio
           publicado.
@@ -147,10 +140,8 @@ export function PerfilPage() {
               )}
             />
 
-            <MediaUploadField
+            <MediaField
               label="Foto de perfil"
-              accept="image/*"
-              tipo="imagen"
               currentMediaId={form.watch('imagen_perfil_id')}
               onUploaded={(media) =>
                 form.setValue('imagen_perfil_id', media.id, {
@@ -176,17 +167,6 @@ export function PerfilPage() {
                 form.setValue('cv_media_id', undefined, { shouldDirty: true })
               }
             />
-
-            {errorMessage ? (
-              <p role="alert" className="text-sm text-destructive">
-                {errorMessage}
-              </p>
-            ) : null}
-            {upsertPerfil.isSuccess ? (
-              <p className="text-sm text-muted-foreground">
-                Perfil guardado.
-              </p>
-            ) : null}
 
             <Button
               type="submit"

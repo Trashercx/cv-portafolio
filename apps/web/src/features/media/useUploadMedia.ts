@@ -25,5 +25,8 @@ export function useUploadMedia() {
 
       return apiUpload<Media>('/admin/media', formData)
     },
+    meta: {
+      mensajeExito: 'Archivo subido correctamente.',
+    },
   })
 }

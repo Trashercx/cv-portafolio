@@ -1,6 +1,6 @@
 import { ConfirmDeleteDialog } from '@/components/shared/ConfirmDeleteDialog'
 import { OrderButtons } from '@/components/shared/OrderButtons'
-import { MediaUploadField } from '@/components/media/MediaUploadField'
+import { MediaField } from '@/components/media/MediaField'
 import { Button } from '@/components/ui/button'
 import { ApiError } from '@/lib/api-client'
 import { calcularIntercambioOrdenPorMediaId } from '@/lib/reorder'
@@ -94,10 +94,8 @@ export function GaleriaImagenesProyecto({
         </div>
       )}
 
-      <MediaUploadField
+      <MediaField
         label="Agregar imagen"
-        accept="image/*"
-        tipo="imagen"
         onUploaded={(media) =>
           agregar.mutate({ media_id: media.id, orden: siguienteOrden })
         }

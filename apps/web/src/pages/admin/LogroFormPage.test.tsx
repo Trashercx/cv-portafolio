@@ -102,4 +102,41 @@ describe('LogroFormPage (nuevo)', () => {
       expect.objectContaining({ onSuccess: expect.any(Function) }),
     )
   })
+
+  it('muestra el link "Ver enlace" cuando la URL de referencia es válida', async () => {
+    const user = userEvent.setup()
+    renderLogroFormPage()
+
+    expect(
+      screen.queryByRole('link', { name: /ver enlace/i }),
+    ).not.toBeInTheDocument()
+
+    await user.type(
+      screen.getByLabelText(/url de referencia/i),
+      'https://ejemplo.com/nota',
+    )
+
+    const link = await screen.findByRole('link', { name: /ver enlace/i })
+    expect(link).toHaveAttribute('href', 'https://ejemplo.com/nota')
+    expect(link).toHaveAttribute('target', '_blank')
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer')
+  })
+
+  it('no muestra el link "Ver enlace" cuando la URL de referencia es inválida o está vacía', async () => {
+    const user = userEvent.setup()
+    renderLogroFormPage()
+
+    expect(
+      screen.queryByRole('link', { name: /ver enlace/i }),
+    ).not.toBeInTheDocument()
+
+    await user.type(
+      screen.getByLabelText(/url de referencia/i),
+      'no-es-una-url',
+    )
+
+    expect(
+      screen.queryByRole('link', { name: /ver enlace/i }),
+    ).not.toBeInTheDocument()
+  })
 })

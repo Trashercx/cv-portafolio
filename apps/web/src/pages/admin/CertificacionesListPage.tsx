@@ -42,7 +42,7 @@ export function CertificacionesListPage() {
   return (
     <div className="grid gap-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Certificaciones</h1>
+        <h1 className="font-heading text-xl font-semibold">Certificaciones</h1>
         <Button asChild>
           <Link to="/admin/certificaciones/nuevo">Nueva certificación</Link>
         </Button>
