@@ -1,9 +1,11 @@
-import { act, render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { toast } from 'sonner'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Seccion } from '@/features/secciones/types'
+import type { SnapshotSitio } from '@/features/publico/types'
+import type { VersionSitio } from '@/features/publicacion/types'
 import { useEditorSeccionesStore } from '@/store/editor-secciones-store'
 import { EditorSeccionesPage } from './EditorSeccionesPage'
 
@@ -77,7 +79,126 @@ vi.mock('@/features/secciones/useSecciones', () => ({
   useReordenarSecciones: () => ({ mutateAsync: reordenarMutateAsyncMock }),
 }))
 
-describe('EditorSeccionesPage (UC-07)', () => {
+// Fixtures y mocks de UC-10/UC-11 (Previsualizar/Publicar/Revertir), fusionados
+// en esta página desde Sprint 7 (ver `docs` de `EditorSeccionesPage` y
+// `PanelVersiones`). Migrados desde el extinto `PublicacionPage.test.tsx`.
+const SNAPSHOT_VACIO: SnapshotSitio = {
+  perfil: null,
+  tema: null,
+  secciones: [
+    {
+      id: 'seccion-hero',
+      usuario_admin_id: 'admin-1',
+      tipo_seccion: 'hero',
+      titulo_visible: 'Portada',
+      orden: 0,
+      visible: true,
+      configuracion: { titulo: 'Hola', subtitulo: 'Mundo' },
+    },
+    {
+      id: 'seccion-contacto',
+      usuario_admin_id: 'admin-1',
+      tipo_seccion: 'contacto',
+      titulo_visible: 'Contacto oculto',
+      orden: 1,
+      visible: false,
+      configuracion: { mostrar_formulario: false },
+    },
+  ],
+  proyectos: [],
+  certificaciones: [],
+  logros: [],
+  redes_sociales: [],
+}
+
+const VERSION_PREVIEW: VersionSitio = {
+  id: 'preview-1',
+  usuario_admin_id: 'admin-1',
+  estado: 'borrador',
+  snapshot: SNAPSHOT_VACIO,
+  publicado_en: null,
+}
+
+const VERSION_ACTUAL: VersionSitio = {
+  id: 'v3',
+  usuario_admin_id: 'admin-1',
+  estado: 'publicado',
+  snapshot: SNAPSHOT_VACIO,
+  publicado_en: '2026-02-01T00:00:00.000Z',
+}
+
+const VERSION_ANTERIOR: VersionSitio = {
+  id: 'v2',
+  usuario_admin_id: 'admin-1',
+  estado: 'publicado',
+  snapshot: SNAPSHOT_VACIO,
+  publicado_en: '2026-01-01T00:00:00.000Z',
+}
+
+const VERSION_BORRADOR: VersionSitio = {
+  id: 'v1',
+  usuario_admin_id: 'admin-1',
+  estado: 'borrador',
+  snapshot: SNAPSHOT_VACIO,
+  publicado_en: null,
+}
+
+/**
+ * Publicada más vieja que `VERSION_ANTERIOR`: en el historial
+ * V0 < V2 < V3(actual), NO debe ofrecer "Deshacer última publicación" — solo
+ * V2 (la inmediatamente anterior a la actual) puede. Migrado desde el
+ * extinto `PublicacionPage.test.tsx` (ver comentario en el test que la usa).
+ */
+const VERSION_MAS_ANTIGUA_PUBLICADA: VersionSitio = {
+  id: 'v0',
+  usuario_admin_id: 'admin-1',
+  estado: 'publicado',
+  snapshot: SNAPSHOT_VACIO,
+  publicado_en: '2025-12-01T00:00:00.000Z',
+}
+
+const previewMutateMock = vi.fn()
+const publicarMutateMock = vi.fn()
+const revertirMutateMock = vi.fn()
+
+const publicacionMocks: {
+  versiones: VersionSitio[]
+  versionesIsLoading: boolean
+  versionesIsSuccess: boolean
+  previewPending: boolean
+  publicarPending: boolean
+  revertirPending: boolean
+} = {
+  versiones: [VERSION_ACTUAL, VERSION_ANTERIOR],
+  versionesIsLoading: false,
+  versionesIsSuccess: true,
+  previewPending: false,
+  publicarPending: false,
+  revertirPending: false,
+}
+
+vi.mock('@/features/publicacion/usePublicacion', () => ({
+  useVersiones: () => ({
+    data: publicacionMocks.versiones,
+    isLoading: publicacionMocks.versionesIsLoading,
+    isSuccess: publicacionMocks.versionesIsSuccess,
+    error: null,
+  }),
+  usePreviewVersion: () => ({
+    mutate: previewMutateMock,
+    isPending: publicacionMocks.previewPending,
+  }),
+  usePublicarVersion: () => ({
+    mutate: publicarMutateMock,
+    isPending: publicacionMocks.publicarPending,
+  }),
+  useRevertirVersion: () => ({
+    mutate: revertirMutateMock,
+    isPending: publicacionMocks.revertirPending,
+  }),
+}))
+
+describe('EditorSeccionesPage (UC-07, UC-10, UC-11)', () => {
   beforeEach(() => {
     useEditorSeccionesStore.setState({ content: [] })
     crearMutateAsyncMock.mockResolvedValue({ id: 'seccion-c' })
@@ -86,6 +207,16 @@ describe('EditorSeccionesPage (UC-07)', () => {
     actualizarVisibilidadMutateAsyncMock.mockResolvedValue(undefined)
     eliminarMutateAsyncMock.mockResolvedValue(undefined)
     reordenarMutateAsyncMock.mockResolvedValue(undefined)
+
+    publicacionMocks.versiones = [VERSION_ACTUAL, VERSION_ANTERIOR]
+    publicacionMocks.versionesIsLoading = false
+    publicacionMocks.versionesIsSuccess = true
+    publicacionMocks.previewPending = false
+    publicacionMocks.publicarPending = false
+    publicacionMocks.revertirPending = false
+    previewMutateMock.mockImplementation((_vars, options) => {
+      options?.onSuccess?.(VERSION_PREVIEW)
+    })
   })
 
   afterEach(() => {
@@ -366,5 +497,150 @@ describe('EditorSeccionesPage (UC-07)', () => {
     expect(toast.success).not.toHaveBeenCalled()
     // No debió llegar a reordenar tras el fallo previo en la fase de diff.
     expect(reordenarMutateAsyncMock).not.toHaveBeenCalled()
+  })
+
+  it('muestra el badge "Publicado" cuando la versión más reciente ya fue publicada', async () => {
+    renderEditor()
+
+    expect(await screen.findByText('Publicado')).toBeInTheDocument()
+    expect(screen.queryByText('Borrador')).not.toBeInTheDocument()
+  })
+
+  it('muestra el badge "Borrador" cuando la versión más reciente todavía no se publicó', async () => {
+    publicacionMocks.versiones = [
+      VERSION_PREVIEW,
+      VERSION_ACTUAL,
+      VERSION_ANTERIOR,
+    ]
+    renderEditor()
+
+    expect(await screen.findByText('Borrador')).toBeInTheDocument()
+  })
+
+  it('no muestra el badge "Publicado" mientras el historial de versiones todavía está cargando', () => {
+    publicacionMocks.versionesIsLoading = true
+    publicacionMocks.versionesIsSuccess = false
+    renderEditor()
+
+    expect(screen.queryByText('Publicado')).not.toBeInTheDocument()
+  })
+
+  it('no muestra el badge "Publicado" cuando todavía no existe ninguna versión (sitio nuevo, nunca publicado ni previsualizado)', async () => {
+    publicacionMocks.versiones = []
+    renderEditor()
+
+    // Sin ninguna versión todavía no hay nada público que mostrar como
+    // "Publicado": se trata como "Borrador" (ver comentario en
+    // `EditorSeccionesPage` sobre `hayCambiosSinPublicar`).
+    expect(await screen.findByText('Borrador')).toBeInTheDocument()
+    expect(screen.queryByText('Publicado')).not.toBeInTheDocument()
+  })
+
+  it('"Publicar" pide confirmación antes de llamar a la mutación', async () => {
+    const user = userEvent.setup()
+    renderEditor()
+
+    await user.click(screen.getByRole('button', { name: /^publicar$/i }))
+
+    const dialogo = await screen.findByRole('alertdialog')
+    expect(
+      within(dialogo).getByText(/publicar los cambios actuales/i),
+    ).toBeInTheDocument()
+
+    expect(publicarMutateMock).not.toHaveBeenCalled()
+
+    await user.click(
+      within(dialogo).getByRole('button', { name: /^publicar$/i }),
+    )
+
+    expect(publicarMutateMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('"Historial de versiones" abre un diálogo con el historial completo y permite previsualizar sin salir del editor', async () => {
+    const user = userEvent.setup()
+    renderEditor()
+
+    await user.click(
+      screen.getByRole('button', { name: /historial de versiones/i }),
+    )
+
+    const dialogo = await screen.findByRole('dialog')
+    // "Historial de versiones" aparece dos veces dentro del diálogo (el
+    // título del `Dialog` y el encabezado de la sección de `PanelVersiones`),
+    // así que basta con confirmar que ambas están presentes.
+    expect(
+      within(dialogo).getAllByText(/historial de versiones/i),
+    ).toHaveLength(2)
+
+    await user.click(
+      within(dialogo).getByRole('button', { name: /previsualizar cambios/i }),
+    )
+
+    expect(previewMutateMock).toHaveBeenCalled()
+    // La sección visible se pinta normal, y la oculta se muestra igual pero
+    // marcada como "no se publicará" (soloVisibles=false en la preview).
+    expect(within(dialogo).getByText('Hola')).toBeInTheDocument()
+    expect(within(dialogo).getByText('Contacto oculto')).toBeInTheDocument()
+    expect(
+      within(dialogo).getByText('Oculta · no se publicará'),
+    ).toBeInTheDocument()
+  })
+
+  it('"Deshacer última publicación" solo aparece en la publicada inmediatamente anterior a la actual, y confirma antes de revertir', async () => {
+    const user = userEvent.setup()
+    renderEditor()
+
+    await user.click(
+      screen.getByRole('button', { name: /historial de versiones/i }),
+    )
+    const dialogo = await screen.findByRole('dialog')
+
+    const botonesRevertir = within(dialogo).getAllByRole('button', {
+      name: /deshacer última publicación/i,
+    })
+    // Solo la versión "anterior" (v2) puede revertirse: la actual (v3) no
+    // tiene "antes de sí misma".
+    expect(botonesRevertir).toHaveLength(1)
+
+    await user.click(botonesRevertir[0])
+
+    const confirmacion = await screen.findByRole('alertdialog')
+    await user.click(
+      within(confirmacion).getByRole('button', { name: /^deshacer$/i }),
+    )
+
+    // El backend restaura la publicada INMEDIATAMENTE ANTERIOR al id que
+    // recibe, así que para recuperar el contenido de v2 hay que llamar a la
+    // mutación con el id de la actual (v3), no con 'v2'.
+    expect(revertirMutateMock).toHaveBeenCalledWith(
+      'v3',
+      expect.objectContaining({ onSettled: expect.any(Function) }),
+    )
+  })
+
+  it('con 3+ versiones publicadas, "Deshacer última publicación" solo aparece en la inmediatamente anterior a la actual, no en publicaciones más antiguas', async () => {
+    const user = userEvent.setup()
+    publicacionMocks.versiones = [
+      VERSION_ACTUAL,
+      VERSION_ANTERIOR,
+      VERSION_MAS_ANTIGUA_PUBLICADA,
+      VERSION_BORRADOR,
+    ]
+    renderEditor()
+
+    await user.click(
+      screen.getByRole('button', { name: /historial de versiones/i }),
+    )
+    const dialogo = await screen.findByRole('dialog')
+
+    // Historial: v0 < v2 < v3(actual). Solo v2 (inmediatamente anterior a la
+    // actual) puede ofrecer "deshacer última publicación" — v0, aunque
+    // también publicada, es más vieja y revertir sobre su fila restauraría
+    // v0 en vez de mostrar el resultado de "deshacer la última publicación";
+    // v1 (borrador) tampoco es una publicación.
+    const botonesRevertir = within(dialogo).getAllByRole('button', {
+      name: /deshacer última publicación/i,
+    })
+    expect(botonesRevertir).toHaveLength(1)
   })
 })

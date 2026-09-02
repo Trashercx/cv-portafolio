@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth-store'
@@ -12,13 +12,19 @@ const NAV_ITEMS = [
   { to: '/admin/editor', label: 'Editor visual' },
   { to: '/admin/tema', label: 'Tema' },
   { to: '/admin/media', label: 'Biblioteca de medios' },
-  { to: '/admin/publicacion', label: 'Publicación' },
 ]
 
 /**
  * Layout de administración: navegación superior a las 5 secciones de
- * contenido (UC-02 a UC-06), el editor visual/tema/biblioteca (UC-07 a
- * UC-09), publicación (UC-10, UC-11) + botón de cerrar sesión.
+ * contenido (UC-02 a UC-06) y el editor visual/tema/biblioteca (UC-07 a
+ * UC-09) + botón de cerrar sesión.
+ *
+ * Publicación (UC-10, UC-11) ya no tiene una entrada de navegación ni ruta
+ * propias (Sprint 7): se fusionó dentro de "Editor visual"
+ * (`EditorSeccionesPage`) para eliminar la navegación redundante entre
+ * "estructura" y "publicación" que eran, en la práctica, un solo flujo de
+ * trabajo. `/admin/publicacion` sigue existiendo como redirect en `App.tsx`
+ * por compatibilidad con enlaces ya guardados.
  *
  * "Cerrar sesión" en Sprint 2 solo limpia el auth store (en memoria) y
  * redirige a `/admin/login` — no hay endpoint de logout real en el backend
@@ -28,8 +34,17 @@ const NAV_ITEMS = [
  */
 export function AdminLayout() {
   const navigate = useNavigate()
+  const location = useLocation()
   const admin = useAuthStore((state) => state.admin)
   const clearAdmin = useAuthStore((state) => state.clearAdmin)
+
+  // El editor visual (UC-07, fusionado con UC-10/UC-11 en Sprint 7) necesita
+  // todo el ancho disponible para el lienzo de Puck: el `max-w-5xl` que el
+  // resto de las páginas del panel sí necesita para mantener formularios y
+  // tablas legibles termina angostando innecesariamente ese lienzo. Solo
+  // esta ruta se libera del límite de ancho; el resto del panel conserva su
+  // `max-w-5xl` actual sin cambios.
+  const esRutaDeAnchoCompleto = location.pathname.startsWith('/admin/editor')
 
   const handleLogout = () => {
     clearAdmin()
@@ -68,7 +83,12 @@ export function AdminLayout() {
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-5xl p-4">
+      <main
+        className={cn(
+          'p-4',
+          esRutaDeAnchoCompleto ? 'w-full' : 'mx-auto max-w-5xl',
+        )}
+      >
         <Outlet />
       </main>
     </div>

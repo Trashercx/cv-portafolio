@@ -28,8 +28,9 @@ type RenderizadorSeccionesProps = {
 /**
  * Pinta las `secciones` de un `SnapshotSitio` según su `tipo_seccion`, en su
  * `orden`. Componente compartido entre la vista previa del panel (UC-10,
- * `PublicacionPage`) y la home pública (UC-12, `PublicHomePage`) para no
- * duplicar cómo se interpreta cada bloque.
+ * `PanelVersiones`, incrustado en `EditorSeccionesPage` desde Sprint 7) y la
+ * home pública (UC-12, `PublicHomePage`) para no duplicar cómo se
+ * interpreta cada bloque.
  */
 export function RenderizadorSecciones({
   snapshot,
@@ -153,8 +154,11 @@ function BloqueHero({ config }: { config: HeroConfiguracion }) {
           href={config.enlace_boton}
           target="_blank"
           rel="noreferrer"
-          style={{ backgroundColor: 'var(--color-primario)' }}
-          className="mx-auto rounded-md px-6 py-2.5 text-sm font-medium text-white"
+          style={{
+            backgroundColor: 'var(--color-primario)',
+            color: 'var(--color-texto)',
+          }}
+          className="mx-auto rounded-md px-6 py-2.5 text-sm font-medium"
         >
           {config.texto_boton}
         </a>

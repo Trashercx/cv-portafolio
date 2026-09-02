@@ -1,9 +1,18 @@
 import '@measured/puck/puck.css'
 import { Puck, type Data, type UiState, type Viewports } from '@measured/puck'
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
+import { ConfirmActionDialog } from '@/components/shared/ConfirmActionDialog'
+import { PanelVersiones } from '@/components/publicacion/PanelVersiones'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog'
 import { puckConfig, type PuckSeccionesComponents } from '@/lib/puck-config'
 import { ApiError } from '@/lib/api-client'
 import {
@@ -20,6 +29,7 @@ import {
   type Seccion,
   type TipoSeccion,
 } from '@/features/secciones/types'
+import { usePublicarVersion, useVersiones } from '@/features/publicacion/usePublicacion'
 import { useEditorSeccionesStore } from '@/store/editor-secciones-store'
 
 type EditorData = Data<PuckSeccionesComponents>
@@ -121,7 +131,15 @@ function separarProps(props: EditorContentItem['props']) {
 
 /**
  * UC-07 (Editar estructura visual, drag-and-drop) — editor de Puck sobre
- * las 6 secciones definidas en `docs/plan-tecnico.md`.
+ * las 6 secciones definidas en `docs/plan-tecnico.md` — fusionado con UC-10
+ * (Previsualizar cambios) y UC-11 (Publicar/revertir una versión) en un solo
+ * lugar (Sprint 7): la barra superior tiene el estado Borrador/Publicado
+ * (`useVersiones`) y el botón único "Publicar" (`usePublicarVersion`), y el
+ * botón "Historial de versiones" abre un `Dialog` con `PanelVersiones`
+ * (previsualizar + historial completo + "Deshacer última publicación") sin
+ * salir de esta página. Antes eran dos páginas separadas
+ * (`EditorSeccionesPage` + `PublicacionPage`, hoy eliminada) con una
+ * navegación redundante entre ellas.
  *
  * Estrategia de sincronización: el `content` de Puck se carga una sola vez
  * desde `GET /admin/secciones` y a partir de ahí Puck es dueño de su propio
@@ -145,7 +163,30 @@ export function EditorSeccionesPage() {
   const content = useEditorSeccionesStore((state) => state.content)
   const setContent = useEditorSeccionesStore((state) => state.setContent)
 
-  const navigate = useNavigate()
+  const versionesQuery = useVersiones()
+  const publicar = usePublicarVersion()
+  const [historialAbierto, setHistorialAbierto] = useState(false)
+
+  // `GET /admin/versiones` (ver `useVersiones`) siempre devuelve el
+  // historial más reciente primero: si esa primera fila es un `borrador`
+  // (generado por "Previsualizar cambios"), todavía hay contenido sin
+  // publicar; si es `publicado`, el sitio público ya refleja lo último. No
+  // hace falta comparar contra el `content` de Puck en memoria: el criterio
+  // es el mismo que usa el propio historial de versiones (única fuente de
+  // verdad de "qué se publicó").
+  //
+  // Mientras la query todavía está cargando (`isSuccess` false) no hay datos
+  // reales todavía, así que no se muestra ningún badge — mostrar "Publicado"
+  // por defecto sería engañoso. Un sitio nuevo sin ninguna versión
+  // (`data.length === 0`, nunca se publicó ni previsualizó nada) tampoco
+  // puede considerarse "Publicado": se trata como "Borrador" porque no hay
+  // nada público todavía y es coherente con que el botón "Publicar" sigue
+  // disponible para ese primer publish.
+  const versionMasReciente = versionesQuery.data?.[0]
+  const hayHistorial = versionesQuery.isSuccess && versionesQuery.data.length > 0
+  const hayCambiosSinPublicar =
+    !hayHistorial || versionMasReciente?.estado === 'borrador'
+
   const [initialData, setInitialData] = useState<EditorData | null>(null)
   const [editorKey, setEditorKey] = useState(0)
   const [guardando, setGuardando] = useState(false)
@@ -304,15 +345,37 @@ export function EditorSeccionesPage() {
     <div className="-mx-4 -my-4 grid gap-0">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-background px-4 py-3">
         <div>
-          <h1 className="font-heading text-lg font-semibold">
-            Editor visual de secciones
-          </h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="font-heading text-lg font-semibold">
+              Editor visual de secciones
+            </h1>
+            {versionesQuery.isSuccess ? (
+              <Badge variant={hayCambiosSinPublicar ? 'secondary' : 'default'}>
+                {hayCambiosSinPublicar ? 'Borrador' : 'Publicado'}
+              </Badge>
+            ) : null}
+          </div>
           <p className="text-sm text-muted-foreground">
             Arrastra bloques desde el panel, edita su configuración y su
             visibilidad, y presiona "Guardar cambios" para aplicarlos.
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            variant="outline"
+            onClick={() => setHistorialAbierto(true)}
+          >
+            Historial de versiones
+          </Button>
+          <ConfirmActionDialog
+            trigger={<Button disabled={publicar.isPending}>Publicar</Button>}
+            title="¿Publicar los cambios actuales?"
+            description="Esto reemplaza de inmediato la versión visible al público con el contenido, secciones y tema actuales."
+            confirmLabel="Publicar"
+            pendingLabel="Publicando…"
+            isPending={publicar.isPending}
+            onConfirm={() => publicar.mutate()}
+          />
           <Button
             onClick={guardarCambios}
             disabled={guardando || !initialData}
@@ -321,6 +384,19 @@ export function EditorSeccionesPage() {
           </Button>
         </div>
       </div>
+
+      <Dialog open={historialAbierto} onOpenChange={setHistorialAbierto}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Historial de versiones</DialogTitle>
+            <DialogDescription>
+              Previsualiza los cambios en curso o vuelve a una versión
+              publicada anterior, sin salir del editor.
+            </DialogDescription>
+          </DialogHeader>
+          <PanelVersiones />
+        </DialogContent>
+      </Dialog>
 
       {seccionesQuery.isLoading ? (
         <p className="p-4 text-sm text-muted-foreground">
@@ -363,22 +439,15 @@ export function EditorSeccionesPage() {
               onChange={(data) => setContent(data.content)}
               overrides={{
                 // Puck siempre renderiza su propio botón nativo "Publish" en
-                // el header. Como nunca le pasamos `onPublish`, quedaba
-                // desconectado (el click no hacía nada). El flujo real de
-                // publicación es UC-11 (`/admin/publicacion`,
-                // `PublicacionPage`), con su propio diálogo de confirmación
-                // — a propósito NO se conecta `onPublish` aquí para mantener
-                // ambos flujos (UC-07 estructura vs UC-11 publicación)
-                // separados.
-                headerActions: () => (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => navigate('/admin/publicacion')}
-                  >
-                    Ir a Publicación
-                  </Button>
-                ),
+                // el header, pero nunca le pasamos `onPublish` así que
+                // quedaba desconectado (el click no hacía nada). El flujo
+                // real de publicación (UC-11, con su propio diálogo de
+                // confirmación) ahora vive en la barra superior de esta
+                // misma página (botón "Publicar" fuera del lienzo de Puck),
+                // así que aquí se anula por completo el header nativo de
+                // Puck para no mostrar un botón "Publish" muerto junto al
+                // real.
+                headerActions: () => <></>,
               }}
             />
           </div>
