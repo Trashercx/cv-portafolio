@@ -1,0 +1,264 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap');
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  .app { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; transition: background-color .35s ease, color .35s ease; }
+  .heading { font-family: 'Manrope', ui-sans-serif, system-ui, sans-serif; }
+  a { color: var(--primary); text-decoration: none; }
+  button { font-family: inherit; cursor: pointer; }
+  .card { transition: background-color .35s ease, border-color .35s ease; }
+  .toggle-thumb { transition: transform .3s cubic-bezier(.4,0,.2,1); }
+  .btn-outline:hover { background: var(--muted); }
+  .btn-primary:hover { opacity: .92; }
+  .btn-destructive:hover { opacity: .92; }
+  .icon-btn:hover { background: var(--muted); }
+  .sidebar { transition: width .22s ease; }
+  .sidebar-item:hover { background: var(--sidebar-accent); color: var(--sidebar-accent-foreground); }
+  @keyframes modalIn { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  @keyframes backdropIn { from { opacity: 0; } to { opacity: 1; } }
+  .backdrop { animation: backdropIn .18s ease; }
+  .modal-panel { animation: modalIn .2s cubic-bezier(.2,.8,.2,1); }
+  .preset:hover { border-color: var(--ring); }
+</style>
+</helmet>
+
+<div class="app" style="--background:{{p.background}};--foreground:{{p.foreground}};--card:{{p.card}};--card-foreground:{{p.cardForeground}};--primary:{{p.primary}};--primary-foreground:{{p.primaryForeground}};--secondary:{{p.secondary}};--secondary-foreground:{{p.secondaryForeground}};--muted:{{p.muted}};--muted-foreground:{{p.mutedForeground}};--accent:{{p.accent}};--accent-foreground:{{p.accentForeground}};--destructive:{{p.destructive}};--border:{{p.border}};--ring:{{p.ring}};--sidebar:{{p.sidebar}};--sidebar-foreground:{{p.sidebarForeground}};--sidebar-accent:{{p.sidebarAccent}};--sidebar-accent-foreground:{{p.sidebarAccentForeground}};--sidebar-border:{{p.sidebarBorder}};background-color:var(--background);color:var(--foreground);height:960px;display:flex;overflow:hidden;">
+
+  <aside class="sidebar" style="width:{{sidebarAncho}}px;flex-shrink:0;height:100%;background:var(--sidebar);color:var(--sidebar-foreground);border-right:1px solid var(--sidebar-border);display:flex;flex-direction:column;padding:16px 12px;gap:4px;overflow:hidden;">
+    <div style="display:flex;align-items:center;gap:10px;padding:6px 10px 18px;">
+      <div style="width:30px;height:30px;border-radius:9px;background:var(--primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span class="heading" style="color:var(--primary-foreground);font-weight:800;font-size:14px;">P</span></div>
+      <sc-if value="{{sidebarExpandido}}" hint-placeholder-val="{{true}}"><span class="heading" style="font-weight:700;font-size:15px;white-space:nowrap;">Panel</span></sc-if>
+    </div>
+    <a href="#" class="sidebar-item" style="display:flex;align-items:center;gap:12px;padding:9px 10px;border-radius:8px;font-size:13.5px;font-weight:500;color:var(--sidebar-foreground);opacity:.72;justify-content:{{navJustify}};">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="8" r="4"></circle><path d="M4,20c0-4.4,3.6-7,8-7s8,2.6,8,7"></path></svg>
+      <sc-if value="{{sidebarExpandido}}" hint-placeholder-val="{{true}}"><span style="white-space:nowrap;">Perfil</span></sc-if>
+    </a>
+    <a href="#" class="sidebar-item" style="display:flex;align-items:center;gap:12px;padding:9px 10px;border-radius:8px;font-size:13.5px;font-weight:500;color:var(--sidebar-foreground);opacity:.72;justify-content:{{navJustify}};">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="3" y="3" width="7.5" height="7.5" rx="1.5"></rect><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5"></rect><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5"></rect><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5"></rect></svg>
+      <sc-if value="{{sidebarExpandido}}" hint-placeholder-val="{{true}}"><span style="white-space:nowrap;">Proyectos</span></sc-if>
+    </a>
+    <a href="#" class="sidebar-item" style="display:flex;align-items:center;gap:12px;padding:9px 10px;border-radius:8px;font-size:13.5px;font-weight:500;color:var(--sidebar-foreground);opacity:.72;justify-content:{{navJustify}};">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="8" r="5"></circle><path d="M8,12.6 L6.2,21 L12,17.8 L17.8,21 L16,12.6"></path></svg>
+      <sc-if value="{{sidebarExpandido}}" hint-placeholder-val="{{true}}"><span style="white-space:nowrap;">Certificaciones</span></sc-if>
+    </a>
+    <a href="#" class="sidebar-item" style="display:flex;align-items:center;gap:12px;padding:9px 10px;border-radius:8px;font-size:13.5px;font-weight:500;color:var(--sidebar-foreground);opacity:.72;justify-content:{{navJustify}};">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M12,3 L14.6,8.7 L21,9.5 L16.3,13.9 L17.5,20.2 L12,17.1 L6.5,20.2 L7.7,13.9 L3,9.5 L9.4,8.7 Z"></path></svg>
+      <sc-if value="{{sidebarExpandido}}" hint-placeholder-val="{{true}}"><span style="white-space:nowrap;">Logros</span></sc-if>
+    </a>
+    <a href="#" class="sidebar-item" style="display:flex;align-items:center;gap:12px;padding:9px 10px;border-radius:8px;font-size:13.5px;font-weight:500;color:var(--sidebar-foreground);opacity:.72;justify-content:{{navJustify}};">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="18" cy="5" r="2.6"></circle><circle cx="6" cy="12" r="2.6"></circle><circle cx="18" cy="19" r="2.6"></circle><line x1="8.4" y1="10.6" x2="15.6" y2="6.4"></line><line x1="8.4" y1="13.4" x2="15.6" y2="17.6"></line></svg>
+      <sc-if value="{{sidebarExpandido}}" hint-placeholder-val="{{true}}"><span style="white-space:nowrap;">Redes sociales</span></sc-if>
+    </a>
+    <a href="#" class="sidebar-item" style="display:flex;align-items:center;gap:12px;padding:9px 10px;border-radius:8px;font-size:13.5px;font-weight:500;color:var(--sidebar-foreground);opacity:.72;justify-content:{{navJustify}};">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M12,2.5 L21,7.5 L12,12.5 L3,7.5 Z"></path><polyline points="3,12.5 12,17.5 21,12.5"></polyline><polyline points="3,17 12,22 21,17"></polyline></svg>
+      <sc-if value="{{sidebarExpandido}}" hint-placeholder-val="{{true}}"><span style="white-space:nowrap;">Editor visual</span></sc-if>
+    </a>
+    <a href="#" class="sidebar-item" style="display:flex;align-items:center;gap:12px;padding:9px 10px;border-radius:8px;font-size:13.5px;font-weight:600;background:var(--sidebar-accent);color:var(--sidebar-accent-foreground);justify-content:{{navJustify}};">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="9"></circle><circle cx="9" cy="9.5" r="1.15" fill="currentColor" stroke="none"></circle><circle cx="14.5" cy="8.5" r="1.15" fill="currentColor" stroke="none"></circle><circle cx="16.5" cy="13" r="1.15" fill="currentColor" stroke="none"></circle><circle cx="10.5" cy="15.5" r="1.15" fill="currentColor" stroke="none"></circle></svg>
+      <sc-if value="{{sidebarExpandido}}" hint-placeholder-val="{{true}}"><span style="white-space:nowrap;">Tema</span></sc-if>
+    </a>
+    <a href="#" class="sidebar-item" style="display:flex;align-items:center;gap:12px;padding:9px 10px;border-radius:8px;font-size:13.5px;font-weight:500;color:var(--sidebar-foreground);opacity:.72;justify-content:{{navJustify}};">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="3" y="4" width="18" height="16" rx="2"></rect><circle cx="8.5" cy="9.5" r="1.4" fill="currentColor" stroke="none"></circle><path d="M21,15.5 L15.5,10.5 L6,20"></path></svg>
+      <sc-if value="{{sidebarExpandido}}" hint-placeholder-val="{{true}}"><span style="white-space:nowrap;">Biblioteca de medios</span></sc-if>
+    </a>
+  </aside>
+
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;height:100%;">
+    <header style="position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 28px;border-bottom:1px solid var(--border);background:var(--background);flex-shrink:0;">
+      <button onClick="{{toggleSidebar}}" aria-label="Mostrar u ocultar la barra lateral" class="icon-btn" style="display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--foreground);">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><line x1="3.5" y1="6.5" x2="20.5" y2="6.5"></line><line x1="3.5" y1="12" x2="20.5" y2="12"></line><line x1="3.5" y1="17.5" x2="20.5" y2="17.5"></line></svg>
+      </button>
+      <div style="flex:1;"></div>
+      <div style="display:flex;align-items:center;gap:16px;flex-shrink:0;">
+        <button onClick="{{toggleTema}}" aria-label="Cambiar entre modo claro y oscuro" style="position:relative;width:52px;height:28px;border-radius:999px;border:1px solid var(--border);background:var(--muted);padding:0;display:flex;align-items:center;">
+          <span class="toggle-thumb" style="position:absolute;top:2px;left:2px;width:22px;height:22px;border-radius:999px;background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center;transform:translateX({{despl}}px);">
+            <sc-if value="{{p.oscuro}}" hint-placeholder-val="{{false}}"><svg width="13" height="13" viewBox="0 0 24 24" fill="var(--foreground)" stroke="none"><path d="M20,12.5A8,8 0 1,1 11.5,4 A6,6 0 0,0 20,12.5 Z"></path></svg></sc-if>
+            <sc-if value="{{p.claro}}" hint-placeholder-val="{{true}}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--foreground)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="2.5" x2="12" y2="5"></line><line x1="12" y1="19" x2="12" y2="21.5"></line><line x1="2.5" y1="12" x2="5" y2="12"></line><line x1="19" y1="12" x2="21.5" y2="12"></line><line x1="5.3" y1="5.3" x2="7.1" y2="7.1"></line><line x1="16.9" y1="16.9" x2="18.7" y2="18.7"></line><line x1="5.3" y1="18.7" x2="7.1" y2="16.9"></line><line x1="16.9" y1="7.1" x2="18.7" y2="5.3"></line></svg></sc-if>
+          </span>
+        </button>
+        <div style="width:1px;height:22px;background:var(--border);"></div>
+        <div style="display:flex;align-items:center;gap:9px;">
+          <div style="width:30px;height:30px;border-radius:999px;background:var(--primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span class="heading" style="color:var(--primary-foreground);font-weight:700;font-size:11.5px;">OB</span></div>
+          <span style="font-size:13px;color:var(--foreground);white-space:nowrap;">Oscar Burga</span>
+        </div>
+        <button class="btn-outline" style="display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--foreground);font-size:13px;font-weight:500;white-space:nowrap;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9,21 H5 a2,2 0 0 1,-2,-2 V5 a2,2 0 0 1,2,-2 h4"></path><polyline points="16,17 21,12 16,7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+          Cerrar sesión
+        </button>
+      </div>
+    </header>
+
+    <main style="flex:1;min-height:0;overflow-y:auto;padding:32px 32px 60px;">
+      <div style="max-width:1200px;margin:0 auto;">
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:24px;">
+          <div>
+            <h1 class="heading" style="margin:0;font-size:23px;font-weight:700;">Tema visual</h1>
+            <p style="margin:6px 0 0;font-size:14px;color:var(--muted-foreground);">El tema activo define los colores y la tipografía del sitio público.</p>
+          </div>
+          <button onClick="{{abrirModal}}" class="btn-primary" style="display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 16px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:13px;font-weight:600;white-space:nowrap;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            Nuevo tema
+          </button>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:14px;">
+          <div class="card" style="border:2px solid var(--primary);border-radius:14px;background:var(--card);padding:18px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;">
+              <p class="heading" style="margin:0;font-size:14.5px;font-weight:700;">Índigo Profesional</p>
+              <span style="display:inline-flex;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;background:var(--primary);color:var(--primary-foreground);">Activo</span>
+            </div>
+            <div style="display:flex;gap:6px;margin-top:12px;">
+              <span style="width:22px;height:22px;border-radius:999px;background:#4338ca;border:1px solid var(--border);"></span>
+              <span style="width:22px;height:22px;border-radius:999px;background:#7c3aed;border:1px solid var(--border);"></span>
+              <span style="width:22px;height:22px;border-radius:999px;background:#ffffff;border:1px solid var(--border);"></span>
+              <span style="width:22px;height:22px;border-radius:999px;background:#0f172a;border:1px solid var(--border);"></span>
+            </div>
+            <p style="margin:10px 0 12px;font-size:12.5px;color:var(--muted-foreground);">Manrope · claro</p>
+            <button disabled style="width:100%;height:32px;border-radius:8px;border:1px solid var(--border);background:var(--muted);color:var(--muted-foreground);font-size:12.5px;font-weight:500;">Activo</button>
+          </div>
+
+          <div class="card" style="border:1px solid var(--border);border-radius:14px;background:var(--card);padding:18px;">
+            <p class="heading" style="margin:0;font-size:14.5px;font-weight:700;">Océano</p>
+            <div style="display:flex;gap:6px;margin-top:12px;">
+              <span style="width:22px;height:22px;border-radius:999px;background:#0369a1;border:1px solid var(--border);"></span>
+              <span style="width:22px;height:22px;border-radius:999px;background:#0891b2;border:1px solid var(--border);"></span>
+              <span style="width:22px;height:22px;border-radius:999px;background:#f0f9ff;border:1px solid var(--border);"></span>
+              <span style="width:22px;height:22px;border-radius:999px;background:#0c4a6e;border:1px solid var(--border);"></span>
+            </div>
+            <p style="margin:10px 0 12px;font-size:12.5px;color:var(--muted-foreground);">Manrope · claro</p>
+            <div style="display:flex;gap:8px;">
+              <button class="btn-outline" style="flex:1;height:32px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--foreground);font-size:12.5px;font-weight:500;">Activar</button>
+              <button class="btn-destructive" style="height:32px;width:32px;border-radius:8px;border:none;background:var(--destructive);color:#fff;display:flex;align-items:center;justify-content:center;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"></line><line x1="19" y1="5" x2="5" y2="19"></line></svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="card" style="border:1px solid var(--border);border-radius:14px;background:var(--card);padding:18px;">
+            <p class="heading" style="margin:0;font-size:14.5px;font-weight:700;">Medianoche</p>
+            <div style="display:flex;gap:6px;margin-top:12px;">
+              <span style="width:22px;height:22px;border-radius:999px;background:#6366f1;border:1px solid var(--border);"></span>
+              <span style="width:22px;height:22px;border-radius:999px;background:#38bdf8;border:1px solid var(--border);"></span>
+              <span style="width:22px;height:22px;border-radius:999px;background:#0b1220;border:1px solid var(--border);"></span>
+              <span style="width:22px;height:22px;border-radius:999px;background:#e2e8f0;border:1px solid var(--border);"></span>
+            </div>
+            <p style="margin:10px 0 12px;font-size:12.5px;color:var(--muted-foreground);">Manrope · oscuro</p>
+            <div style="display:flex;gap:8px;">
+              <button class="btn-outline" style="flex:1;height:32px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--foreground);font-size:12.5px;font-weight:500;">Activar</button>
+              <button class="btn-destructive" style="height:32px;width:32px;border-radius:8px;border:none;background:var(--destructive);color:#fff;display:flex;align-items:center;justify-content:center;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"></line><line x1="19" y1="5" x2="5" y2="19"></line></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <sc-if value="{{modalAbierto}}" hint-placeholder-val="{{false}}">
+    <div onClick="{{cerrarModal}}" class="backdrop" style="position:absolute;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;z-index:50;padding:24px;">
+      <div id="tema-modal-panel" role="dialog" aria-modal="true" aria-labelledby="tema-modal-titulo" onClick="{{detenerPropagacion}}" class="modal-panel card" style="width:100%;max-width:520px;max-height:calc(100% - 24px);overflow-y:auto;background:var(--card);color:var(--card-foreground);border:1px solid var(--border);border-radius:16px;box-shadow:0 20px 50px rgba(0,0,0,.35);">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border-bottom:1px solid var(--border);">
+          <h2 id="tema-modal-titulo" class="heading" style="margin:0;font-size:17px;font-weight:700;">Nuevo tema</h2>
+          <button onClick="{{cerrarModal}}" aria-label="Cerrar" class="icon-btn" style="display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;border:none;background:transparent;color:var(--muted-foreground);">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="5" x2="19" y2="19"></line><line x1="19" y1="5" x2="5" y2="19"></line></svg>
+          </button>
+        </div>
+        <div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px;">
+          <div>
+            <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px;">Plantilla predefinida (opcional)</label>
+            <div style="display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:8px;">
+              <div class="preset" style="border:1.5px solid var(--ring);border-radius:10px;padding:10px;cursor:pointer;">
+                <div style="display:flex;gap:4px;"><span style="width:14px;height:14px;border-radius:999px;background:#0369a1;"></span><span style="width:14px;height:14px;border-radius:999px;background:#0891b2;"></span><span style="width:14px;height:14px;border-radius:999px;background:#f0f9ff;border:1px solid var(--border);"></span></div>
+                <p style="margin:6px 0 0;font-size:11.5px;font-weight:600;">Océano</p>
+              </div>
+              <div class="preset" style="border:1.5px solid var(--border);border-radius:10px;padding:10px;cursor:pointer;">
+                <div style="display:flex;gap:4px;"><span style="width:14px;height:14px;border-radius:999px;background:#ea580c;"></span><span style="width:14px;height:14px;border-radius:999px;background:#f43f5e;"></span><span style="width:14px;height:14px;border-radius:999px;background:#fff7ed;border:1px solid var(--border);"></span></div>
+                <p style="margin:6px 0 0;font-size:11.5px;font-weight:600;">Atardecer</p>
+              </div>
+              <div class="preset" style="border:1.5px solid var(--border);border-radius:10px;padding:10px;cursor:pointer;">
+                <div style="display:flex;gap:4px;"><span style="width:14px;height:14px;border-radius:999px;background:#16a34a;"></span><span style="width:14px;height:14px;border-radius:999px;background:#84cc16;"></span><span style="width:14px;height:14px;border-radius:999px;background:#f0fdf4;border:1px solid var(--border);"></span></div>
+                <p style="margin:6px 0 0;font-size:11.5px;font-weight:600;">Bosque</p>
+              </div>
+            </div>
+          </div>
+          <div>
+            <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">Nombre</label>
+            <input value="Océano" style="width:100%;border:1px solid var(--border);border-radius:8px;background:var(--background);color:var(--foreground);padding:9px 12px;font-size:14px;outline:none;" />
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+            <div>
+              <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">Color primario</label>
+              <div style="display:flex;align-items:center;gap:8px;border:1px solid var(--border);border-radius:8px;padding:6px 10px;"><span style="width:18px;height:18px;border-radius:5px;background:#0369a1;"></span><span style="font-size:13px;">#0369a1</span></div>
+            </div>
+            <div>
+              <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">Color secundario</label>
+              <div style="display:flex;align-items:center;gap:8px;border:1px solid var(--border);border-radius:8px;padding:6px 10px;"><span style="width:18px;height:18px;border-radius:5px;background:#0891b2;"></span><span style="font-size:13px;">#0891b2</span></div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:10px;padding:16px 24px;border-top:1px solid var(--border);">
+          <button onClick="{{cerrarModal}}" class="btn-outline" style="height:36px;padding:0 16px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--foreground);font-size:13px;font-weight:500;">Cancelar</button>
+          <button onClick="{{cerrarModal}}" class="btn-primary" style="height:36px;padding:0 18px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:13px;font-weight:600;">Crear tema</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"oscuro":{"editor":"boolean","default":false,"section":"Tema"}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { oscuro: props.oscuro ?? false, sidebarColapsado: false, modalAbierto: false };
+    this.handleKeyDown = this.handleKeyDown.bind(this);
+  }
+  componentDidMount() { document.addEventListener('keydown', this.handleKeyDown); }
+  componentWillUnmount() { document.removeEventListener('keydown', this.handleKeyDown); }
+  componentDidUpdate(prevProps, prevState) {
+    if (this.state.modalAbierto && !prevState.modalAbierto) {
+      var panel = document.getElementById('tema-modal-panel');
+      if (panel) { var f = panel.querySelectorAll('input, button, [tabindex]'); if (f.length) f[0].focus(); }
+    }
+  }
+  handleKeyDown(e) {
+    if (!this.state.modalAbierto) return;
+    if (e.key === 'Escape') { this.setState({ modalAbierto: false }); return; }
+    if (e.key === 'Tab') {
+      var panel = document.getElementById('tema-modal-panel');
+      if (!panel) return;
+      var focusables = Array.prototype.slice.call(panel.querySelectorAll('input, button, [tabindex]:not([tabindex="-1"])'));
+      if (!focusables.length) return;
+      var first = focusables[0], last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  }
+  renderVals() {
+    const claroTokens = { background: 'oklch(1 0 0)', foreground: 'oklch(0.145 0 0)', card: 'oklch(1 0 0)', cardForeground: 'oklch(0.145 0 0)', primary: 'oklch(0.53 0.19 265)', primaryForeground: 'oklch(0.98 0.01 265)', secondary: 'oklch(0.96 0.02 265)', secondaryForeground: 'oklch(0.33 0.08 265)', muted: 'oklch(0.97 0 0)', mutedForeground: 'oklch(0.556 0 0)', accent: 'oklch(0.95 0.03 265)', accentForeground: 'oklch(0.33 0.08 265)', destructive: 'oklch(0.577 0.245 27.325)', border: 'oklch(0.922 0 0)', ring: 'oklch(0.58 0.19 265)', sidebar: 'oklch(0.985 0 0)', sidebarForeground: 'oklch(0.145 0 0)', sidebarAccent: 'oklch(0.95 0.03 265)', sidebarAccentForeground: 'oklch(0.33 0.08 265)', sidebarBorder: 'oklch(0.922 0 0)' };
+    const oscuroTokens = { background: 'oklch(0.145 0 0)', foreground: 'oklch(0.985 0 0)', card: 'oklch(0.205 0 0)', cardForeground: 'oklch(0.985 0 0)', primary: 'oklch(0.74 0.15 265)', primaryForeground: 'oklch(0.18 0.02 265)', secondary: 'oklch(0.32 0.05 265)', secondaryForeground: 'oklch(0.9 0.02 265)', muted: 'oklch(0.269 0 0)', mutedForeground: 'oklch(0.708 0 0)', accent: 'oklch(0.32 0.06 265)', accentForeground: 'oklch(0.92 0.02 265)', destructive: 'oklch(0.704 0.191 22.216)', border: 'oklch(1 0 0 / 10%)', ring: 'oklch(0.74 0.15 265)', sidebar: 'oklch(0.205 0 0)', sidebarForeground: 'oklch(0.985 0 0)', sidebarAccent: 'oklch(0.32 0.06 265)', sidebarAccentForeground: 'oklch(0.92 0.02 265)', sidebarBorder: 'oklch(1 0 0 / 10%)' };
+    const isOscuro = !!this.state.oscuro;
+    const base = isOscuro ? oscuroTokens : claroTokens;
+    const p = Object.assign({}, base, { oscuro: isOscuro, claro: !isOscuro });
+    const toggleTema = () => this.setState({ oscuro: !this.state.oscuro });
+    const toggleSidebar = () => this.setState({ sidebarColapsado: !this.state.sidebarColapsado });
+    const abrirModal = () => this.setState({ modalAbierto: true });
+    const cerrarModal = () => this.setState({ modalAbierto: false });
+    const detenerPropagacion = (e) => { e.stopPropagation(); };
+    const sidebarExpandido = !this.state.sidebarColapsado;
+    return { p, toggleTema, toggleSidebar, abrirModal, cerrarModal, detenerPropagacion, despl: isOscuro ? 28 : 2, sidebarAncho: sidebarExpandido ? 236 : 76, sidebarExpandido, navJustify: sidebarExpandido ? 'flex-start' : 'center', modalAbierto: this.state.modalAbierto };
+  }
+}
+</script>
+</body>
+</html>
