@@ -26,6 +26,17 @@ const IMAGEN_B: Media = {
   created_at: '2024-01-02T00:00:00.000Z',
 }
 
+const DOCUMENTO_PDF: Media = {
+  id: 'media-pdf',
+  url: 'https://cdn.example.com/certificado.pdf',
+  s3_key: 'certificado.pdf',
+  tipo: 'pdf',
+  ancho: null,
+  alto: null,
+  alt_text: 'Certificado AWS',
+  created_at: '2024-01-03T00:00:00.000Z',
+}
+
 const useMediaListMock = vi.fn()
 
 vi.mock('@/features/media/useMediaLibrary', () => ({
@@ -81,5 +92,53 @@ describe('MediaField', () => {
     await user.click(miniaturaB)
 
     expect(onUploadedMock).toHaveBeenCalledWith(IMAGEN_B)
+  })
+
+  it('por defecto (sin tiposPermitidos) solo acepta imagen en el input de archivo', () => {
+    useMediaListMock.mockReturnValue({ data: [], isLoading: false })
+    render(<MediaField label="Foto de perfil" onUploaded={onUploadedMock} />)
+
+    expect(screen.getByLabelText(/foto de perfil/i)).toHaveAttribute(
+      'accept',
+      'image/*',
+    )
+  })
+
+  it('con tiposPermitidos=["imagen","pdf"] (certificación), el input acepta ambos y la biblioteca no filtra por tipo en el servidor', async () => {
+    useMediaListMock.mockReturnValue({
+      data: [IMAGEN_A, DOCUMENTO_PDF],
+      isLoading: false,
+    })
+    const user = userEvent.setup()
+    render(
+      <MediaField
+        label="Logo o documento del certificado (imagen o PDF)"
+        tiposPermitidos={['imagen', 'pdf']}
+        onUploaded={onUploadedMock}
+      />,
+    )
+
+    expect(
+      screen.getByLabelText(/logo o documento del certificado/i),
+    ).toHaveAttribute('accept', 'image/*,application/pdf')
+
+    await user.click(
+      screen.getByRole('tab', { name: /elegir de biblioteca/i }),
+    )
+    await user.click(
+      screen.getByRole('button', { name: /elegir de biblioteca/i }),
+    )
+
+    // Con más de un tipo permitido no hay filtro combinado en el backend
+    // (`GET /admin/media?tipo=` acepta un solo valor): se pide todo y se
+    // filtra en el cliente.
+    expect(useMediaListMock).toHaveBeenCalledWith(undefined)
+
+    // El PDF se ve como ítem seleccionable (ícono, no un <img> roto) y
+    // elegirlo llama a onUploaded con ese Media.
+    const itemPdf = await screen.findByText('Certificado AWS')
+    await user.click(itemPdf)
+
+    expect(onUploadedMock).toHaveBeenCalledWith(DOCUMENTO_PDF)
   })
 })

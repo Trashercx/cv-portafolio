@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useNavigate, useParams } from 'react-router-dom'
 import { MediaField } from '@/components/media/MediaField'
@@ -23,6 +23,8 @@ import {
   useCertificacion,
   useCrearCertificacion,
 } from '@/features/certificaciones/useCertificaciones'
+import { useMedia } from '@/features/media/useMediaLibrary'
+import type { Media } from '@/features/media/types'
 
 const DEFAULT_VALUES: CertificacionFormValues = {
   nombre: '',
@@ -46,6 +48,15 @@ export function CertificacionFormPage() {
   const crear = useCrearCertificacion()
   const actualizar = useActualizarCertificacion(id ?? '')
 
+  // `Certificacion` (admin) solo trae `logo_media_id`, no el `Media`
+  // resuelto (a diferencia del snapshot público) — se resuelve acá para
+  // poder previsualizarlo (imagen o PDF) al editar una certificación ya
+  // guardada. Se prioriza `logoSeleccionado` (elegido/subido en esta misma
+  // sesión, con su `Media` completo a mano) para no esperar a un refetch.
+  const { data: logoExistente } = useMedia(certificacion?.logo_media_id ?? undefined)
+  const [logoSeleccionado, setLogoSeleccionado] = useState<Media | null>(null)
+  const logoParaPrevisualizar = logoSeleccionado ?? logoExistente ?? null
+
   const form = useForm<CertificacionFormValues>({
     resolver: zodResolver(certificacionSchema),
     defaultValues: DEFAULT_VALUES,
@@ -65,6 +76,11 @@ export function CertificacionFormPage() {
       logo_media_id: certificacion.logo_media_id ?? undefined,
       orden: certificacion.orden,
     })
+    // Descarta cualquier selección local de una certificación anterior (la
+    // ruta `/admin/certificaciones/:id` reutiliza el mismo componente al
+    // navegar entre certificaciones): `logoExistente` se resuelve solo con
+    // el `logo_media_id` fresco de abajo.
+    setLogoSeleccionado(null)
   }, [certificacion, form])
 
   const mutacionActiva = esNuevo ? crear : actualizar
@@ -213,18 +229,23 @@ export function CertificacionFormPage() {
             />
 
             <MediaField
-              label="Logo (opcional)"
+              label="Logo o documento del certificado (imagen o PDF)"
+              tiposPermitidos={['imagen', 'pdf']}
               currentMediaId={form.watch('logo_media_id')}
-              onUploaded={(media) =>
+              currentPreviewUrl={logoParaPrevisualizar?.url}
+              currentMediaTipo={logoParaPrevisualizar?.tipo}
+              onUploaded={(media) => {
                 form.setValue('logo_media_id', media.id, {
                   shouldDirty: true,
                 })
-              }
-              onClear={() =>
+                setLogoSeleccionado(media)
+              }}
+              onClear={() => {
                 form.setValue('logo_media_id', undefined, {
                   shouldDirty: true,
                 })
-              }
+                setLogoSeleccionado(null)
+              }}
             />
 
             <Button
