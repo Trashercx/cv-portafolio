@@ -147,6 +147,17 @@ Pruebas: Supertest de la transición borrador → publicado → revertido, y de 
 
 Dockerfiles multi-stage para `apps/api` y `apps/web`; definición de servicios en Dokploy/Coolify; paso de CD en GitHub Actions (build de imágenes o webhook de despliegue); cron de `pg_dump` con copia a S3; checklist de variables de entorno de producción; smoke test post-despliegue (login + `GET /sitio`).
 
+### Sprint 8 — Fase 2: foto de perfil en el hero, skills y fondo de página animado (UC-07 ext., UC-15, UC-16)
+
+Continuación del rediseño visual aprobado en las rondas de `/design` tras la Fase 1 (sidebar admin, modales). El botón de CV y el bloque "Sobre mí" ya se implementaron en Sprint 7 y no se tocan aquí.
+
+- **`skills`:** módulo Nest nuevo, patrón "contenido propio del admin" (como `logros`, sin catálogo compartido): CRUD completo (`GET/POST/PATCH/DELETE /admin/skills`), campo `icono` como string libre (mismo patrón que `PLATAFORMA_RED.icono_defecto`, resuelto a un ícono real en el frontend vía `simple-icons`/`lucide-react`).
+- **`fondo-sitio`:** módulo Nest nuevo, mismo patrón que `tema` (índice único parcial en SQL manual + transacción de activación exclusiva en el servicio): CRUD + `PATCH /admin/fondos/:id/activar`. `tipo` es uno de `solido | degradado_animado | aurora_animada | particulas | cuadricula_animada`; `configuracion` (jsonb) solo guarda `velocidad` y `opacidad`, compartidos por los 5 tipos.
+- **`secciones`:** `HeroConfiguracionDto` gana `mostrar_foto_perfil`, `posicion_foto`, `estilo_foto` (reutiliza `PERFIL.imagen_perfil_id`, no crea un `media_id` propio del hero); nuevo `SkillsConfiguracionDto` (`direccion`, `velocidad`) para el nuevo `tipo_seccion='skills'`.
+- **`versiones-sitio`:** `SnapshotSitio` gana `skills` (lista completa del catálogo) y `fondo` (el `FondoSitio` activo o `null`); `VersionesSitioService.armarSnapshot()` los arma junto al resto vía `Promise.all`.
+- **Frontend:** nuevo bloque `skills` en la config de Puck; `RenderizadorSecciones` gana `BloqueSkills` (marquesina infinita CSS) y extiende `BloqueHero` con la foto de perfil; `PublicHomePage` gana un layer de fondo animado (`FondoAnimado`), independiente del wrapper de variables CSS de `TEMA`; nuevos `@keyframes` en `index.css`; páginas admin `SkillsListPage` y `FondoSitioPage` (esta última calco de `TemaPage`, pero independiente — nunca una pestaña dentro de ella).
+- **Pruebas:** Jest de exclusividad de `FONDO_SITIO.activo` (mismo test que ya existe para `TEMA`); Supertest de validación de los DTOs nuevos; Vitest/RTL del bloque `skills` (marquesina) y del hero con foto.
+
 ## 3. Índice UC → tareas → subagente → sprint
 
 `code-reviewer` y `release-manager` aplican a **toda** fila antes de cerrar la tarea o hacer commit — no se repiten en cada celda.
@@ -159,7 +170,7 @@ Dockerfiles multi-stage para `apps/api` y `apps/web`; definición de servicios e
 | UC-04 | Módulo `certificaciones`, endpoints CRUD, pantalla CRUD | backend-nestjs → frontend-react | 1, 2 |
 | UC-05 | Módulo `logros`, endpoints CRUD, pantalla CRUD | backend-nestjs → frontend-react | 1, 2 |
 | UC-06 | Módulo `redes-sociales` + catálogo `plataformas-red`, endpoints CRUD, pantalla CRUD | backend-nestjs → frontend-react | 1, 2 |
-| UC-07 | Módulo `secciones`, validación por `tipo_seccion`, reordenar/visibilidad, integración Puck | backend-nestjs → frontend-react | 3 |
+| UC-07 | Módulo `secciones`, validación por `tipo_seccion`, reordenar/visibilidad, integración Puck (Sprint 8: + campos de foto en `hero`, nuevo bloque `skills`) | backend-nestjs → frontend-react | 3, 8 |
 | UC-08 | Módulo `tema`, índice único parcial (SQL manual), transacción de activación exclusiva, selector de tema en UI | db-schema → backend-nestjs → frontend-react | 3 |
 | UC-09 | Biblioteca de media completa, chequeo de "usado en", galería en UI | backend-nestjs → frontend-react | 3 |
 | UC-10 | Endpoint de preview (borrador), vista previa en UI leyendo contenido en vivo | backend-nestjs → frontend-react | 4 |
@@ -167,6 +178,8 @@ Dockerfiles multi-stage para `apps/api` y `apps/web`; definición de servicios e
 | UC-12 | Módulo `publico`, `GET /sitio` resolviendo contra snapshot publicado, home pública | backend-nestjs → frontend-react | 4 |
 | UC-13 | `GET /proyectos/:id` y `GET /certificaciones/:id` contra snapshot, páginas de detalle público | backend-nestjs → frontend-react | 4 |
 | UC-14 | `GET /redes` y `GET /cv` públicos, componente de redes + descarga de CV | backend-nestjs → frontend-react | 4 |
+| UC-15 | Módulo `fondo-sitio`, índice único parcial (SQL manual), transacción de activación exclusiva, página de configuración en UI | db-schema → backend-nestjs → frontend-react | 8 |
+| UC-16 | Módulo `skills`, endpoints CRUD, bloque `skills` en Puck (marquesina), pantalla CRUD | db-schema → backend-nestjs → frontend-react | 8 |
 
 ## 4. Reglas consolidadas (checklist de referencia rápida)
 
@@ -176,8 +189,8 @@ Dockerfiles multi-stage para `apps/api` y `apps/web`; definición de servicios e
 **Esquema de datos**
 - Nombres de tabla/columna en español y snake_case.
 - Verificar 3FN en cada cambio: nada de listas en una sola columna, ni datos repetidos que deberían ser catálogo.
-- Las dos columnas JSONB (`SECCION.configuracion`, `VERSION_SITIO.snapshot`) son las únicas excepciones deliberadas.
-- Solo un `TEMA.activo = true` por administrador (índice único parcial + transacción en el servicio).
+- Las tres columnas JSONB (`SECCION.configuracion`, `VERSION_SITIO.snapshot`, `FONDO_SITIO.configuracion`) son las únicas excepciones deliberadas.
+- Solo un `TEMA.activo = true` y un `FONDO_SITIO.activo = true` por administrador (índice único parcial + transacción en el servicio, mismo patrón para ambos).
 - Todo cambio de esquema pasa por el subagente `db-schema`, que genera la migración.
 
 **Backend**
@@ -229,12 +242,13 @@ En orden:
 9. Definir el catálogo inicial de `TECNOLOGIA` (propuesta ajustable): React, NestJS, TypeScript, PostgreSQL, Prisma, Node.js, Tailwind CSS, Docker — más las tecnologías reales de los proyectos que se carguen.
 10. Definir el catálogo inicial de `PLATAFORMA_RED` (propuesta ajustable): LinkedIn, GitHub, Twitter/X, Correo, Sitio personal — cada uno con su `icono_defecto`.
 11. Definir los tipos de bloque de `SECCION.configuracion` con parámetros mínimos (propuesta ajustable):
-    - `hero`: título, subtítulo, imagen de fondo (`media_id`), texto de botón, enlace de botón.
+    - `hero`: título, subtítulo, imagen de fondo (`media_id`), texto de botón, enlace de botón. Sprint 8: + `mostrar_foto_perfil: boolean`, `posicion_foto: 'ninguna'|'centrada'|'esquina_superior'|'esquina_inferior'`, `estilo_foto: 'con_marco'|'sin_fondo'` (reutiliza `PERFIL.imagen_perfil_id`, no un `media_id` propio).
     - `sobre-mi`: usa `PERFIL` directamente; único parámetro propio: `mostrar_foto: boolean`.
     - `proyectos`: `cantidad_a_mostrar`, `solo_destacados: boolean`.
     - `certificaciones`: `orden: 'fecha' | 'manual'`.
     - `logros`: `categoria_filtro` (opcional).
     - `contacto`: `mostrar_formulario: boolean` (si no hay formulario en v1, solo enlaces de redes + CV).
+    - `skills` (Sprint 8): `direccion: 'izquierda'|'derecha'`, `velocidad: 'lenta'|'media'|'rapida'` — controla solo la presentación del carrusel; los skills mostrados vienen completos del catálogo `SKILL` (igual que `logros`/`proyectos` vienen completos en el snapshot y el bloque los filtra/ordena).
 12. Definir la estructura de carpetas del bucket S3: `perfil/`, `proyectos/`, `certificaciones/`, `logros/`, `backups/`; convención de nombre de archivo `{uuid}.{extension}` para evitar colisiones y filtrado accidental por nombre original.
 13. Fijar la estrategia de almacenamiento del JWT en frontend (cookie httpOnly vs localStorage, ver Sprint 0) antes de escribir el guard/cliente HTTP.
 14. Fijar la semántica exacta de "revertir versión" (nueva fila copiando snapshot antiguo, ver Sprint 4) antes de implementar `VersionSitioService`.
