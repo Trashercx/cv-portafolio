@@ -480,6 +480,9 @@ describe('Versiones del sitio y sitio público (e2e, UC-10 a UC-14)', () => {
           titulo: `Titulo hero e2e ${sufijo}`,
           subtitulo: 'Subtitulo hero e2e',
           imagen_fondo_media_id: media.body.id,
+          mostrar_foto_perfil: true,
+          posicion_foto: 'centrada',
+          estilo_foto: 'con_marco',
         },
       })
       .expect(201);

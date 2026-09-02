@@ -2,11 +2,13 @@ import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CertificacionesService } from '../certificaciones/certificaciones.service';
+import { FondoSitioService } from '../fondo-sitio/fondo-sitio.service';
 import { LogrosService } from '../logros/logros.service';
 import { PerfilService } from '../perfil/perfil.service';
 import { ProyectosService } from '../proyectos/proyectos.service';
 import { RedesSocialesService } from '../redes-sociales/redes-sociales.service';
 import { SeccionesService } from '../secciones/secciones.service';
+import { SkillsService } from '../skills/skills.service';
 import { TemaService } from '../tema/tema.service';
 import { SnapshotSitio } from './snapshot.types';
 import { VersionesSitioService } from './versiones-sitio.service';
@@ -31,6 +33,8 @@ describe('VersionesSitioService (UC-10 Previsualizar, UC-11 Publicar/revertir)',
   let certificacionesService: { listarConLogo: jest.Mock };
   let logrosService: { listar: jest.Mock };
   let redesSocialesService: { listar: jest.Mock };
+  let skillsService: { listar: jest.Mock };
+  let fondoSitioService: { obtenerActivo: jest.Mock };
 
   const snapshotEsperado = {
     perfil: { id: 'perfil-1' },
@@ -40,6 +44,8 @@ describe('VersionesSitioService (UC-10 Previsualizar, UC-11 Publicar/revertir)',
     certificaciones: [{ id: 'cert-1' }],
     logros: [{ id: 'logro-1' }],
     redes_sociales: [{ id: 'red-1' }],
+    skills: [{ id: 'skill-1' }],
+    fondo: { id: 'fondo-1' },
   };
 
   beforeEach(async () => {
@@ -77,6 +83,12 @@ describe('VersionesSitioService (UC-10 Previsualizar, UC-11 Publicar/revertir)',
     redesSocialesService = {
       listar: jest.fn().mockResolvedValue(snapshotEsperado.redes_sociales),
     };
+    skillsService = {
+      listar: jest.fn().mockResolvedValue(snapshotEsperado.skills),
+    };
+    fondoSitioService = {
+      obtenerActivo: jest.fn().mockResolvedValue(snapshotEsperado.fondo),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -89,6 +101,8 @@ describe('VersionesSitioService (UC-10 Previsualizar, UC-11 Publicar/revertir)',
         { provide: CertificacionesService, useValue: certificacionesService },
         { provide: LogrosService, useValue: logrosService },
         { provide: RedesSocialesService, useValue: redesSocialesService },
+        { provide: SkillsService, useValue: skillsService },
+        { provide: FondoSitioService, useValue: fondoSitioService },
       ],
     }).compile();
 
@@ -112,6 +126,8 @@ describe('VersionesSitioService (UC-10 Previsualizar, UC-11 Publicar/revertir)',
       expect(certificacionesService.listarConLogo).toHaveBeenCalled();
       expect(logrosService.listar).toHaveBeenCalled();
       expect(redesSocialesService.listar).toHaveBeenCalled();
+      expect(skillsService.listar).toHaveBeenCalled();
+      expect(fondoSitioService.obtenerActivo).toHaveBeenCalledWith('admin-1');
 
       expect(prisma.versionSitio.create).toHaveBeenCalledWith({
         data: {

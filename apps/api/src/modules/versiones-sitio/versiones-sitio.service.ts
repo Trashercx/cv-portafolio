@@ -6,11 +6,13 @@ import {
 import { Prisma } from '../../../generated/prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CertificacionesService } from '../certificaciones/certificaciones.service';
+import { FondoSitioService } from '../fondo-sitio/fondo-sitio.service';
 import { LogrosService } from '../logros/logros.service';
 import { PerfilService } from '../perfil/perfil.service';
 import { ProyectosService } from '../proyectos/proyectos.service';
 import { RedesSocialesService } from '../redes-sociales/redes-sociales.service';
 import { SeccionesService } from '../secciones/secciones.service';
+import { SkillsService } from '../skills/skills.service';
 import { TemaService } from '../tema/tema.service';
 import {
   ESTADO_BORRADOR,
@@ -41,6 +43,8 @@ export class VersionesSitioService {
     private readonly certificacionesService: CertificacionesService,
     private readonly logrosService: LogrosService,
     private readonly redesSocialesService: RedesSocialesService,
+    private readonly skillsService: SkillsService,
+    private readonly fondoSitioService: FondoSitioService,
   ) {}
 
   /**
@@ -64,6 +68,8 @@ export class VersionesSitioService {
       certificaciones,
       logros,
       redes_sociales,
+      skills,
+      fondo,
     ] = await Promise.all([
       this.perfilService.obtenerConMedia(usuarioAdminId),
       this.temaService.obtenerActivo(usuarioAdminId),
@@ -72,6 +78,8 @@ export class VersionesSitioService {
       this.certificacionesService.listarConLogo(),
       this.logrosService.listar(),
       this.redesSocialesService.listar(),
+      this.skillsService.listar(),
+      this.fondoSitioService.obtenerActivo(usuarioAdminId),
     ]);
 
     return {
@@ -82,6 +90,8 @@ export class VersionesSitioService {
       certificaciones,
       logros,
       redes_sociales,
+      skills,
+      fondo,
     } as unknown as SnapshotSitio;
   }
 
