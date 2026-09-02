@@ -1,0 +1,19 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 1440, "h": 900, "title": "Proyectos", "is_interactive": true },
+    { "file": "Certificaciones.dc.html", "x": 1560, "y": 0, "w": 1440, "h": 900, "title": "Certificaciones", "is_interactive": true },
+    { "file": "Logros.dc.html", "x": 3120, "y": 0, "w": 1440, "h": 900, "title": "Logros", "is_interactive": true },
+
+    { "file": "RedesSociales.dc.html", "x": 0, "y": 1050, "w": 1440, "h": 900, "title": "Redes sociales", "is_interactive": true },
+    { "file": "Perfil.dc.html", "x": 1560, "y": 1050, "w": 1440, "h": 860, "title": "Perfil", "is_interactive": true },
+    { "file": "Tema.dc.html", "x": 3120, "y": 1050, "w": 1440, "h": 960, "title": "Tema visual", "is_interactive": true },
+
+    { "file": "Biblioteca.dc.html", "x": 0, "y": 2160, "w": 1440, "h": 900, "title": "Biblioteca de medios", "is_interactive": true },
+    { "file": "EditorVisual.dc.html", "x": 1560, "y": 2160, "w": 1440, "h": 960, "title": "Editor visual", "is_interactive": true },
+    { "file": "Mobile.dc.html", "x": 3120, "y": 2160, "w": 390, "h": 844, "title": "Móvil — Proyectos", "is_interactive": true }
+  ],
+  "annotations": [
+    { "id": "brief-summary", "x": 0, "y": -150, "w": 900, "text": "Sistema completo del panel: mismo sidebar colapsable + top bar + interruptor día/noche en las 8 pantallas, aplicado sobre los tokens OKLCh ya definidos en index.css.\nProyectos, Redes y Tema mantienen el modal de alta/edición con backdrop, focus trap y cierre por Escape (ya probado en la primera ronda); el resto se centra en el contenido propio de cada módulo. El Editor visual arranca con el sidebar colapsado para dar más espacio al lienzo, y ahora suma: foto de perfil configurable (posición + con/sin marco), botón de CV, bloque \"Sobre mí\", bloque \"Skills\" con marquesina infinita de íconos, y un fondo de página animado (Aurora/Degradado/Partículas/Cuadrícula) independiente del Tema — clic en \"Fondo del sitio\" en la paleta izquierda." }
+  ],
+  "launch": { "view": "canvas" }
+}

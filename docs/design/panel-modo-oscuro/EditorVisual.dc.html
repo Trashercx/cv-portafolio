@@ -1,0 +1,682 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap');
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  .app { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; transition: background-color .35s ease, color .35s ease; }
+  .heading { font-family: 'Manrope', ui-sans-serif, system-ui, sans-serif; }
+  a { color: var(--primary); text-decoration: none; }
+  button { font-family: inherit; cursor: pointer; }
+  .card { transition: background-color .35s ease, border-color .35s ease; }
+  .toggle-thumb { transition: transform .3s cubic-bezier(.4,0,.2,1); }
+  .btn-outline:hover { background: var(--muted); }
+  .btn-primary:hover { opacity: .92; }
+  .icon-btn:hover { background: var(--muted); }
+  .sidebar { transition: width .22s ease; }
+  .sidebar-item:hover { background: var(--sidebar-accent); color: var(--sidebar-accent-foreground); }
+  .block-item:hover { background: var(--muted); }
+  .block-head:hover { background: var(--muted); }
+  .pill-opt { transition: background-color .15s ease, color .15s ease, border-color .15s ease; }
+  .pill-opt:hover { border-color: var(--ring); }
+  .carousel-arrow:hover { background: var(--card); }
+  .fondo-item:hover { background: var(--muted); }
+  @keyframes entradaAparecer { from { opacity: 0; } to { opacity: var(--opacidad-final, 1); } }
+  @keyframes entradaDeslizar { from { transform: translateY(22px); } to { transform: translateY(0); } }
+  @keyframes entradaZoom { from { transform: scale(.94); } to { transform: scale(1); } }
+  @keyframes gradientShift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+  @keyframes auroraFloat1 { 0%, 100% { transform: translate(0,0) scale(1); } 50% { transform: translate(50px,-30px) scale(1.08); } }
+  @keyframes auroraFloat2 { 0%, 100% { transform: translate(0,0) scale(1); } 50% { transform: translate(-40px,35px) scale(1.05); } }
+  @keyframes auroraFloat3 { 0%, 100% { transform: translate(0,0) scale(1); } 50% { transform: translate(30px,30px) scale(.95); } }
+  @keyframes particlesDrift { from { background-position: 0 0; } to { background-position: 64px 64px; } }
+  @keyframes gridDrift { from { background-position: 0 0; } to { background-position: 40px 40px; } }
+  @keyframes marqueeDerIzq { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+  @keyframes marqueeIzqDer { from { transform: translateX(-50%); } to { transform: translateX(0); } }
+</style>
+</helmet>
+
+<div class="app" style="--background:{{p.background}};--foreground:{{p.foreground}};--card:{{p.card}};--card-foreground:{{p.cardForeground}};--primary:{{p.primary}};--primary-foreground:{{p.primaryForeground}};--secondary:{{p.secondary}};--secondary-foreground:{{p.secondaryForeground}};--muted:{{p.muted}};--muted-foreground:{{p.mutedForeground}};--accent:{{p.accent}};--accent-foreground:{{p.accentForeground}};--destructive:{{p.destructive}};--border:{{p.border}};--ring:{{p.ring}};--sidebar:{{p.sidebar}};--sidebar-foreground:{{p.sidebarForeground}};--sidebar-accent:{{p.sidebarAccent}};--sidebar-accent-foreground:{{p.sidebarAccentForeground}};--sidebar-border:{{p.sidebarBorder}};background-color:var(--background);color:var(--foreground);height:960px;display:flex;overflow:hidden;">
+
+  <aside class="sidebar" style="width:{{sidebarAncho}}px;flex-shrink:0;height:100%;background:var(--sidebar);color:var(--sidebar-foreground);border-right:1px solid var(--sidebar-border);display:flex;flex-direction:column;padding:16px 12px;gap:4px;overflow:hidden;">
+    <div style="display:flex;align-items:center;gap:10px;padding:6px 10px 18px;">
+      <div style="width:30px;height:30px;border-radius:9px;background:var(--primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span class="heading" style="color:var(--primary-foreground);font-weight:800;font-size:14px;">P</span></div>
+      <sc-if value="{{sidebarExpandido}}" hint-placeholder-val="{{true}}"><span class="heading" style="font-weight:700;font-size:15px;white-space:nowrap;">Panel</span></sc-if>
+    </div>
+    <a href="#" class="sidebar-item" style="display:flex;align-items:center;gap:12px;padding:9px 10px;border-radius:8px;font-size:13.5px;font-weight:500;color:var(--sidebar-foreground);opacity:.72;justify-content:{{navJustify}};">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="8" r="4"></circle><path d="M4,20c0-4.4,3.6-7,8-7s8,2.6,8,7"></path></svg>
+      <sc-if value="{{sidebarExpandido}}" hint-placeholder-val="{{true}}"><span style="white-space:nowrap;">Perfil</span></sc-if>
+    </a>
+    <a href="#" class="sidebar-item" style="display:flex;align-items:center;gap:12px;padding:9px 10px;border-radius:8px;font-size:13.5px;font-weight:500;color:var(--sidebar-foreground);opacity:.72;justify-content:{{navJustify}};">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="3" y="3" width="7.5" height="7.5" rx="1.5"></rect><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5"></rect><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5"></rect><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5"></rect></svg>
+      <sc-if value="{{sidebarExpandido}}" hint-placeholder-val="{{true}}"><span style="white-space:nowrap;">Proyectos</span></sc-if>
+    </a>
+    <a href="#" class="sidebar-item" style="display:flex;align-items:center;gap:12px;padding:9px 10px;border-radius:8px;font-size:13.5px;font-weight:500;color:var(--sidebar-foreground);opacity:.72;justify-content:{{navJustify}};">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="8" r="5"></circle><path d="M8,12.6 L6.2,21 L12,17.8 L17.8,21 L16,12.6"></path></svg>
+      <sc-if value="{{sidebarExpandido}}" hint-placeholder-val="{{true}}"><span style="white-space:nowrap;">Certificaciones</span></sc-if>
+    </a>
+    <a href="#" class="sidebar-item" style="display:flex;align-items:center;gap:12px;padding:9px 10px;border-radius:8px;font-size:13.5px;font-weight:500;color:var(--sidebar-foreground);opacity:.72;justify-content:{{navJustify}};">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="18" cy="5" r="2.6"></circle><circle cx="6" cy="12" r="2.6"></circle><circle cx="18" cy="19" r="2.6"></circle><line x1="8.4" y1="10.6" x2="15.6" y2="6.4"></line><line x1="8.4" y1="13.4" x2="15.6" y2="17.6"></line></svg>
+      <sc-if value="{{sidebarExpandido}}" hint-placeholder-val="{{true}}"><span style="white-space:nowrap;">Redes sociales</span></sc-if>
+    </a>
+    <a href="#" class="sidebar-item" style="display:flex;align-items:center;gap:12px;padding:9px 10px;border-radius:8px;font-size:13.5px;font-weight:600;background:var(--sidebar-accent);color:var(--sidebar-accent-foreground);justify-content:{{navJustify}};">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M12,2.5 L21,7.5 L12,12.5 L3,7.5 Z"></path><polyline points="3,12.5 12,17.5 21,12.5"></polyline><polyline points="3,17 12,22 21,17"></polyline></svg>
+      <sc-if value="{{sidebarExpandido}}" hint-placeholder-val="{{true}}"><span style="white-space:nowrap;">Editor visual</span></sc-if>
+    </a>
+    <a href="#" class="sidebar-item" style="display:flex;align-items:center;gap:12px;padding:9px 10px;border-radius:8px;font-size:13.5px;font-weight:500;color:var(--sidebar-foreground);opacity:.72;justify-content:{{navJustify}};">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="9"></circle><circle cx="9" cy="9.5" r="1.15" fill="currentColor" stroke="none"></circle><circle cx="14.5" cy="8.5" r="1.15" fill="currentColor" stroke="none"></circle><circle cx="16.5" cy="13" r="1.15" fill="currentColor" stroke="none"></circle><circle cx="10.5" cy="15.5" r="1.15" fill="currentColor" stroke="none"></circle></svg>
+      <sc-if value="{{sidebarExpandido}}" hint-placeholder-val="{{true}}"><span style="white-space:nowrap;">Tema</span></sc-if>
+    </a>
+    <a href="#" class="sidebar-item" style="display:flex;align-items:center;gap:12px;padding:9px 10px;border-radius:8px;font-size:13.5px;font-weight:500;color:var(--sidebar-foreground);opacity:.72;justify-content:{{navJustify}};">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><rect x="3" y="4" width="18" height="16" rx="2"></rect><circle cx="8.5" cy="9.5" r="1.4" fill="currentColor" stroke="none"></circle><path d="M21,15.5 L15.5,10.5 L6,20"></path></svg>
+      <sc-if value="{{sidebarExpandido}}" hint-placeholder-val="{{true}}"><span style="white-space:nowrap;">Biblioteca de medios</span></sc-if>
+    </a>
+  </aside>
+
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;height:100%;">
+    <header style="position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:10px 24px;border-bottom:1px solid var(--border);background:var(--background);flex-shrink:0;">
+      <div style="display:flex;align-items:center;gap:14px;">
+        <button onClick="{{toggleSidebar}}" aria-label="Mostrar u ocultar la barra lateral" class="icon-btn" style="display:flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--foreground);flex-shrink:0;">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><line x1="3.5" y1="6.5" x2="20.5" y2="6.5"></line><line x1="3.5" y1="12" x2="20.5" y2="12"></line><line x1="3.5" y1="17.5" x2="20.5" y2="17.5"></line></svg>
+        </button>
+        <div>
+          <p class="heading" style="margin:0;font-size:14.5px;font-weight:700;">Editor visual</p>
+          <p style="margin:1px 0 0;font-size:11.5px;color:var(--muted-foreground);">Estructura, foto, fondo y efectos del sitio público</p>
+        </div>
+        <span style="display:inline-flex;padding:3px 9px;border-radius:6px;font-size:11.5px;font-weight:600;background:var(--secondary);color:var(--secondary-foreground);">Borrador</span>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+        <button class="btn-outline" style="height:32px;padding:0 12px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--foreground);font-size:12.5px;font-weight:500;">Historial de versiones</button>
+        <button class="btn-outline" style="height:32px;padding:0 12px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--foreground);font-size:12.5px;font-weight:500;">Guardar cambios</button>
+        <button class="btn-primary" style="height:32px;padding:0 14px;border-radius:8px;border:none;background:var(--primary);color:var(--primary-foreground);font-size:12.5px;font-weight:600;">Publicar</button>
+
+        <div style="width:1px;height:20px;background:var(--border);margin:0 2px;"></div>
+
+        <button onClick="{{toggleTema}}" aria-label="Cambiar entre modo claro y oscuro" style="position:relative;width:46px;height:26px;border-radius:999px;border:1px solid var(--border);background:var(--muted);padding:0;display:flex;align-items:center;">
+          <span class="toggle-thumb" style="position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:999px;background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center;transform:translateX({{despl}}px);">
+            <sc-if value="{{p.oscuro}}" hint-placeholder-val="{{false}}"><svg width="11" height="11" viewBox="0 0 24 24" fill="var(--foreground)" stroke="none"><path d="M20,12.5A8,8 0 1,1 11.5,4 A6,6 0 0,0 20,12.5 Z"></path></svg></sc-if>
+            <sc-if value="{{p.claro}}" hint-placeholder-val="{{true}}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--foreground)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"></circle><line x1="12" y1="2.5" x2="12" y2="5"></line><line x1="12" y1="19" x2="12" y2="21.5"></line><line x1="2.5" y1="12" x2="5" y2="12"></line><line x1="19" y1="12" x2="21.5" y2="12"></line><line x1="5.3" y1="5.3" x2="7.1" y2="7.1"></line><line x1="16.9" y1="16.9" x2="18.7" y2="18.7"></line><line x1="5.3" y1="18.7" x2="7.1" y2="16.9"></line><line x1="16.9" y1="7.1" x2="18.7" y2="5.3"></line></svg></sc-if>
+          </span>
+        </button>
+        <div style="width:30px;height:30px;border-radius:999px;background:var(--primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><span class="heading" style="color:var(--primary-foreground);font-weight:700;font-size:11.5px;">OB</span></div>
+      </div>
+    </header>
+
+    <div style="flex:1;min-height:0;display:flex;">
+      <!-- Paleta de bloques -->
+      <div style="width:200px;flex-shrink:0;border-right:1px solid var(--border);padding:16px 12px;overflow-y:auto;">
+        <p style="margin:0 0 8px;padding:0 6px;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted-foreground);font-weight:600;">Página</p>
+        <button onClick="{{seleccionarFondo}}" class="fondo-item block-item" style="width:100%;display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;font-size:13px;font-weight:500;border:none;text-align:left;background:{{fondoItemBg}};color:{{fondoItemColor}};">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12,3 C7,3 3,7 3,12 C3,17 7,21 12,21 C13,21 14,20 14,19 C14,18 13.3,17.6 13.3,16.7 C13.3,15.8 14,15 15,15 H17 C19.2,15 21,13.2 21,11 C21,6.6 17,3 12,3 Z"></path><circle cx="7.5" cy="10.5" r="1.1" fill="currentColor" stroke="none"></circle><circle cx="11" cy="7.5" r="1.1" fill="currentColor" stroke="none"></circle><circle cx="15.5" cy="8.5" r="1.1" fill="currentColor" stroke="none"></circle></svg>
+          Fondo del sitio
+        </button>
+
+        <p style="margin:16px 0 8px;padding:0 6px;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted-foreground);font-weight:600;">Secciones</p>
+        <div class="block-item" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;font-size:13px;font-weight:500;color:var(--foreground);">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line></svg>
+          Portada (Hero)
+        </div>
+        <div class="block-item" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;font-size:13px;font-weight:500;color:var(--foreground);">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"></circle><path d="M4,20c0-4.4,3.6-7,8-7s8,2.6,8,7"></path></svg>
+          Sobre mí
+        </div>
+        <div class="block-item" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;font-size:13px;font-weight:500;color:var(--foreground);">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7.5" height="7.5" rx="1"></rect><rect x="13.5" y="3" width="7.5" height="7.5" rx="1"></rect><rect x="3" y="13.5" width="7.5" height="7.5" rx="1"></rect><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1"></rect></svg>
+          Proyectos
+        </div>
+        <div class="block-item" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;font-size:13px;font-weight:500;color:var(--foreground);">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="5"></circle><path d="M8,12.6 L6.2,21 L12,17.8 L17.8,21 L16,12.6"></path></svg>
+          Certificaciones
+        </div>
+        <div class="block-item" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;font-size:13px;font-weight:500;color:var(--foreground);">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12,3 L14.6,8.7 L21,9.5 L16.3,13.9 L17.5,20.2 L12,17.1 L6.5,20.2 L7.7,13.9 L3,9.5 L9.4,8.7 Z"></path></svg>
+          Logros
+        </div>
+        <div class="block-item" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;font-size:13px;font-weight:500;color:var(--foreground);">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="7" height="7" rx="1.5"></rect><rect x="14" y="4" width="7" height="7" rx="1.5"></rect><rect x="3" y="15" width="7" height="5" rx="1.5"></rect><rect x="14" y="15" width="7" height="5" rx="1.5"></rect></svg>
+          Skills
+        </div>
+        <div class="block-item" style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;font-size:13px;font-weight:500;color:var(--foreground);">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="18" cy="5" r="2.6"></circle><circle cx="6" cy="12" r="2.6"></circle><circle cx="18" cy="19" r="2.6"></circle><line x1="8.4" y1="10.6" x2="15.6" y2="6.4"></line><line x1="8.4" y1="13.4" x2="15.6" y2="17.6"></line></svg>
+          Contacto
+        </div>
+        <p style="margin:16px 0 0;padding:0 6px;font-size:11.5px;color:var(--muted-foreground);">Clic en una sección del lienzo, o en "Fondo del sitio", para editar sus efectos.</p>
+      </div>
+
+      <!-- Canvas -->
+      <div style="flex:1;min-width:0;position:relative;overflow:hidden;background:var(--muted);">
+        <sc-if value="{{fondoEsDegradado}}" hint-placeholder-val="{{false}}">
+          <div style="position:absolute;inset:0;background:linear-gradient(120deg, var(--primary), var(--accent), var(--secondary));background-size:220% 220%;animation:gradientShift 10s ease infinite;opacity:.5;"></div>
+        </sc-if>
+        <sc-if value="{{fondoEsAurora}}" hint-placeholder-val="{{true}}">
+          <div style="position:absolute;width:340px;height:340px;top:-80px;left:-60px;border-radius:999px;background:var(--primary);filter:blur(70px);opacity:.4;animation:auroraFloat1 14s ease-in-out infinite;"></div>
+          <div style="position:absolute;width:300px;height:300px;bottom:-70px;right:5%;border-radius:999px;background:var(--accent);filter:blur(70px);opacity:.45;animation:auroraFloat2 17s ease-in-out infinite;"></div>
+          <div style="position:absolute;width:260px;height:260px;top:35%;right:20%;border-radius:999px;background:var(--secondary);filter:blur(60px);opacity:.4;animation:auroraFloat3 12s ease-in-out infinite;"></div>
+        </sc-if>
+        <sc-if value="{{fondoEsParticulas}}" hint-placeholder-val="{{false}}">
+          <div style="position:absolute;inset:0;background-image:radial-gradient(var(--foreground) 1.4px, transparent 1.4px);background-size:32px 32px;opacity:.12;animation:particlesDrift 22s linear infinite;"></div>
+        </sc-if>
+        <sc-if value="{{fondoEsGrid}}" hint-placeholder-val="{{false}}">
+          <div style="position:absolute;inset:0;background-image:repeating-linear-gradient(0deg, var(--foreground) 0, var(--foreground) 1px, transparent 1px, transparent 40px), repeating-linear-gradient(90deg, var(--foreground) 0, var(--foreground) 1px, transparent 1px, transparent 40px);opacity:.08;animation:gridDrift 10s linear infinite;"></div>
+        </sc-if>
+
+        <div style="position:relative;z-index:1;height:100%;overflow-y:auto;padding:28px;">
+        <div style="max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:16px;">
+
+          <div style="border:{{ringHero}};border-radius:12px;overflow:hidden;background:var(--card);">
+            <button onClick="{{seleccionarHero}}" class="block-head" style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:transparent;border:none;text-align:left;font-size:11.5px;font-weight:600;color:var(--muted-foreground);border-bottom:1px solid var(--border);">
+              <span style="display:flex;align-items:center;gap:8px;">Portada (Hero) <sc-if value="{{esHero}}" hint-placeholder-val="{{true}}"><span style="padding:1px 7px;border-radius:5px;background:var(--accent);color:var(--accent-foreground);font-weight:600;">Editando</span></sc-if></span>
+              <span style="color:var(--muted-foreground);font-weight:500;">{{resumenHero}}</span>
+            </button>
+            <div style="position:relative;padding:36px 24px;text-align:center;background:linear-gradient(160deg, var(--secondary), var(--card));opacity:{{efectoHero.opacidadCss}};animation:{{efectoHero.cssAnim}} .6s cubic-bezier(.2,.8,.2,1) both;--opacidad-final:{{efectoHero.opacidadCss}};">
+              <sc-if value="{{fotoEsCentrada}}" hint-placeholder-val="{{false}}">
+                <div style="width:64px;height:64px;border-radius:999px;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg, var(--accent), var(--secondary));{{fotoEstiloInline}}">
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--muted-foreground)" stroke-width="1.6"><circle cx="12" cy="8" r="4"></circle><path d="M4,20c0-4.4,3.6-7,8-7s8,2.6,8,7"></path></svg>
+                </div>
+              </sc-if>
+              <sc-if value="{{fotoEsCorner}}" hint-placeholder-val="{{false}}">
+                <div style="position:absolute;{{fotoCornerPos}}width:56px;height:56px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg, var(--accent), var(--secondary));{{fotoEstiloInline}}">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--muted-foreground)" stroke-width="1.6"><circle cx="12" cy="8" r="4"></circle><path d="M4,20c0-4.4,3.6-7,8-7s8,2.6,8,7"></path></svg>
+                </div>
+              </sc-if>
+              <p class="heading" style="margin:0;font-size:24px;font-weight:800;">Oscar Burga</p>
+              <p style="margin:6px 0 18px;font-size:13.5px;color:var(--muted-foreground);">Ingeniero de Software</p>
+              <div style="display:flex;gap:10px;justify-content:center;">
+                <span style="display:inline-flex;padding:8px 18px;border-radius:8px;background:var(--primary);color:var(--primary-foreground);font-size:12.5px;font-weight:600;">Ver proyectos</span>
+                <sc-if value="{{efectoHero.mostrarCV}}" hint-placeholder-val="{{true}}">
+                  <span style="display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--foreground);font-size:12.5px;font-weight:600;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12,3v12 M7,10 L12,15 L17,10"></path><path d="M4,17 v3 a2,2 0 0 0 2,2 h12 a2,2 0 0 0 2,-2 v-3"></path></svg>
+                    Descargar CV
+                  </span>
+                </sc-if>
+              </div>
+            </div>
+          </div>
+
+          <div style="border:{{ringSobreMi}};border-radius:12px;overflow:hidden;background:var(--card);">
+            <button onClick="{{seleccionarSobreMi}}" class="block-head" style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:transparent;border:none;text-align:left;font-size:11.5px;font-weight:600;color:var(--muted-foreground);border-bottom:1px solid var(--border);">
+              <span style="display:flex;align-items:center;gap:8px;">Sobre mí <sc-if value="{{esSobreMi}}" hint-placeholder-val="{{false}}"><span style="padding:1px 7px;border-radius:5px;background:var(--accent);color:var(--accent-foreground);font-weight:600;">Editando</span></sc-if></span>
+              <span style="color:var(--muted-foreground);font-weight:500;">{{resumenSobreMi}}</span>
+            </button>
+            <div style="padding:24px;opacity:{{efectoSobreMi.opacidadCss}};animation:{{efectoSobreMi.cssAnim}} .6s cubic-bezier(.2,.8,.2,1) both;--opacidad-final:{{efectoSobreMi.opacidadCss}};">
+              <p class="heading" style="margin:0 0 8px;font-size:16px;font-weight:700;">Sobre mí</p>
+              <p style="margin:0;font-size:13.5px;line-height:1.6;color:var(--muted-foreground);">Desarrollador full-stack con foco en productos web escalables y experiencia de usuario cuidada. Me interesa el diseño de sistemas, la accesibilidad y construir herramientas que la gente realmente use.</p>
+            </div>
+          </div>
+
+          <div style="border:{{ringProyectos}};border-radius:12px;overflow:hidden;background:var(--card);">
+            <button onClick="{{seleccionarProyectos}}" class="block-head" style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:transparent;border:none;text-align:left;font-size:11.5px;font-weight:600;color:var(--muted-foreground);border-bottom:1px solid var(--border);">
+              <span style="display:flex;align-items:center;gap:8px;">Proyectos <sc-if value="{{esProyectos}}" hint-placeholder-val="{{false}}"><span style="padding:1px 7px;border-radius:5px;background:var(--accent);color:var(--accent-foreground);font-weight:600;">Editando</span></sc-if></span>
+              <span style="color:var(--muted-foreground);font-weight:500;">{{resumenProyectos}}</span>
+            </button>
+            <div style="padding:20px;display:grid;grid-template-columns:{{proyectosCols}};gap:10px;opacity:{{efectoProyectos.opacidadCss}};animation:{{efectoProyectos.cssAnim}} .6s cubic-bezier(.2,.8,.2,1) both;--opacidad-final:{{efectoProyectos.opacidadCss}};">
+              <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;">
+                <div style="aspect-ratio:16/10;background:linear-gradient(135deg, var(--secondary), var(--muted));"></div>
+                <p style="margin:0;padding:8px;font-size:11.5px;font-weight:600;">Gestión de Inventario</p>
+              </div>
+              <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;">
+                <div style="aspect-ratio:16/10;background:linear-gradient(135deg, var(--accent), var(--secondary));"></div>
+                <p style="margin:0;padding:8px;font-size:11.5px;font-weight:600;">Reservas Restaurantes</p>
+              </div>
+              <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;">
+                <div style="aspect-ratio:16/10;background:linear-gradient(135deg, var(--muted), var(--primary));"></div>
+                <p style="margin:0;padding:8px;font-size:11.5px;font-weight:600;">Analítica en Tiempo Real</p>
+              </div>
+            </div>
+          </div>
+
+          <div style="border:{{ringLogros}};border-radius:12px;overflow:hidden;background:var(--card);">
+            <button onClick="{{seleccionarLogros}}" class="block-head" style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:transparent;border:none;text-align:left;font-size:11.5px;font-weight:600;color:var(--muted-foreground);border-bottom:1px solid var(--border);">
+              <span style="display:flex;align-items:center;gap:8px;">Logros <sc-if value="{{esLogros}}" hint-placeholder-val="{{false}}"><span style="padding:1px 7px;border-radius:5px;background:var(--accent);color:var(--accent-foreground);font-weight:600;">Editando</span></sc-if></span>
+              <span style="color:var(--muted-foreground);font-weight:500;">{{resumenLogros}}</span>
+            </button>
+
+            <sc-if value="{{logrosEsCarrusel}}" hint-placeholder-val="{{true}}">
+              <div style="padding:20px 0 20px 20px;opacity:{{efectoLogros.opacidadCss}};animation:{{efectoLogros.cssAnim}} .6s cubic-bezier(.2,.8,.2,1) both;--opacidad-final:{{efectoLogros.opacidadCss}};">
+                <div style="display:flex;align-items:center;gap:10px;">
+                  <div style="flex:1;min-width:0;overflow:hidden;">
+                    <div style="display:flex;gap:12px;">
+                      <div style="flex:0 0 210px;border:1px solid var(--border);border-radius:10px;padding:14px;background:var(--muted);">
+                        <span style="display:inline-flex;padding:2px 8px;border-radius:6px;font-size:10.5px;font-weight:600;background:var(--secondary);color:var(--secondary-foreground);">Reconocimiento</span>
+                        <p style="margin:8px 0 0;font-size:12.5px;font-weight:700;">Top 10 — Hackathon LatAm</p>
+                      </div>
+                      <div style="flex:0 0 210px;border:1px solid var(--border);border-radius:10px;padding:14px;background:var(--muted);">
+                        <span style="display:inline-flex;padding:2px 8px;border-radius:6px;font-size:10.5px;font-weight:600;background:var(--secondary);color:var(--secondary-foreground);">Publicación</span>
+                        <p style="margin:8px 0 0;font-size:12.5px;font-weight:700;">Artículo destacado</p>
+                      </div>
+                      <div style="flex:0 0 210px;border:1px solid var(--border);border-radius:10px;padding:14px;background:var(--muted);">
+                        <span style="display:inline-flex;padding:2px 8px;border-radius:6px;font-size:10.5px;font-weight:600;background:var(--secondary);color:var(--secondary-foreground);">Certificación</span>
+                        <p style="margin:8px 0 0;font-size:12.5px;font-weight:700;">Speaker — DevFest 2025</p>
+                      </div>
+                    </div>
+                  </div>
+                  <button aria-label="Siguiente" class="carousel-arrow" style="flex-shrink:0;width:30px;height:30px;border-radius:999px;border:1px solid var(--border);background:var(--muted);display:flex;align-items:center;justify-content:center;margin-right:16px;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--foreground)" stroke-width="2.2" stroke-linecap="round"><polyline points="9,5 16,12 9,19"></polyline></svg>
+                  </button>
+                </div>
+                <div style="display:flex;gap:5px;justify-content:center;margin-top:14px;">
+                  <span style="width:6px;height:6px;border-radius:999px;background:var(--primary);"></span>
+                  <span style="width:6px;height:6px;border-radius:999px;background:var(--border);"></span>
+                  <span style="width:6px;height:6px;border-radius:999px;background:var(--border);"></span>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{logrosEsGrid}}" hint-placeholder-val="{{false}}">
+              <div style="padding:20px;display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:10px;opacity:{{efectoLogros.opacidadCss}};animation:{{efectoLogros.cssAnim}} .6s cubic-bezier(.2,.8,.2,1) both;--opacidad-final:{{efectoLogros.opacidadCss}};">
+                <div style="border:1px solid var(--border);border-radius:10px;padding:14px;background:var(--muted);">
+                  <span style="display:inline-flex;padding:2px 8px;border-radius:6px;font-size:10.5px;font-weight:600;background:var(--secondary);color:var(--secondary-foreground);">Reconocimiento</span>
+                  <p style="margin:8px 0 0;font-size:12.5px;font-weight:700;">Top 10 — Hackathon LatAm</p>
+                </div>
+                <div style="border:1px solid var(--border);border-radius:10px;padding:14px;background:var(--muted);">
+                  <span style="display:inline-flex;padding:2px 8px;border-radius:6px;font-size:10.5px;font-weight:600;background:var(--secondary);color:var(--secondary-foreground);">Publicación</span>
+                  <p style="margin:8px 0 0;font-size:12.5px;font-weight:700;">Artículo destacado</p>
+                </div>
+                <div style="border:1px solid var(--border);border-radius:10px;padding:14px;background:var(--muted);">
+                  <span style="display:inline-flex;padding:2px 8px;border-radius:6px;font-size:10.5px;font-weight:600;background:var(--secondary);color:var(--secondary-foreground);">Certificación</span>
+                  <p style="margin:8px 0 0;font-size:12.5px;font-weight:700;">Speaker — DevFest 2025</p>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+
+          <div style="border:{{ringSkills}};border-radius:12px;overflow:hidden;background:var(--card);">
+            <button onClick="{{seleccionarSkills}}" class="block-head" style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:transparent;border:none;text-align:left;font-size:11.5px;font-weight:600;color:var(--muted-foreground);border-bottom:1px solid var(--border);">
+              <span style="display:flex;align-items:center;gap:8px;">Skills <sc-if value="{{esSkills}}" hint-placeholder-val="{{false}}"><span style="padding:1px 7px;border-radius:5px;background:var(--accent);color:var(--accent-foreground);font-weight:600;">Editando</span></sc-if></span>
+              <span style="color:var(--muted-foreground);font-weight:500;">{{resumenSkills}}</span>
+            </button>
+            <div style="padding:20px 0;opacity:{{efectoSkills.opacidadCss}};animation:{{efectoSkills.cssAnim}} .6s cubic-bezier(.2,.8,.2,1) both;--opacidad-final:{{efectoSkills.opacidadCss}};">
+              <p class="heading" style="margin:0 0 12px;padding:0 20px;font-size:16px;font-weight:700;">Skills y herramientas</p>
+              <div style="overflow:hidden;-webkit-mask-image:linear-gradient(90deg, transparent, black 8%, black 92%, transparent);mask-image:linear-gradient(90deg, transparent, black 8%, black 92%, transparent);">
+                <div style="display:flex;gap:28px;width:max-content;animation:{{skillsAnimName}} {{skillsDuracion}}s linear infinite;">
+                  <sc-for list="{{skillsFila}}" as="s" hint-placeholder-count="16">
+                    <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+                      <sc-if value="{{s.esNode}}" hint-placeholder-val="{{false}}"><div style="width:34px;height:34px;border-radius:9px;background:var(--muted);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5FA04E" stroke-width="1.8" stroke-linejoin="round"><path d="M12,2 L20.5,7 V17 L12,22 L3.5,17 V7 Z"></path></svg></div></sc-if>
+                      <sc-if value="{{s.esJava}}" hint-placeholder-val="{{false}}"><div style="width:34px;height:34px;border-radius:9px;background:var(--muted);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E76F00" stroke-width="1.7" stroke-linecap="round"><path d="M7,13 h10 a1,1 0 0 1,1,1 v3 a2,2 0 0 1,-2,2 H8 a2,2 0 0 1,-2,-2 v-3 a1,1 0 0 1,1,-1 Z"></path><path d="M9,13 C9,10 15,10 15,7"></path><line x1="7" y1="9" x2="17" y2="9"></line></svg></div></sc-if>
+                      <sc-if value="{{s.esAws}}" hint-placeholder-val="{{false}}"><div style="width:34px;height:34px;border-radius:9px;background:#232F3E;display:flex;align-items:center;justify-content:center;"><span style="font-size:9.5px;font-weight:800;color:#FF9900;letter-spacing:.02em;">AWS</span></div></sc-if>
+                      <sc-if value="{{s.esAzure}}" hint-placeholder-val="{{false}}"><div style="width:34px;height:34px;border-radius:9px;background:#0078D4;display:flex;align-items:center;justify-content:center;"><span style="font-size:8px;font-weight:800;color:#fff;letter-spacing:.01em;">AZURE</span></div></sc-if>
+                      <sc-if value="{{s.esReact}}" hint-placeholder-val="{{false}}"><div style="width:34px;height:34px;border-radius:9px;background:var(--muted);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#61DAFB" stroke-width="1.4"><circle cx="12" cy="12" r="2.2" fill="#61DAFB" stroke="none"></circle><ellipse cx="12" cy="12" rx="10" ry="4"></ellipse><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)"></ellipse><ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(120 12 12)"></ellipse></svg></div></sc-if>
+                      <sc-if value="{{s.esPostgres}}" hint-placeholder-val="{{false}}"><div style="width:34px;height:34px;border-radius:9px;background:var(--muted);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#336791" stroke-width="1.7"><ellipse cx="12" cy="6" rx="8" ry="3"></ellipse><path d="M4,6 v6 a8,3 0 0 0,16,0 V6"></path><path d="M4,12 v6 a8,3 0 0 0,16,0 v-6"></path></svg></div></sc-if>
+                      <sc-if value="{{s.esDocker}}" hint-placeholder-val="{{false}}"><div style="width:34px;height:34px;border-radius:9px;background:var(--muted);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#2496ED" stroke-width="1.7" stroke-linejoin="round"><rect x="3" y="10" width="4" height="4"></rect><rect x="8" y="10" width="4" height="4"></rect><rect x="13" y="10" width="4" height="4"></rect><rect x="8" y="5" width="4" height="4"></rect><path d="M2,14 C2,18 5,20 10,20 C16,20 20,17 21,11 C19,11 18,12 18,12 C17,10 14,9 14,9"></path></svg></div></sc-if>
+                      <sc-if value="{{s.esGit}}" hint-placeholder-val="{{false}}"><div style="width:34px;height:34px;border-radius:9px;background:var(--muted);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F05033" stroke-width="1.8"><circle cx="6" cy="6" r="2.2"></circle><circle cx="6" cy="18" r="2.2"></circle><circle cx="17" cy="12" r="2.2"></circle><path d="M6,8.2 V15.8"></path><path d="M6,8.2 C6,11 8,12 11,12 H14.8"></path></svg></div></sc-if>
+                      <span style="font-size:12px;font-weight:600;white-space:nowrap;">{{s.nombre}}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+        </div>
+      </div>
+
+      <!-- Propiedades -->
+      <div style="width:290px;flex-shrink:0;border-left:1px solid var(--border);padding:18px 16px;overflow-y:auto;">
+
+        <sc-if value="{{esFondo}}" hint-placeholder-val="{{false}}">
+          <p style="margin:0 0 14px;font-size:13px;font-weight:700;" class="heading">Fondo del sitio</p>
+          <p style="margin:0 0 14px;font-size:12px;color:var(--muted-foreground);line-height:1.5;">Independiente del Tema (que define colores y tipografía). Se aplica detrás de todas las secciones.</p>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            <sc-for list="{{fondoOpciones}}" as="opt" hint-placeholder-count="5">
+              <button onClick="{{opt.pick}}" class="pill-opt" style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-radius:8px;font-size:12.5px;font-weight:500;border:1px solid {{opt.borde}};background:{{opt.fondo}};color:{{opt.color}};text-align:left;">
+                <span>{{opt.label}}</span>
+                <sc-if value="{{opt.activo}}" hint-placeholder-val="{{false}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><polyline points="5,13 10,18 19,7"></polyline></svg></sc-if>
+              </button>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{mostrarEfectos}}" hint-placeholder-val="{{true}}">
+          <p style="margin:0 0 14px;font-size:13px;font-weight:700;" class="heading">Propiedades — {{tituloSeleccion}}</p>
+          <div style="display:flex;flex-direction:column;gap:16px;">
+
+            <sc-if value="{{esHero}}" hint-placeholder-val="{{true}}">
+              <div>
+                <label style="display:block;font-size:12px;font-weight:600;margin-bottom:5px;">Título</label>
+                <input value="Oscar Burga" style="width:100%;border:1px solid var(--border);border-radius:7px;background:var(--background);color:var(--foreground);padding:7px 10px;font-size:13px;outline:none;" />
+              </div>
+              <div>
+                <label style="display:block;font-size:12px;font-weight:600;margin-bottom:5px;">Subtítulo</label>
+                <input value="Ingeniero de Software" style="width:100%;border:1px solid var(--border);border-radius:7px;background:var(--background);color:var(--foreground);padding:7px 10px;font-size:13px;outline:none;" />
+              </div>
+              <div>
+                <label style="display:block;font-size:12px;font-weight:600;margin-bottom:8px;">Foto de perfil</label>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+                  <button onClick="{{setFotoNinguna}}" class="pill-opt" style="padding:7px 4px;border-radius:7px;font-size:11.5px;font-weight:500;border:1px solid {{bordeFotoNinguna}};background:{{fondoFotoNinguna}};color:{{colorFotoNinguna}};">Ninguna</button>
+                  <button onClick="{{setFotoCentrada}}" class="pill-opt" style="padding:7px 4px;border-radius:7px;font-size:11.5px;font-weight:500;border:1px solid {{bordeFotoCentrada}};background:{{fondoFotoCentrada}};color:{{colorFotoCentrada}};">Centrada</button>
+                  <button onClick="{{setFotoEsquinaSuperior}}" class="pill-opt" style="padding:7px 4px;border-radius:7px;font-size:11.5px;font-weight:500;border:1px solid {{bordeFotoEsquinaSuperior}};background:{{fondoFotoEsquinaSuperior}};color:{{colorFotoEsquinaSuperior}};">Esquina sup.</button>
+                  <button onClick="{{setFotoEsquinaInferior}}" class="pill-opt" style="padding:7px 4px;border-radius:7px;font-size:11.5px;font-weight:500;border:1px solid {{bordeFotoEsquinaInferior}};background:{{fondoFotoEsquinaInferior}};color:{{colorFotoEsquinaInferior}};">Esquina inf.</button>
+                </div>
+                <p style="margin:10px 0 6px;font-size:11.5px;color:var(--muted-foreground);">Estilo — formal (con marco) o integrado al fondo (sin marco)</p>
+                <div style="display:flex;gap:6px;">
+                  <button onClick="{{setEstiloMarco}}" class="pill-opt" style="flex:1;padding:7px 0;border-radius:7px;font-size:12px;font-weight:500;border:1px solid {{bordeEstiloMarco}};background:{{fondoEstiloMarco}};color:{{colorEstiloMarco}};">Con marco</button>
+                  <button onClick="{{setEstiloSinFondo}}" class="pill-opt" style="flex:1;padding:7px 0;border-radius:7px;font-size:12px;font-weight:500;border:1px solid {{bordeEstiloSinFondo}};background:{{fondoEstiloSinFondo}};color:{{colorEstiloSinFondo}};">Sin fondo</button>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;">
+                <label style="font-size:12px;font-weight:600;">Botón de descarga de CV</label>
+                <button onClick="{{toggleCV}}" aria-label="Mostrar u ocultar el botón de CV" style="position:relative;width:38px;height:22px;border-radius:999px;border:1px solid var(--border);background:{{cvFondo}};padding:0;">
+                  <span style="position:absolute;top:2px;left:{{cvThumb}}px;width:16px;height:16px;border-radius:999px;background:var(--card);transition:left .2s ease;"></span>
+                </button>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{esSobreMi}}" hint-placeholder-val="{{false}}">
+              <div>
+                <label style="display:block;font-size:12px;font-weight:600;margin-bottom:5px;">Título</label>
+                <input value="Sobre mí" style="width:100%;border:1px solid var(--border);border-radius:7px;background:var(--background);color:var(--foreground);padding:7px 10px;font-size:13px;outline:none;" />
+              </div>
+              <div>
+                <label style="display:block;font-size:12px;font-weight:600;margin-bottom:5px;">Texto</label>
+                <textarea rows="4" style="width:100%;border:1px solid var(--border);border-radius:7px;background:var(--background);color:var(--foreground);padding:7px 10px;font-size:12.5px;outline:none;resize:vertical;font-family:inherit;">Desarrollador full-stack con foco en productos web escalables y experiencia de usuario cuidada.</textarea>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{esProyectos}}" hint-placeholder-val="{{false}}">
+              <div>
+                <label style="display:block;font-size:12px;font-weight:600;margin-bottom:8px;">Columnas</label>
+                <div style="display:flex;gap:6px;">
+                  <button onClick="{{setCols2}}" class="pill-opt" style="flex:1;padding:7px 0;border-radius:7px;font-size:12px;font-weight:500;border:1px solid {{bordeCols2}};background:{{fondoCols2}};color:{{colorCols2}};">2</button>
+                  <button onClick="{{setCols3}}" class="pill-opt" style="flex:1;padding:7px 0;border-radius:7px;font-size:12px;font-weight:500;border:1px solid {{bordeCols3}};background:{{fondoCols3}};color:{{colorCols3}};">3</button>
+                  <button onClick="{{setCols4}}" class="pill-opt" style="flex:1;padding:7px 0;border-radius:7px;font-size:12px;font-weight:500;border:1px solid {{bordeCols4}};background:{{fondoCols4}};color:{{colorCols4}};">4</button>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{esLogros}}" hint-placeholder-val="{{false}}">
+              <div>
+                <label style="display:block;font-size:12px;font-weight:600;margin-bottom:8px;">Diseño de visualización</label>
+                <div style="display:flex;gap:6px;">
+                  <button onClick="{{setLayoutGrid}}" class="pill-opt" style="flex:1;padding:7px 0;border-radius:7px;font-size:12px;font-weight:500;border:1px solid {{bordeLayoutGrid}};background:{{fondoLayoutGrid}};color:{{colorLayoutGrid}};">Cuadrícula</button>
+                  <button onClick="{{setLayoutCarrusel}}" class="pill-opt" style="flex:1;padding:7px 0;border-radius:7px;font-size:12px;font-weight:500;border:1px solid {{bordeLayoutCarrusel}};background:{{fondoLayoutCarrusel}};color:{{colorLayoutCarrusel}};">Carrusel</button>
+                </div>
+              </div>
+              <sc-if value="{{logrosEsCarrusel}}" hint-placeholder-val="{{true}}">
+                <div style="display:flex;align-items:center;justify-content:space-between;">
+                  <label style="font-size:12px;font-weight:600;">Reproducción automática</label>
+                  <button onClick="{{toggleAutoplay}}" aria-label="Alternar reproducción automática" style="position:relative;width:38px;height:22px;border-radius:999px;border:1px solid var(--border);background:{{autoplayFondo}};padding:0;">
+                    <span style="position:absolute;top:2px;left:{{autoplayThumb}}px;width:16px;height:16px;border-radius:999px;background:var(--card);transition:left .2s ease;"></span>
+                  </button>
+                </div>
+              </sc-if>
+            </sc-if>
+
+            <sc-if value="{{esSkills}}" hint-placeholder-val="{{false}}">
+              <div>
+                <label style="display:block;font-size:12px;font-weight:600;margin-bottom:8px;">Dirección del recorrido</label>
+                <div style="display:flex;gap:6px;">
+                  <button onClick="{{setDirIzqDer}}" class="pill-opt" style="flex:1;padding:7px 0;border-radius:7px;font-size:12px;font-weight:500;border:1px solid {{bordeDirIzqDer}};background:{{fondoDirIzqDer}};color:{{colorDirIzqDer}};">→ Izq. a der.</button>
+                  <button onClick="{{setDirDerIzq}}" class="pill-opt" style="flex:1;padding:7px 0;border-radius:7px;font-size:12px;font-weight:500;border:1px solid {{bordeDirDerIzq}};background:{{fondoDirDerIzq}};color:{{colorDirDerIzq}};">← Der. a izq.</button>
+                </div>
+              </div>
+              <div>
+                <label style="display:block;font-size:12px;font-weight:600;margin-bottom:8px;">Velocidad</label>
+                <div style="display:flex;gap:6px;">
+                  <button onClick="{{setVelLenta}}" class="pill-opt" style="flex:1;padding:7px 0;border-radius:7px;font-size:12px;font-weight:500;border:1px solid {{bordeVelLenta}};background:{{fondoVelLenta}};color:{{colorVelLenta}};">Lenta</button>
+                  <button onClick="{{setVelNormal}}" class="pill-opt" style="flex:1;padding:7px 0;border-radius:7px;font-size:12px;font-weight:500;border:1px solid {{bordeVelNormal}};background:{{fondoVelNormal}};color:{{colorVelNormal}};">Normal</button>
+                  <button onClick="{{setVelRapida}}" class="pill-opt" style="flex:1;padding:7px 0;border-radius:7px;font-size:12px;font-weight:500;border:1px solid {{bordeVelRapida}};background:{{fondoVelRapida}};color:{{colorVelRapida}};">Rápida</button>
+                </div>
+              </div>
+            </sc-if>
+
+            <div>
+              <label style="display:block;font-size:12px;font-weight:600;margin-bottom:8px;">Animación de entrada</label>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+                <sc-for list="{{animOpciones}}" as="opt" hint-placeholder-count="4">
+                  <button onClick="{{opt.pick}}" class="pill-opt" style="padding:7px 4px;border-radius:7px;font-size:12px;font-weight:500;border:1px solid {{opt.borde}};background:{{opt.fondo}};color:{{opt.color}};">{{opt.label}}</button>
+                </sc-for>
+              </div>
+            </div>
+            <div>
+              <label style="display:block;font-size:12px;font-weight:600;margin-bottom:8px;">Opacidad al aparecer</label>
+              <div style="display:flex;gap:6px;">
+                <sc-for list="{{opacidadOpciones}}" as="opt" hint-placeholder-count="3">
+                  <button onClick="{{opt.pick}}" class="pill-opt" style="flex:1;padding:7px 0;border-radius:7px;font-size:12px;font-weight:500;border:1px solid {{opt.borde}};background:{{opt.fondo}};color:{{opt.color}};">{{opt.label}}</button>
+                </sc-for>
+              </div>
+            </div>
+
+          </div>
+        </sc-if>
+
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{"oscuro":{"editor":"boolean","default":false,"section":"Tema"}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      oscuro: props.oscuro ?? false,
+      sidebarColapsado: true,
+      selected: 'hero',
+      fondoPagina: 'aurora',
+      efectos: {
+        hero: { animacion: 'aparecer', opacidad: 100, foto: 'esquinaSuperior', estiloFoto: 'marco', mostrarCV: true },
+        sobremi: { animacion: 'aparecer', opacidad: 100 },
+        proyectos: { animacion: 'ninguna', opacidad: 100, columnas: 3 },
+        logros: { animacion: 'deslizar', opacidad: 100, layout: 'carrusel', autoplay: true },
+        skills: { animacion: 'ninguna', opacidad: 100, direccion: 'derIzq', velocidad: 'normal' }
+      }
+    };
+  }
+
+  actualizarEfecto(id, patch) {
+    const efectos = Object.assign({}, this.state.efectos);
+    efectos[id] = Object.assign({}, efectos[id], patch);
+    this.setState({ efectos: efectos });
+  }
+
+  renderVals() {
+    const claroTokens = { background: 'oklch(1 0 0)', foreground: 'oklch(0.145 0 0)', card: 'oklch(1 0 0)', cardForeground: 'oklch(0.145 0 0)', primary: 'oklch(0.53 0.19 265)', primaryForeground: 'oklch(0.98 0.01 265)', secondary: 'oklch(0.96 0.02 265)', secondaryForeground: 'oklch(0.33 0.08 265)', muted: 'oklch(0.97 0 0)', mutedForeground: 'oklch(0.556 0 0)', accent: 'oklch(0.95 0.03 265)', accentForeground: 'oklch(0.33 0.08 265)', destructive: 'oklch(0.577 0.245 27.325)', border: 'oklch(0.922 0 0)', ring: 'oklch(0.58 0.19 265)', sidebar: 'oklch(0.985 0 0)', sidebarForeground: 'oklch(0.145 0 0)', sidebarAccent: 'oklch(0.95 0.03 265)', sidebarAccentForeground: 'oklch(0.33 0.08 265)', sidebarBorder: 'oklch(0.922 0 0)' };
+    const oscuroTokens = { background: 'oklch(0.145 0 0)', foreground: 'oklch(0.985 0 0)', card: 'oklch(0.205 0 0)', cardForeground: 'oklch(0.985 0 0)', primary: 'oklch(0.74 0.15 265)', primaryForeground: 'oklch(0.18 0.02 265)', secondary: 'oklch(0.32 0.05 265)', secondaryForeground: 'oklch(0.9 0.02 265)', muted: 'oklch(0.269 0 0)', mutedForeground: 'oklch(0.708 0 0)', accent: 'oklch(0.32 0.06 265)', accentForeground: 'oklch(0.92 0.02 265)', destructive: 'oklch(0.704 0.191 22.216)', border: 'oklch(1 0 0 / 10%)', ring: 'oklch(0.74 0.15 265)', sidebar: 'oklch(0.205 0 0)', sidebarForeground: 'oklch(0.985 0 0)', sidebarAccent: 'oklch(0.32 0.06 265)', sidebarAccentForeground: 'oklch(0.92 0.02 265)', sidebarBorder: 'oklch(1 0 0 / 10%)' };
+    const isOscuro = !!this.state.oscuro;
+    const base = isOscuro ? oscuroTokens : claroTokens;
+    const p = Object.assign({}, base, { oscuro: isOscuro, claro: !isOscuro });
+    const toggleTema = () => this.setState({ oscuro: !this.state.oscuro });
+    const toggleSidebar = () => this.setState({ sidebarColapsado: !this.state.sidebarColapsado });
+    const sidebarExpandido = !this.state.sidebarColapsado;
+
+    const ANIM_LABEL = { ninguna: 'Ninguna', aparecer: 'Aparecer', deslizar: 'Deslizar', zoom: 'Zoom' };
+    const ANIM_CSS = { ninguna: 'none', aparecer: 'entradaAparecer', deslizar: 'entradaDeslizar', zoom: 'entradaZoom' };
+    const self = this;
+
+    function efectoDe(id) {
+      const e = self.state.efectos[id];
+      return {
+        animacion: e.animacion,
+        opacidad: e.opacidad,
+        opacidadCss: (e.opacidad / 100).toString(),
+        cssAnim: ANIM_CSS[e.animacion],
+        layout: e.layout,
+        autoplay: e.autoplay,
+        columnas: e.columnas,
+        foto: e.foto,
+        estiloFoto: e.estiloFoto,
+        mostrarCV: e.mostrarCV,
+        direccion: e.direccion,
+        velocidad: e.velocidad
+      };
+    }
+    function optionStyle(activo) {
+      return activo
+        ? { borde: 'var(--ring)', fondo: 'var(--accent)', color: 'var(--accent-foreground)' }
+        : { borde: 'var(--border)', fondo: 'var(--card)', color: 'var(--foreground)' };
+    }
+    function ringFor(id) {
+      return self.state.selected === id ? '2px solid var(--ring)' : '1px solid var(--border)';
+    }
+
+    const efectoHero = efectoDe('hero');
+    const efectoSobreMi = efectoDe('sobremi');
+    const efectoProyectos = efectoDe('proyectos');
+    const efectoLogros = efectoDe('logros');
+    const efectoSkills = efectoDe('skills');
+
+    const seleccionar = (id) => () => this.setState({ selected: id });
+
+    const seleccion = this.state.selected;
+    const esFondo = seleccion === 'fondo';
+    const esHero = seleccion === 'hero';
+    const esSobreMi = seleccion === 'sobremi';
+    const esProyectos = seleccion === 'proyectos';
+    const esLogros = seleccion === 'logros';
+    const esSkills = seleccion === 'skills';
+    const TITULOS = { hero: 'Portada', sobremi: 'Sobre mí', proyectos: 'Proyectos', logros: 'Logros', skills: 'Skills' };
+
+    // -- animación / opacidad genéricas, según el bloque seleccionado --
+    const efectoActual = esFondo ? null : self.state.efectos[seleccion];
+    const animOpciones = ['ninguna', 'aparecer', 'deslizar', 'zoom'].map((v) => {
+      const activo = efectoActual && efectoActual.animacion === v;
+      const st = optionStyle(activo);
+      return { valor: v, label: ANIM_LABEL[v], borde: st.borde, fondo: st.fondo, color: st.color, pick: () => this.actualizarEfecto(seleccion, { animacion: v }) };
+    });
+    const opacidadOpciones = [100, 75, 50].map((v) => {
+      const activo = efectoActual && efectoActual.opacidad === v;
+      const st = optionStyle(activo);
+      return { valor: v, label: v + '%', borde: st.borde, fondo: st.fondo, color: st.color, pick: () => this.actualizarEfecto(seleccion, { opacidad: v }) };
+    });
+
+    // -- foto de perfil (Hero) --
+    const fotoStyleFor = (v) => optionStyle(efectoHero.foto === v);
+    const fN = fotoStyleFor('ninguna'), fC = fotoStyleFor('centrada'), fS = fotoStyleFor('esquinaSuperior'), fI = fotoStyleFor('esquinaInferior');
+    const estiloStyleFor = (v) => optionStyle(efectoHero.estiloFoto === v);
+    const eMarco = estiloStyleFor('marco'), eSin = estiloStyleFor('sinFondo');
+
+    // -- columnas Proyectos / layout Logros / dirección-velocidad Skills --
+    const colsStyleFor = (n) => optionStyle(efectoProyectos.columnas === n);
+    const cols2 = colsStyleFor(2), cols3 = colsStyleFor(3), cols4 = colsStyleFor(4);
+    const layoutStyleFor = (v) => optionStyle(efectoLogros.layout === v);
+    const layoutGrid = layoutStyleFor('grid'), layoutCarrusel = layoutStyleFor('carrusel');
+    const dirStyleFor = (v) => optionStyle(efectoSkills.direccion === v);
+    const dirIzqDer = dirStyleFor('izqDer'), dirDerIzq = dirStyleFor('derIzq');
+    const velStyleFor = (v) => optionStyle(efectoSkills.velocidad === v);
+    const velLenta = velStyleFor('lenta'), velNormal = velStyleFor('normal'), velRapida = velStyleFor('rapida');
+
+    // -- fondo del sitio --
+    const FONDO_LABEL = { solido: 'Sólido', degradado: 'Degradado animado', aurora: 'Aurora animada', particulas: 'Partículas', grid: 'Cuadrícula animada' };
+    const fondoOpciones = ['solido', 'degradado', 'aurora', 'particulas', 'grid'].map((v) => {
+      const activo = self.state.fondoPagina === v;
+      const st = optionStyle(activo);
+      return { valor: v, label: FONDO_LABEL[v], activo: activo, borde: st.borde, fondo: st.fondo, color: st.color, pick: () => this.setState({ fondoPagina: v }) };
+    });
+
+    // -- skills marquee data (duplicada para el loop infinito) --
+    const skillsBase = [
+      { id: 'node', nombre: 'Node.js' },
+      { id: 'java', nombre: 'Java' },
+      { id: 'aws', nombre: 'AWS' },
+      { id: 'azure', nombre: 'Azure' },
+      { id: 'react', nombre: 'React' },
+      { id: 'postgres', nombre: 'PostgreSQL' },
+      { id: 'docker', nombre: 'Docker' },
+      { id: 'git', nombre: 'Git' }
+    ];
+    const skillsFila = skillsBase.concat(skillsBase).map((s) => ({
+      nombre: s.nombre,
+      esNode: s.id === 'node', esJava: s.id === 'java', esAws: s.id === 'aws', esAzure: s.id === 'azure',
+      esReact: s.id === 'react', esPostgres: s.id === 'postgres', esDocker: s.id === 'docker', esGit: s.id === 'git'
+    }));
+    const VEL_SEGUNDOS = { lenta: 40, normal: 24, rapida: 13 };
+
+    return {
+      p, toggleTema, toggleSidebar,
+      despl: isOscuro ? 22 : 2,
+      sidebarAncho: sidebarExpandido ? 236 : 76, sidebarExpandido, navJustify: sidebarExpandido ? 'flex-start' : 'center',
+
+      esFondo, esHero, esSobreMi, esProyectos, esLogros, esSkills,
+      mostrarEfectos: !esFondo,
+      tituloSeleccion: TITULOS[seleccion] || '',
+      seleccionarFondo: seleccion === 'fondo' ? () => {} : () => this.setState({ selected: 'fondo' }),
+      seleccionarHero: seleccionar('hero'), seleccionarSobreMi: seleccionar('sobremi'), seleccionarProyectos: seleccionar('proyectos'), seleccionarLogros: seleccionar('logros'), seleccionarSkills: seleccionar('skills'),
+      fondoItemBg: esFondo ? 'var(--accent)' : 'transparent', fondoItemColor: esFondo ? 'var(--accent-foreground)' : 'var(--foreground)',
+      ringHero: ringFor('hero'), ringSobreMi: ringFor('sobremi'), ringProyectos: ringFor('proyectos'), ringLogros: ringFor('logros'), ringSkills: ringFor('skills'),
+
+      efectoHero, efectoSobreMi, efectoProyectos, efectoLogros, efectoSkills,
+      resumenHero: ANIM_LABEL[efectoHero.animacion] + ' · ' + efectoHero.opacidad + '%',
+      resumenSobreMi: ANIM_LABEL[efectoSobreMi.animacion] + ' · ' + efectoSobreMi.opacidad + '%',
+      resumenProyectos: ANIM_LABEL[efectoProyectos.animacion] + ' · ' + efectoProyectos.columnas + ' col.',
+      resumenLogros: ANIM_LABEL[efectoLogros.animacion] + ' · ' + (efectoLogros.layout === 'carrusel' ? 'Carrusel' : 'Cuadrícula'),
+      resumenSkills: (efectoSkills.direccion === 'izqDer' ? '→' : '←') + ' · ' + (efectoSkills.velocidad === 'lenta' ? 'Lenta' : efectoSkills.velocidad === 'rapida' ? 'Rápida' : 'Normal'),
+
+      proyectosCols: 'repeat(' + efectoProyectos.columnas + ', minmax(0, 1fr))',
+      logrosEsCarrusel: efectoLogros.layout === 'carrusel',
+      logrosEsGrid: efectoLogros.layout === 'grid',
+
+      fotoEsCentrada: efectoHero.foto === 'centrada',
+      fotoEsCorner: efectoHero.foto === 'esquinaSuperior' || efectoHero.foto === 'esquinaInferior',
+      fotoCornerPos: efectoHero.foto === 'esquinaInferior' ? 'bottom:16px;right:16px;' : 'top:16px;right:16px;',
+      fotoEstiloInline: efectoHero.estiloFoto === 'sinFondo' ? 'border:none;box-shadow:none;' : 'border:3px solid var(--card);box-shadow:0 4px 14px rgba(0,0,0,.18);',
+
+      setFotoNinguna: () => this.actualizarEfecto('hero', { foto: 'ninguna' }),
+      setFotoCentrada: () => this.actualizarEfecto('hero', { foto: 'centrada' }),
+      setFotoEsquinaSuperior: () => this.actualizarEfecto('hero', { foto: 'esquinaSuperior' }),
+      setFotoEsquinaInferior: () => this.actualizarEfecto('hero', { foto: 'esquinaInferior' }),
+      bordeFotoNinguna: fN.borde, fondoFotoNinguna: fN.fondo, colorFotoNinguna: fN.color,
+      bordeFotoCentrada: fC.borde, fondoFotoCentrada: fC.fondo, colorFotoCentrada: fC.color,
+      bordeFotoEsquinaSuperior: fS.borde, fondoFotoEsquinaSuperior: fS.fondo, colorFotoEsquinaSuperior: fS.color,
+      bordeFotoEsquinaInferior: fI.borde, fondoFotoEsquinaInferior: fI.fondo, colorFotoEsquinaInferior: fI.color,
+
+      setEstiloMarco: () => this.actualizarEfecto('hero', { estiloFoto: 'marco' }),
+      setEstiloSinFondo: () => this.actualizarEfecto('hero', { estiloFoto: 'sinFondo' }),
+      bordeEstiloMarco: eMarco.borde, fondoEstiloMarco: eMarco.fondo, colorEstiloMarco: eMarco.color,
+      bordeEstiloSinFondo: eSin.borde, fondoEstiloSinFondo: eSin.fondo, colorEstiloSinFondo: eSin.color,
+
+      toggleCV: () => this.actualizarEfecto('hero', { mostrarCV: !efectoHero.mostrarCV }),
+      cvFondo: efectoHero.mostrarCV ? 'var(--primary)' : 'var(--muted)',
+      cvThumb: efectoHero.mostrarCV ? 18 : 2,
+
+      setCols2: () => this.actualizarEfecto('proyectos', { columnas: 2 }),
+      setCols3: () => this.actualizarEfecto('proyectos', { columnas: 3 }),
+      setCols4: () => this.actualizarEfecto('proyectos', { columnas: 4 }),
+      bordeCols2: cols2.borde, fondoCols2: cols2.fondo, colorCols2: cols2.color,
+      bordeCols3: cols3.borde, fondoCols3: cols3.fondo, colorCols3: cols3.color,
+      bordeCols4: cols4.borde, fondoCols4: cols4.fondo, colorCols4: cols4.color,
+
+      setLayoutGrid: () => this.actualizarEfecto('logros', { layout: 'grid' }),
+      setLayoutCarrusel: () => this.actualizarEfecto('logros', { layout: 'carrusel' }),
+      bordeLayoutGrid: layoutGrid.borde, fondoLayoutGrid: layoutGrid.fondo, colorLayoutGrid: layoutGrid.color,
+      bordeLayoutCarrusel: layoutCarrusel.borde, fondoLayoutCarrusel: layoutCarrusel.fondo, colorLayoutCarrusel: layoutCarrusel.color,
+
+      toggleAutoplay: () => this.actualizarEfecto('logros', { autoplay: !efectoLogros.autoplay }),
+      autoplayFondo: efectoLogros.autoplay ? 'var(--primary)' : 'var(--muted)',
+      autoplayThumb: efectoLogros.autoplay ? 18 : 2,
+
+      setDirIzqDer: () => this.actualizarEfecto('skills', { direccion: 'izqDer' }),
+      setDirDerIzq: () => this.actualizarEfecto('skills', { direccion: 'derIzq' }),
+      bordeDirIzqDer: dirIzqDer.borde, fondoDirIzqDer: dirIzqDer.fondo, colorDirIzqDer: dirIzqDer.color,
+      bordeDirDerIzq: dirDerIzq.borde, fondoDirDerIzq: dirDerIzq.fondo, colorDirDerIzq: dirDerIzq.color,
+      setVelLenta: () => this.actualizarEfecto('skills', { velocidad: 'lenta' }),
+      setVelNormal: () => this.actualizarEfecto('skills', { velocidad: 'normal' }),
+      setVelRapida: () => this.actualizarEfecto('skills', { velocidad: 'rapida' }),
+      bordeVelLenta: velLenta.borde, fondoVelLenta: velLenta.fondo, colorVelLenta: velLenta.color,
+      bordeVelNormal: velNormal.borde, fondoVelNormal: velNormal.fondo, colorVelNormal: velNormal.color,
+      bordeVelRapida: velRapida.borde, fondoVelRapida: velRapida.fondo, colorVelRapida: velRapida.color,
+      skillsFila,
+      skillsAnimName: efectoSkills.direccion === 'izqDer' ? 'marqueeIzqDer' : 'marqueeDerIzq',
+      skillsDuracion: VEL_SEGUNDOS[efectoSkills.velocidad],
+
+      fondoOpciones,
+      fondoEsSolido: this.state.fondoPagina === 'solido',
+      fondoEsDegradado: this.state.fondoPagina === 'degradado',
+      fondoEsAurora: this.state.fondoPagina === 'aurora',
+      fondoEsParticulas: this.state.fondoPagina === 'particulas',
+      fondoEsGrid: this.state.fondoPagina === 'grid',
+
+      animOpciones, opacidadOpciones
+    };
+  }
+}
+</script>
+</body>
+</html>
