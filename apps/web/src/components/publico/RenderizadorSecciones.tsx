@@ -7,8 +7,10 @@ import type {
   LogrosConfiguracion,
   ProyectosConfiguracion,
   Seccion,
+  SkillsConfiguracion,
   SobreMiConfiguracion,
 } from '@/features/secciones/types'
+import { IconoSkill } from '@/features/skills/iconos-skill'
 import { formatearFecha } from '@/lib/formato'
 import { RedesSociales } from './RedesSociales'
 import type { SnapshotSitio } from '@/features/publico/types'
@@ -76,7 +78,12 @@ function BloqueSeccion({
 }) {
   switch (seccion.tipo_seccion) {
     case 'hero':
-      return <BloqueHero config={seccion.configuracion as HeroConfiguracion} />
+      return (
+        <BloqueHero
+          config={seccion.configuracion as HeroConfiguracion}
+          perfil={snapshot.perfil}
+        />
+      )
     case 'sobre-mi':
       return (
         <BloqueSobreMi
@@ -118,12 +125,66 @@ function BloqueSeccion({
           redesSociales={snapshot.redes_sociales}
         />
       )
+    case 'skills':
+      return (
+        <BloqueSkills
+          titulo={seccion.titulo_visible}
+          config={seccion.configuracion as SkillsConfiguracion}
+          skills={snapshot.skills}
+        />
+      )
     default:
       return null
   }
 }
 
-function BloqueHero({ config }: { config: HeroConfiguracion }) {
+function BloqueHero({
+  config,
+  perfil,
+}: {
+  config: HeroConfiguracion
+  perfil: SnapshotSitio['perfil']
+}) {
+  const mostrarFoto =
+    config.mostrar_foto_perfil &&
+    config.posicion_foto !== 'ninguna' &&
+    Boolean(perfil?.imagen_perfil)
+
+  // `esquina_*` se posiciona `absolute` respecto de este contenedor: solo
+  // hace falta `position: relative` cuando hay foto en una esquina (en
+  // `centrada` la imagen ya sigue el flujo normal del documento).
+  const contenedorRelativo =
+    mostrarFoto &&
+    (config.posicion_foto === 'esquina_superior' ||
+      config.posicion_foto === 'esquina_inferior')
+
+  const claseFoto =
+    config.estilo_foto === 'con_marco'
+      ? 'rounded-full border-4 object-cover'
+      : 'object-contain drop-shadow-lg'
+
+  const fotoPerfil =
+    mostrarFoto && perfil?.imagen_perfil ? (
+      <img
+        src={perfil.imagen_perfil.url}
+        alt={perfil.imagen_perfil.alt_text ?? perfil.nombre_completo}
+        style={
+          config.estilo_foto === 'con_marco'
+            ? { borderColor: 'var(--color-primario)' }
+            : undefined
+        }
+        className={
+          config.posicion_foto === 'centrada'
+            ? `mx-auto size-24 ${claseFoto}`
+            : `absolute size-16 sm:size-20 ${claseFoto} ${
+                config.posicion_foto === 'esquina_superior'
+                  ? 'top-4 right-4'
+                  : 'bottom-4 right-4'
+              }`
+        }
+      />
+    ) : null
+
   return (
     <div
       style={
@@ -135,8 +196,13 @@ function BloqueHero({ config }: { config: HeroConfiguracion }) {
             }
           : undefined
       }
-      className="grid gap-4 rounded-lg p-8 text-center"
+      className={
+        contenedorRelativo
+          ? 'relative grid gap-4 rounded-lg p-8 text-center'
+          : 'grid gap-4 rounded-lg p-8 text-center'
+      }
     >
+      {config.posicion_foto === 'centrada' ? fotoPerfil : null}
       <h1
         className="text-4xl font-bold"
         style={{ color: 'var(--color-texto)' }}
@@ -163,6 +229,10 @@ function BloqueHero({ config }: { config: HeroConfiguracion }) {
           {config.texto_boton}
         </a>
       ) : null}
+      {config.posicion_foto === 'esquina_superior' ||
+      config.posicion_foto === 'esquina_inferior'
+        ? fotoPerfil
+        : null}
     </div>
   )
 }
@@ -382,6 +452,68 @@ function BloqueContacto({
         </p>
       ) : null}
       <RedesSociales redes={redesSociales} cvMedia={perfil?.cv_media ?? null} />
+    </div>
+  )
+}
+
+/** Duración del loop del carrusel de skills (UC-07 + UC-16), más rápida cuanto mayor la "velocidad" elegida. */
+const DURACION_MARQUEE: Record<SkillsConfiguracion['velocidad'], string> = {
+  lenta: '60s',
+  media: '35s',
+  rapida: '18s',
+}
+
+function BloqueSkills({
+  titulo,
+  config,
+  skills,
+}: {
+  titulo: string
+  config: SkillsConfiguracion
+  skills: SnapshotSitio['skills']
+}) {
+  const visibles = [...skills]
+    .filter((skill) => skill.visible)
+    .sort((a, b) => a.orden - b.orden)
+
+  if (visibles.length === 0) {
+    return (
+      <div className="mx-auto grid max-w-5xl gap-6 text-center">
+        <h2 className="text-2xl font-semibold">{titulo}</h2>
+        <p className="text-muted-foreground">Todavía no hay skills cargados.</p>
+      </div>
+    )
+  }
+
+  // Duplica la lista para que el loop de la animación (`translateX(-50%)`,
+  // ver `@keyframes marquee` en `index.css`) no muestre ningún salto visual.
+  const duplicados = [...visibles, ...visibles]
+  const direccionAnimacion = config.direccion === 'izquierda' ? 'normal' : 'reverse'
+
+  return (
+    <div className="mx-auto grid max-w-5xl gap-6 overflow-hidden">
+      <h2 className="text-2xl font-semibold text-center">{titulo}</h2>
+      <div className="overflow-hidden">
+        <div
+          className="flex w-max gap-8"
+          style={{
+            animation: `marquee ${DURACION_MARQUEE[config.velocidad]} linear infinite`,
+            animationDirection: direccionAnimacion,
+          }}
+        >
+          {duplicados.map((skill, index) => (
+            <div
+              key={`${skill.id}-${index}`}
+              className="flex shrink-0 flex-col items-center gap-2"
+            >
+              <IconoSkill icono={skill.icono} className="size-10" />
+              <span className="text-xs text-muted-foreground">
+                {skill.nombre}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }

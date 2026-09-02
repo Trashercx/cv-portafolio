@@ -1,0 +1,262 @@
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useEffect, useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { ApiError } from '@/lib/api-client'
+import { CLAVES_ICONO_SKILL, IconoSkill } from './iconos-skill'
+import { skillSchema, type SkillFormValues } from './skill-schema'
+import type { Skill } from './types'
+import { useActualizarSkill, useCrearSkill } from './useSkills'
+
+const OTRO_ICONO_VALUE = 'otro'
+
+const DEFAULT_VALUES: SkillFormValues = {
+  nombre: '',
+  icono: '',
+  orden: 0,
+  visible: true,
+}
+
+type SkillFormDialogProps = {
+  skill?: Skill | null
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}
+
+/** UC-16 (Gestionar catálogo de skills): crear/editar dentro de un modal. */
+export function SkillFormDialog({
+  skill,
+  open,
+  onOpenChange,
+}: SkillFormDialogProps) {
+  const esNuevo = !skill
+
+  const crear = useCrearSkill()
+  const actualizar = useActualizarSkill(skill?.id ?? '')
+
+  const form = useForm<SkillFormValues>({
+    resolver: zodResolver(skillSchema),
+    defaultValues: DEFAULT_VALUES,
+  })
+
+  // `true` cuando el ícono se edita como texto libre (fuera del catálogo de
+  // `CLAVES_ICONO_SKILL`). Vive fuera de react-hook-form a propósito: es
+  // solo un interruptor de qué control mostrar (Select vs. Input), nunca un
+  // valor que viaje al backend.
+  const [modoIconoLibre, setModoIconoLibre] = useState(false)
+
+  // Depende de `open` (no solo de `skill`): sin esto, cerrar el modal sin
+  // guardar y reabrirlo en el mismo estado (misma referencia `skill`,
+  // incluido `null`→`null` en modo "nuevo") no dispara el reset y quedan
+  // valores sucios de la sesión anterior.
+  useEffect(() => {
+    if (!open) return
+    form.reset(
+      skill
+        ? {
+            nombre: skill.nombre,
+            icono: skill.icono,
+            orden: skill.orden,
+            visible: skill.visible,
+          }
+        : DEFAULT_VALUES,
+    )
+    const iconoInicial = skill?.icono ?? ''
+    setModoIconoLibre(
+      Boolean(iconoInicial) &&
+        !(CLAVES_ICONO_SKILL as readonly string[]).includes(iconoInicial),
+    )
+  }, [open, skill, form])
+
+  const mutacionActiva = esNuevo ? crear : actualizar
+
+  const onSubmit = (values: SkillFormValues) => {
+    const payload = {
+      nombre: values.nombre,
+      icono: values.icono,
+      orden: values.orden,
+      visible: values.visible,
+    }
+
+    if (esNuevo) {
+      crear.mutate(payload, { onSuccess: () => onOpenChange(false) })
+    } else {
+      actualizar.mutate(payload, { onSuccess: () => onOpenChange(false) })
+    }
+  }
+
+  const errorMessage =
+    mutacionActiva.error instanceof ApiError
+      ? mutacionActiva.error.message
+      : mutacionActiva.error
+        ? 'No se pudo guardar el skill. Intenta de nuevo.'
+        : null
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{esNuevo ? 'Nuevo skill' : 'Editar skill'}</DialogTitle>
+        </DialogHeader>
+        <Form {...form}>
+          <form
+            onSubmit={form.handleSubmit(onSubmit)}
+            noValidate
+            className="grid gap-4"
+          >
+            <FormField
+              control={form.control}
+              name="nombre"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nombre</FormLabel>
+                  <FormControl>
+                    <Input placeholder="p. ej. Node.js" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="icono"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Ícono</FormLabel>
+                  <div className="flex items-center gap-2">
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-md border bg-card">
+                      {field.value ? (
+                        <IconoSkill icono={field.value} className="size-5" />
+                      ) : null}
+                    </span>
+                    {modoIconoLibre ? (
+                      <FormControl>
+                        <Input
+                          placeholder="Clave del ícono, p. ej. kubernetes"
+                          {...field}
+                        />
+                      </FormControl>
+                    ) : (
+                      <Select
+                        value={field.value}
+                        onValueChange={(value) => {
+                          if (value === OTRO_ICONO_VALUE) {
+                            setModoIconoLibre(true)
+                            field.onChange('')
+                            return
+                          }
+                          field.onChange(value)
+                        }}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Elegir ícono" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {CLAVES_ICONO_SKILL.map((clave) => (
+                            <SelectItem key={clave} value={clave}>
+                              {clave}
+                            </SelectItem>
+                          ))}
+                          <SelectItem value={OTRO_ICONO_VALUE}>
+                            Otro (personalizado)
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+                  {modoIconoLibre ? (
+                    <button
+                      type="button"
+                      className="w-fit text-xs text-primary underline underline-offset-4"
+                      onClick={() => {
+                        setModoIconoLibre(false)
+                        field.onChange('')
+                      }}
+                    >
+                      Elegir de la lista
+                    </button>
+                  ) : null}
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="orden"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Orden</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      value={field.value}
+                      onChange={(event) =>
+                        field.onChange(event.target.valueAsNumber)
+                      }
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="visible"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center gap-2 space-y-0">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={(checked) =>
+                        field.onChange(checked === true)
+                      }
+                    />
+                  </FormControl>
+                  <FormLabel className="mt-0!">Visible</FormLabel>
+                </FormItem>
+              )}
+            />
+
+            {errorMessage ? (
+              <p role="alert" className="text-sm text-destructive">
+                {errorMessage}
+              </p>
+            ) : null}
+
+            <DialogFooter>
+              <Button type="submit" disabled={mutacionActiva.isPending}>
+                {mutacionActiva.isPending ? 'Guardando…' : 'Guardar'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  )
+}

@@ -48,7 +48,13 @@ const SNAPSHOT: SnapshotSitio = {
       titulo_visible: 'Portada',
       orden: 0,
       visible: true,
-      configuracion: { titulo: 'Hola, soy Ada', subtitulo: 'Bienvenido' },
+      configuracion: {
+        titulo: 'Hola, soy Ada',
+        subtitulo: 'Bienvenido',
+        mostrar_foto_perfil: false,
+        posicion_foto: 'ninguna',
+        estilo_foto: 'con_marco',
+      },
     },
     {
       id: 'seccion-contacto-oculta',
@@ -64,6 +70,8 @@ const SNAPSHOT: SnapshotSitio = {
   certificaciones: [],
   logros: [],
   redes_sociales: [],
+  skills: [],
+  fondo: null,
 }
 
 const useSitioMock = vi.fn()
