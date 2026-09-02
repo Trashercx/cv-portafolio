@@ -16,6 +16,21 @@ export function useMediaList(tipo?: string) {
   })
 }
 
+/**
+ * `GET /admin/media/:id`: el `Media` completo (con `url`/`tipo`) para un id
+ * ya guardado en otra entidad (p. ej. `Certificacion.logo_media_id`), que
+ * solo expone el id, no el objeto resuelto. Se usa para previsualizar
+ * (imagen o PDF, ver `MediaPreview`) un archivo ya cargado sin depender de
+ * que el formulario padre haya recibido una `Media` fresca en esta sesión.
+ */
+export function useMedia(id?: string) {
+  return useQuery({
+    queryKey: [...MEDIA_QUERY_KEY, 'item', id] as const,
+    queryFn: () => apiFetch<Media>(`/admin/media/${id}`),
+    enabled: Boolean(id),
+  })
+}
+
 /** `PATCH /admin/media/:id`: edición de `alt_text`. */
 export function useActualizarMedia() {
   const queryClient = useQueryClient()

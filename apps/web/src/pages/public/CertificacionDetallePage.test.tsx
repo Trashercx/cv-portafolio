@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { CertificacionPublica } from '@/features/publico/types'
@@ -56,6 +57,42 @@ describe('CertificacionDetallePage (UC-13)', () => {
     expect(
       screen.getByRole('link', { name: /verificar credencial/i }),
     ).toHaveAttribute('href', 'https://verify.example.com/cert-1')
+  })
+
+  it('cuando el logo es un PDF (feedback externo, UC-04), lo muestra como documento verificable en vez de un <img> roto', async () => {
+    useCertificacionPublicaMock.mockReturnValue({
+      data: {
+        ...CERTIFICACION,
+        logo_media_id: 'media-pdf',
+        logo: {
+          id: 'media-pdf',
+          url: 'https://cdn.example.com/certificado.pdf',
+          s3_key: 'certificado.pdf',
+          tipo: 'pdf',
+          ancho: null,
+          alto: null,
+          alt_text: null,
+          created_at: '2024-01-01T00:00:00.000Z',
+        },
+      },
+      isLoading: false,
+      error: null,
+    })
+    const user = userEvent.setup()
+
+    renderConId('certificacion-1')
+
+    expect(screen.queryByRole('img')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /ver documento/i }))
+
+    expect(screen.getByTitle('AWS Certified Cloud Practitioner')).toHaveAttribute(
+      'src',
+      'https://cdn.example.com/certificado.pdf',
+    )
+    expect(
+      screen.getByRole('link', { name: /abrir en pestaña nueva/i }),
+    ).toHaveAttribute('href', 'https://cdn.example.com/certificado.pdf')
   })
 
   it('muestra un 404 amigable cuando la certificación no existe en lo publicado', () => {

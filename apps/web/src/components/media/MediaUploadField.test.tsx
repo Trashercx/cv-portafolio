@@ -106,6 +106,50 @@ describe('MediaUploadField', () => {
     expect(screen.queryByText(/pendiente de subir/i)).not.toBeInTheDocument()
   })
 
+  it('al seleccionar un PDF (certificación) muestra una previsualización embebida en vez de un <img> roto, y permite subirlo', async () => {
+    const user = userEvent.setup()
+    render(
+      <MediaUploadField
+        label="Logo o documento del certificado (imagen o PDF)"
+        accept="image/*,application/pdf"
+        onUploaded={onUploadedMock}
+      />,
+    )
+
+    await user.upload(
+      screen.getByLabelText(/logo o documento del certificado/i),
+      crearArchivo('certificado.pdf', 'application/pdf'),
+    )
+
+    expect(screen.queryByRole('img')).not.toBeInTheDocument()
+    expect(screen.getByText('certificado.pdf')).toBeInTheDocument()
+
+    // Al ampliar, se embebe como documento (no como <img> roto).
+    await user.click(screen.getByRole('button', { name: /ver documento/i }))
+    expect(screen.getByTitle('certificado.pdf')).toHaveAttribute(
+      'src',
+      expect.stringMatching(/^blob:mock-/),
+    )
+
+    expect(screen.getByText(/pendiente de subir/i)).toBeInTheDocument()
+    expect(uploadMutateMock).not.toHaveBeenCalled()
+  })
+
+  it('con currentMediaTipo="pdf", el archivo ya confirmado se previsualiza como documento embebido, no como <img>', () => {
+    render(
+      <MediaUploadField
+        label="Logo o documento del certificado (imagen o PDF)"
+        accept="image/*,application/pdf"
+        currentMediaId="media-existente"
+        currentPreviewUrl="https://cdn.example.com/certificado.pdf"
+        currentMediaTipo="pdf"
+        onUploaded={onUploadedMock}
+      />,
+    )
+
+    expect(screen.queryByRole('img')).not.toBeInTheDocument()
+  })
+
   it('click en "Cancelar" antes de subir no llama a upload.mutate y restaura el archivo ya confirmado, si había uno', async () => {
     const user = userEvent.setup()
     const { container } = render(

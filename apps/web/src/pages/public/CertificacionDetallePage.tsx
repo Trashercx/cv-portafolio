@@ -1,4 +1,5 @@
 import { Link, useParams } from 'react-router-dom'
+import { MediaPreview } from '@/components/media/MediaPreview'
 import { useCertificacionPublica } from '@/features/publico/usePublico'
 import { ApiError } from '@/lib/api-client'
 import { formatearFecha } from '@/lib/formato'
@@ -47,10 +48,13 @@ export function CertificacionDetallePage() {
       </Link>
 
       {certificacion.logo ? (
-        <img
-          src={certificacion.logo.url}
+        <MediaPreview
+          tipo={certificacion.logo.tipo}
+          url={certificacion.logo.url}
           alt={certificacion.logo.alt_text ?? certificacion.nombre}
-          className="size-20 object-contain"
+          nombre={certificacion.nombre}
+          className="size-20 rounded-md"
+          fit="contain"
         />
       ) : null}
 

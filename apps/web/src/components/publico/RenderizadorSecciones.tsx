@@ -1,3 +1,4 @@
+import { FileIcon } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import type {
   CertificacionesConfiguracion,
@@ -274,11 +275,24 @@ function BloqueCertificaciones({
               className="grid gap-2 rounded-lg border p-4 transition-colors hover:bg-accent"
             >
               {certificacion.logo ? (
-                <img
-                  src={certificacion.logo.url}
-                  alt={certificacion.logo.alt_text ?? certificacion.nombre}
-                  className="size-12 object-contain"
-                />
+                // Tarjeta clicable (navega al detalle, UC-13): el zoom/lightbox
+                // del logo o documento vive en `CertificacionDetallePage`, no
+                // acá — anidar el `Dialog` de `MediaPreview` dentro de este
+                // `Link` interceptaría el click de navegación. Si el logo es
+                // un PDF (feedback externo, UC-04) se muestra un ícono en vez
+                // de un `<img>` roto.
+                certificacion.logo.tipo === 'imagen' ? (
+                  <img
+                    src={certificacion.logo.url}
+                    alt={certificacion.logo.alt_text ?? certificacion.nombre}
+                    className="size-12 object-contain"
+                  />
+                ) : (
+                  <FileIcon
+                    className="size-12 text-muted-foreground"
+                    aria-label="Documento del certificado"
+                  />
+                )
               ) : null}
               <h3 className="font-semibold">{certificacion.nombre}</h3>
               <p className="text-sm text-muted-foreground">
