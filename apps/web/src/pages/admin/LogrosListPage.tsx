@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { useState } from 'react'
 import { ConfirmDeleteDialog } from '@/components/shared/ConfirmDeleteDialog'
 import { OrderButtons } from '@/components/shared/OrderButtons'
 import { Button } from '@/components/ui/button'
@@ -10,6 +10,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { LogroFormDialog } from '@/features/logros/LogroFormDialog'
+import type { Logro } from '@/features/logros/types'
 import {
   useEliminarLogro,
   useLogros,
@@ -24,6 +26,9 @@ export function LogrosListPage() {
   const reordenar = useReordenarLogros()
   const eliminar = useEliminarLogro()
 
+  const [dialogoAbierto, setDialogoAbierto] = useState(false)
+  const [itemEditando, setItemEditando] = useState<Logro | null>(null)
+
   const ordenados = [...(logros ?? [])].sort((a, b) => a.orden - b.orden)
 
   const mover = (id: string, direccion: 'subir' | 'bajar') => {
@@ -33,15 +38,23 @@ export function LogrosListPage() {
     reordenar.mutate(intercambio)
   }
 
+  const abrirNuevo = () => {
+    setItemEditando(null)
+    setDialogoAbierto(true)
+  }
+
+  const abrirEdicion = (logro: Logro) => {
+    setItemEditando(logro)
+    setDialogoAbierto(true)
+  }
+
   return (
     <div className="grid gap-4">
       <div className="flex items-center justify-between">
         <h1 className="font-heading text-xl font-semibold">
           Logros y reconocimientos
         </h1>
-        <Button asChild>
-          <Link to="/admin/logros/nuevo">Nuevo logro</Link>
-        </Button>
+        <Button onClick={abrirNuevo}>Nuevo logro</Button>
       </div>
 
       {isLoading ? (
@@ -85,8 +98,12 @@ export function LogrosListPage() {
                 <TableCell>{logro.titulo}</TableCell>
                 <TableCell>{logro.categoria}</TableCell>
                 <TableCell className="flex justify-end gap-2">
-                  <Button variant="outline" size="sm" asChild>
-                    <Link to={`/admin/logros/${logro.id}`}>Editar</Link>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => abrirEdicion(logro)}
+                  >
+                    Editar
                   </Button>
                   <ConfirmDeleteDialog
                     trigger={
@@ -105,6 +122,12 @@ export function LogrosListPage() {
           </TableBody>
         </Table>
       ) : null}
+
+      <LogroFormDialog
+        logro={itemEditando}
+        open={dialogoAbierto}
+        onOpenChange={setDialogoAbierto}
+      />
     </div>
   )
 }

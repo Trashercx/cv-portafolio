@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { useState } from 'react'
 import { ConfirmDeleteDialog } from '@/components/shared/ConfirmDeleteDialog'
 import { OrderButtons } from '@/components/shared/OrderButtons'
 import { Badge } from '@/components/ui/badge'
@@ -11,6 +11,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { ProyectoFormDialog } from '@/features/proyectos/ProyectoFormDialog'
+import type { ProyectoBase } from '@/features/proyectos/types'
 import {
   useEliminarProyecto,
   useReordenarProyectos,
@@ -25,6 +27,9 @@ export function ProyectosListPage() {
   const reordenar = useReordenarProyectos()
   const eliminar = useEliminarProyecto()
 
+  const [dialogoAbierto, setDialogoAbierto] = useState(false)
+  const [itemEditando, setItemEditando] = useState<ProyectoBase | null>(null)
+
   const ordenados = [...(proyectos ?? [])].sort((a, b) => a.orden - b.orden)
 
   const mover = (id: string, direccion: 'subir' | 'bajar') => {
@@ -34,13 +39,21 @@ export function ProyectosListPage() {
     reordenar.mutate(intercambio)
   }
 
+  const abrirNuevo = () => {
+    setItemEditando(null)
+    setDialogoAbierto(true)
+  }
+
+  const abrirEdicion = (proyecto: ProyectoBase) => {
+    setItemEditando(proyecto)
+    setDialogoAbierto(true)
+  }
+
   return (
     <div className="grid gap-4">
       <div className="flex items-center justify-between">
         <h1 className="font-heading text-xl font-semibold">Proyectos</h1>
-        <Button asChild>
-          <Link to="/admin/proyectos/nuevo">Nuevo proyecto</Link>
-        </Button>
+        <Button onClick={abrirNuevo}>Nuevo proyecto</Button>
       </div>
 
       {isLoading ? (
@@ -89,8 +102,12 @@ export function ProyectosListPage() {
                   {proyecto.destacado ? <Badge>Destacado</Badge> : null}
                 </TableCell>
                 <TableCell className="flex justify-end gap-2">
-                  <Button variant="outline" size="sm" asChild>
-                    <Link to={`/admin/proyectos/${proyecto.id}`}>Editar</Link>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => abrirEdicion(proyecto)}
+                  >
+                    Editar
                   </Button>
                   <ConfirmDeleteDialog
                     trigger={
@@ -109,6 +126,12 @@ export function ProyectosListPage() {
           </TableBody>
         </Table>
       ) : null}
+
+      <ProyectoFormDialog
+        proyecto={itemEditando}
+        open={dialogoAbierto}
+        onOpenChange={setDialogoAbierto}
+      />
     </div>
   )
 }

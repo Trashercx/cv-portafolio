@@ -1,21 +1,9 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
+import { useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { LogroFormPage } from './LogroFormPage'
-
-const navigateMock = vi.fn()
-
-vi.mock('react-router-dom', async () => {
-  const actual =
-    await vi.importActual<typeof import('react-router-dom')>(
-      'react-router-dom',
-    )
-  return {
-    ...actual,
-    useNavigate: () => navigateMock,
-  }
-})
+import { LogroFormDialog } from './LogroFormDialog'
+import type { Logro } from './types'
 
 const crearMutateMock = vi.fn()
 const actualizarMutateMock = vi.fn()
@@ -24,8 +12,7 @@ const crearState: { isPending: boolean; error: unknown } = {
   error: null,
 }
 
-vi.mock('@/features/logros/useLogros', () => ({
-  useLogro: () => ({ data: undefined, isLoading: false }),
+vi.mock('./useLogros', () => ({
   useCrearLogro: () => ({
     mutate: crearMutateMock,
     isPending: crearState.isPending,
@@ -38,15 +25,35 @@ vi.mock('@/features/logros/useLogros', () => ({
   }),
 }))
 
-function renderLogroFormPage() {
+function renderDialog(onOpenChange = vi.fn()) {
   return render(
-    <MemoryRouter>
-      <LogroFormPage />
-    </MemoryRouter>,
+    <LogroFormDialog logro={null} open onOpenChange={onOpenChange} />,
   )
 }
 
-describe('LogroFormPage (nuevo)', () => {
+const LOGRO_EXISTENTE: Logro = {
+  id: 'logro-existente',
+  usuario_admin_id: 'admin-1',
+  titulo: 'Beca de investigación',
+  descripcion: 'Descripción existente',
+  fecha: '2023-05-10',
+  categoria: 'Académico',
+  url_referencia: null,
+  orden: 3,
+}
+
+/** Wrapper con estado propio de `open`, para poder cerrar/reabrir el diálogo como lo haría la `*ListPage`. */
+function WrapperControlado({ logro }: { logro: Logro | null }) {
+  const [open, setOpen] = useState(true)
+  return (
+    <>
+      <button onClick={() => setOpen(true)}>Reabrir</button>
+      <LogroFormDialog logro={logro} open={open} onOpenChange={setOpen} />
+    </>
+  )
+}
+
+describe('LogroFormDialog (nuevo)', () => {
   beforeEach(() => {
     crearState.isPending = false
     crearState.error = null
@@ -58,7 +65,7 @@ describe('LogroFormPage (nuevo)', () => {
 
   it('no llama a la mutación cuando falta un campo obligatorio', async () => {
     const user = userEvent.setup()
-    renderLogroFormPage()
+    renderDialog()
 
     // deja "título" vacío
     await user.type(
@@ -73,9 +80,10 @@ describe('LogroFormPage (nuevo)', () => {
     expect(crearMutateMock).not.toHaveBeenCalled()
   })
 
-  it('llama a la mutación con el payload correcto cuando el formulario es válido', async () => {
+  it('llama a la mutación con el payload correcto y cierra el modal al guardar', async () => {
     const user = userEvent.setup()
-    renderLogroFormPage()
+    const onOpenChange = vi.fn()
+    renderDialog(onOpenChange)
 
     await user.type(screen.getByLabelText(/título/i), 'Hackathon ganador')
     await user.type(
@@ -101,11 +109,17 @@ describe('LogroFormPage (nuevo)', () => {
       },
       expect.objectContaining({ onSuccess: expect.any(Function) }),
     )
+
+    const opciones = crearMutateMock.mock.calls[0][1] as {
+      onSuccess: () => void
+    }
+    opciones.onSuccess()
+    expect(onOpenChange).toHaveBeenCalledWith(false)
   })
 
   it('muestra el link "Ver enlace" cuando la URL de referencia es válida', async () => {
     const user = userEvent.setup()
-    renderLogroFormPage()
+    renderDialog()
 
     expect(
       screen.queryByRole('link', { name: /ver enlace/i }),
@@ -124,7 +138,7 @@ describe('LogroFormPage (nuevo)', () => {
 
   it('no muestra el link "Ver enlace" cuando la URL de referencia es inválida o está vacía', async () => {
     const user = userEvent.setup()
-    renderLogroFormPage()
+    renderDialog()
 
     expect(
       screen.queryByRole('link', { name: /ver enlace/i }),
@@ -138,5 +152,59 @@ describe('LogroFormPage (nuevo)', () => {
     expect(
       screen.queryByRole('link', { name: /ver enlace/i }),
     ).not.toBeInTheDocument()
+  })
+
+  it('modo edición: precarga el logro existente y llama a actualizar, no a crear', async () => {
+    const user = userEvent.setup()
+    render(
+      <LogroFormDialog
+        logro={LOGRO_EXISTENTE}
+        open
+        onOpenChange={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByLabelText(/título/i)).toHaveValue('Beca de investigación')
+    expect(screen.getByLabelText(/descripción/i)).toHaveValue(
+      'Descripción existente',
+    )
+    expect(screen.getByLabelText(/categoría/i)).toHaveValue('Académico')
+
+    await user.click(screen.getByRole('button', { name: /guardar/i }))
+
+    await waitFor(() => expect(actualizarMutateMock).toHaveBeenCalledTimes(1))
+    expect(actualizarMutateMock).toHaveBeenCalledWith(
+      {
+        titulo: 'Beca de investigación',
+        descripcion: 'Descripción existente',
+        fecha: '2023-05-10',
+        categoria: 'Académico',
+        url_referencia: undefined,
+        orden: 3,
+      },
+      expect.objectContaining({ onSuccess: expect.any(Function) }),
+    )
+    expect(crearMutateMock).not.toHaveBeenCalled()
+  })
+
+  it('resetea el formulario al reabrir sin guardar (mismo estado "nuevo")', async () => {
+    const user = userEvent.setup()
+    render(<WrapperControlado logro={null} />)
+
+    await user.type(screen.getByLabelText(/título/i), 'texto sucio sin guardar')
+    expect(screen.getByLabelText(/título/i)).toHaveValue(
+      'texto sucio sin guardar',
+    )
+
+    // cierra sin guardar (Escape, como haría el admin)
+    await user.keyboard('{Escape}')
+    await waitFor(() =>
+      expect(screen.queryByLabelText(/título/i)).not.toBeInTheDocument(),
+    )
+
+    // reabre en el mismo estado "nuevo"
+    await user.click(screen.getByRole('button', { name: /reabrir/i }))
+
+    expect(await screen.findByLabelText(/título/i)).toHaveValue('')
   })
 })

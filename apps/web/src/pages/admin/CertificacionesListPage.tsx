@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { useState } from 'react'
 import { ConfirmDeleteDialog } from '@/components/shared/ConfirmDeleteDialog'
 import { OrderButtons } from '@/components/shared/OrderButtons'
 import { Button } from '@/components/ui/button'
@@ -10,6 +10,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { CertificacionFormDialog } from '@/features/certificaciones/CertificacionFormDialog'
+import type { Certificacion } from '@/features/certificaciones/types'
 import {
   useCertificaciones,
   useEliminarCertificacion,
@@ -23,6 +25,9 @@ export function CertificacionesListPage() {
   const { data: certificaciones, isLoading, error } = useCertificaciones()
   const reordenar = useReordenarCertificaciones()
   const eliminar = useEliminarCertificacion()
+
+  const [dialogoAbierto, setDialogoAbierto] = useState(false)
+  const [itemEditando, setItemEditando] = useState<Certificacion | null>(null)
 
   const ordenadas = [...(certificaciones ?? [])].sort(
     (a, b) => a.orden - b.orden,
@@ -39,13 +44,21 @@ export function CertificacionesListPage() {
     reordenar.mutate(intercambio)
   }
 
+  const abrirNuevo = () => {
+    setItemEditando(null)
+    setDialogoAbierto(true)
+  }
+
+  const abrirEdicion = (certificacion: Certificacion) => {
+    setItemEditando(certificacion)
+    setDialogoAbierto(true)
+  }
+
   return (
     <div className="grid gap-4">
       <div className="flex items-center justify-between">
         <h1 className="font-heading text-xl font-semibold">Certificaciones</h1>
-        <Button asChild>
-          <Link to="/admin/certificaciones/nuevo">Nueva certificación</Link>
-        </Button>
+        <Button onClick={abrirNuevo}>Nueva certificación</Button>
       </div>
 
       {isLoading ? (
@@ -102,10 +115,12 @@ export function CertificacionesListPage() {
                   </a>
                 </TableCell>
                 <TableCell className="flex justify-end gap-2">
-                  <Button variant="outline" size="sm" asChild>
-                    <Link to={`/admin/certificaciones/${certificacion.id}`}>
-                      Editar
-                    </Link>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => abrirEdicion(certificacion)}
+                  >
+                    Editar
                   </Button>
                   <ConfirmDeleteDialog
                     trigger={
@@ -124,6 +139,12 @@ export function CertificacionesListPage() {
           </TableBody>
         </Table>
       ) : null}
+
+      <CertificacionFormDialog
+        certificacion={itemEditando}
+        open={dialogoAbierto}
+        onOpenChange={setDialogoAbierto}
+      />
     </div>
   )
 }

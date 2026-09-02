@@ -1,9 +1,14 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
-import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
   Form,
   FormControl,
@@ -14,15 +19,10 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import {
-  logroSchema,
-  type LogroFormValues,
-} from '@/features/logros/logro-schema'
-import {
-  useActualizarLogro,
-  useCrearLogro,
-  useLogro,
-} from '@/features/logros/useLogros'
+import { ApiError } from '@/lib/api-client'
+import { logroSchema, type LogroFormValues } from './logro-schema'
+import type { Logro } from './types'
+import { useActualizarLogro, useCrearLogro } from './useLogros'
 
 const DEFAULT_VALUES: LogroFormValues = {
   titulo: '',
@@ -33,33 +33,47 @@ const DEFAULT_VALUES: LogroFormValues = {
   orden: 0,
 }
 
-/** UC-05 (Gestionar logros y reconocimientos): crear/editar con el mismo formulario. */
-export function LogroFormPage() {
-  const { id } = useParams<{ id: string }>()
-  const esNuevo = !id
-  const navigate = useNavigate()
+type LogroFormDialogProps = {
+  logro?: Logro | null
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}
 
-  const { data: logro, isLoading } = useLogro(id)
+/** UC-05 (Gestionar logros y reconocimientos): crear/editar dentro de un modal. */
+export function LogroFormDialog({
+  logro,
+  open,
+  onOpenChange,
+}: LogroFormDialogProps) {
+  const esNuevo = !logro
 
   const crear = useCrearLogro()
-  const actualizar = useActualizarLogro(id ?? '')
+  const actualizar = useActualizarLogro(logro?.id ?? '')
 
   const form = useForm<LogroFormValues>({
     resolver: zodResolver(logroSchema),
     defaultValues: DEFAULT_VALUES,
   })
 
+  // Depende de `open` (no solo de `logro`): sin esto, cerrar el modal sin
+  // guardar y reabrirlo en el mismo estado (misma referencia `logro`,
+  // incluido `null`→`null` en modo "nuevo") no dispara el reset y quedan
+  // valores sucios de la sesión anterior.
   useEffect(() => {
-    if (!logro) return
-    form.reset({
-      titulo: logro.titulo,
-      descripcion: logro.descripcion,
-      fecha: logro.fecha.slice(0, 10),
-      categoria: logro.categoria,
-      url_referencia: logro.url_referencia ?? '',
-      orden: logro.orden,
-    })
-  }, [logro, form])
+    if (!open) return
+    form.reset(
+      logro
+        ? {
+            titulo: logro.titulo,
+            descripcion: logro.descripcion,
+            fecha: logro.fecha.slice(0, 10),
+            categoria: logro.categoria,
+            url_referencia: logro.url_referencia ?? '',
+            orden: logro.orden,
+          }
+        : DEFAULT_VALUES,
+    )
+  }, [open, logro, form])
 
   const mutacionActiva = esNuevo ? crear : actualizar
 
@@ -83,24 +97,25 @@ export function LogroFormPage() {
     }
 
     if (esNuevo) {
-      crear.mutate(payload, { onSuccess: () => navigate('/admin/logros') })
+      crear.mutate(payload, { onSuccess: () => onOpenChange(false) })
     } else {
-      actualizar.mutate(payload)
+      actualizar.mutate(payload, { onSuccess: () => onOpenChange(false) })
     }
   }
 
-  if (!esNuevo && isLoading) {
-    return <p className="text-sm text-muted-foreground">Cargando logro…</p>
-  }
+  const errorMessage =
+    mutacionActiva.error instanceof ApiError
+      ? mutacionActiva.error.message
+      : mutacionActiva.error
+        ? 'No se pudo guardar el logro. Intenta de nuevo.'
+        : null
 
   return (
-    <Card className="max-w-2xl">
-      <CardHeader>
-        <CardTitle className="font-heading text-xl">
-          {esNuevo ? 'Nuevo logro' : 'Editar logro'}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{esNuevo ? 'Nuevo logro' : 'Editar logro'}</DialogTitle>
+        </DialogHeader>
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit)}
@@ -204,16 +219,20 @@ export function LogroFormPage() {
               )}
             />
 
-            <Button
-              type="submit"
-              className="w-fit"
-              disabled={mutacionActiva.isPending}
-            >
-              {mutacionActiva.isPending ? 'Guardando…' : 'Guardar'}
-            </Button>
+            {errorMessage ? (
+              <p role="alert" className="text-sm text-destructive">
+                {errorMessage}
+              </p>
+            ) : null}
+
+            <DialogFooter>
+              <Button type="submit" disabled={mutacionActiva.isPending}>
+                {mutacionActiva.isPending ? 'Guardando…' : 'Guardar'}
+              </Button>
+            </DialogFooter>
           </form>
         </Form>
-      </CardContent>
-    </Card>
+      </DialogContent>
+    </Dialog>
   )
 }

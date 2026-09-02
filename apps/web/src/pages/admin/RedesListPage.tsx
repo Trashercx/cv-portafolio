@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { useState } from 'react'
 import { ConfirmDeleteDialog } from '@/components/shared/ConfirmDeleteDialog'
 import { OrderButtons } from '@/components/shared/OrderButtons'
 import { Button } from '@/components/ui/button'
@@ -11,6 +11,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { PlataformaBadge } from '@/features/redes-sociales/iconos-plataforma'
+import { RedFormDialog } from '@/features/redes-sociales/RedFormDialog'
+import type { RedSocial } from '@/features/redes-sociales/types'
 import {
   useEliminarRedSocial,
   useRedesSociales,
@@ -25,6 +27,9 @@ export function RedesListPage() {
   const reordenar = useReordenarRedesSociales()
   const eliminar = useEliminarRedSocial()
 
+  const [dialogoAbierto, setDialogoAbierto] = useState(false)
+  const [itemEditando, setItemEditando] = useState<RedSocial | null>(null)
+
   const ordenadas = [...(redes ?? [])].sort((a, b) => a.orden - b.orden)
 
   const mover = (id: string, direccion: 'subir' | 'bajar') => {
@@ -34,13 +39,21 @@ export function RedesListPage() {
     reordenar.mutate(intercambio)
   }
 
+  const abrirNuevo = () => {
+    setItemEditando(null)
+    setDialogoAbierto(true)
+  }
+
+  const abrirEdicion = (red: RedSocial) => {
+    setItemEditando(red)
+    setDialogoAbierto(true)
+  }
+
   return (
     <div className="grid gap-4">
       <div className="flex items-center justify-between">
         <h1 className="font-heading text-xl font-semibold">Redes sociales</h1>
-        <Button asChild>
-          <Link to="/admin/redes/nuevo">Nuevo enlace</Link>
-        </Button>
+        <Button onClick={abrirNuevo}>Nuevo enlace</Button>
       </div>
 
       {isLoading ? (
@@ -95,8 +108,12 @@ export function RedesListPage() {
                   </a>
                 </TableCell>
                 <TableCell className="flex justify-end gap-2">
-                  <Button variant="outline" size="sm" asChild>
-                    <Link to={`/admin/redes/${red.id}`}>Editar</Link>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => abrirEdicion(red)}
+                  >
+                    Editar
                   </Button>
                   <ConfirmDeleteDialog
                     trigger={
@@ -115,6 +132,12 @@ export function RedesListPage() {
           </TableBody>
         </Table>
       ) : null}
+
+      <RedFormDialog
+        red={itemEditando}
+        open={dialogoAbierto}
+        onOpenChange={setDialogoAbierto}
+      />
     </div>
   )
 }
