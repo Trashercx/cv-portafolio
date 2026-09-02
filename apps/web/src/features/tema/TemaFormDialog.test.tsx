@@ -66,4 +66,34 @@ describe('TemaFormDialog', () => {
       expect.objectContaining({ onSuccess: expect.any(Function) }),
     )
   })
+
+  it('precarga el formulario al elegir una plantilla predefinida (editable antes de guardar)', async () => {
+    const user = userEvent.setup()
+    render(<TemaFormDialog />)
+
+    await user.click(screen.getByRole('button', { name: /nuevo tema/i }))
+
+    await user.click(
+      screen.getByRole('combobox', { name: /plantilla predefinida/i }),
+    )
+    await user.click(await screen.findByRole('option', { name: /océano/i }))
+
+    expect(screen.getByLabelText(/^nombre$/i)).toHaveValue('Océano')
+
+    await user.click(screen.getByRole('button', { name: /crear tema/i }))
+
+    await waitFor(() => expect(crearMutateMock).toHaveBeenCalledTimes(1))
+    expect(crearMutateMock).toHaveBeenCalledWith(
+      {
+        nombre: 'Océano',
+        color_primario: '#0284c7',
+        color_secundario: '#0891b2',
+        color_fondo: '#f0f9ff',
+        color_texto: '#0c4a6e',
+        fuente_principal: 'Inter',
+        modo: 'claro',
+      },
+      expect.objectContaining({ onSuccess: expect.any(Function) }),
+    )
+  })
 })

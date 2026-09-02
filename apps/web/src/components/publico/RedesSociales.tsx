@@ -1,4 +1,5 @@
 import type { Media } from '@/features/media/types'
+import { PlataformaIcono } from '@/features/redes-sociales/iconos-plataforma'
 import type { RedSocial } from '@/features/redes-sociales/types'
 import { API_BASE_URL } from '@/lib/api-client'
 
@@ -31,8 +32,9 @@ export function RedesSociales({ redes, cvMedia }: RedesSocialesProps) {
                 href={red.url}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-block rounded-md border px-4 py-2 text-sm font-medium transition-colors hover:bg-accent"
+                className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition-colors hover:bg-accent"
               >
+                <PlataformaIcono iconoDefecto={red.plataforma.icono_defecto} />
                 {red.plataforma.nombre}
               </a>
             </li>

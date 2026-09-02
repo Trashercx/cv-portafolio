@@ -10,6 +10,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { PlataformaBadge } from '@/features/redes-sociales/iconos-plataforma'
 import {
   useEliminarRedSocial,
   useRedesSociales,
@@ -80,7 +81,9 @@ export function RedesListPage() {
                     onBajar={() => mover(red.id, 'bajar')}
                   />
                 </TableCell>
-                <TableCell>{red.plataforma.nombre}</TableCell>
+                <TableCell>
+                  <PlataformaBadge plataforma={red.plataforma} />
+                </TableCell>
                 <TableCell>
                   <a
                     href={red.url}
