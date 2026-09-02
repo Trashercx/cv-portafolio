@@ -1,9 +1,14 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
-import { useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
   Form,
   FormControl,
@@ -20,16 +25,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  redSocialSchema,
-  type RedSocialFormValues,
-} from '@/features/redes-sociales/red-social-schema'
-import { usePlataformasRed } from '@/features/redes-sociales/usePlataformasRed'
-import {
-  useActualizarRedSocial,
-  useCrearRedSocial,
-  useRedSocial,
-} from '@/features/redes-sociales/useRedesSociales'
+import { ApiError } from '@/lib/api-client'
+import { redSocialSchema, type RedSocialFormValues } from './red-social-schema'
+import type { RedSocial } from './types'
+import { usePlataformasRed } from './usePlataformasRed'
+import { useActualizarRedSocial, useCrearRedSocial } from './useRedesSociales'
 
 const DEFAULT_VALUES: RedSocialFormValues = {
   plataforma_id: '',
@@ -37,55 +37,64 @@ const DEFAULT_VALUES: RedSocialFormValues = {
   orden: 0,
 }
 
-/** UC-06 (Gestionar enlaces de redes): crear/editar con el mismo formulario. */
-export function RedFormPage() {
-  const { id } = useParams<{ id: string }>()
-  const esNuevo = !id
-  const navigate = useNavigate()
+type RedFormDialogProps = {
+  red?: RedSocial | null
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}
 
-  const { data: red, isLoading } = useRedSocial(id)
+/** UC-06 (Gestionar enlaces de redes): crear/editar dentro de un modal. */
+export function RedFormDialog({ red, open, onOpenChange }: RedFormDialogProps) {
+  const esNuevo = !red
   const { data: plataformas, isLoading: cargandoPlataformas } =
     usePlataformasRed()
 
   const crear = useCrearRedSocial()
-  const actualizar = useActualizarRedSocial(id ?? '')
+  const actualizar = useActualizarRedSocial(red?.id ?? '')
 
   const form = useForm<RedSocialFormValues>({
     resolver: zodResolver(redSocialSchema),
     defaultValues: DEFAULT_VALUES,
   })
 
+  // Depende de `open` (no solo de `red`): sin esto, cerrar el modal sin
+  // guardar y reabrirlo en el mismo estado (misma referencia `red`, incluido
+  // `null`→`null` en modo "nuevo") no dispara el reset y quedan valores
+  // sucios de la sesión anterior.
   useEffect(() => {
-    if (!red) return
-    form.reset({
-      plataforma_id: red.plataforma_id,
-      url: red.url,
-      orden: red.orden,
-    })
-  }, [red, form])
+    if (!open) return
+    form.reset(
+      red
+        ? { plataforma_id: red.plataforma_id, url: red.url, orden: red.orden }
+        : DEFAULT_VALUES,
+    )
+  }, [open, red, form])
 
   const mutacionActiva = esNuevo ? crear : actualizar
 
   const onSubmit = (values: RedSocialFormValues) => {
     if (esNuevo) {
-      crear.mutate(values, { onSuccess: () => navigate('/admin/redes') })
+      crear.mutate(values, { onSuccess: () => onOpenChange(false) })
     } else {
-      actualizar.mutate(values)
+      actualizar.mutate(values, { onSuccess: () => onOpenChange(false) })
     }
   }
 
-  if (!esNuevo && isLoading) {
-    return <p className="text-sm text-muted-foreground">Cargando enlace…</p>
-  }
+  const errorMessage =
+    mutacionActiva.error instanceof ApiError
+      ? mutacionActiva.error.message
+      : mutacionActiva.error
+        ? 'No se pudo guardar el enlace. Intenta de nuevo.'
+        : null
 
   return (
-    <Card className="max-w-2xl">
-      <CardHeader>
-        <CardTitle className="font-heading text-xl">
-          {esNuevo ? 'Nuevo enlace de red' : 'Editar enlace de red'}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>
+            {esNuevo ? 'Nuevo enlace de red' : 'Editar enlace de red'}
+          </DialogTitle>
+        </DialogHeader>
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit)}
@@ -153,16 +162,20 @@ export function RedFormPage() {
               )}
             />
 
-            <Button
-              type="submit"
-              className="w-fit"
-              disabled={mutacionActiva.isPending}
-            >
-              {mutacionActiva.isPending ? 'Guardando…' : 'Guardar'}
-            </Button>
+            {errorMessage ? (
+              <p role="alert" className="text-sm text-destructive">
+                {errorMessage}
+              </p>
+            ) : null}
+
+            <DialogFooter>
+              <Button type="submit" disabled={mutacionActiva.isPending}>
+                {mutacionActiva.isPending ? 'Guardando…' : 'Guardar'}
+              </Button>
+            </DialogFooter>
           </form>
         </Form>
-      </CardContent>
-    </Card>
+      </DialogContent>
+    </Dialog>
   )
 }

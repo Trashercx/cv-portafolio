@@ -1,10 +1,15 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { useNavigate, useParams } from 'react-router-dom'
 import { MediaField } from '@/components/media/MediaField'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
   Form,
   FormControl,
@@ -14,17 +19,18 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import type { Media } from '@/features/media/types'
+import { useMedia } from '@/features/media/useMediaLibrary'
+import { ApiError } from '@/lib/api-client'
 import {
   certificacionSchema,
   type CertificacionFormValues,
-} from '@/features/certificaciones/certificacion-schema'
+} from './certificacion-schema'
+import type { Certificacion } from './types'
 import {
   useActualizarCertificacion,
-  useCertificacion,
   useCrearCertificacion,
-} from '@/features/certificaciones/useCertificaciones'
-import { useMedia } from '@/features/media/useMediaLibrary'
-import type { Media } from '@/features/media/types'
+} from './useCertificaciones'
 
 const DEFAULT_VALUES: CertificacionFormValues = {
   nombre: '',
@@ -37,23 +43,31 @@ const DEFAULT_VALUES: CertificacionFormValues = {
   orden: 0,
 }
 
-/** UC-04 (Gestionar certificaciones): crear/editar con el mismo formulario. */
-export function CertificacionFormPage() {
-  const { id } = useParams<{ id: string }>()
-  const esNuevo = !id
-  const navigate = useNavigate()
+type CertificacionFormDialogProps = {
+  certificacion?: Certificacion | null
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}
 
-  const { data: certificacion, isLoading } = useCertificacion(id)
+/** UC-04 (Gestionar certificaciones): crear/editar dentro de un modal. */
+export function CertificacionFormDialog({
+  certificacion,
+  open,
+  onOpenChange,
+}: CertificacionFormDialogProps) {
+  const esNuevo = !certificacion
 
   const crear = useCrearCertificacion()
-  const actualizar = useActualizarCertificacion(id ?? '')
+  const actualizar = useActualizarCertificacion(certificacion?.id ?? '')
 
   // `Certificacion` (admin) solo trae `logo_media_id`, no el `Media`
   // resuelto (a diferencia del snapshot público) — se resuelve acá para
   // poder previsualizarlo (imagen o PDF) al editar una certificación ya
   // guardada. Se prioriza `logoSeleccionado` (elegido/subido en esta misma
   // sesión, con su `Media` completo a mano) para no esperar a un refetch.
-  const { data: logoExistente } = useMedia(certificacion?.logo_media_id ?? undefined)
+  const { data: logoExistente } = useMedia(
+    certificacion?.logo_media_id ?? undefined,
+  )
   const [logoSeleccionado, setLogoSeleccionado] = useState<Media | null>(null)
   const logoParaPrevisualizar = logoSeleccionado ?? logoExistente ?? null
 
@@ -62,26 +76,33 @@ export function CertificacionFormPage() {
     defaultValues: DEFAULT_VALUES,
   })
 
+  // Depende de `open` (no solo de `certificacion`): sin esto, cerrar el
+  // modal sin guardar y reabrirlo en el mismo estado (misma referencia
+  // `certificacion`, incluido `null`→`null` en modo "nuevo") no dispara el
+  // reset y quedan valores sucios de la sesión anterior.
   useEffect(() => {
-    if (!certificacion) return
-    form.reset({
-      nombre: certificacion.nombre,
-      institucion: certificacion.institucion,
-      fecha_emision: certificacion.fecha_emision.slice(0, 10),
-      fecha_expiracion: certificacion.fecha_expiracion
-        ? certificacion.fecha_expiracion.slice(0, 10)
-        : '',
-      url_verificacion: certificacion.url_verificacion,
-      credencial_id: certificacion.credencial_id ?? '',
-      logo_media_id: certificacion.logo_media_id ?? undefined,
-      orden: certificacion.orden,
-    })
-    // Descarta cualquier selección local de una certificación anterior (la
-    // ruta `/admin/certificaciones/:id` reutiliza el mismo componente al
-    // navegar entre certificaciones): `logoExistente` se resuelve solo con
-    // el `logo_media_id` fresco de abajo.
+    if (!open) return
+    form.reset(
+      certificacion
+        ? {
+            nombre: certificacion.nombre,
+            institucion: certificacion.institucion,
+            fecha_emision: certificacion.fecha_emision.slice(0, 10),
+            fecha_expiracion: certificacion.fecha_expiracion
+              ? certificacion.fecha_expiracion.slice(0, 10)
+              : '',
+            url_verificacion: certificacion.url_verificacion,
+            credencial_id: certificacion.credencial_id ?? '',
+            logo_media_id: certificacion.logo_media_id ?? undefined,
+            orden: certificacion.orden,
+          }
+        : DEFAULT_VALUES,
+    )
+    // Descarta cualquier selección local de una certificación anterior: el
+    // mismo diálogo se reutiliza al editar certificaciones distintas.
+    // `logoExistente` se resuelve solo con el `logo_media_id` fresco de arriba.
     setLogoSeleccionado(null)
-  }, [certificacion, form])
+  }, [open, certificacion, form])
 
   const mutacionActiva = esNuevo ? crear : actualizar
 
@@ -98,30 +119,27 @@ export function CertificacionFormPage() {
     }
 
     if (esNuevo) {
-      crear.mutate(payload, {
-        onSuccess: () => navigate('/admin/certificaciones'),
-      })
+      crear.mutate(payload, { onSuccess: () => onOpenChange(false) })
     } else {
-      actualizar.mutate(payload)
+      actualizar.mutate(payload, { onSuccess: () => onOpenChange(false) })
     }
   }
 
-  if (!esNuevo && isLoading) {
-    return (
-      <p className="text-sm text-muted-foreground">
-        Cargando certificación…
-      </p>
-    )
-  }
+  const errorMessage =
+    mutacionActiva.error instanceof ApiError
+      ? mutacionActiva.error.message
+      : mutacionActiva.error
+        ? 'No se pudo guardar la certificación. Intenta de nuevo.'
+        : null
 
   return (
-    <Card className="max-w-2xl">
-      <CardHeader>
-        <CardTitle className="font-heading text-xl">
-          {esNuevo ? 'Nueva certificación' : 'Editar certificación'}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {esNuevo ? 'Nueva certificación' : 'Editar certificación'}
+          </DialogTitle>
+        </DialogHeader>
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit)}
@@ -248,16 +266,20 @@ export function CertificacionFormPage() {
               }}
             />
 
-            <Button
-              type="submit"
-              className="w-fit"
-              disabled={mutacionActiva.isPending}
-            >
-              {mutacionActiva.isPending ? 'Guardando…' : 'Guardar'}
-            </Button>
+            {errorMessage ? (
+              <p role="alert" className="text-sm text-destructive">
+                {errorMessage}
+              </p>
+            ) : null}
+
+            <DialogFooter>
+              <Button type="submit" disabled={mutacionActiva.isPending}>
+                {mutacionActiva.isPending ? 'Guardando…' : 'Guardar'}
+              </Button>
+            </DialogFooter>
           </form>
         </Form>
-      </CardContent>
-    </Card>
+      </DialogContent>
+    </Dialog>
   )
 }
