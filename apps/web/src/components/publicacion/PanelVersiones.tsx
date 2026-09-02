@@ -5,7 +5,6 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   usePreviewVersion,
-  usePublicarVersion,
   useRevertirVersion,
   useVersiones,
 } from '@/features/publicacion/usePublicacion'
@@ -26,7 +25,13 @@ function formatearFechaHora(fecha: string | null): string {
 }
 
 /**
- * UC-10 (Previsualizar cambios) y UC-11 (Publicar o revertir una versión).
+ * UC-10 (Previsualizar cambios) y la parte de "historial + deshacer" de
+ * UC-11 (Publicar o revertir una versión), extraídas como componente
+ * compartido para que `EditorSeccionesPage` pueda mostrarlas sin salir del
+ * editor (Sprint 7, fusión de Editor visual + Publicación) sin duplicar este
+ * JSX. El botón "Publicar" en sí vive en la barra superior de
+ * `EditorSeccionesPage` (es el "botón único de publicación" del reporte), no
+ * aquí.
  *
  * "La actual" = la versión `publicado` de `publicado_en` más reciente (mismo
  * criterio que `VersionesSitioService.obtenerUltimaPublicada`, que es lo que
@@ -39,14 +44,10 @@ function formatearFechaHora(fecha: string | null): string {
  * el único contenido al que se puede volver deshaciendo la publicación más
  * reciente), y al confirmarlo se llama a la mutación con el id de "la
  * actual" (no el de esa fila) para que el backend restaure justo esa fila.
- * Mostrar el botón en filas publicadas más antiguas sería engañoso: no hay
- * forma de pedirle al backend "restaura el contenido de esta fila en
- * particular" si no es la inmediatamente anterior a la actual.
  */
-export function PublicacionPage() {
+export function PanelVersiones() {
   const versionesQuery = useVersiones()
   const preview = usePreviewVersion()
-  const publicar = usePublicarVersion()
   const revertir = useRevertirVersion()
 
   const [previewVersion, setPreviewVersion] = useState<VersionSitio | null>(
@@ -90,55 +91,43 @@ export function PublicacionPage() {
 
   return (
     <div className="grid gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="font-heading text-xl font-semibold">Publicación</h1>
-          <p className="text-sm text-muted-foreground">
-            Previsualiza los cambios en curso, publícalos o vuelve a una
-            versión publicada anterior.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
+      <section className="grid gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-sm font-medium text-muted-foreground">
+            Vista previa
+          </h2>
           <Button
             variant="outline"
+            size="sm"
             onClick={handlePreview}
             disabled={preview.isPending}
           >
-            {preview.isPending ? 'Generando vista previa…' : 'Previsualizar cambios'}
+            {preview.isPending
+              ? 'Generando vista previa…'
+              : 'Previsualizar cambios'}
           </Button>
-          <ConfirmActionDialog
-            trigger={<Button disabled={publicar.isPending}>Publicar</Button>}
-            title="¿Publicar los cambios actuales?"
-            description="Esto reemplaza de inmediato la versión visible al público con el contenido, secciones y tema actuales."
-            confirmLabel="Publicar"
-            pendingLabel="Publicando…"
-            isPending={publicar.isPending}
-            onConfirm={() => publicar.mutate()}
-          />
         </div>
-      </div>
 
-      {previewVersion ? (
-        <section className="grid gap-3">
-          <h2 className="text-sm font-medium text-muted-foreground">
-            Vista previa (secciones ocultas se muestran atenuadas: no se
-            publicarán)
-          </h2>
+        {previewVersion ? (
           <div
             style={
               previewVersion.snapshot.tema
                 ? temaComoVariablesCss(previewVersion.snapshot.tema)
                 : undefined
             }
-            className="max-h-[32rem] overflow-y-auto rounded-lg border"
+            className="max-h-[24rem] overflow-y-auto rounded-lg border"
           >
             <RenderizadorSecciones
               snapshot={previewVersion.snapshot}
               soloVisibles={false}
             />
           </div>
-        </section>
-      ) : null}
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Las secciones ocultas se mostrarán atenuadas: no se publicarán.
+          </p>
+        )}
+      </section>
 
       <section className="grid gap-3">
         <h2 className="font-heading text-sm font-medium text-muted-foreground">

@@ -12,7 +12,6 @@ import { MediaLibraryPage } from '@/pages/admin/MediaLibraryPage'
 import { PerfilPage } from '@/pages/admin/PerfilPage'
 import { ProyectosListPage } from '@/pages/admin/ProyectosListPage'
 import { ProyectoFormPage } from '@/pages/admin/ProyectoFormPage'
-import { PublicacionPage } from '@/pages/admin/PublicacionPage'
 import { RedesListPage } from '@/pages/admin/RedesListPage'
 import { RedFormPage } from '@/pages/admin/RedFormPage'
 import { TemaPage } from '@/pages/admin/TemaPage'
@@ -75,7 +74,17 @@ function App() {
           <Route path="editor" element={<EditorSeccionesPage />} />
           <Route path="tema" element={<TemaPage />} />
           <Route path="media" element={<MediaLibraryPage />} />
-          <Route path="publicacion" element={<PublicacionPage />} />
+          {/*
+            UC-10/UC-11 (Publicación) se fusionaron dentro de "Editor
+            visual" (Sprint 7): ya no hay una página independiente, así que
+            esta ruta redirige en vez de eliminarse por completo, para no
+            romper enlaces/marcadores que el admin pueda tener guardados
+            hacia `/admin/publicacion`.
+          */}
+          <Route
+            path="publicacion"
+            element={<Navigate to="/admin/editor" replace />}
+          />
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />
