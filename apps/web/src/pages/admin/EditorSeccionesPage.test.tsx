@@ -41,7 +41,13 @@ const SECCION_HERO: Seccion = {
   titulo_visible: 'Portada',
   orden: 0,
   visible: true,
-  configuracion: { titulo: 'A', subtitulo: 'B' },
+  configuracion: {
+    titulo: 'A',
+    subtitulo: 'B',
+    mostrar_foto_perfil: false,
+    posicion_foto: 'ninguna',
+    estilo_foto: 'con_marco',
+  },
 }
 
 const SECCION_CONTACTO: Seccion = {
@@ -61,9 +67,18 @@ const actualizarVisibilidadMutateAsyncMock = vi.fn()
 const eliminarMutateAsyncMock = vi.fn()
 const reordenarMutateAsyncMock = vi.fn()
 
+/**
+ * Mutable para poder variar `useSecciones().data` por test (p. ej. simular
+ * una sección `hero` legada), mismo patrón que `publicacionMocks` más abajo
+ * en este archivo.
+ */
+const seccionesMock: { data: Seccion[] } = {
+  data: [SECCION_HERO, SECCION_CONTACTO],
+}
+
 vi.mock('@/features/secciones/useSecciones', () => ({
   useSecciones: () => ({
-    data: [SECCION_HERO, SECCION_CONTACTO],
+    data: seccionesMock.data,
     isLoading: false,
     error: null,
   }),
@@ -93,7 +108,13 @@ const SNAPSHOT_VACIO: SnapshotSitio = {
       titulo_visible: 'Portada',
       orden: 0,
       visible: true,
-      configuracion: { titulo: 'Hola', subtitulo: 'Mundo' },
+      configuracion: {
+        titulo: 'Hola',
+        subtitulo: 'Mundo',
+        mostrar_foto_perfil: false,
+        posicion_foto: 'ninguna',
+        estilo_foto: 'con_marco',
+      },
     },
     {
       id: 'seccion-contacto',
@@ -109,6 +130,8 @@ const SNAPSHOT_VACIO: SnapshotSitio = {
   certificaciones: [],
   logros: [],
   redes_sociales: [],
+  skills: [],
+  fondo: null,
 }
 
 const VERSION_PREVIEW: VersionSitio = {
@@ -201,6 +224,7 @@ vi.mock('@/features/publicacion/usePublicacion', () => ({
 describe('EditorSeccionesPage (UC-07, UC-10, UC-11)', () => {
   beforeEach(() => {
     useEditorSeccionesStore.setState({ content: [] })
+    seccionesMock.data = [SECCION_HERO, SECCION_CONTACTO]
     crearMutateAsyncMock.mockResolvedValue({ id: 'seccion-c' })
     actualizarMutateAsyncMock.mockResolvedValue(undefined)
     actualizarConfiguracionMutateAsyncMock.mockResolvedValue(undefined)
@@ -232,6 +256,41 @@ describe('EditorSeccionesPage (UC-07, UC-10, UC-11)', () => {
     const [primero, segundo] = useEditorSeccionesStore.getState().content
     expect(primero.type).toBe('hero')
     expect(segundo.type).toBe('contacto')
+  })
+
+  it('una sección hero legada (sin mostrar_foto_perfil/posicion_foto/estilo_foto guardados) carga el content inicial con el fallback conservador, no con el default de creación', async () => {
+    const SECCION_HERO_LEGADA: Seccion = {
+      id: 'seccion-legada',
+      usuario_admin_id: 'admin-1',
+      tipo_seccion: 'hero',
+      titulo_visible: 'Portada',
+      orden: 0,
+      visible: true,
+      // Datos legados: guardados antes de agregar estos 3 campos al DTO de
+      // `hero` (ahora opcionales en `HeroConfiguracion`, ver su comentario).
+      configuracion: { titulo: 'A', subtitulo: 'B' },
+    }
+    seccionesMock.data = [SECCION_HERO_LEGADA]
+
+    renderEditor()
+
+    await waitFor(() =>
+      expect(useEditorSeccionesStore.getState().content).toHaveLength(1),
+    )
+
+    const [heroContent] = useEditorSeccionesStore.getState().content
+    // El default de "creación" del bloque (`puckConfig.components.hero.defaultProps`)
+    // es `mostrar_foto_perfil: true, posicion_foto: 'centrada'` — si el editor
+    // lo reutilizara para rellenar datos legados, guardar cualquier cambio
+    // fijaría una foto visible en el sitio público sin que el admin lo haya
+    // elegido. El content inicial debe traer en cambio el fallback
+    // conservador (sin foto), que preserva el comportamiento que la sección
+    // ya tenía.
+    expect(heroContent.props).toMatchObject({
+      mostrar_foto_perfil: false,
+      posicion_foto: 'ninguna',
+      estilo_foto: 'con_marco',
+    })
   })
 
   it('"Guardar cambios" crea, actualiza, elimina y reordena según el content simulado', async () => {
