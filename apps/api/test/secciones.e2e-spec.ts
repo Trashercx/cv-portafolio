@@ -118,13 +118,21 @@ describe('Secciones (e2e, UC-07)', () => {
   it('crea, lista, reordena, oculta/muestra, actualiza configuración y elimina una sección', async () => {
     const sufijo = Date.now();
 
+    const heroConfiguracionBase = {
+      titulo: 'Hola',
+      subtitulo: 'Bienvenido',
+      mostrar_foto_perfil: true,
+      posicion_foto: 'centrada',
+      estilo_foto: 'con_marco',
+    };
+
     const seccionA = await agent
       .post('/admin/secciones')
       .send({
         tipo_seccion: 'hero',
         titulo_visible: `Hero e2e ${sufijo}`,
         orden: 9001,
-        configuracion: { titulo: 'Hola', subtitulo: 'Bienvenido' },
+        configuracion: heroConfiguracionBase,
       })
       .expect(201);
     idsCreados.push(seccionA.body.id);
@@ -172,14 +180,18 @@ describe('Secciones (e2e, UC-07)', () => {
     expect(ocultada.body.visible).toBe(false);
 
     // Configuración: válida para el tipo ya guardado (hero).
-    const configuracionActualizada = await agent
-      .patch(`/admin/secciones/${seccionA.body.id}/configuracion`)
-      .send({ titulo: 'Título nuevo', subtitulo: 'Subtítulo nuevo' })
-      .expect(200);
-    expect(configuracionActualizada.body.configuracion).toEqual({
+    const heroConfiguracionNueva = {
+      ...heroConfiguracionBase,
       titulo: 'Título nuevo',
       subtitulo: 'Subtítulo nuevo',
-    });
+    };
+    const configuracionActualizada = await agent
+      .patch(`/admin/secciones/${seccionA.body.id}/configuracion`)
+      .send(heroConfiguracionNueva)
+      .expect(200);
+    expect(configuracionActualizada.body.configuracion).toEqual(
+      heroConfiguracionNueva,
+    );
 
     // Configuración: inválida para el tipo ya guardado (contacto espera mostrar_formulario boolean).
     await agent
@@ -201,5 +213,54 @@ describe('Secciones (e2e, UC-07)', () => {
     const idsRestantes = listado3.body.map((s: { id: string }) => s.id);
     expect(idsRestantes).not.toContain(seccionB.body.id);
     expect(idsRestantes).toContain(seccionA.body.id);
+  });
+
+  // -----------------------------------------------------------------------
+  // Regresión (Sprint 8, code-review): `mostrar_foto_perfil`/`posicion_foto`/
+  // `estilo_foto` se agregaron a `HeroConfiguracionDto` DESPUÉS de que ya
+  // existieran secciones `hero` publicadas cuya `configuracion` (jsonb) no
+  // los tiene. Deben ser opcionales para que un PATCH "viejo" (solo
+  // título/subtítulo, como cualquier admin antes de Sprint 8) sobre una de
+  // esas filas siga aceptándose, sin exigir backfill de datos.
+  // -----------------------------------------------------------------------
+
+  it('PATCH /admin/secciones/:id/configuracion acepta una sección hero YA EXISTENTE (creada antes de Sprint 8, sin los campos nuevos de foto) actualizada con un payload "viejo"', async () => {
+    const sufijo = Date.now();
+    const admin = await prisma.usuarioAdmin.findUniqueOrThrow({
+      where: { email: process.env.ADMIN_EMAIL },
+    });
+
+    // Simula una fila persistida ANTES de Sprint 8: se crea directo contra
+    // Prisma (no vía POST /admin/secciones, que hoy sí validaría/permitiría
+    // los campos nuevos) con `configuracion` sin mostrar_foto_perfil/
+    // posicion_foto/estilo_foto.
+    const seccionHeroVieja = await prisma.seccion.create({
+      data: {
+        usuario_admin_id: admin.id,
+        tipo_seccion: 'hero',
+        titulo_visible: `Hero legado e2e ${sufijo}`,
+        orden: 9700,
+        visible: true,
+        configuracion: {
+          titulo: 'Hola legado',
+          subtitulo: 'Bienvenido legado',
+        },
+      },
+    });
+    idsCreados.push(seccionHeroVieja.id);
+
+    const configuracionEditadaSinCamposNuevos = {
+      titulo: 'Título editado sin campos de foto',
+      subtitulo: 'Subtítulo editado sin campos de foto',
+    };
+
+    const respuesta = await agent
+      .patch(`/admin/secciones/${seccionHeroVieja.id}/configuracion`)
+      .send(configuracionEditadaSinCamposNuevos)
+      .expect(200);
+
+    expect(respuesta.body.configuracion).toEqual(
+      configuracionEditadaSinCamposNuevos,
+    );
   });
 });
