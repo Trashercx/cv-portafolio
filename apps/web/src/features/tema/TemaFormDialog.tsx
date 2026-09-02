@@ -19,6 +19,7 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
@@ -26,9 +27,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Separator } from '@/components/ui/separator'
 import { ApiError } from '@/lib/api-client'
+import { PLANTILLAS_TEMA } from './plantillas-tema'
 import { temaSchema, type TemaFormValues } from './tema-schema'
 import { useCrearTema } from './useTemas'
+
+const ID_PLANTILLA_PERSONALIZADA = 'personalizado'
 
 const DEFAULT_VALUES: TemaFormValues = {
   nombre: '',
@@ -50,6 +55,7 @@ const CAMPOS_COLOR: Array<{ name: keyof TemaFormValues; label: string }> = [
 /** UC-08: formulario de creación de un tema nuevo (siempre inactivo, ver `CreateTemaDto`). */
 export function TemaFormDialog() {
   const [open, setOpen] = useState(false)
+  const [plantillaId, setPlantillaId] = useState(ID_PLANTILLA_PERSONALIZADA)
   const crear = useCrearTema()
 
   const form = useForm<TemaFormValues>({
@@ -57,10 +63,35 @@ export function TemaFormDialog() {
     defaultValues: DEFAULT_VALUES,
   })
 
+  /**
+   * Precarga el formulario con una paleta del catálogo (`PLANTILLAS_TEMA`).
+   * Solo rellena valores por defecto editables: no crea nada en el backend,
+   * la creación real sigue pasando por `useCrearTema` al enviar el form.
+   */
+  const aplicarPlantilla = (id: string) => {
+    setPlantillaId(id)
+    if (id === ID_PLANTILLA_PERSONALIZADA) {
+      form.reset(DEFAULT_VALUES)
+      return
+    }
+    const plantilla = PLANTILLAS_TEMA.find((candidata) => candidata.id === id)
+    if (!plantilla) return
+    form.reset({
+      nombre: plantilla.nombre,
+      color_primario: plantilla.color_primario,
+      color_secundario: plantilla.color_secundario,
+      color_fondo: plantilla.color_fondo,
+      color_texto: plantilla.color_texto,
+      fuente_principal: plantilla.fuente_principal,
+      modo: plantilla.modo,
+    })
+  }
+
   const onSubmit = (values: TemaFormValues) => {
     crear.mutate(values, {
       onSuccess: () => {
         form.reset(DEFAULT_VALUES)
+        setPlantillaId(ID_PLANTILLA_PERSONALIZADA)
         setOpen(false)
       },
     })
@@ -78,7 +109,10 @@ export function TemaFormDialog() {
       open={open}
       onOpenChange={(nextOpen) => {
         setOpen(nextOpen)
-        if (!nextOpen) form.reset(DEFAULT_VALUES)
+        if (!nextOpen) {
+          form.reset(DEFAULT_VALUES)
+          setPlantillaId(ID_PLANTILLA_PERSONALIZADA)
+        }
       }}
     >
       <DialogTrigger asChild>
@@ -88,6 +122,45 @@ export function TemaFormDialog() {
         <DialogHeader>
           <DialogTitle>Nuevo tema</DialogTitle>
         </DialogHeader>
+        <div className="grid gap-2">
+          <Label htmlFor="plantilla-tema">Plantilla predefinida (opcional)</Label>
+          <Select value={plantillaId} onValueChange={aplicarPlantilla}>
+            <SelectTrigger id="plantilla-tema" className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ID_PLANTILLA_PERSONALIZADA}>
+                Personalizado (en blanco)
+              </SelectItem>
+              {PLANTILLAS_TEMA.map((plantilla) => (
+                <SelectItem key={plantilla.id} value={plantilla.id}>
+                  <span className="flex items-center gap-2">
+                    <span className="flex gap-0.5">
+                      <span
+                        aria-hidden="true"
+                        className="size-3 rounded-full border"
+                        style={{ backgroundColor: plantilla.color_primario }}
+                      />
+                      <span
+                        aria-hidden="true"
+                        className="size-3 rounded-full border"
+                        style={{ backgroundColor: plantilla.color_secundario }}
+                      />
+                    </span>
+                    {plantilla.nombre} · {plantilla.modo}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            Precarga los campos de abajo con una paleta lista; podés seguir
+            editándolos antes de crear el tema.
+          </p>
+        </div>
+
+        <Separator className="my-2" />
+
         <Form {...form}>
           <form
             onSubmit={form.handleSubmit(onSubmit)}
