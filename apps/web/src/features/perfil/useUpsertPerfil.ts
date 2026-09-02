@@ -19,6 +19,10 @@ export function useUpsertPerfil() {
   return useMutation({
     mutationFn: (payload: UpsertPerfilPayload) =>
       apiFetch<Perfil>('/admin/perfil', { method: 'PUT', body: payload }),
+    meta: {
+      mensajeExito: 'Perfil guardado correctamente.',
+      mensajeError: 'No se pudo guardar el perfil. Intenta de nuevo.',
+    },
     onSuccess: (perfil) => {
       queryClient.setQueryData(PERFIL_QUERY_KEY, perfil)
     },

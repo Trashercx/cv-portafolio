@@ -92,7 +92,7 @@ export function PublicacionPage() {
     <div className="grid gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold">Publicación</h1>
+          <h1 className="font-heading text-xl font-semibold">Publicación</h1>
           <p className="text-sm text-muted-foreground">
             Previsualiza los cambios en curso, publícalos o vuelve a una
             versión publicada anterior.
@@ -118,35 +118,6 @@ export function PublicacionPage() {
         </div>
       </div>
 
-      {preview.error ? (
-        <p role="alert" className="text-sm text-destructive">
-          {mensajeDeError(preview.error, 'No se pudo generar la vista previa.')}
-        </p>
-      ) : null}
-      {publicar.error ? (
-        <p role="alert" className="text-sm text-destructive">
-          {mensajeDeError(publicar.error, 'No se pudo publicar.')}
-        </p>
-      ) : null}
-      {publicar.isSuccess ? (
-        <p role="status" className="text-sm text-green-600">
-          Cambios publicados correctamente.
-        </p>
-      ) : null}
-      {revertir.error ? (
-        <p role="alert" className="text-sm text-destructive">
-          {mensajeDeError(
-            revertir.error,
-            'No se pudo revertir a la versión anterior.',
-          )}
-        </p>
-      ) : null}
-      {revertir.isSuccess ? (
-        <p role="status" className="text-sm text-green-600">
-          Se restauró la versión publicada anterior.
-        </p>
-      ) : null}
-
       {previewVersion ? (
         <section className="grid gap-3">
           <h2 className="text-sm font-medium text-muted-foreground">
@@ -170,7 +141,7 @@ export function PublicacionPage() {
       ) : null}
 
       <section className="grid gap-3">
-        <h2 className="text-sm font-medium text-muted-foreground">
+        <h2 className="font-heading text-sm font-medium text-muted-foreground">
           Historial de versiones
         </h2>
 

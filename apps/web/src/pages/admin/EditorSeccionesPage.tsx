@@ -1,6 +1,8 @@
 import '@measured/puck/puck.css'
-import { Puck, type Data } from '@measured/puck'
+import { Puck, type Data, type UiState, type Viewports } from '@measured/puck'
 import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { puckConfig, type PuckSeccionesComponents } from '@/lib/puck-config'
 import { ApiError } from '@/lib/api-client'
@@ -22,6 +24,39 @@ import { useEditorSeccionesStore } from '@/store/editor-secciones-store'
 
 type EditorData = Data<PuckSeccionesComponents>
 type EditorContentItem = EditorData['content'][number]
+
+/**
+ * Opciones del selector de viewport de Puck, con el escritorio primero (el
+ * panel de administración se usa mayormente en desktop). El primer elemento
+ * también determina el ancho por defecto cuando no hay `ui.viewports`
+ * explícito, pero aquí igual fijamos `PUCK_UI_INICIAL` abajo porque Puck por
+ * defecto ignora este orden al calcular el viewport inicial (ver
+ * `PUCK_UI_INICIAL`).
+ */
+const PUCK_VIEWPORTS: Viewports = [
+  { width: 1280, height: 'auto', icon: 'Monitor', label: 'Escritorio' },
+  { width: 768, height: 'auto', icon: 'Tablet', label: 'Tablet' },
+  { width: 360, height: 'auto', icon: 'Smartphone', label: 'Móvil' },
+]
+
+/**
+ * Puck siempre inicializa `state.ui.viewports.current` desde su propio
+ * `defaultViewports[0]` (360px / "Small"), sin importar la prop `viewports`
+ * de arriba (que solo cambia las OPCIONES del selector, no el estado
+ * inicial) — por eso hace falta fijarlo explícitamente vía la prop `ui`.
+ * `Partial<UiState>` solo hace opcionales las claves de nivel superior: si
+ * se pasa `viewports`, Puck lo mezcla con un spread superficial contra su
+ * estado por defecto, así que hay que repetir la forma completa
+ * (`current`, `controlsVisible`, `options`) y no solo `current`, o
+ * `controlsVisible`/`options` quedarían `undefined`.
+ */
+const PUCK_UI_INICIAL: Partial<UiState> = {
+  viewports: {
+    current: { width: 1280, height: 'auto' },
+    controlsVisible: true,
+    options: [],
+  },
+}
 
 /**
  * Subconjunto de `Seccion` que necesitamos para calcular el diff (crear /
@@ -110,12 +145,10 @@ export function EditorSeccionesPage() {
   const content = useEditorSeccionesStore((state) => state.content)
   const setContent = useEditorSeccionesStore((state) => state.setContent)
 
+  const navigate = useNavigate()
   const [initialData, setInitialData] = useState<EditorData | null>(null)
   const [editorKey, setEditorKey] = useState(0)
   const [guardando, setGuardando] = useState(false)
-  const [mensaje, setMensaje] = useState<
-    { tipo: 'exito' | 'error'; texto: string } | null
-  >(null)
 
   // Fuente de verdad de "qué hay persistido ahora mismo" para el diff de
   // `guardarCambios` (ver comentario de `SeccionPersistida` más arriba).
@@ -148,7 +181,6 @@ export function EditorSeccionesPage() {
 
   const guardarCambios = async () => {
     setGuardando(true)
-    setMensaje(null)
 
     const seccionesOriginales = seccionesPersistentesRef.current
     const contentActualizado = [...content]
@@ -249,19 +281,20 @@ export function EditorSeccionesPage() {
       setContent(contentActualizado)
       setInitialData({ content: contentActualizado, root: {} })
       setEditorKey((key) => key + 1)
-      setMensaje({ tipo: 'exito', texto: 'Cambios guardados correctamente.' })
-    } catch (error) {
-      // Conserva en `content` lo que sí se alcanzó a crear (con sus
+      toast.success('Cambios guardados correctamente.')
+    } catch {
+      // No mostramos un toast de error aquí: cada sub-mutación
+      // (`crearSeccion`, `actualizarConfiguracion`, etc.) ya es un
+      // `useMutation` y pasa por el `MutationCache.onError` global de
+      // `query-client.ts`, que SIEMPRE dispara su propio `toast.error` sin
+      // importar si la mutación declara `meta` — duplicarlo aquí mostraba el
+      // mismo mensaje dos veces. Este `catch` solo existe para la lógica de
+      // estado: conserva en `content` lo que sí se alcanzó a crear (con sus
       // `_seccionId` nuevos) para no duplicar secciones si el admin
-      // reintenta guardar tras corregir el error.
+      // reintenta guardar tras corregir el error. Deliberadamente NO se
+      // avanza `seccionesPersistentesRef` aquí, para que el próximo intento
+      // vuelva a diffear contra el último estado realmente persistido.
       setContent(contentActualizado)
-      setMensaje({
-        tipo: 'error',
-        texto:
-          error instanceof ApiError
-            ? error.message
-            : 'No se pudieron guardar todos los cambios. Intenta de nuevo.',
-      })
     } finally {
       setGuardando(false)
     }
@@ -271,25 +304,15 @@ export function EditorSeccionesPage() {
     <div className="-mx-4 -my-4 grid gap-0">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-background px-4 py-3">
         <div>
-          <h1 className="text-lg font-semibold">Editor visual de secciones</h1>
+          <h1 className="font-heading text-lg font-semibold">
+            Editor visual de secciones
+          </h1>
           <p className="text-sm text-muted-foreground">
             Arrastra bloques desde el panel, edita su configuración y su
             visibilidad, y presiona "Guardar cambios" para aplicarlos.
           </p>
         </div>
         <div className="flex items-center gap-3">
-          {mensaje ? (
-            <p
-              role={mensaje.tipo === 'error' ? 'alert' : 'status'}
-              className={
-                mensaje.tipo === 'error'
-                  ? 'text-sm text-destructive'
-                  : 'text-sm text-green-600'
-              }
-            >
-              {mensaje.texto}
-            </p>
-          ) : null}
           <Button
             onClick={guardarCambios}
             disabled={guardando || !initialData}
@@ -335,7 +358,28 @@ export function EditorSeccionesPage() {
               key={editorKey}
               config={puckConfig}
               data={initialData}
+              viewports={PUCK_VIEWPORTS}
+              ui={PUCK_UI_INICIAL}
               onChange={(data) => setContent(data.content)}
+              overrides={{
+                // Puck siempre renderiza su propio botón nativo "Publish" en
+                // el header. Como nunca le pasamos `onPublish`, quedaba
+                // desconectado (el click no hacía nada). El flujo real de
+                // publicación es UC-11 (`/admin/publicacion`,
+                // `PublicacionPage`), con su propio diálogo de confirmación
+                // — a propósito NO se conecta `onPublish` aquí para mantener
+                // ambos flujos (UC-07 estructura vs UC-11 publicación)
+                // separados.
+                headerActions: () => (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate('/admin/publicacion')}
+                  >
+                    Ir a Publicación
+                  </Button>
+                ),
+              }}
             />
           </div>
           {guardando ? (

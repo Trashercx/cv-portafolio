@@ -37,7 +37,7 @@ export function ProyectosListPage() {
   return (
     <div className="grid gap-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Proyectos</h1>
+        <h1 className="font-heading text-xl font-semibold">Proyectos</h1>
         <Button asChild>
           <Link to="/admin/proyectos/nuevo">Nuevo proyecto</Link>
         </Button>

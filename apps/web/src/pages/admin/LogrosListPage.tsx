@@ -36,7 +36,9 @@ export function LogrosListPage() {
   return (
     <div className="grid gap-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Logros y reconocimientos</h1>
+        <h1 className="font-heading text-xl font-semibold">
+          Logros y reconocimientos
+        </h1>
         <Button asChild>
           <Link to="/admin/logros/nuevo">Nuevo logro</Link>
         </Button>

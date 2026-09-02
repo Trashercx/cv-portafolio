@@ -22,23 +22,10 @@ export function TemaPage() {
 
   const temaActivo = temas?.find((tema) => tema.activo)
 
-  const activarErrorMessage =
-    activar.error instanceof ApiError
-      ? activar.error.message
-      : activar.error
-        ? 'No se pudo activar el tema.'
-        : null
-  const eliminarErrorMessage =
-    eliminar.error instanceof ApiError
-      ? eliminar.error.message
-      : eliminar.error
-        ? 'No se pudo eliminar el tema.'
-        : null
-
   return (
     <div className="grid gap-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Tema visual</h1>
+        <h1 className="font-heading text-xl font-semibold">Tema visual</h1>
         <TemaFormDialog />
       </div>
 
@@ -52,17 +39,6 @@ export function TemaPage() {
             : 'No se pudieron cargar los temas.'}
         </p>
       ) : null}
-      {activarErrorMessage ? (
-        <p role="alert" className="text-sm text-destructive">
-          {activarErrorMessage}
-        </p>
-      ) : null}
-      {eliminarErrorMessage ? (
-        <p role="alert" className="text-sm text-destructive">
-          {eliminarErrorMessage}
-        </p>
-      ) : null}
-
       <section className="grid gap-3">
         <h2 className="text-sm font-medium text-muted-foreground">
           Vista previa del tema activo

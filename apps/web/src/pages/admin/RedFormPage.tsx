@@ -30,7 +30,6 @@ import {
   useCrearRedSocial,
   useRedSocial,
 } from '@/features/redes-sociales/useRedesSociales'
-import { ApiError } from '@/lib/api-client'
 
 const DEFAULT_VALUES: RedSocialFormValues = {
   plataforma_id: '',
@@ -75,13 +74,6 @@ export function RedFormPage() {
     }
   }
 
-  const errorMessage =
-    mutacionActiva.error instanceof ApiError
-      ? mutacionActiva.error.message
-      : mutacionActiva.error
-        ? 'No se pudo guardar el enlace. Intenta de nuevo.'
-        : null
-
   if (!esNuevo && isLoading) {
     return <p className="text-sm text-muted-foreground">Cargando enlace…</p>
   }
@@ -89,7 +81,7 @@ export function RedFormPage() {
   return (
     <Card className="max-w-2xl">
       <CardHeader>
-        <CardTitle>
+        <CardTitle className="font-heading text-xl">
           {esNuevo ? 'Nuevo enlace de red' : 'Editar enlace de red'}
         </CardTitle>
       </CardHeader>
@@ -160,12 +152,6 @@ export function RedFormPage() {
                 </FormItem>
               )}
             />
-
-            {errorMessage ? (
-              <p role="alert" className="text-sm text-destructive">
-                {errorMessage}
-              </p>
-            ) : null}
 
             <Button
               type="submit"

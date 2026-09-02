@@ -24,6 +24,9 @@ export function usePreviewVersion() {
   return useMutation({
     mutationFn: () =>
       apiFetch<VersionSitio>('/admin/versiones/preview', { method: 'POST' }),
+    meta: {
+      mensajeError: 'No se pudo generar la vista previa. Intenta de nuevo.',
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: VERSIONES_QUERY_KEY })
     },
@@ -41,6 +44,10 @@ export function usePublicarVersion() {
   return useMutation({
     mutationFn: () =>
       apiFetch<VersionSitio>('/admin/versiones/publicar', { method: 'POST' }),
+    meta: {
+      mensajeExito: 'Cambios publicados correctamente.',
+      mensajeError: 'No se pudo publicar los cambios. Intenta de nuevo.',
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: VERSIONES_QUERY_KEY })
       queryClient.invalidateQueries({ queryKey: SITIO_QUERY_KEY })
@@ -60,6 +67,10 @@ export function useRevertirVersion() {
       apiFetch<VersionSitio>(`/admin/versiones/${id}/revertir`, {
         method: 'POST',
       }),
+    meta: {
+      mensajeExito: 'Se restauró la versión publicada anterior.',
+      mensajeError: 'No se pudo revertir a la versión anterior. Intenta de nuevo.',
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: VERSIONES_QUERY_KEY })
       queryClient.invalidateQueries({ queryKey: SITIO_QUERY_KEY })

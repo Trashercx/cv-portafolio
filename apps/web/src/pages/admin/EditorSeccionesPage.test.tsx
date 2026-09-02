@@ -1,9 +1,23 @@
 import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router-dom'
+import { toast } from 'sonner'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Seccion } from '@/features/secciones/types'
 import { useEditorSeccionesStore } from '@/store/editor-secciones-store'
 import { EditorSeccionesPage } from './EditorSeccionesPage'
+
+vi.mock('sonner', () => ({
+  toast: { success: vi.fn(), error: vi.fn() },
+}))
+
+function renderEditor() {
+  return render(
+    <MemoryRouter>
+      <EditorSeccionesPage />
+    </MemoryRouter>,
+  )
+}
 
 /**
  * Montar un `<Puck>` real (drag-and-drop, DnD backend, portales) en jsdom es
@@ -79,7 +93,7 @@ describe('EditorSeccionesPage (UC-07)', () => {
   })
 
   it('carga las secciones existentes en el store de edición al montar', async () => {
-    render(<EditorSeccionesPage />)
+    renderEditor()
 
     await waitFor(() =>
       expect(useEditorSeccionesStore.getState().content).toHaveLength(2),
@@ -91,7 +105,7 @@ describe('EditorSeccionesPage (UC-07)', () => {
 
   it('"Guardar cambios" crea, actualiza, elimina y reordena según el content simulado', async () => {
     const user = userEvent.setup()
-    render(<EditorSeccionesPage />)
+    renderEditor()
 
     await waitFor(() =>
       expect(useEditorSeccionesStore.getState().content).toHaveLength(2),
@@ -154,9 +168,11 @@ describe('EditorSeccionesPage (UC-07)', () => {
       { id: 'seccion-c', orden: 1 },
     ])
 
-    expect(
-      await screen.findByText(/cambios guardados correctamente/i),
-    ).toBeInTheDocument()
+    await waitFor(() =>
+      expect(toast.success).toHaveBeenCalledWith(
+        'Cambios guardados correctamente.',
+      ),
+    )
   })
 
   it('bloquea la edición (queda `inert`) mientras "Guardar cambios" está en curso, y la desbloquea al terminar', async () => {
@@ -172,7 +188,7 @@ describe('EditorSeccionesPage (UC-07)', () => {
       }),
     )
 
-    render(<EditorSeccionesPage />)
+    renderEditor()
 
     await waitFor(() =>
       expect(useEditorSeccionesStore.getState().content).toHaveLength(2),
@@ -212,14 +228,16 @@ describe('EditorSeccionesPage (UC-07)', () => {
     })
 
     await waitFor(() => expect(wrapper).not.toHaveAttribute('inert'))
-    expect(
-      await screen.findByText(/cambios guardados correctamente/i),
-    ).toBeInTheDocument()
+    await waitFor(() =>
+      expect(toast.success).toHaveBeenCalledWith(
+        'Cambios guardados correctamente.',
+      ),
+    )
   })
 
   it('un segundo "Guardar cambios" inmediatamente después del primero no reintenta crear/eliminar lo ya persistido (condición de carrera con el cache de la query)', async () => {
     const user = userEvent.setup()
-    render(<EditorSeccionesPage />)
+    renderEditor()
 
     await waitFor(() =>
       expect(useEditorSeccionesStore.getState().content).toHaveLength(2),
@@ -277,8 +295,76 @@ describe('EditorSeccionesPage (UC-07)', () => {
     expect(eliminarMutateAsyncMock).toHaveBeenCalledWith('seccion-b')
     expect(crearMutateAsyncMock).toHaveBeenCalledTimes(1)
 
-    expect(
-      await screen.findByText(/cambios guardados correctamente/i),
-    ).toBeInTheDocument()
+    await waitFor(() =>
+      expect(toast.success).toHaveBeenCalledWith(
+        'Cambios guardados correctamente.',
+      ),
+    )
+  })
+
+  it('si una sub-mutación falla, "Guardar cambios" no muestra su propio toast.error (deja esa responsabilidad al MutationCache global) y conserva lo ya creado', async () => {
+    const user = userEvent.setup()
+    // Cada `mutateAsync` de `useSecciones` es un `useMutation` real y por lo
+    // tanto ya pasa por el `MutationCache.onError` global de
+    // `query-client.ts` (no mockeado aquí), que SIEMPRE muestra su propio
+    // `toast.error`. Este test verifica que `EditorSeccionesPage` ya NO
+    // duplica ese toast localmente en su `catch` — solo se prueba la mitad
+    // "local" del fix; la otra mitad (que el toast global sigue
+    // disparándose) no cambió y no se tocó en este sprint.
+    actualizarConfiguracionMutateAsyncMock.mockRejectedValue(
+      new Error('fallo de red simulado'),
+    )
+
+    renderEditor()
+
+    await waitFor(() =>
+      expect(useEditorSeccionesStore.getState().content).toHaveLength(2),
+    )
+
+    act(() => {
+      useEditorSeccionesStore.getState().setContent([
+        {
+          type: 'hero',
+          props: {
+            id: 'seccion-a',
+            _seccionId: 'seccion-a',
+            _visible: true,
+            _tituloVisible: 'Portada',
+            titulo: 'A',
+            subtitulo: 'B2',
+          },
+        },
+        {
+          type: 'contacto',
+          props: {
+            id: 'seccion-b',
+            _seccionId: 'seccion-b',
+            _visible: true,
+            _tituloVisible: 'Contacto',
+            mostrar_formulario: false,
+          },
+        },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ] as any)
+    })
+
+    await user.click(screen.getByRole('button', { name: /guardar cambios/i }))
+
+    await waitFor(() =>
+      expect(actualizarConfiguracionMutateAsyncMock).toHaveBeenCalled(),
+    )
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: /guardar cambios/i }),
+      ).not.toBeDisabled(),
+    )
+
+    // No debe haber ni un solo toast disparado por `EditorSeccionesPage`
+    // mismo: el de éxito no aplica porque falló, y el de error ya no vive
+    // en este componente.
+    expect(toast.error).not.toHaveBeenCalled()
+    expect(toast.success).not.toHaveBeenCalled()
+    // No debió llegar a reordenar tras el fallo previo en la fase de diff.
+    expect(reordenarMutateAsyncMock).not.toHaveBeenCalled()
   })
 })

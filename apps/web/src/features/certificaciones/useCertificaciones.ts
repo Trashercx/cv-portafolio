@@ -45,6 +45,10 @@ export function useCrearCertificacion() {
         method: 'POST',
         body: payload,
       }),
+    meta: {
+      mensajeExito: 'Certificación creada correctamente.',
+      mensajeError: 'No se pudo crear la certificación. Intenta de nuevo.',
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: CERTIFICACIONES_QUERY_KEY })
     },
@@ -61,6 +65,10 @@ export function useActualizarCertificacion(id: string) {
         method: 'PATCH',
         body: payload,
       }),
+    meta: {
+      mensajeExito: 'Certificación guardada correctamente.',
+      mensajeError: 'No se pudo guardar la certificación. Intenta de nuevo.',
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: CERTIFICACIONES_QUERY_KEY })
       queryClient.invalidateQueries({ queryKey: certificacionQueryKey(id) })
@@ -77,6 +85,10 @@ export function useEliminarCertificacion() {
       apiFetch<{ eliminado: boolean }>(`/admin/certificaciones/${id}`, {
         method: 'DELETE',
       }),
+    meta: {
+      mensajeExito: 'Certificación eliminada correctamente.',
+      mensajeError: 'No se pudo eliminar la certificación. Intenta de nuevo.',
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: CERTIFICACIONES_QUERY_KEY })
     },
@@ -102,6 +114,9 @@ export function useReordenarCertificaciones() {
           }),
         ),
       )
+    },
+    meta: {
+      mensajeError: 'No se pudo reordenar las certificaciones. Intenta de nuevo.',
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: CERTIFICACIONES_QUERY_KEY })

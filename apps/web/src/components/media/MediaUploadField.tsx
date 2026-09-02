@@ -33,10 +33,15 @@ type MediaUploadFieldProps = {
 }
 
 /**
- * Input de archivo reutilizable que sube directo a `POST /admin/media` (con
- * cookie de sesión, nunca a una URL pre-firmada) y devuelve el `media_id`
- * resultante al formulario que lo use vía `onUploaded`. Muestra
- * previsualización cuando el archivo (nuevo o ya conocido) es una imagen.
+ * Input de archivo reutilizable que sube a `POST /admin/media` (con cookie
+ * de sesión, nunca a una URL pre-firmada) y devuelve el `media_id`
+ * resultante al formulario que lo use vía `onUploaded`.
+ *
+ * Flujo de confirmación en dos pasos: elegir un archivo NO sube de
+ * inmediato — solo lo deja "pendiente de confirmar" (con su propia
+ * previsualización y los botones "Subir"/"Cancelar"). Solo "Subir" dispara
+ * la mutación; "Cancelar" descarta la selección sin tocar la red y, si ya
+ * había un archivo confirmado antes, vuelve a mostrarlo tal cual estaba.
  */
 export function MediaUploadField({
   label,
@@ -50,38 +55,108 @@ export function MediaUploadField({
 }: MediaUploadFieldProps) {
   const inputId = useId()
   const inputRef = useRef<HTMLInputElement>(null)
-  const [localPreviewUrl, setLocalPreviewUrl] = useState<string | null>(null)
+  const [archivoPendiente, setArchivoPendiente] = useState<File | null>(null)
+  const [previewPendienteUrl, setPreviewPendienteUrl] = useState<
+    string | null
+  >(null)
+  // Previsualización local del último archivo SUBIDO CON ÉXITO en esta
+  // sesión: se muestra en el estado "confirmado" en vez de esperar a que el
+  // formulario padre reciba una `currentPreviewUrl` fresca (que en perfil/
+  // certificaciones nunca llega — ver el comentario de `currentMediaId`).
+  const [previewConfirmadoUrl, setPreviewConfirmadoUrl] = useState<
+    string | null
+  >(null)
   const upload = useUploadMedia()
 
-  // Libera el object URL local al desmontar o reemplazar la selección.
+  // Refs que siempre reflejan el último valor de cada estado: se usan solo
+  // para leer el valor VIGENTE en el cleanup de desmontaje de abajo. No se
+  // puede lograr esto con las dependencias del efecto (`[previewPendienteUrl,
+  // previewConfirmadoUrl]`) porque `handleSubir` "transfiere" el mismo blob
+  // URL de pendiente a confirmado (mismo string, cambia de dueño): si el
+  // efecto se re-ejecutara por ese cambio de dependencia, su cleanup
+  // revocaría el blob justo cuando pasa a ser el `previewConfirmadoUrl`
+  // vigente, rompiendo la imagen recién confirmada. Con refs + deps `[]`,
+  // el cleanup solo corre al desmontar el componente de verdad.
+  const previewPendienteUrlRef = useRef(previewPendienteUrl)
+  const previewConfirmadoUrlRef = useRef(previewConfirmadoUrl)
+
+  // Sincroniza los refs de arriba en cada render (nunca durante el render en
+  // sí, para no disparar el lint `react(refs)` de "accessing refs during
+  // render" ni arriesgar lecturas inconsistentes bajo Strict Mode).
+  useEffect(() => {
+    previewPendienteUrlRef.current = previewPendienteUrl
+  }, [previewPendienteUrl])
+  useEffect(() => {
+    previewConfirmadoUrlRef.current = previewConfirmadoUrl
+  }, [previewConfirmadoUrl])
+
+  // Libera los object URL locales vigentes al desmontar. Las transiciones
+  // intermedias (nueva selección, cancelar, quitar, confirmar subida) ya
+  // revocan explícitamente el valor anterior en cada handler de abajo.
   useEffect(() => {
     return () => {
-      if (localPreviewUrl) URL.revokeObjectURL(localPreviewUrl)
+      if (previewPendienteUrlRef.current) {
+        URL.revokeObjectURL(previewPendienteUrlRef.current)
+      }
+      if (previewConfirmadoUrlRef.current) {
+        URL.revokeObjectURL(previewConfirmadoUrlRef.current)
+      }
     }
-  }, [localPreviewUrl])
+  }, [])
+
+  const limpiarInput = () => {
+    if (inputRef.current) inputRef.current.value = ''
+  }
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
 
-    if (file.type.startsWith('image/')) {
-      setLocalPreviewUrl((previo) => {
-        if (previo) URL.revokeObjectURL(previo)
-        return URL.createObjectURL(file)
-      })
-    } else {
-      setLocalPreviewUrl(null)
-    }
+    setPreviewPendienteUrl((previo) => {
+      if (previo) URL.revokeObjectURL(previo)
+      return file.type.startsWith('image/') ? URL.createObjectURL(file) : null
+    })
+    setArchivoPendiente(file)
+  }
+
+  const handleSubir = () => {
+    if (!archivoPendiente) return
 
     upload.mutate(
-      { file, tipo },
+      { file: archivoPendiente, tipo },
       {
-        onSuccess: (media) => onUploaded(media),
+        onSuccess: (media) => {
+          onUploaded(media)
+          setPreviewConfirmadoUrl((previo) => {
+            if (previo) URL.revokeObjectURL(previo)
+            return previewPendienteUrl
+          })
+          setPreviewPendienteUrl(null)
+          setArchivoPendiente(null)
+        },
       },
     )
   }
 
-  const previewUrl = localPreviewUrl ?? currentPreviewUrl ?? null
+  const handleCancelar = () => {
+    setPreviewPendienteUrl((previo) => {
+      if (previo) URL.revokeObjectURL(previo)
+      return null
+    })
+    setArchivoPendiente(null)
+    limpiarInput()
+  }
+
+  const handleQuitar = () => {
+    setPreviewConfirmadoUrl((previo) => {
+      if (previo) URL.revokeObjectURL(previo)
+      return null
+    })
+    limpiarInput()
+    onClear?.()
+  }
+
+  const previewConfirmado = previewConfirmadoUrl ?? currentPreviewUrl ?? null
   const errorMessage =
     upload.error instanceof ApiError
       ? upload.error.message
@@ -93,50 +168,80 @@ export function MediaUploadField({
     <div className="grid gap-2">
       <Label htmlFor={inputId}>{label}</Label>
 
-      {previewUrl ? (
-        <img
-          src={previewUrl}
-          alt=""
-          className="h-32 w-32 rounded-md border object-cover"
-        />
-      ) : currentMediaId ? (
-        <p className="text-sm text-muted-foreground">
-          Archivo ya cargado (sin previsualización disponible).
-        </p>
-      ) : null}
+      {archivoPendiente ? (
+        <div className="grid gap-2">
+          {previewPendienteUrl ? (
+            <img
+              src={previewPendienteUrl}
+              alt=""
+              className="h-32 w-32 rounded-md border object-cover"
+            />
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              {archivoPendiente.name}
+            </p>
+          )}
+          <p className="text-xs font-medium text-muted-foreground">
+            Pendiente de subir
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              disabled={upload.isPending}
+              onClick={handleSubir}
+            >
+              {upload.isPending ? 'Subiendo…' : 'Subir'}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={upload.isPending}
+              onClick={handleCancelar}
+            >
+              Cancelar
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <>
+          {previewConfirmado ? (
+            <img
+              src={previewConfirmado}
+              alt=""
+              className="h-32 w-32 rounded-md border object-cover"
+            />
+          ) : currentMediaId ? (
+            <p className="text-sm text-muted-foreground">
+              Archivo ya cargado (sin previsualización disponible).
+            </p>
+          ) : null}
 
-      <div className="flex items-center gap-2">
-        <Input
-          id={inputId}
-          ref={inputRef}
-          type="file"
-          accept={accept}
-          disabled={disabled || upload.isPending}
-          onChange={handleFileChange}
-        />
-        {(currentMediaId || previewUrl) && onClear ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            disabled={disabled || upload.isPending}
-            onClick={() => {
-              setLocalPreviewUrl((previo) => {
-                if (previo) URL.revokeObjectURL(previo)
-                return null
-              })
-              if (inputRef.current) inputRef.current.value = ''
-              onClear()
-            }}
-          >
-            Quitar
-          </Button>
-        ) : null}
-      </div>
+          <div className="flex items-center gap-2">
+            <Input
+              id={inputId}
+              ref={inputRef}
+              type="file"
+              accept={accept}
+              disabled={disabled}
+              onChange={handleFileChange}
+            />
+            {(currentMediaId || previewConfirmado) && onClear ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={disabled}
+                onClick={handleQuitar}
+              >
+                Quitar
+              </Button>
+            ) : null}
+          </div>
+        </>
+      )}
 
-      {upload.isPending ? (
-        <p className="text-sm text-muted-foreground">Subiendo…</p>
-      ) : null}
       {errorMessage ? (
         <p role="alert" className="text-sm text-destructive">
           {errorMessage}

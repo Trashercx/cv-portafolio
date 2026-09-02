@@ -26,6 +26,10 @@ export function useCrearProyecto() {
         method: 'POST',
         body: payload,
       }),
+    meta: {
+      mensajeExito: 'Proyecto creado correctamente.',
+      mensajeError: 'No se pudo crear el proyecto. Intenta de nuevo.',
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: PROYECTOS_QUERY_KEY })
     },
@@ -42,6 +46,10 @@ export function useActualizarProyecto(id: string) {
         method: 'PATCH',
         body: payload,
       }),
+    meta: {
+      mensajeExito: 'Proyecto guardado correctamente.',
+      mensajeError: 'No se pudo guardar el proyecto. Intenta de nuevo.',
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: PROYECTOS_QUERY_KEY })
       queryClient.invalidateQueries({ queryKey: proyectoQueryKey(id) })
@@ -58,6 +66,10 @@ export function useEliminarProyecto() {
       apiFetch<{ eliminado: boolean }>(`/admin/proyectos/${id}`, {
         method: 'DELETE',
       }),
+    meta: {
+      mensajeExito: 'Proyecto eliminado correctamente.',
+      mensajeError: 'No se pudo eliminar el proyecto. Intenta de nuevo.',
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: PROYECTOS_QUERY_KEY })
     },
@@ -74,6 +86,9 @@ export function useReordenarProyectos() {
         method: 'PATCH',
         body: items,
       }),
+    meta: {
+      mensajeError: 'No se pudo reordenar los proyectos. Intenta de nuevo.',
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: PROYECTOS_QUERY_KEY })
     },
@@ -89,6 +104,9 @@ export function useAgregarTecnologiaProyecto(proyectoId: string) {
       apiFetch(`/admin/proyectos/${proyectoId}/tecnologias/${tecnologiaId}`, {
         method: 'POST',
       }),
+    meta: {
+      mensajeError: 'No se pudo agregar la tecnología. Intenta de nuevo.',
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: proyectoQueryKey(proyectoId) })
       queryClient.invalidateQueries({ queryKey: PROYECTOS_QUERY_KEY })
@@ -105,6 +123,9 @@ export function useQuitarTecnologiaProyecto(proyectoId: string) {
       apiFetch(`/admin/proyectos/${proyectoId}/tecnologias/${tecnologiaId}`, {
         method: 'DELETE',
       }),
+    meta: {
+      mensajeError: 'No se pudo quitar la tecnología. Intenta de nuevo.',
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: proyectoQueryKey(proyectoId) })
       queryClient.invalidateQueries({ queryKey: PROYECTOS_QUERY_KEY })
@@ -124,6 +145,10 @@ export function useAgregarImagenProyecto(proyectoId: string) {
         method: 'POST',
         body: payload,
       }),
+    meta: {
+      mensajeExito: 'Imagen agregada a la galería.',
+      mensajeError: 'No se pudo agregar la imagen. Intenta de nuevo.',
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: proyectoQueryKey(proyectoId) })
       queryClient.invalidateQueries({ queryKey: PROYECTOS_QUERY_KEY })
@@ -140,6 +165,10 @@ export function useQuitarImagenProyecto(proyectoId: string) {
       apiFetch(`/admin/proyectos/${proyectoId}/imagenes/${mediaId}`, {
         method: 'DELETE',
       }),
+    meta: {
+      mensajeExito: 'Imagen quitada de la galería.',
+      mensajeError: 'No se pudo quitar la imagen. Intenta de nuevo.',
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: proyectoQueryKey(proyectoId) })
       queryClient.invalidateQueries({ queryKey: PROYECTOS_QUERY_KEY })
@@ -157,6 +186,9 @@ export function useReordenarImagenesProyecto(proyectoId: string) {
         method: 'PATCH',
         body: items,
       }),
+    meta: {
+      mensajeError: 'No se pudo reordenar las imágenes. Intenta de nuevo.',
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: proyectoQueryKey(proyectoId) })
       queryClient.invalidateQueries({ queryKey: PROYECTOS_QUERY_KEY })

@@ -39,6 +39,10 @@ export function useCrearRedSocial() {
         method: 'POST',
         body: payload,
       }),
+    meta: {
+      mensajeExito: 'Enlace creado correctamente.',
+      mensajeError: 'No se pudo crear el enlace. Intenta de nuevo.',
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: REDES_SOCIALES_QUERY_KEY })
     },
@@ -55,6 +59,10 @@ export function useActualizarRedSocial(id: string) {
         method: 'PATCH',
         body: payload,
       }),
+    meta: {
+      mensajeExito: 'Enlace guardado correctamente.',
+      mensajeError: 'No se pudo guardar el enlace. Intenta de nuevo.',
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: REDES_SOCIALES_QUERY_KEY })
       queryClient.invalidateQueries({ queryKey: redSocialQueryKey(id) })
@@ -71,6 +79,10 @@ export function useEliminarRedSocial() {
       apiFetch<{ eliminado: boolean }>(`/admin/redes-sociales/${id}`, {
         method: 'DELETE',
       }),
+    meta: {
+      mensajeExito: 'Enlace eliminado correctamente.',
+      mensajeError: 'No se pudo eliminar el enlace. Intenta de nuevo.',
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: REDES_SOCIALES_QUERY_KEY })
     },
@@ -91,6 +103,9 @@ export function useReordenarRedesSociales() {
           }),
         ),
       )
+    },
+    meta: {
+      mensajeError: 'No se pudo reordenar los enlaces. Intenta de nuevo.',
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: REDES_SOCIALES_QUERY_KEY })

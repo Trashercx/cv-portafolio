@@ -39,6 +39,10 @@ export function useCrearLogro() {
   return useMutation({
     mutationFn: (payload: LogroPayload) =>
       apiFetch<Logro>('/admin/logros', { method: 'POST', body: payload }),
+    meta: {
+      mensajeExito: 'Logro creado correctamente.',
+      mensajeError: 'No se pudo crear el logro. Intenta de nuevo.',
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: LOGROS_QUERY_KEY })
     },
@@ -55,6 +59,10 @@ export function useActualizarLogro(id: string) {
         method: 'PATCH',
         body: payload,
       }),
+    meta: {
+      mensajeExito: 'Logro guardado correctamente.',
+      mensajeError: 'No se pudo guardar el logro. Intenta de nuevo.',
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: LOGROS_QUERY_KEY })
       queryClient.invalidateQueries({ queryKey: logroQueryKey(id) })
@@ -71,6 +79,10 @@ export function useEliminarLogro() {
       apiFetch<{ eliminado: boolean }>(`/admin/logros/${id}`, {
         method: 'DELETE',
       }),
+    meta: {
+      mensajeExito: 'Logro eliminado correctamente.',
+      mensajeError: 'No se pudo eliminar el logro. Intenta de nuevo.',
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: LOGROS_QUERY_KEY })
     },
@@ -91,6 +103,9 @@ export function useReordenarLogros() {
           }),
         ),
       )
+    },
+    meta: {
+      mensajeError: 'No se pudo reordenar los logros. Intenta de nuevo.',
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: LOGROS_QUERY_KEY })

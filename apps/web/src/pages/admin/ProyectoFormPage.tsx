@@ -32,7 +32,6 @@ import {
   useCrearProyecto,
 } from '@/features/proyectos/useProyectoMutations'
 import { useProyecto, useProyectos } from '@/features/proyectos/useProyectos'
-import { ApiError } from '@/lib/api-client'
 
 const DEFAULT_VALUES: ProyectoFormValues = {
   titulo: '',
@@ -111,13 +110,6 @@ export function ProyectoFormPage() {
     }
   }
 
-  const errorMessage =
-    mutacionActiva.error instanceof ApiError
-      ? mutacionActiva.error.message
-      : mutacionActiva.error
-        ? 'No se pudo guardar el proyecto. Intenta de nuevo.'
-        : null
-
   if (!esNuevo && isLoading) {
     return <p className="text-sm text-muted-foreground">Cargando proyecto…</p>
   }
@@ -126,7 +118,9 @@ export function ProyectoFormPage() {
     <div className="grid max-w-2xl gap-6">
       <Card>
         <CardHeader>
-          <CardTitle>{esNuevo ? 'Nuevo proyecto' : 'Editar proyecto'}</CardTitle>
+          <CardTitle className="font-heading text-xl">
+            {esNuevo ? 'Nuevo proyecto' : 'Editar proyecto'}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <Form {...form}>
@@ -264,12 +258,6 @@ export function ProyectoFormPage() {
                   </FormItem>
                 )}
               />
-
-              {errorMessage ? (
-                <p role="alert" className="text-sm text-destructive">
-                  {errorMessage}
-                </p>
-              ) : null}
 
               <Button
                 type="submit"
