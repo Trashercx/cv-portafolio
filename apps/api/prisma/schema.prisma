@@ -37,6 +37,8 @@ model UsuarioAdmin {
   redes_sociales  RedSocial[]
   secciones       Seccion[]
   temas           Tema[]
+  skills          Skill[]
+  fondos_sitio    FondoSitio[]
   versiones_sitio VersionSitio[]
 
   @@map("usuario_admin")
@@ -242,6 +244,43 @@ model Tema {
   usuario_admin UsuarioAdmin @relation(fields: [usuario_admin_id], references: [id])
 
   @@map("tema")
+}
+
+/// Skills/tecnologías destacadas del administrador (UC-16). Patrón de
+/// "contenido propio del admin" (como LOGRO), no catálogo compartido:
+/// distinto de TECNOLOGIA, que sirve para clasificar proyectos, no para
+/// el carrusel de skills del hero.
+model Skill {
+  id               String  @id @default(uuid()) @db.Uuid
+  usuario_admin_id String  @db.Uuid
+  nombre           String
+  icono            String
+  orden            Int
+  visible          Boolean @default(true)
+
+  usuario_admin UsuarioAdmin @relation(fields: [usuario_admin_id], references: [id])
+
+  @@map("skill")
+}
+
+/// Fondo de página animado del sitio público (UC-15), independiente del
+/// módulo TEMA (que solo maneja color/tipografía, ver plan-portafolio.md
+/// sección 4). Regla de negocio: solo un FONDO_SITIO por administrador
+/// puede tener `activo = true` a la vez — mismo mecanismo que TEMA (ver su
+/// comentario arriba): índice único parcial editado a mano en la migración
+/// (`CREATE UNIQUE INDEX fondo_sitio_admin_activo_unico ON fondo_sitio
+/// (usuario_admin_id) WHERE activo = true;`) + transacción en
+/// FondoSitioService que desactiva el fondo previo antes de activar el nuevo.
+model FondoSitio {
+  id               String  @id @default(uuid()) @db.Uuid
+  usuario_admin_id String  @db.Uuid
+  tipo             String
+  configuracion    Json
+  activo           Boolean @default(false)
+
+  usuario_admin UsuarioAdmin @relation(fields: [usuario_admin_id], references: [id])
+
+  @@map("fondo_sitio")
 }
 
 /// Snapshots de publicación (UC-10, UC-11). `snapshot` es JSONB por la misma razón que
