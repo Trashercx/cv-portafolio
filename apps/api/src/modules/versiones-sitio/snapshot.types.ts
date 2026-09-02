@@ -65,6 +65,8 @@ export interface SnapshotSitio {
   certificaciones: SnapshotConId[];
   logros: SnapshotConId[];
   redes_sociales: SnapshotConId[];
+  skills: SnapshotConId[];
+  fondo: Record<string, unknown> | null;
 }
 
 export const ESTADO_BORRADOR = 'borrador';

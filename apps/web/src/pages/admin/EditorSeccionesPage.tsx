@@ -93,28 +93,62 @@ type SeccionPersistida = {
 }
 
 /**
+ * Fallback conservador para una `Seccion` `hero` guardada antes de agregar
+ * `mostrar_foto_perfil`/`posicion_foto`/`estilo_foto` a `HeroConfiguracion`
+ * (su `configuracion` JSONB puede no traerlos). A propósito NO se reutiliza
+ * `puckConfig.components.hero.defaultProps` para rellenar este hueco: esos
+ * defaults están pensados para un bloque `hero` recién arrastrado al lienzo
+ * (`mostrar_foto_perfil: true`, `posicion_foto: 'centrada'`), y usarlos acá
+ * mezclaría "mostrar foto" en el `content` inicial del editor para una
+ * sección vieja que nunca tuvo foto configurada — el próximo `PATCH`
+ * (aunque sea de otro bloque) fijaría esa foto como visible en el sitio
+ * público sin que el admin lo haya elegido. Este fallback preserva en
+ * cambio el comportamiento visual que la sección ya tenía: sin foto.
+ */
+const FALLBACK_HERO_LEGADO = {
+  mostrar_foto_perfil: false,
+  posicion_foto: 'ninguna',
+  estilo_foto: 'con_marco',
+} as const
+
+/**
  * Convierte las `Seccion[]` del backend (ordenadas por `orden`) al `content`
  * inicial de Puck. Los campos propios de nuestro backend (`id`, `visible`,
  * `titulo_visible`) viajan como props con prefijo `_` para no mezclarse con
  * los campos reales de `configuracion` que sí editan los DTOs de cada tipo
  * — ver el comentario de cabecera de `puck-config.tsx`.
+ *
+ * Se parte de `defaultProps` del bloque correspondiente (no solo de
+ * `seccion.configuracion`): una `Seccion` guardada antes de agregar un campo
+ * nuevo a su DTO de configuración puede no traerlo en su JSONB — sin este
+ * merge, Puck mostraría ese control sin ningún valor seleccionado en vez de
+ * partir de un default concreto. Para los 3 campos de foto de `hero`
+ * específicamente, `FALLBACK_HERO_LEGADO` pisa el default "de creación" de
+ * `defaultProps` con uno conservador (ver su comentario) antes de aplicar la
+ * `configuracion` real guardada, que sigue ganando si esos campos sí están
+ * presentes.
  */
 function seccionesAContenidoInicial(secciones: Seccion[]): EditorContentItem[] {
   return [...secciones]
     .sort((a, b) => a.orden - b.orden)
-    .map(
-      (seccion) =>
-        ({
-          type: seccion.tipo_seccion,
-          props: {
-            id: seccion.id,
-            _seccionId: seccion.id,
-            _visible: seccion.visible,
-            _tituloVisible: seccion.titulo_visible,
-            ...seccion.configuracion,
-          },
-        }) as EditorContentItem,
-    )
+    .map((seccion) => {
+      const defaultProps =
+        puckConfig.components[seccion.tipo_seccion]?.defaultProps ?? {}
+      const fallbackLegado =
+        seccion.tipo_seccion === 'hero' ? FALLBACK_HERO_LEGADO : {}
+      return {
+        type: seccion.tipo_seccion,
+        props: {
+          ...defaultProps,
+          ...fallbackLegado,
+          id: seccion.id,
+          _seccionId: seccion.id,
+          _visible: seccion.visible,
+          _tituloVisible: seccion.titulo_visible,
+          ...seccion.configuracion,
+        },
+      } as EditorContentItem
+    })
 }
 
 /** Separa las props internas (prefijo `_`, más el `id` que agrega Puck) de la `configuracion` real que acepta el backend. */

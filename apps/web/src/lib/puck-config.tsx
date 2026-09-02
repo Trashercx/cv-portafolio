@@ -6,6 +6,7 @@ import type {
   HeroConfiguracion,
   LogrosConfiguracion,
   ProyectosConfiguracion,
+  SkillsConfiguracion,
   SobreMiConfiguracion,
 } from '@/features/secciones/types'
 
@@ -94,6 +95,7 @@ export type PuckSeccionesComponents = {
   certificaciones: ConInternos<CertificacionesConfiguracion>
   logros: ConInternos<LogrosConfiguracion>
   contacto: ConInternos<ContactoConfiguracion>
+  skills: ConInternos<SkillsConfiguracion>
 }
 
 /**
@@ -110,6 +112,9 @@ export const puckConfig: Config<PuckSeccionesComponents> = {
       defaultProps: {
         titulo: 'Tu nombre',
         subtitulo: 'Tu título profesional',
+        mostrar_foto_perfil: true,
+        posicion_foto: 'centrada',
+        estilo_foto: 'con_marco',
         _visible: true,
         _tituloVisible: 'Portada',
       },
@@ -119,10 +124,45 @@ export const puckConfig: Config<PuckSeccionesComponents> = {
         imagen_fondo_media_id: imagenFondoField,
         texto_boton: { type: 'text', label: 'Texto del botón (opcional)' },
         enlace_boton: { type: 'text', label: 'Enlace del botón (opcional)' },
+        mostrar_foto_perfil: {
+          type: 'radio',
+          label: 'Mostrar foto de perfil',
+          options: [
+            { label: 'Sí', value: true },
+            { label: 'No', value: false },
+          ],
+        },
+        posicion_foto: {
+          type: 'select',
+          label: 'Posición de la foto',
+          options: [
+            { label: 'Ninguna', value: 'ninguna' },
+            { label: 'Centrada', value: 'centrada' },
+            { label: 'Esquina superior', value: 'esquina_superior' },
+            { label: 'Esquina inferior', value: 'esquina_inferior' },
+          ],
+        },
+        estilo_foto: {
+          type: 'select',
+          label: 'Estilo de la foto',
+          options: [
+            { label: 'Con marco', value: 'con_marco' },
+            { label: 'Sin fondo', value: 'sin_fondo' },
+          ],
+        },
         _visible: VISIBLE_FIELD,
         _tituloVisible: TITULO_VISIBLE_FIELD,
       },
-      render: ({ titulo, subtitulo, texto_boton, enlace_boton, _visible }) => (
+      render: ({
+        titulo,
+        subtitulo,
+        texto_boton,
+        enlace_boton,
+        mostrar_foto_perfil,
+        posicion_foto,
+        estilo_foto,
+        _visible,
+      }) => (
         <BloquePreview visible={_visible} etiqueta="Portada">
           <h1 className="text-2xl font-bold text-foreground">{titulo}</h1>
           <p className="text-muted-foreground">{subtitulo}</p>
@@ -132,6 +172,13 @@ export const puckConfig: Config<PuckSeccionesComponents> = {
               {enlace_boton ? ` → ${enlace_boton}` : ''}
             </span>
           ) : null}
+          <p className="text-xs text-muted-foreground">
+            Foto de perfil:{' '}
+            {mostrar_foto_perfil
+              ? `${posicion_foto} · ${estilo_foto}`
+              : 'oculta'}
+            .
+          </p>
         </BloquePreview>
       ),
     },
@@ -268,6 +315,43 @@ export const puckConfig: Config<PuckSeccionesComponents> = {
             {mostrar_formulario
               ? 'Con formulario de contacto.'
               : 'Solo enlaces de redes y descarga de CV.'}
+          </p>
+        </BloquePreview>
+      ),
+    },
+    skills: {
+      label: 'Skills',
+      defaultProps: {
+        direccion: 'izquierda',
+        velocidad: 'media',
+        _visible: true,
+        _tituloVisible: 'Skills',
+      },
+      fields: {
+        direccion: {
+          type: 'select',
+          label: 'Dirección del carrusel',
+          options: [
+            { label: 'Izquierda', value: 'izquierda' },
+            { label: 'Derecha', value: 'derecha' },
+          ],
+        },
+        velocidad: {
+          type: 'select',
+          label: 'Velocidad',
+          options: [
+            { label: 'Lenta', value: 'lenta' },
+            { label: 'Media', value: 'media' },
+            { label: 'Rápida', value: 'rapida' },
+          ],
+        },
+        _visible: VISIBLE_FIELD,
+        _tituloVisible: TITULO_VISIBLE_FIELD,
+      },
+      render: ({ direccion, velocidad, _visible }) => (
+        <BloquePreview visible={_visible} etiqueta="Skills">
+          <p className="text-sm text-muted-foreground">
+            Carrusel hacia la {direccion}, velocidad {velocidad}.
           </p>
         </BloquePreview>
       ),

@@ -1,3 +1,4 @@
+import { FondoAnimado } from '@/components/publico/FondoAnimado'
 import { RenderizadorSecciones } from '@/components/publico/RenderizadorSecciones'
 import { useSitio } from '@/features/publico/usePublico'
 import { ApiError } from '@/lib/api-client'
@@ -45,9 +46,12 @@ export function PublicHomePage() {
   return (
     <div
       style={snapshot.tema ? temaComoVariablesCss(snapshot.tema) : undefined}
-      className="min-h-svh"
+      className="relative min-h-svh"
     >
-      <RenderizadorSecciones snapshot={snapshot} />
+      {snapshot.fondo ? <FondoAnimado fondo={snapshot.fondo} /> : null}
+      <div className="relative z-10">
+        <RenderizadorSecciones snapshot={snapshot} />
+      </div>
     </div>
   )
 }

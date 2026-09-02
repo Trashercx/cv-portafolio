@@ -10,6 +10,8 @@ import { MediaLibraryPage } from '@/pages/admin/MediaLibraryPage'
 import { PerfilPage } from '@/pages/admin/PerfilPage'
 import { ProyectosListPage } from '@/pages/admin/ProyectosListPage'
 import { RedesListPage } from '@/pages/admin/RedesListPage'
+import { SkillsListPage } from '@/pages/admin/SkillsListPage'
+import { FondoSitioPage } from '@/pages/admin/FondoSitioPage'
 import { TemaPage } from '@/pages/admin/TemaPage'
 import { CertificacionDetallePage } from '@/pages/public/CertificacionDetallePage'
 import { ProyectoDetallePage } from '@/pages/public/ProyectoDetallePage'
@@ -53,8 +55,11 @@ function App() {
 
           <Route path="redes" element={<RedesListPage />} />
 
+          <Route path="skills" element={<SkillsListPage />} />
+
           <Route path="editor" element={<EditorSeccionesPage />} />
           <Route path="tema" element={<TemaPage />} />
+          <Route path="fondo" element={<FondoSitioPage />} />
           <Route path="media" element={<MediaLibraryPage />} />
           {/*
             UC-10/UC-11 (Publicación) se fusionaron dentro de "Editor

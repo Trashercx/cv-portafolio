@@ -122,3 +122,76 @@
     @apply bg-background text-foreground;
   }
 }
+
+/*
+ * Animaciones CSS puras (sin librería nueva) para el carrusel de skills
+ * (UC-07 + UC-16, ver `RenderizadorSecciones.tsx`) y el fondo animado del
+ * sitio (UC-15, ver `FondoAnimado.tsx`).
+ */
+@layer utilities {
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  @keyframes gradient-shift {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+
+  @keyframes aurora-drift-1 {
+    from {
+      transform: translate(0, 0) scale(1);
+    }
+    to {
+      transform: translate(10%, 15%) scale(1.15);
+    }
+  }
+
+  @keyframes aurora-drift-2 {
+    from {
+      transform: translate(0, 0) scale(1);
+    }
+    to {
+      transform: translate(-15%, 10%) scale(1.1);
+    }
+  }
+
+  @keyframes aurora-drift-3 {
+    from {
+      transform: translate(0, 0) scale(1);
+    }
+    to {
+      transform: translate(5%, -15%) scale(1.2);
+    }
+  }
+
+  @keyframes particles-float {
+    from {
+      background-position: 0 0, 24px 36px;
+    }
+    to {
+      background-position: 48px 48px, 72px 108px;
+    }
+  }
+
+  @keyframes grid-drift {
+    from {
+      background-position: 0 0;
+    }
+    to {
+      background-position: 40px 40px;
+    }
+  }
+}

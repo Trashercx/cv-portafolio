@@ -1,9 +1,11 @@
 import type { Certificacion } from '@/features/certificaciones/types'
+import type { FondoSitio } from '@/features/fondo-sitio/types'
 import type { Logro } from '@/features/logros/types'
 import type { Media } from '@/features/media/types'
 import type { Proyecto } from '@/features/proyectos/types'
 import type { RedSocial } from '@/features/redes-sociales/types'
 import type { Seccion } from '@/features/secciones/types'
+import type { Skill } from '@/features/skills/types'
 import type { Tema } from '@/features/tema/types'
 
 /**
@@ -46,4 +48,6 @@ export type SnapshotSitio = {
   certificaciones: CertificacionPublica[]
   logros: Logro[]
   redes_sociales: RedSocial[]
+  skills: Skill[]
+  fondo: FondoSitio | null
 }

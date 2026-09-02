@@ -39,6 +39,14 @@ describe('SeccionesService (UC-07)', () => {
   });
 
   describe('crear', () => {
+    const heroConfiguracionValida = {
+      titulo: 'Hola',
+      subtitulo: 'Bienvenido',
+      mostrar_foto_perfil: true,
+      posicion_foto: 'centrada' as const,
+      estilo_foto: 'con_marco' as const,
+    };
+
     it('crea una sección hero con configuración válida', async () => {
       prisma.seccion.create.mockResolvedValue({ id: 'seccion-1' });
 
@@ -46,7 +54,7 @@ describe('SeccionesService (UC-07)', () => {
         tipo_seccion: 'hero',
         titulo_visible: 'Inicio',
         orden: 1,
-        configuracion: { titulo: 'Hola', subtitulo: 'Bienvenido' },
+        configuracion: heroConfiguracionValida,
       });
 
       expect(prisma.seccion.create).toHaveBeenCalledWith({
@@ -56,7 +64,7 @@ describe('SeccionesService (UC-07)', () => {
           titulo_visible: 'Inicio',
           orden: 1,
           visible: true,
-          configuracion: { titulo: 'Hola', subtitulo: 'Bienvenido' },
+          configuracion: heroConfiguracionValida,
         },
       });
     });
@@ -67,10 +75,34 @@ describe('SeccionesService (UC-07)', () => {
           tipo_seccion: 'hero',
           titulo_visible: 'Inicio',
           orden: 1,
-          configuracion: { titulo: 'Hola' }, // falta "subtitulo"
+          configuracion: { titulo: 'Hola' }, // falta "subtitulo" y los campos de foto
         }),
       ).rejects.toThrow(BadRequestException);
       expect(prisma.seccion.create).not.toHaveBeenCalled();
+    });
+
+    it('valida "skills" (direccion izquierda|derecha, velocidad lenta|media|rapida)', async () => {
+      prisma.seccion.create.mockResolvedValue({ id: 'seccion-6' });
+
+      await service.crear('admin-1', {
+        tipo_seccion: 'skills',
+        titulo_visible: 'Skills',
+        orden: 7,
+        configuracion: { direccion: 'izquierda', velocidad: 'media' },
+      });
+
+      expect(prisma.seccion.create).toHaveBeenCalled();
+    });
+
+    it('rechaza "skills" con una direccion fuera del catálogo', async () => {
+      await expect(
+        service.crear('admin-1', {
+          tipo_seccion: 'skills',
+          titulo_visible: 'Skills',
+          orden: 7,
+          configuracion: { direccion: 'arriba', velocidad: 'media' },
+        }),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('rechaza configuración con campos que no corresponden al tipo_seccion', async () => {
@@ -195,6 +227,41 @@ describe('SeccionesService (UC-07)', () => {
       await expect(
         service.actualizarConfiguracion('no-existe', { orden: 'fecha' }),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    /**
+     * Regresión (Sprint 8, code-review): `mostrar_foto_perfil`/`posicion_foto`/
+     * `estilo_foto` se agregaron a `HeroConfiguracionDto` DESPUÉS de que ya
+     * existieran secciones `hero` publicadas cuya `configuracion` (jsonb) no
+     * los tiene, sin ningún backfill de datos. Si esos 3 campos fueran
+     * requeridos, este PATCH "viejo" (solo título/subtítulo, como hacía
+     * cualquier admin antes de Sprint 8) sería rechazado con 400 aunque
+     * nunca tocó esos campos. Deben ser `@IsOptional()` con default de clase
+     * para que este caso siga aceptándose.
+     */
+    it('acepta actualizar la configuración de una sección hero YA EXISTENTE sin los campos nuevos de foto (payload "viejo", anterior a Sprint 8)', async () => {
+      prisma.seccion.findUnique.mockResolvedValue({
+        id: 'seccion-hero-vieja',
+        tipo_seccion: 'hero',
+      });
+      prisma.seccion.update.mockResolvedValue({ id: 'seccion-hero-vieja' });
+
+      const configuracionVieja = {
+        titulo: 'Título editado',
+        subtitulo: 'Subtítulo editado',
+      };
+
+      await expect(
+        service.actualizarConfiguracion(
+          'seccion-hero-vieja',
+          configuracionVieja,
+        ),
+      ).resolves.toBeDefined();
+
+      expect(prisma.seccion.update).toHaveBeenCalledWith({
+        where: { id: 'seccion-hero-vieja' },
+        data: { configuracion: configuracionVieja },
+      });
     });
   });
 

@@ -3,6 +3,7 @@ import { ContactoConfiguracionDto } from './contacto-configuracion.dto';
 import { HeroConfiguracionDto } from './hero-configuracion.dto';
 import { LogrosConfiguracionDto } from './logros-configuracion.dto';
 import { ProyectosConfiguracionDto } from './proyectos-configuracion.dto';
+import { SkillsConfiguracionDto } from './skills-configuracion.dto';
 import { SobreMiConfiguracionDto } from './sobre-mi-configuracion.dto';
 
 export {
@@ -11,13 +12,14 @@ export {
   HeroConfiguracionDto,
   LogrosConfiguracionDto,
   ProyectosConfiguracionDto,
+  SkillsConfiguracionDto,
   SobreMiConfiguracionDto,
 };
 
 /**
- * Los 6 tipos de bloque del editor visual (UC-07), decididos en
- * docs/plan-tecnico.md sección 5. `Seccion.tipo_seccion` solo puede ser uno
- * de estos valores.
+ * Los 7 tipos de bloque del editor visual (UC-07), decididos en
+ * docs/plan-tecnico.md sección 5 (`skills` agregado en Sprint 8, UC-16).
+ * `Seccion.tipo_seccion` solo puede ser uno de estos valores.
  */
 export const TIPOS_SECCION = [
   'hero',
@@ -26,6 +28,7 @@ export const TIPOS_SECCION = [
   'certificaciones',
   'logros',
   'contacto',
+  'skills',
 ] as const;
 
 export type TipoSeccion = (typeof TIPOS_SECCION)[number];
@@ -43,4 +46,5 @@ export const CONFIGURACION_DTO_POR_TIPO: Record<TipoSeccion, new () => object> =
     certificaciones: CertificacionesConfiguracionDto,
     logros: LogrosConfiguracionDto,
     contacto: ContactoConfiguracionDto,
+    skills: SkillsConfiguracionDto,
   };

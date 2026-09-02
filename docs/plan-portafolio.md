@@ -110,6 +110,8 @@ Dos actores: el **Administrador** (tú, usuario único autenticado) y el **Visit
 | UC-09 | Gestionar biblioteca multimedia | archivo, texto alternativo, tipo | Toda imagen usada en el sitio proviene de la biblioteca y puede reemplazarse sin romper la referencia en proyectos/certificaciones. |
 | UC-10 | Previsualizar cambios (borrador) | snapshot de la configuración actual | Es posible ver el sitio con los cambios aplicados antes de que sean visibles públicamente. |
 | UC-11 | Publicar o revertir una versión | estado (borrador/publicado), fecha de publicación | Publicar reemplaza la versión visible al público; revertir restaura la última versión publicada anterior. |
+| UC-15 | Configurar fondo animado del sitio | tipo (sólido/degradado animado/aurora animada/partículas/cuadrícula animada), configuración (velocidad, opacidad), activo | Un fondo guardado y marcado como activo se aplica de inmediato a la vista previa y, tras publicar, al sitio en vivo; solo un fondo puede estar activo a la vez. |
+| UC-16 | Gestionar catálogo de skills | nombre, ícono, orden, visible | Un skill creado, editado, reordenado u ocultado se refleja en el carrusel de skills del sitio publicado tras publicar. |
 
 ### Actor: Visitante
 
@@ -238,6 +240,21 @@ erDiagram
         string modo
         boolean activo
     }
+    SKILL {
+        uuid id PK
+        uuid usuario_admin_id FK
+        string nombre
+        string icono
+        int orden
+        boolean visible
+    }
+    FONDO_SITIO {
+        uuid id PK
+        uuid usuario_admin_id FK
+        string tipo
+        jsonb configuracion
+        boolean activo
+    }
     VERSION_SITIO {
         uuid id PK
         uuid usuario_admin_id FK
@@ -254,6 +271,8 @@ erDiagram
     USUARIO_ADMIN ||--o{ RED_SOCIAL : gestiona
     USUARIO_ADMIN ||--o{ SECCION : configura
     USUARIO_ADMIN ||--o{ TEMA : define
+    USUARIO_ADMIN ||--o{ SKILL : gestiona
+    USUARIO_ADMIN ||--o{ FONDO_SITIO : define
     USUARIO_ADMIN ||--o{ VERSION_SITIO : publica
     PERFIL }o--o| MEDIA : "foto de perfil"
     PERFIL }o--o| MEDIA : "cv en pdf"
@@ -265,7 +284,7 @@ erDiagram
     PLATAFORMA_RED ||--o{ RED_SOCIAL : clasifica
 ```
 
-Catorce entidades: el administrador es el dueño de todo el contenido; `MEDIA`, `TECNOLOGIA` y `PLATAFORMA_RED` son catálogos compartidos en vez de campos de texto libre repetidos; `SECCION`, `TEMA` y `VERSION_SITIO` sostienen el editor visual y la publicación por versiones.
+Dieciséis entidades: el administrador es el dueño de todo el contenido; `MEDIA`, `TECNOLOGIA` y `PLATAFORMA_RED` son catálogos compartidos en vez de campos de texto libre repetidos; `SECCION`, `TEMA`, `FONDO_SITIO` y `VERSION_SITIO` sostienen el editor visual y la publicación por versiones. `SKILL` sigue el mismo patrón que `LOGRO`: contenido propio del administrador (no un catálogo compartido) — a diferencia de `TECNOLOGIA`, que solo clasifica proyectos, `SKILL` es lo que se muestra en el carrusel de habilidades del sitio público, así que no tendría sentido reutilizar aquel catálogo para este propósito distinto. `FONDO_SITIO` sigue el mismo patrón de "configuración visual exclusiva" que `TEMA`, pero es deliberadamente independiente de él: `TEMA` solo maneja color y tipografía, `FONDO_SITIO` maneja el fondo animado del landing.
 
 `USUARIO_ADMIN.intentos_fallidos` (int, default 0) y `USUARIO_ADMIN.bloqueado_hasta` (timestamp, nullable) se agregan porque el criterio de aceptación de UC-01 exige bloqueo temporal tras 3 intentos fallidos de login, y el esquema original no tenía dónde contar esos intentos ni hasta cuándo dura el bloqueo.
 
@@ -275,9 +294,11 @@ Catorce entidades: el administrador es el dueño de todo el contenido; `MEDIA`, 
 - **2FN:** en las tablas de unión (`PROYECTO_TECNOLOGIA`, `PROYECTO_IMAGEN`) los atributos no clave dependen de la combinación completa de la llave compuesta, no de una sola mitad.
 - **3FN:** no hay dependencias transitivas: el nombre de una plataforma de red social o de una tecnología vive una sola vez en su catálogo (`PLATAFORMA_RED`, `TECNOLOGIA`), no repetido en cada fila que la referencia.
 
-Dos excepciones deliberadas, ambas justificadas por el propio requisito de edición visual: `SECCION.configuracion` y `VERSION_SITIO.snapshot` usan `JSONB` porque el contenido de un bloque del editor (o una foto completa del sitio para poder revertirla) tiene forma variable por diseño; forzarlo a columnas fijas obligaría a rediseñar el esquema cada vez que agregues un tipo de bloque nuevo.
+Tres excepciones deliberadas, todas justificadas por el propio requisito de edición visual: `SECCION.configuracion`, `VERSION_SITIO.snapshot` y `FONDO_SITIO.configuracion` usan `JSONB` porque el contenido de un bloque del editor (o una foto completa del sitio para poder revertirla, o los parámetros de un fondo animado) tiene forma variable por diseño; forzarlo a columnas fijas obligaría a rediseñar el esquema cada vez que agregues un tipo de bloque o de fondo nuevo. `FONDO_SITIO.configuracion` en particular guarda solo `velocidad` y `opacidad`, los dos parámetros que comparten los cinco tipos de fondo (sólido, degradado animado, aurora animada, partículas, cuadrícula animada); columnas fijas por tipo obligarían a alterar el esquema cada vez que se agregue un tipo de fondo nuevo.
 
 > **Regla de negocio a aplicar en la aplicación (no solo en el esquema):** solo un registro de `TEMA` por administrador puede tener `activo = true` a la vez; conviene reforzarlo con un índice único parcial en PostgreSQL además de la validación en NestJS.
+
+> **Regla de negocio a aplicar en la aplicación (no solo en el esquema):** solo un registro de `FONDO_SITIO` por administrador puede tener `activo = true` a la vez; mismo mecanismo que `TEMA` (índice único parcial en PostgreSQL + validación en NestJS).
 
 ## 5. Despliegue y operación en el VPS
 

@@ -4,9 +4,11 @@ import {
   LayoutGrid,
   Palette,
   Share2,
+  Sparkles,
   Trophy,
   User,
   Wand2,
+  Waves,
   type LucideIcon,
 } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
@@ -26,16 +28,18 @@ const NAV_ITEMS: Array<{ to: string; label: string; icon: LucideIcon }> = [
   { to: '/admin/certificaciones', label: 'Certificaciones', icon: BadgeCheck },
   { to: '/admin/logros', label: 'Logros', icon: Trophy },
   { to: '/admin/redes', label: 'Redes sociales', icon: Share2 },
+  { to: '/admin/skills', label: 'Skills', icon: Sparkles },
   { to: '/admin/editor', label: 'Editor visual', icon: Wand2 },
   { to: '/admin/tema', label: 'Tema', icon: Palette },
+  { to: '/admin/fondo', label: 'Fondo del sitio', icon: Waves },
   { to: '/admin/media', label: 'Biblioteca de medios', icon: Image },
 ]
 
 /**
  * Navegación lateral del panel admin (bloque oficial shadcn `Sidebar`,
  * colapsable a solo-íconos en desktop y `Sheet` en mobile vía
- * `collapsible="offcanvas"` por defecto). Mismas 8 entradas que ya cubrían
- * UC-02 a UC-09.
+ * `collapsible="offcanvas"` por defecto). Las 8 entradas originales
+ * (UC-02 a UC-09) más "Skills" (UC-16) y "Fondo del sitio" (UC-15).
  */
 export function AppSidebar() {
   const location = useLocation()
