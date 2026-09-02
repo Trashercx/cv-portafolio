@@ -60,6 +60,15 @@ describe('CertificacionFormPage (nueva)', () => {
     vi.clearAllMocks()
   })
 
+  it('el campo de logo acepta imagen o PDF (feedback externo, UC-04: certificado como documento verificable)', () => {
+    renderCertificacionFormPage()
+
+    const inputLogo = screen.getByLabelText(
+      /logo o documento del certificado \(imagen o pdf\)/i,
+    )
+    expect(inputLogo).toHaveAttribute('accept', 'image/*,application/pdf')
+  })
+
   it('no llama a la mutación cuando falta un campo obligatorio', async () => {
     const user = userEvent.setup()
     renderCertificacionFormPage()

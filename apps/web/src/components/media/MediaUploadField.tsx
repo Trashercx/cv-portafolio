@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react'
+import { MediaPreview } from '@/components/media/MediaPreview'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -25,11 +26,30 @@ type MediaUploadFieldProps = {
    * galería de imágenes de un proyecto, que sí incluye `media.url`).
    */
   currentPreviewUrl?: string | null
+  /**
+   * `Media.tipo` de `currentMediaId`/`currentPreviewUrl`, si el llamador ya
+   * lo conoce (p. ej. certificación con logo en imagen o PDF). Por defecto
+   * `"imagen"` — comportamiento histórico, válido para perfil y galería de
+   * proyectos, que solo aceptan imágenes.
+   */
+  currentMediaTipo?: string | null
   /** Se llama con el Media completo devuelto por el servidor tras subir. */
   onUploaded: (media: Media) => void
   /** Permite quitar la referencia actual sin subir un archivo nuevo. */
   onClear?: () => void
   disabled?: boolean
+}
+
+/** `Media.tipo` equivalente de un mimetype de archivo local, para previsualizarlo antes de subirlo (mismo criterio que `MediaService.inferirTipo` en el backend). */
+function tipoDesdeMime(mimetype: string): string {
+  if (mimetype.startsWith('image/')) return 'imagen'
+  if (mimetype === 'application/pdf') return 'pdf'
+  return 'archivo'
+}
+
+/** Solo imagen y PDF tienen una previsualización local con `URL.createObjectURL` — otros tipos muestran el nombre del archivo. */
+function esPrevisualizable(mimetype: string): boolean {
+  return mimetype.startsWith('image/') || mimetype === 'application/pdf'
 }
 
 /**
@@ -49,6 +69,7 @@ export function MediaUploadField({
   tipo,
   currentMediaId,
   currentPreviewUrl,
+  currentMediaTipo,
   onUploaded,
   onClear,
   disabled,
@@ -64,6 +85,12 @@ export function MediaUploadField({
   // formulario padre reciba una `currentPreviewUrl` fresca (que en perfil/
   // certificaciones nunca llega — ver el comentario de `currentMediaId`).
   const [previewConfirmadoUrl, setPreviewConfirmadoUrl] = useState<
+    string | null
+  >(null)
+  // `Media.tipo` real (de la respuesta del servidor) del último archivo
+  // subido con éxito en esta sesión, para decidir cómo previsualizarlo
+  // (imagen vs. documento embebido) sin depender de `currentMediaTipo`.
+  const [previewConfirmadoTipo, setPreviewConfirmadoTipo] = useState<
     string | null
   >(null)
   const upload = useUploadMedia()
@@ -114,7 +141,7 @@ export function MediaUploadField({
 
     setPreviewPendienteUrl((previo) => {
       if (previo) URL.revokeObjectURL(previo)
-      return file.type.startsWith('image/') ? URL.createObjectURL(file) : null
+      return esPrevisualizable(file.type) ? URL.createObjectURL(file) : null
     })
     setArchivoPendiente(file)
   }
@@ -131,6 +158,7 @@ export function MediaUploadField({
             if (previo) URL.revokeObjectURL(previo)
             return previewPendienteUrl
           })
+          setPreviewConfirmadoTipo(media.tipo)
           setPreviewPendienteUrl(null)
           setArchivoPendiente(null)
         },
@@ -152,11 +180,14 @@ export function MediaUploadField({
       if (previo) URL.revokeObjectURL(previo)
       return null
     })
+    setPreviewConfirmadoTipo(null)
     limpiarInput()
     onClear?.()
   }
 
   const previewConfirmado = previewConfirmadoUrl ?? currentPreviewUrl ?? null
+  const previewConfirmadoTipoResuelto =
+    previewConfirmadoTipo ?? currentMediaTipo ?? 'imagen'
   const errorMessage =
     upload.error instanceof ApiError
       ? upload.error.message
@@ -171,10 +202,10 @@ export function MediaUploadField({
       {archivoPendiente ? (
         <div className="grid gap-2">
           {previewPendienteUrl ? (
-            <img
-              src={previewPendienteUrl}
-              alt=""
-              className="h-32 w-32 rounded-md border object-cover"
+            <MediaPreview
+              tipo={tipoDesdeMime(archivoPendiente.type)}
+              url={previewPendienteUrl}
+              nombre={archivoPendiente.name}
             />
           ) : (
             <p className="text-sm text-muted-foreground">
@@ -207,11 +238,7 @@ export function MediaUploadField({
       ) : (
         <>
           {previewConfirmado ? (
-            <img
-              src={previewConfirmado}
-              alt=""
-              className="h-32 w-32 rounded-md border object-cover"
-            />
+            <MediaPreview tipo={previewConfirmadoTipoResuelto} url={previewConfirmado} />
           ) : currentMediaId ? (
             <p className="text-sm text-muted-foreground">
               Archivo ya cargado (sin previsualización disponible).
