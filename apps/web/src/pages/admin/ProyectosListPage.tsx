@@ -18,6 +18,7 @@ import {
   useReordenarProyectos,
 } from '@/features/proyectos/useProyectoMutations'
 import { useProyectos } from '@/features/proyectos/useProyectos'
+import { useComandosContextuales } from '@/features/paleta-comandos/contexto-paleta'
 import { ApiError } from '@/lib/api-client'
 import { calcularIntercambioOrdenPorId } from '@/lib/reorder'
 
@@ -48,6 +49,10 @@ export function ProyectosListPage() {
     setItemEditando(proyecto)
     setDialogoAbierto(true)
   }
+
+  useComandosContextuales([
+    { id: 'nuevo-proyecto', etiqueta: 'Nuevo proyecto', accion: abrirNuevo },
+  ])
 
   return (
     <div className="grid gap-4">

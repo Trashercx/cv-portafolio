@@ -206,6 +206,19 @@ Sin migraciones: todo son campos nuevos en columnas `JSONB`/`string` ya existent
 
 Pruebas: `personalizacion-bloque.dto.spec.ts` (defaults rellenados por `plainToInstance` para los 8 tipos, valores fuera de catálogo rechazados); `create-fondo-sitio.dto.spec.ts`/`create-tema.dto.spec.ts` (los tipos/tokens nuevos aceptados, los legados de tema siguen aceptándose); `EnvoltorioSeccion.test.tsx` (clases correctas por combinación de props, default GENÉRICO cuando no vienen); `RenderizadorSecciones.test.tsx` (el fallback de `ancho_contenido` propio de cada uno de los 5 tipos que no eran `max-w-5xl`, no el genérico); specs de `BloqueContacto`/`BloqueLogros`/`BloqueSkills`; `tema-css.test.ts` (token nuevo resuelve al stack correcto, valor legado pasa sin traducir).
 
+### Fase 3.5 — Navegación del panel y paleta de comandos
+
+Sin backend: solo frontend. Única dependencia nueva de todo el rediseño (`cmdk@^1.1.1`, instalada exclusivamente en el workspace `apps/web`).
+
+- **`AppSidebar.tsx`**: los mismos 10 ítems de siempre (rutas y etiquetas sin cambios), reagrupados en 3 `SidebarGroup` — "Contenido" (Perfil, Proyectos, Certificaciones, Logros, Skills, Redes sociales), "Diseño" (Editor visual, Tema, Fondo del sitio), "Recursos" (Biblioteca de medios) — más un link "Ver sitio público" (`target="_blank"`) en el `SidebarFooter`, que antes no existía. `esRutaActiva` se corrigió de un `startsWith(item.to)` crudo (marcaría activo `/admin/tema` ante una futura ruta `/admin/tema-avanzado`) a comparar por límite de segmento (`pathname === to || pathname.startsWith(to + '/')`).
+- **`components/ui/command.tsx`**: wrapper estilo shadcn sobre `cmdk`, con `CommandDialog` montado dentro del `Dialog`/`DialogContent` ya existentes del proyecto — no introduce un segundo sistema de overlay.
+- **Comandos contextuales sin store global**, por decisión explícita del plan: `features/paleta-comandos/contexto-paleta.tsx` expone `ProveedorPaletaComandos` (Context + `useState`) y el hook `useComandosContextuales(comandos)`, que registra al montar y desregistra al desmontar — así un comando como "Nuevo proyecto" solo aparece en la paleta mientras esa página está montada. Se registran por `id` en un `Record`, no en un array, para que registrar/desregistrar sea idempotente.
+- **`PaletaComandos.tsx`**: listener global de `Ctrl+K`/`⌘K` en `document`, 3 grupos — "Navegar" (las 10 rutas admin + "Ver sitio público"), "Acciones" (cambiar tema, cerrar sesión) y "Página actual" (comandos contextuales, el grupo no se renderiza si está vacío). Sin conflicto con los atajos de teclado internos de Puck: el lienzo se monta con `iframe={{ enabled: true }}` (Fase 3.1), así que sus eventos de teclado ocurren en el `document` del iframe y no burbujean al `document` del panel. Montado en `AdminLayout.tsx`, dentro de `ThemeProvider`.
+- Wiring de ejemplo en `ProyectosListPage.tsx` y `SkillsListPage.tsx` ("Nuevo proyecto"/"Nuevo skill", reusando el mismo handler que ya abría el diálogo de creación).
+- Explícitamente fuera de alcance (documentado en el plan, no implementado): búsqueda de contenido por nombre dentro de la paleta, y consolidar Certificaciones+Logros o Tema+Fondo en `Tabs` — Tema y Fondo son entidades independientes por decisión de Fase 2.
+
+Pruebas: `AppSidebar.test.tsx` (los 10 ítems presentes y agrupados, atributos del link "Ver sitio público", ruta exacta activa, sub-ruta real activa, caso de colisión de prefijo `/admin/tema-avanzado` NO activa "Tema"); `PaletaComandos.test.tsx` (abre/cierra con `Ctrl+K`, navega al hacer click, abre el sitio público en pestaña nueva, cierra sesión desde la paleta, un comando contextual aparece mientras su página está montada y desaparece al desmontarla).
+
 ## 3. Índice UC → tareas → subagente → sprint
 
 `code-reviewer` y `release-manager` aplican a **toda** fila antes de cerrar la tarea o hacer commit — no se repiten en cada celda.
