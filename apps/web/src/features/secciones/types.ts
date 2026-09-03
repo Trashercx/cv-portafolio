@@ -43,7 +43,35 @@ export const TIPO_SECCION_LABEL: Record<TipoSeccion, string> = {
  */
 export type TipoSeccionAnidable = Exclude<TipoSeccion, 'hero' | 'columnas'>
 
-export type HeroConfiguracion = {
+export type EspaciadoVerticalBloque = 'compacto' | 'normal' | 'amplio'
+export type AnchoContenidoBloque = 'estrecho' | 'normal' | 'amplio' | 'completo'
+export type AlineacionTextoBloque = 'izquierda' | 'centro'
+export type FondoBloqueBloque = 'ninguno' | 'sutil' | 'tarjeta'
+
+/**
+ * Fase 3.4 (personalización visual por bloque): campos compartidos por los 8
+ * tipos de bloque (`hero`, `sobre-mi`, `proyectos`, `certificaciones`,
+ * `logros`, `contacto`, `skills`, `columnas`). Todos opcionales con default
+ * en el frontend (`apps/web/src/lib/escalas-bloque.ts`) — el backend, en
+ * paralelo, valida exactamente estos mismos nombres/valores en cada DTO de
+ * `configuracion`. Una `Seccion` guardada antes de esta fase no los trae en
+ * su `configuracion` JSONB: cada consumidor debe asumir `undefined` y aplicar
+ * el default documentado acá, nunca asumir que el campo existe.
+ */
+export type BloqueConfiguracionBase = {
+  /** @default 'normal' */
+  espaciado_vertical?: EspaciadoVerticalBloque
+  /** @default 'normal' */
+  ancho_contenido?: AnchoContenidoBloque
+  /** @default 'izquierda' */
+  alineacion_texto?: AlineacionTextoBloque
+  /** @default 'ninguno' */
+  fondo_bloque?: FondoBloqueBloque
+  /** @default true */
+  separador_inferior?: boolean
+}
+
+export type HeroConfiguracion = BloqueConfiguracionBase & {
   titulo: string
   subtitulo: string
   imagen_fondo_media_id?: string
@@ -69,33 +97,69 @@ export type HeroConfiguracion = {
   mostrar_foto_perfil?: boolean
   posicion_foto?: 'ninguna' | 'centrada' | 'esquina_superior' | 'esquina_inferior'
   estilo_foto?: 'con_marco' | 'sin_fondo'
+  /** @default 'normal' */
+  altura?: 'normal' | 'grande' | 'pantalla_completa'
+  /** @default 'ninguno' */
+  overlay_fondo?: 'ninguno' | 'oscuro' | 'claro'
+  /** @default 'normal' */
+  tamano_titulo?: 'normal' | 'grande'
 }
 
-export type SobreMiConfiguracion = {
+export type SobreMiConfiguracion = BloqueConfiguracionBase & {
   mostrar_foto: boolean
+  /** @default 'izquierda' */
+  posicion_foto?: 'izquierda' | 'derecha'
+  /** @default 'circular' */
+  forma_foto?: 'circular' | 'cuadrada'
 }
 
 /** `configuracion` para `tipo_seccion = 'skills'` (UC-07 + UC-16). Espeja `SkillsConfiguracionDto`. */
-export type SkillsConfiguracion = {
+export type SkillsConfiguracion = BloqueConfiguracionBase & {
   direccion: 'izquierda' | 'derecha'
   velocidad: 'lenta' | 'media' | 'rapida'
+  /**
+   * @default 'lg' — el carrusel ya usa `tamano="lg"` desde Fase 3.2; no
+   * cambiar el default acá o cambia el aspecto de todos los sitios ya
+   * publicados con este bloque.
+   */
+  tamano_icono?: 'sm' | 'md' | 'lg'
+  /** @default true */
+  mostrar_nombres?: boolean
+  /** @default true */
+  pausar_al_pasar?: boolean
 }
 
-export type ProyectosConfiguracion = {
+export type ProyectosConfiguracion = BloqueConfiguracionBase & {
   cantidad_a_mostrar: number
   solo_destacados: boolean
+  /** @default 3 */
+  columnas?: 2 | 3
+  /** @default 'simple' */
+  estilo_tarjeta?: 'simple' | 'con_sombra'
+  /** @default true */
+  mostrar_descripcion?: boolean
 }
 
-export type CertificacionesConfiguracion = {
+export type CertificacionesConfiguracion = BloqueConfiguracionBase & {
   orden: 'fecha' | 'manual'
+  /** @default 3 */
+  columnas?: 2 | 3
+  /** @default 'simple' */
+  estilo_tarjeta?: 'simple' | 'con_sombra'
+  /** @default true */
+  mostrar_fecha?: boolean
 }
 
-export type LogrosConfiguracion = {
+export type LogrosConfiguracion = BloqueConfiguracionBase & {
   categoria_filtro?: string
+  /** @default 'tarjetas' */
+  estilo_lista?: 'tarjetas' | 'linea_tiempo'
 }
 
-export type ContactoConfiguracion = {
+export type ContactoConfiguracion = BloqueConfiguracionBase & {
   mostrar_formulario: boolean
+  /** @default 'iconos' */
+  estilo_redes?: 'iconos' | 'botones'
 }
 
 export type DistribucionColumnas = '1-1' | '1-2' | '2-1' | '1-1-1'
@@ -121,7 +185,7 @@ export type BloqueColumnaHijo = {
  * columnas y queda vacío — así el `render` decide qué se ve, no la forma del
  * dato.
  */
-export type ColumnasConfiguracion = {
+export type ColumnasConfiguracion = BloqueConfiguracionBase & {
   distribucion: DistribucionColumnas
   alineacion_vertical: AlineacionVerticalColumnas
   espaciado: EspaciadoColumnas

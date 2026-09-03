@@ -156,7 +156,14 @@
     animation-iteration-count: infinite;
   }
 
-  .carrusel-skills:hover .carrusel-skills-pista {
+  /*
+   * Fase 3.4 (`BloqueSkills`, `config.pausar_al_pasar`): antes esta regla
+   * pausaba incondicionalmente al pasar el mouse; ahora depende del
+   * modificador `.carrusel-skills--pausable`, que `BloqueSkills.tsx` agrega
+   * o quita según ese campo (default `true`, mismo comportamiento de
+   * siempre).
+   */
+  .carrusel-skills--pausable:hover .carrusel-skills-pista {
     animation-play-state: paused;
   }
 
