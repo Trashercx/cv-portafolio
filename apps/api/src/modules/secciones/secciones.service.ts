@@ -3,15 +3,10 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { plainToInstance } from 'class-transformer';
-import { validate } from 'class-validator';
 import { Prisma } from '../../../generated/prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import {
-  CONFIGURACION_DTO_POR_TIPO,
-  TIPOS_SECCION,
-  TipoSeccion,
-} from './dto/configuracion';
+import { TipoSeccion } from './dto/configuracion';
+import { obtenerErroresConfiguracion } from './dto/configuracion/validar-configuracion';
 import { ActualizarVisibilidadSeccionDto } from './dto/actualizar-visibilidad-seccion.dto';
 import { CreateSeccionDto } from './dto/create-seccion.dto';
 import { ReordenarSeccionItemDto } from './dto/reordenar-seccion-item.dto';
@@ -117,42 +112,25 @@ export class SeccionesService {
 
   /**
    * Valida un `configuracion` contra el DTO de `class-validator` que le
-   * corresponde a `tipoSeccion` (uno de los 6 tipos de bloque, ver
-   * `dto/configuracion/index.ts`). Reproduce a mano el comportamiento del
-   * `ValidationPipe` global (`whitelist` + `forbidNonWhitelisted`) porque
-   * `configuracion` es JSON dinámico y no se puede tipar como un DTO fijo
-   * en la firma del controlador.
+   * corresponde a `tipoSeccion` (uno de los tipos de bloque, ver
+   * `dto/configuracion/index.ts`). Wrapper delgado sobre
+   * `obtenerErroresConfiguracion` (la misma lógica de validación la reutiliza
+   * `@EsListaDeBloques()` para los bloques hijo de un contenedor `columnas`,
+   * Fase 3.3/UC-17): este método es el único que traduce la lista de errores
+   * a un `BadRequestException`.
    */
   private async validarConfiguracion(
     tipoSeccion: TipoSeccion,
     configuracion: unknown,
   ) {
-    if (!TIPOS_SECCION.includes(tipoSeccion)) {
-      throw new BadRequestException(`tipo_seccion desconocido: ${tipoSeccion}`);
-    }
-
-    if (
-      typeof configuracion !== 'object' ||
-      configuracion === null ||
-      Array.isArray(configuracion)
-    ) {
-      throw new BadRequestException('configuracion debe ser un objeto');
-    }
-
-    const DtoClase = CONFIGURACION_DTO_POR_TIPO[tipoSeccion];
-    const instancia = plainToInstance(DtoClase, configuracion);
-
-    const errores = await validate(instancia, {
-      whitelist: true,
-      forbidNonWhitelisted: true,
-    });
+    const errores = await obtenerErroresConfiguracion(
+      tipoSeccion,
+      configuracion,
+    );
 
     if (errores.length > 0) {
-      const mensajes = errores.flatMap((error) =>
-        Object.values(error.constraints ?? {}),
-      );
       throw new BadRequestException({
-        message: mensajes,
+        message: errores,
         error: `configuracion inválida para tipo_seccion "${tipoSeccion}"`,
       });
     }
