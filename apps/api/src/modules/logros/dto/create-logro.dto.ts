@@ -1,11 +1,11 @@
 import {
-  IsDateString,
   IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
   IsUrl,
 } from 'class-validator';
+import { EsFechaIso } from '../../../common/validators/es-fecha-iso.decorator';
 
 /**
  * UC-05 (Gestionar logros y reconocimientos) — campos exactos según
@@ -21,7 +21,7 @@ export class CreateLogroDto {
   @IsNotEmpty()
   descripcion: string;
 
-  @IsDateString()
+  @EsFechaIso({ noFutura: true })
   fecha: string;
 
   @IsString()
