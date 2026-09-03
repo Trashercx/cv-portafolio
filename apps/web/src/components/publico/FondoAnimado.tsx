@@ -14,6 +14,9 @@ const DURACIONES: Record<string, Record<string, string>> = {
   aurora_animada: { lenta: '40s', media: '24s', rapida: '14s' },
   particulas: { lenta: '30s', media: '18s', rapida: '9s' },
   cuadricula_animada: { lenta: '24s', media: '14s', rapida: '7s' },
+  ondas: { lenta: '22s', media: '13s', rapida: '7s' },
+  malla_difusa: { lenta: '36s', media: '22s', rapida: '12s' },
+  lineas_diagonales: { lenta: '16s', media: '9s', rapida: '4s' },
 }
 
 function duracion(tipo: string, velocidad: string): string {
@@ -110,6 +113,94 @@ export function FondoAnimado({ fondo }: FondoAnimadoProps) {
               'linear-gradient(var(--color-primario) 1px, transparent 1px), linear-gradient(90deg, var(--color-primario) 1px, transparent 1px)',
             backgroundSize: '40px 40px',
             animation: `grid-drift ${dur} linear infinite`,
+          }}
+        />
+      ) : null}
+
+      {tipo === 'ondas' ? (
+        <div
+          className="size-full"
+          style={{
+            backgroundImage:
+              'repeating-linear-gradient(0deg, var(--color-primario) 0 2px, transparent 2px 36px), repeating-linear-gradient(0deg, var(--color-secundario) 0 2px, transparent 2px 56px)',
+            backgroundSize: '100% 36px, 100% 56px',
+            animation: `wave-drift ${dur} linear infinite`,
+          }}
+        />
+      ) : null}
+
+      {tipo === 'malla_difusa' ? (
+        <>
+          <div
+            className="absolute size-[32%] rounded-full"
+            style={{
+              top: '4%',
+              left: '6%',
+              backgroundColor: 'var(--color-primario)',
+              filter: 'blur(60px)',
+              animation: `malla-drift-1 ${dur} ease-in-out infinite alternate`,
+            }}
+          />
+          <div
+            className="absolute size-[28%] rounded-full"
+            style={{
+              top: '8%',
+              left: '58%',
+              backgroundColor: 'var(--color-secundario)',
+              filter: 'blur(60px)',
+              animation: `malla-drift-2 ${dur} ease-in-out infinite alternate`,
+            }}
+          />
+          <div
+            className="absolute size-[30%] rounded-full"
+            style={{
+              top: '38%',
+              left: '22%',
+              backgroundColor: 'var(--color-fondo)',
+              filter: 'blur(60px)',
+              animation: `malla-drift-3 ${dur} ease-in-out infinite alternate`,
+            }}
+          />
+          <div
+            className="absolute size-[30%] rounded-full"
+            style={{
+              top: '42%',
+              left: '68%',
+              backgroundColor: 'var(--color-primario)',
+              filter: 'blur(60px)',
+              animation: `malla-drift-2 ${dur} ease-in-out infinite alternate`,
+            }}
+          />
+          <div
+            className="absolute size-[28%] rounded-full"
+            style={{
+              top: '70%',
+              left: '10%',
+              backgroundColor: 'var(--color-secundario)',
+              filter: 'blur(60px)',
+              animation: `malla-drift-1 ${dur} ease-in-out infinite alternate`,
+            }}
+          />
+          <div
+            className="absolute size-[30%] rounded-full"
+            style={{
+              top: '66%',
+              left: '58%',
+              backgroundColor: 'var(--color-fondo)',
+              filter: 'blur(60px)',
+              animation: `malla-drift-3 ${dur} ease-in-out infinite alternate`,
+            }}
+          />
+        </>
+      ) : null}
+
+      {tipo === 'lineas_diagonales' ? (
+        <div
+          className="size-full"
+          style={{
+            backgroundImage:
+              'repeating-linear-gradient(45deg, var(--color-primario) 0 2px, transparent 2px 40px), repeating-linear-gradient(45deg, var(--color-secundario) 0 1px, transparent 1px 24px)',
+            animation: `diagonal-drift ${dur} linear infinite`,
           }}
         />
       ) : null}

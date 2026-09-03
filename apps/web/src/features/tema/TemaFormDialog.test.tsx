@@ -60,7 +60,7 @@ describe('TemaFormDialog', () => {
         color_secundario: '#7c3aed',
         color_fondo: '#ffffff',
         color_texto: '#0f172a',
-        fuente_principal: 'Inter',
+        fuente_principal: 'manrope',
         modo: 'oscuro',
       },
       expect.objectContaining({ onSuccess: expect.any(Function) }),
@@ -90,9 +90,45 @@ describe('TemaFormDialog', () => {
         color_secundario: '#0891b2',
         color_fondo: '#f0f9ff',
         color_texto: '#0c4a6e',
-        fuente_principal: 'Inter',
+        fuente_principal: 'sans_sistema',
         modo: 'claro',
       },
+      expect.objectContaining({ onSuccess: expect.any(Function) }),
+    )
+  })
+
+  it('ofrece los 4 tokens nuevos de tipografía (no los legados) y permite elegir uno', async () => {
+    const user = userEvent.setup()
+    render(<TemaFormDialog />)
+
+    await user.click(screen.getByRole('button', { name: /nuevo tema/i }))
+    await user.click(
+      screen.getByRole('combobox', { name: /tipografía principal/i }),
+    )
+
+    expect(
+      await screen.findByRole('option', { name: 'Manrope (recomendada)' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('option', { name: 'Sans del sistema' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('option', { name: 'Serif del sistema' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('option', { name: 'Monoespaciada del sistema' }),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: 'Inter' })).not.toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole('option', { name: 'Serif del sistema' }),
+    )
+    await user.type(screen.getByLabelText(/^nombre$/i), 'Tema serif')
+    await user.click(screen.getByRole('button', { name: /crear tema/i }))
+
+    await waitFor(() => expect(crearMutateMock).toHaveBeenCalledTimes(1))
+    expect(crearMutateMock).toHaveBeenCalledWith(
+      expect.objectContaining({ fuente_principal: 'serif_sistema' }),
       expect.objectContaining({ onSuccess: expect.any(Function) }),
     )
   })

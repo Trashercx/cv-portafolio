@@ -41,9 +41,17 @@ const DEFAULT_VALUES: TemaFormValues = {
   color_secundario: '#7c3aed',
   color_fondo: '#ffffff',
   color_texto: '#0f172a',
-  fuente_principal: 'Inter',
+  fuente_principal: 'manrope',
   modo: 'claro',
 }
+
+/** Los únicos 4 tokens que el `Select` de tipografía ofrece (ver `tema-schema.ts`/`lib/tema-css.ts`). */
+const OPCIONES_FUENTE: Array<{ value: TemaFormValues['fuente_principal']; label: string }> = [
+  { value: 'manrope', label: 'Manrope (recomendada)' },
+  { value: 'sans_sistema', label: 'Sans del sistema' },
+  { value: 'serif_sistema', label: 'Serif del sistema' },
+  { value: 'mono_sistema', label: 'Monoespaciada del sistema' },
+]
 
 const CAMPOS_COLOR: Array<{ name: keyof TemaFormValues; label: string }> = [
   { name: 'color_primario', label: 'Color primario' },
@@ -211,9 +219,20 @@ export function TemaFormDialog() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Tipografía principal</FormLabel>
-                  <FormControl>
-                    <Input placeholder="p. ej. Inter" {...field} />
-                  </FormControl>
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <FormControl>
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {OPCIONES_FUENTE.map((opcion) => (
+                        <SelectItem key={opcion.value} value={opcion.value}>
+                          {opcion.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
