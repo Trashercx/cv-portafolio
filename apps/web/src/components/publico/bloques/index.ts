@@ -1,0 +1,7 @@
+export { BloqueHero } from './BloqueHero'
+export { BloqueSobreMi } from './BloqueSobreMi'
+export { BloqueProyectos } from './BloqueProyectos'
+export { BloqueCertificaciones } from './BloqueCertificaciones'
+export { BloqueLogros } from './BloqueLogros'
+export { BloqueContacto } from './BloqueContacto'
+export { BloqueSkills } from './BloqueSkills'
