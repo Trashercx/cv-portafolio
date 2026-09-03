@@ -250,6 +250,16 @@ model Tema {
 /// "contenido propio del admin" (como LOGRO), no catálogo compartido:
 /// distinto de TECNOLOGIA, que sirve para clasificar proyectos, no para
 /// el carrusel de skills del hero.
+/// Regla de negocio: `nombre` es único por administrador, sin distinguir
+/// mayúsculas/minúsculas (no pueden coexistir "Java" y "java") — igual que
+/// TEMA.activo y FONDO_SITIO.activo (ver sus comentarios abajo), esto no se
+/// puede expresar con `@@unique` declarativo de Prisma (que es sensible a
+/// mayúsculas/minúsculas, no serviría para bloquear ese caso), así que se
+/// refuerza con un índice único funcional editado a mano en la migración
+/// (`CREATE UNIQUE INDEX skill_admin_nombre_unico ON skill
+/// (usuario_admin_id, lower(nombre));`) + validación case-insensitive en
+/// SkillsService. No confundir con un `@@unique` real: no existe ninguno
+/// en este modelo, el índice vive solo en SQL.
 model Skill {
   id               String  @id @default(uuid()) @db.Uuid
   usuario_admin_id String  @db.Uuid

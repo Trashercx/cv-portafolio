@@ -1,0 +1,22 @@
+-- CreateIndex (manual)
+-- Regla de negocio de docs/plan-portafolio.md, sección 4: SKILL.nombre debe ser único por
+-- administrador sin distinguir mayúsculas/minúsculas (no pueden coexistir, por ejemplo, "Java"
+-- y "java" en el mismo carrusel de skills — Fase 3.2 del rediseño del editor, hallazgo de
+-- "skills duplicados"). Prisma no soporta índices funcionales/case-insensitive de forma
+-- declarativa (no hay `lower()` disponible en @@unique de schema.prisma), así que este índice
+-- se agrega a mano en el SQL generado por `prisma migrate dev --create-only`, tal como documenta
+-- el comentario sobre el modelo Skill en prisma/schema.prisma (mismo mecanismo manual que
+-- tema_admin_activo_unico y fondo_sitio_admin_activo_unico). Reforzar además en SkillsService
+-- con una validación case-insensitive antes de crear/renombrar un skill.
+--
+-- RIESGO OPERATIVO: si ya existen filas duplicadas en la base (p. ej. "Java" y "java" conviven
+-- para el mismo usuario_admin_id), esta migración va a FALLAR al crear el índice único. Antes de
+-- aplicarla contra una base con datos reales, correr esta consulta para detectar duplicados y
+-- resolverlos (renombrar o eliminar) manualmente:
+--
+--   SELECT usuario_admin_id, lower(nombre), array_agg(id)
+--   FROM skill
+--   GROUP BY usuario_admin_id, lower(nombre)
+--   HAVING count(*) > 1;
+--
+CREATE UNIQUE INDEX skill_admin_nombre_unico ON skill (usuario_admin_id, lower(nombre));
