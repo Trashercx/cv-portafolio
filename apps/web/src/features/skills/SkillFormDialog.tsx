@@ -28,11 +28,31 @@ import {
 } from '@/components/ui/select'
 import { ApiError } from '@/lib/api-client'
 import { CLAVES_ICONO_SKILL, IconoSkill } from './iconos-skill'
-import { skillSchema, type SkillFormValues } from './skill-schema'
+import { crearSkillSchema, type SkillFormValues } from './skill-schema'
 import type { Skill } from './types'
-import { useActualizarSkill, useCrearSkill } from './useSkills'
+import { useActualizarSkill, useCrearSkill, useSkills } from './useSkills'
 
 const OTRO_ICONO_VALUE = 'otro'
+
+/**
+ * Nombre legible sugerido para cada ícono del catálogo (UC-16): al elegir
+ * un ícono preestablecido con el campo "nombre" todavía vacío, se
+ * autocompleta con esto — nunca sobreescribe un nombre que el admin ya
+ * haya escrito a mano.
+ */
+const NOMBRES_SUGERIDOS_ICONO_SKILL: Record<
+  (typeof CLAVES_ICONO_SKILL)[number],
+  string
+> = {
+  nodejs: 'Node.js',
+  java: 'Java',
+  aws: 'AWS',
+  azure: 'Azure',
+  react: 'React',
+  postgresql: 'PostgreSQL',
+  docker: 'Docker',
+  git: 'Git',
+}
 
 const DEFAULT_VALUES: SkillFormValues = {
   nombre: '',
@@ -58,8 +78,16 @@ export function SkillFormDialog({
   const crear = useCrearSkill()
   const actualizar = useActualizarSkill(skill?.id ?? '')
 
+  // Lista fresca para la validación de nombre duplicado "en vivo" (UX
+  // anticipada, ver `crearSkillSchema`); el backend igual valida con un 409
+  // como red de seguridad ante condiciones de carrera.
+  const { data: skillsExistentes } = useSkills()
+
   const form = useForm<SkillFormValues>({
-    resolver: zodResolver(skillSchema),
+    // Se reconstruye en cada render a propósito: no hace falta memoizar
+    // (el costo de crear el schema es trivial) y así siempre valida contra
+    // la lista de skills más reciente.
+    resolver: zodResolver(crearSkillSchema(skillsExistentes ?? [], skill?.id)),
     defaultValues: DEFAULT_VALUES,
   })
 
@@ -150,7 +178,7 @@ export function SkillFormDialog({
                   <div className="flex items-center gap-2">
                     <span className="flex size-9 shrink-0 items-center justify-center rounded-md border bg-card">
                       {field.value ? (
-                        <IconoSkill icono={field.value} className="size-5" />
+                        <IconoSkill icono={field.value} tamano="sm" />
                       ) : null}
                     </span>
                     {modoIconoLibre ? (
@@ -170,6 +198,21 @@ export function SkillFormDialog({
                             return
                           }
                           field.onChange(value)
+                          // Autocompleta el nombre a partir del ícono elegido,
+                          // pero solo si el admin todavía no escribió nada:
+                          // nunca sobreescribe un nombre ya ingresado a mano.
+                          if (!form.getValues('nombre').trim()) {
+                            const nombreSugerido =
+                              NOMBRES_SUGERIDOS_ICONO_SKILL[
+                                value as (typeof CLAVES_ICONO_SKILL)[number]
+                              ]
+                            if (nombreSugerido) {
+                              form.setValue('nombre', nombreSugerido, {
+                                shouldDirty: true,
+                                shouldValidate: form.formState.isSubmitted,
+                              })
+                            }
+                          }
                         }}
                       >
                         <FormControl>

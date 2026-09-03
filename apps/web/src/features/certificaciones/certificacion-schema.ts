@@ -1,27 +1,43 @@
 import { z } from 'zod'
 
-const FECHA_REGEX = /^\d{4}-\d{2}-\d{2}$/
+const MENSAJE_FECHA_INVALIDA = 'Fecha inválida (AAAA-MM-DD)'
+
+/** Fecha de "hoy" en formato `AAAA-MM-DD` (sin hora), para rechazar fechas futuras. */
+const obtenerHoyISO = () => new Date().toISOString().slice(0, 10)
 
 /** Espeja `CreateCertificacionDto`/`UpdateCertificacionDto`. */
-export const certificacionSchema = z.object({
-  nombre: z.string().min(1, 'El nombre es obligatorio'),
-  institucion: z.string().min(1, 'La institución es obligatoria'),
-  fecha_emision: z
-    .string()
-    .min(1, 'La fecha de emisión es obligatoria')
-    .regex(FECHA_REGEX, 'Fecha inválida (AAAA-MM-DD)'),
-  fecha_expiracion: z
-    .string()
-    .regex(FECHA_REGEX, 'Fecha inválida (AAAA-MM-DD)')
-    .optional()
-    .or(z.literal('')),
-  url_verificacion: z
-    .string()
-    .min(1, 'La URL de verificación es obligatoria')
-    .url('URL inválida'),
-  credencial_id: z.string().optional().or(z.literal('')),
-  logo_media_id: z.string().uuid().optional(),
-  orden: z.number().int('El orden debe ser un número entero'),
-})
+export const certificacionSchema = z
+  .object({
+    nombre: z.string().min(1, 'El nombre es obligatorio'),
+    institucion: z.string().min(1, 'La institución es obligatoria'),
+    fecha_emision: z
+      .iso.date({ error: MENSAJE_FECHA_INVALIDA })
+      .refine((fecha) => fecha <= obtenerHoyISO(), {
+        message: 'La fecha de emisión no puede ser futura.',
+      }),
+    fecha_expiracion: z
+      .iso.date({ error: MENSAJE_FECHA_INVALIDA })
+      .optional()
+      .or(z.literal('')),
+    url_verificacion: z
+      .string()
+      .min(1, 'La URL de verificación es obligatoria')
+      .url('URL inválida'),
+    credencial_id: z.string().optional().or(z.literal('')),
+    logo_media_id: z.string().uuid().optional(),
+    orden: z.number().int('El orden debe ser un número entero'),
+  })
+  .superRefine((values, ctx) => {
+    // Solo cuando ambas fechas están presentes: la expiración es opcional,
+    // así que no hay nada que comparar si todavía no se cargó.
+    if (!values.fecha_emision || !values.fecha_expiracion) return
+    if (values.fecha_expiracion <= values.fecha_emision) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['fecha_expiracion'],
+        message: 'La fecha de expiración debe ser posterior a la de emisión.',
+      })
+    }
+  })
 
 export type CertificacionFormValues = z.infer<typeof certificacionSchema>

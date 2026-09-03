@@ -69,6 +69,10 @@ export function ProyectoFormDialog({
     proyecto?.id ?? null,
   )
 
+  // Ayuda de UX nativa del navegador (defensa adicional, no reemplaza la
+  // validación de Zod): la fecha de inicio no puede ser futura.
+  const hoy = new Date().toISOString().slice(0, 10)
+
   const crear = useCrearProyecto()
   const actualizar = useActualizarProyecto(proyectoIdActivo ?? '')
 
@@ -218,7 +222,7 @@ export function ProyectoFormDialog({
                   <FormItem>
                     <FormLabel>Fecha de inicio</FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} />
+                      <Input type="date" max={hoy} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -231,7 +235,11 @@ export function ProyectoFormDialog({
                   <FormItem>
                     <FormLabel>Fecha de fin (opcional)</FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} />
+                      <Input
+                        type="date"
+                        min={form.watch('fecha_inicio') || undefined}
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

@@ -57,6 +57,11 @@ export function CertificacionFormDialog({
 }: CertificacionFormDialogProps) {
   const esNuevo = !certificacion
 
+  // Ayuda de UX nativa del navegador (defensa adicional, no reemplaza la
+  // validación de Zod): la fecha de emisión no puede ser futura, y la de
+  // expiración no puede ser anterior/igual a la de emisión ya cargada.
+  const hoy = new Date().toISOString().slice(0, 10)
+
   const crear = useCrearCertificacion()
   const actualizar = useActualizarCertificacion(certificacion?.id ?? '')
 
@@ -180,7 +185,7 @@ export function CertificacionFormDialog({
                   <FormItem>
                     <FormLabel>Fecha de emisión</FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} />
+                      <Input type="date" max={hoy} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -193,7 +198,11 @@ export function CertificacionFormDialog({
                   <FormItem>
                     <FormLabel>Fecha de expiración (opcional)</FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} />
+                      <Input
+                        type="date"
+                        min={form.watch('fecha_emision') || undefined}
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
