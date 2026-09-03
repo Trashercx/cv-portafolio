@@ -96,7 +96,7 @@ export function SkillsListPage() {
                 </TableCell>
                 <TableCell>
                   <span className="flex items-center gap-2">
-                    <IconoSkill icono={skill.icono} className="size-5" />
+                    <IconoSkill icono={skill.icono} tamano="sm" />
                     {skill.nombre}
                   </span>
                 </TableCell>
