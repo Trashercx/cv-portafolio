@@ -101,30 +101,30 @@ export class VersionesSitioService {
    * `perfil.imagen_perfil`/`certificacion.logo`: el snapshot público nunca
    * debe requerir que el consumidor busque un id de media por su cuenta).
    *
-   * Una sola consulta batch (`findMany` con `id: { in: [...] }`) para todas
-   * las secciones hero de una vez, en vez de una consulta por sección. Un id
-   * que no corresponda a ningún `Media` existente (referencia rota) se omite
-   * en silencio: `imagen_fondo` simplemente no se agrega, sin lanzar
-   * excepción — el resto de `armarSnapshot()` ya trata así las referencias
-   * de media opcionales.
+   * RECURSIVA (Fase 3.3, UC-17): una sección `tipo_seccion='columnas'`
+   * guarda sus bloques hijo en `configuracion.columna_1/columna_2/
+   * columna_3` con la MISMA forma que tendrían como fila propia (ver
+   * `ColumnasConfiguracionDto`), así que esta función entra en esos 3
+   * arrays y aplica la misma resolución a cada hijo. Hoy `@EsListaDeBloques`
+   * nunca permite que un hijo sea `hero` (restricción de anidamiento de un
+   * solo nivel, ver `es-lista-de-bloques.decorator.ts`), pero esta función
+   * no depende de esa garantía: la prohibición de anidar `hero` es una
+   * decisión de producto explícita del validador, no algo que este resolver
+   * deba asumir en silencio.
+   *
+   * Sigue siendo una sola consulta batch (`findMany` con `id: { in: [...] }`)
+   * para TODAS las secciones hero de todo el árbol (nivel superior + dentro
+   * de columnas), recolectadas en una sola pasada antes de la única consulta
+   * a `Media` — nunca una consulta por sección/hijo. Un id que no
+   * corresponda a ningún `Media` existente (referencia rota) se omite en
+   * silencio: `imagen_fondo` simplemente no se agrega, sin lanzar excepción.
    */
   private async resolverImagenesFondoHero(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     secciones: any[],
   ): Promise<SnapshotSeccion[]> {
     const idsImagenFondo = [
-      ...new Set(
-        secciones
-          .filter((seccion) => seccion.tipo_seccion === 'hero')
-          .map(
-            (seccion) =>
-              (seccion.configuracion as Record<string, unknown> | null)
-                ?.imagen_fondo_media_id,
-          )
-          .filter(
-            (id): id is string => typeof id === 'string' && id.length > 0,
-          ),
-      ),
+      ...new Set(this.recolectarIdsImagenFondoHero(secciones)),
     ];
 
     const mediaPorId = new Map<string, SnapshotMedia>();
@@ -139,27 +139,112 @@ export class VersionesSitioService {
       );
     }
 
-    return secciones.map((seccion) => {
-      if (seccion.tipo_seccion !== 'hero') {
-        return seccion as SnapshotSeccion;
+    return this.aplicarImagenesFondoHero(secciones, mediaPorId);
+  }
+
+  /**
+   * Recorrido recursivo de recolección (sin consultar `Media` todavía): junta
+   * todos los `imagen_fondo_media_id` de secciones `hero`, tanto de nivel
+   * superior como dentro de `configuracion.columna_1/2/3` de secciones
+   * `columnas` (a cualquier profundidad, aunque hoy el validador solo permite
+   * un nivel).
+   */
+  private recolectarIdsImagenFondoHero(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    secciones: any[],
+  ): string[] {
+    return secciones.flatMap((seccion) => {
+      if (seccion.tipo_seccion === 'hero') {
+        const id = (seccion.configuracion as Record<string, unknown> | null)
+          ?.imagen_fondo_media_id;
+        return typeof id === 'string' && id.length > 0 ? [id] : [];
       }
 
-      const configuracion = seccion.configuracion as Record<string, unknown>;
-      const imagenFondoMediaId = configuracion?.imagen_fondo_media_id;
-      const imagenFondo =
-        typeof imagenFondoMediaId === 'string'
-          ? mediaPorId.get(imagenFondoMediaId)
-          : undefined;
-
-      if (!imagenFondo) {
-        return seccion as SnapshotSeccion;
+      if (seccion.tipo_seccion === 'columnas') {
+        return this.columnasDeSeccion(seccion).flatMap((columna) =>
+          this.recolectarIdsImagenFondoHero(columna),
+        );
       }
 
-      return {
-        ...seccion,
-        configuracion: { ...configuracion, imagen_fondo: imagenFondo },
-      } as SnapshotSeccion;
+      return [];
     });
+  }
+
+  /**
+   * Recorrido recursivo de aplicación: reconstruye cada sección `hero` con
+   * `imagen_fondo` agregada (si corresponde) y cada sección `columnas` con
+   * sus 3 arrays reconstruidos recursivamente. Cualquier otro `tipo_seccion`
+   * se devuelve sin cambios.
+   */
+  private aplicarImagenesFondoHero(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    secciones: any[],
+    mediaPorId: Map<string, SnapshotMedia>,
+  ): SnapshotSeccion[] {
+    return secciones.map((seccion) => {
+      if (seccion.tipo_seccion === 'hero') {
+        const configuracion = seccion.configuracion as Record<string, unknown>;
+        const imagenFondoMediaId = configuracion?.imagen_fondo_media_id;
+        const imagenFondo =
+          typeof imagenFondoMediaId === 'string'
+            ? mediaPorId.get(imagenFondoMediaId)
+            : undefined;
+
+        if (!imagenFondo) {
+          return seccion as SnapshotSeccion;
+        }
+
+        return {
+          ...seccion,
+          configuracion: { ...configuracion, imagen_fondo: imagenFondo },
+        } as SnapshotSeccion;
+      }
+
+      if (seccion.tipo_seccion === 'columnas') {
+        const configuracion = (seccion.configuracion ?? {}) as Record<
+          string,
+          unknown
+        >;
+        const [columna1, columna2, columna3] = this.columnasDeSeccion(
+          seccion,
+        ).map((columna) => this.aplicarImagenesFondoHero(columna, mediaPorId));
+
+        return {
+          ...seccion,
+          configuracion: {
+            ...configuracion,
+            columna_1: columna1,
+            columna_2: columna2,
+            columna_3: columna3,
+          },
+        } as SnapshotSeccion;
+      }
+
+      return seccion as SnapshotSeccion;
+    });
+  }
+
+  /**
+   * `configuracion.columna_1/columna_2/columna_3` de una sección `columnas`,
+   * siempre en ese orden y siempre como array (si alguno faltara o no fuera
+   * array por un dato corrupto/legado, se trata como vacío en vez de
+   * lanzar).
+   */
+  private columnasDeSeccion(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    seccion: any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ): any[][] {
+    const configuracion = (seccion.configuracion ?? {}) as Record<
+      string,
+      unknown
+    >;
+
+    return [
+      configuracion.columna_1,
+      configuracion.columna_2,
+      configuracion.columna_3,
+    ].map((columna) => (Array.isArray(columna) ? columna : []));
   }
 
   /**
