@@ -1,4 +1,5 @@
 import { LogOut } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { AppSidebar } from '@/components/layout/AppSidebar'
 import { ThemeProvider } from '@/components/theme/ThemeProvider'
@@ -44,6 +45,20 @@ export function AdminLayout() {
   // `max-w-5xl` actual sin cambios.
   const esRutaDeAnchoCompleto = location.pathname.startsWith('/admin/editor')
 
+  // El lienzo de Puck (Fase 3.1) necesita el máximo ancho horizontal
+  // posible: la sidebar se colapsa automáticamente al entrar a
+  // `/admin/editor` (reusando `esRutaDeAnchoCompleto`) y se reabre al salir.
+  // Controlada (no `defaultOpen`) porque `AdminLayout` no se remonta entre
+  // rutas — un `defaultOpen` solo se leería una vez, al primer montaje del
+  // panel. El admin igual puede reabrirla a mano con `SidebarTrigger`
+  // mientras sigue en el editor: el `useEffect` solo reacciona a *cambios*
+  // de `esRutaDeAnchoCompleto` (navegación), no en cada render.
+  const [sidebarAbierta, setSidebarAbierta] = useState(!esRutaDeAnchoCompleto)
+
+  useEffect(() => {
+    setSidebarAbierta(!esRutaDeAnchoCompleto)
+  }, [esRutaDeAnchoCompleto])
+
   const handleLogout = () => {
     clearAdmin()
     navigate('/admin/login', { replace: true })
@@ -51,7 +66,7 @@ export function AdminLayout() {
 
   return (
     <ThemeProvider>
-      <SidebarProvider>
+      <SidebarProvider open={sidebarAbierta} onOpenChange={setSidebarAbierta}>
         <AppSidebar />
         <SidebarInset>
           <header className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b bg-background p-4">

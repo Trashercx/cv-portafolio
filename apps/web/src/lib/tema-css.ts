@@ -30,5 +30,11 @@ export function temaComoVariablesCss(tema: TemaColores): CSSProperties {
     '--color-fondo': tema.color_fondo,
     '--color-texto': tema.color_texto,
     fontFamily: tema.fuente_principal,
+    // Bug preexistente (Fase 3.1): `--color-fondo` se declaraba pero nunca
+    // se aplicaba como `background-color` en ningún lado — el contenedor
+    // raíz de `PublicHomePage`/`PanelVersiones`/`PuckRoot` (editor) queda
+    // así siempre pintado con el color de fondo del tema activo, no con el
+    // fondo por defecto del navegador.
+    backgroundColor: 'var(--color-fondo)',
   } as CSSProperties
 }

@@ -1,8 +1,10 @@
 import '@measured/puck/puck.css'
 import { Puck, type Data, type UiState, type Viewports } from '@measured/puck'
-import { useEffect, useRef, useState } from 'react'
+import { Info } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { ConfirmActionDialog } from '@/components/shared/ConfirmActionDialog'
+import { DialogVistaPrevia } from '@/components/publicacion/DialogVistaPrevia'
 import { PanelVersiones } from '@/components/publicacion/PanelVersiones'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -13,6 +15,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { puckConfig, type PuckSeccionesComponents } from '@/lib/puck-config'
 import { ApiError } from '@/lib/api-client'
 import {
@@ -29,6 +32,7 @@ import {
   type Seccion,
   type TipoSeccion,
 } from '@/features/secciones/types'
+import { useDatosEditor, type MetadataEditor } from '@/features/editor/useDatosEditor'
 import { usePublicarVersion, useVersiones } from '@/features/publicacion/usePublicacion'
 import { useEditorSeccionesStore } from '@/store/editor-secciones-store'
 
@@ -167,11 +171,11 @@ function separarProps(props: EditorContentItem['props']) {
  * UC-07 (Editar estructura visual, drag-and-drop) — editor de Puck sobre
  * las 6 secciones definidas en `docs/plan-tecnico.md` — fusionado con UC-10
  * (Previsualizar cambios) y UC-11 (Publicar/revertir una versión) en un solo
- * lugar (Sprint 7): la barra superior tiene el estado Borrador/Publicado
- * (`useVersiones`) y el botón único "Publicar" (`usePublicarVersion`), y el
- * botón "Historial de versiones" abre un `Dialog` con `PanelVersiones`
- * (previsualizar + historial completo + "Deshacer última publicación") sin
- * salir de esta página. Antes eran dos páginas separadas
+ * lugar (Sprint 7): la barra de acciones vive dentro del propio header de
+ * Puck (`overrides.headerActions`, Fase 3.1) con el estado Borrador/Publicado
+ * (`useVersiones`), el botón "Vista previa" (`DialogVistaPrevia`), el botón
+ * "Historial de versiones" y el botón único "Publicar" (`usePublicarVersion`)
+ * — sin salir de esta página. Antes eran dos páginas separadas
  * (`EditorSeccionesPage` + `PublicacionPage`, hoy eliminada) con una
  * navegación redundante entre ellas.
  *
@@ -187,6 +191,15 @@ function separarProps(props: EditorContentItem['props']) {
  * una `key` nueva para que su estado interno quede consistente con lo que
  * ya existe en el backend.
  *
+ * Desde Fase 3.1 el lienzo pinta los bloques reales del sitio (`bloques/`,
+ * vía `puckConfig`/`PuckRoot`), no placeholders esquemáticos: además de
+ * `GET /admin/secciones` (estructura) hace falta el contenido real (perfil,
+ * proyectos, certificaciones, etc.), que trae `useDatosEditor` — ver su
+ * comentario para el detalle de qué endpoints compone y qué huecos de media
+ * resuelve. Ese contenido viaja a cada bloque de Puck vía `puck.metadata`
+ * (prop `metadata` de `<Puck>`, ver `leerMetadata`), nunca como prop de
+ * Zustand/TanStack — es dato del servidor, no estado de edición en curso.
+ *
  * Mientras `guardando === true` el editor queda `inert` (bloqueado a
  * mouse/teclado, con overlay visual) para que sea imposible seguir editando
  * durante el guardado: así se evita tener que fusionar ediciones
@@ -194,6 +207,7 @@ function separarProps(props: EditorContentItem['props']) {
  */
 export function EditorSeccionesPage() {
   const seccionesQuery = useSecciones()
+  const { datos, isLoading: datosLoading, error: datosError } = useDatosEditor()
   const content = useEditorSeccionesStore((state) => state.content)
   const setContent = useEditorSeccionesStore((state) => state.setContent)
 
@@ -253,6 +267,17 @@ export function EditorSeccionesPage() {
       configuracion: seccion.configuracion,
     }))
   }, [seccionesQuery.data, initialData, setContent])
+
+  // Identidad estable de `metadata`: `<Puck>` re-renderiza TODOS los bloques
+  // del lienzo cada vez que la referencia de `metadata` cambia (la usa como
+  // dependencia interna). Sin este `useMemo`, un objeto `{ datos }` literal
+  // nuevo en cada render de `EditorSeccionesPage` forzaría un re-render
+  // completo del lienzo en cada tecleo de cualquier campo — este es el
+  // riesgo de performance más probable de todo el rediseño (Fase 3.1).
+  const metadata = useMemo<MetadataEditor | undefined>(
+    () => (datos ? { datos } : undefined),
+    [datos],
+  )
 
   const guardarCambios = async () => {
     setGuardando(true)
@@ -375,50 +400,11 @@ export function EditorSeccionesPage() {
     }
   }
 
+  const cargando = seccionesQuery.isLoading || datosLoading
+  const errorCarga = seccionesQuery.error ?? datosError
+
   return (
     <div className="-mx-4 -my-4 grid gap-0">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-background px-4 py-3">
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="font-heading text-lg font-semibold">
-              Editor visual de secciones
-            </h1>
-            {versionesQuery.isSuccess ? (
-              <Badge variant={hayCambiosSinPublicar ? 'secondary' : 'default'}>
-                {hayCambiosSinPublicar ? 'Borrador' : 'Publicado'}
-              </Badge>
-            ) : null}
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Arrastra bloques desde el panel, edita su configuración y su
-            visibilidad, y presiona "Guardar cambios" para aplicarlos.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <Button
-            variant="outline"
-            onClick={() => setHistorialAbierto(true)}
-          >
-            Historial de versiones
-          </Button>
-          <ConfirmActionDialog
-            trigger={<Button disabled={publicar.isPending}>Publicar</Button>}
-            title="¿Publicar los cambios actuales?"
-            description="Esto reemplaza de inmediato la versión visible al público con el contenido, secciones y tema actuales."
-            confirmLabel="Publicar"
-            pendingLabel="Publicando…"
-            isPending={publicar.isPending}
-            onConfirm={() => publicar.mutate()}
-          />
-          <Button
-            onClick={guardarCambios}
-            disabled={guardando || !initialData}
-          >
-            {guardando ? 'Guardando…' : 'Guardar cambios'}
-          </Button>
-        </div>
-      </div>
-
       <Dialog open={historialAbierto} onOpenChange={setHistorialAbierto}>
         <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
@@ -432,21 +418,27 @@ export function EditorSeccionesPage() {
         </DialogContent>
       </Dialog>
 
-      {seccionesQuery.isLoading ? (
+      {cargando ? (
         <p className="p-4 text-sm text-muted-foreground">
           Cargando secciones…
         </p>
       ) : null}
-      {seccionesQuery.error ? (
+      {errorCarga ? (
         <p role="alert" className="p-4 text-sm text-destructive">
-          {seccionesQuery.error instanceof ApiError
-            ? seccionesQuery.error.message
+          {errorCarga instanceof ApiError
+            ? errorCarga.message
             : 'No se pudieron cargar las secciones.'}
         </p>
       ) : null}
 
-      {initialData ? (
-        <div className="relative h-[calc(100vh-8.5rem)]">
+      {initialData && datos ? (
+        // `h-[calc(100vh-4.5rem)]`: solo se descuenta la cabecera fija de
+        // `AdminLayout` (~4.5rem) — a diferencia de antes, ya no hay una
+        // barra de acciones propia encima del lienzo (se migró al header
+        // nativo de Puck vía `overrides.headerActions`), lo que le devuelve
+        // al lienzo los ~64px que esa barra ocupaba y permite que el zoom
+        // nativo de Puck llegue a 100% sin recortar el viewport de escritorio.
+        <div className="relative h-[calc(100vh-4.5rem)]">
           {/*
             `inert` (React 19 / atributo HTML nativo) bloquea por completo el
             mouse y el teclado dentro del editor mientras `guardando` es
@@ -468,20 +460,92 @@ export function EditorSeccionesPage() {
               key={editorKey}
               config={puckConfig}
               data={initialData}
+              metadata={metadata}
               viewports={PUCK_VIEWPORTS}
               ui={PUCK_UI_INICIAL}
+              iframe={{ enabled: true, waitForStyles: true }}
               onChange={(data) => setContent(data.content)}
+              headerTitle="Editor visual de secciones"
               overrides={{
-                // Puck siempre renderiza su propio botón nativo "Publish" en
-                // el header, pero nunca le pasamos `onPublish` así que
-                // quedaba desconectado (el click no hacía nada). El flujo
-                // real de publicación (UC-11, con su propio diálogo de
-                // confirmación) ahora vive en la barra superior de esta
-                // misma página (botón "Publicar" fuera del lienzo de Puck),
-                // así que aquí se anula por completo el header nativo de
-                // Puck para no mostrar un botón "Publish" muerto junto al
-                // real.
-                headerActions: () => <></>,
+                // Barra de acciones propia, dentro del header nativo de Puck
+                // (Fase 3.1): antes vivía en un `<div>` separado ENCIMA del
+                // lienzo (le restaba ~64px de alto útil); ahora comparte fila
+                // con el header de Puck. El estado Borrador/Publicado
+                // (UC-10/UC-11) y su Popover explicativo van primero, seguidos
+                // de "Vista previa" (`DialogVistaPrevia`), "Historial de
+                // versiones" y el botón único "Publicar"/"Guardar cambios".
+                headerActions: () => (
+                  <div className="flex flex-wrap items-center gap-2">
+                    {versionesQuery.isSuccess ? (
+                      <div className="flex items-center gap-1">
+                        <Badge
+                          variant={hayCambiosSinPublicar ? 'secondary' : 'default'}
+                        >
+                          {hayCambiosSinPublicar ? 'Borrador' : 'Publicado'}
+                        </Badge>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="size-6"
+                              aria-label="Qué significa cada estado"
+                            >
+                              <Info className="size-4" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-80 text-sm">
+                            <p className="mb-3 text-muted-foreground">
+                              Este editor muestra el sitio real: arrastra
+                              bloques, edítalos y ajusta su visibilidad
+                              directamente sobre la vista previa. Los cambios
+                              quedan en el lienzo hasta que los guardes, y
+                              solo llegan al público cuando presionas
+                              "Publicar".
+                            </p>
+                            <ul className="grid gap-2">
+                              <li>
+                                <strong>Lienzo:</strong> tu contenido actual,
+                                incluidos los cambios sin guardar.
+                              </li>
+                              <li>
+                                <strong>Borrador:</strong> lo último que
+                                guardaste; todavía no es público.
+                              </li>
+                              <li>
+                                <strong>Publicado:</strong> lo que ve un
+                                visitante del sitio hoy.
+                              </li>
+                            </ul>
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    ) : null}
+                    <DialogVistaPrevia />
+                    <Button
+                      variant="outline"
+                      onClick={() => setHistorialAbierto(true)}
+                    >
+                      Historial de versiones
+                    </Button>
+                    <ConfirmActionDialog
+                      trigger={<Button disabled={publicar.isPending}>Publicar</Button>}
+                      title="¿Publicar los cambios actuales?"
+                      description="Esto reemplaza de inmediato la versión visible al público con el contenido, secciones y tema actuales."
+                      confirmLabel="Publicar"
+                      pendingLabel="Publicando…"
+                      isPending={publicar.isPending}
+                      onConfirm={() => publicar.mutate()}
+                    />
+                    <Button
+                      onClick={guardarCambios}
+                      disabled={guardando || !initialData}
+                    >
+                      {guardando ? 'Guardando…' : 'Guardar cambios'}
+                    </Button>
+                  </div>
+                ),
               }}
             />
           </div>
