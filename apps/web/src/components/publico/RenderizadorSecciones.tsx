@@ -1,9 +1,11 @@
 import type {
+  BloqueConfiguracionBase,
   ColumnasConfiguracion,
   HeroConfiguracion,
   Seccion,
 } from '@/features/secciones/types'
 import type { SnapshotSitio } from '@/features/publico/types'
+import { ALINEACION_TEXTO_CLASE } from '@/lib/escalas-bloque'
 import { EnvoltorioSeccion } from './EnvoltorioSeccion'
 import { BloqueColumnas, BloqueHero } from './bloques'
 import { DespachoBloqueSeccion } from './bloques/DespachoBloqueSeccion'
@@ -43,11 +45,29 @@ export function RenderizadorSecciones({
       {secciones.map((seccion) => {
         if (soloVisibles && !seccion.visible) return null
 
+        // Los 4 campos de `BloqueConfiguracionBase` que le tocan a
+        // `EnvoltorioSeccion` (Fase 3.4) — compartidos por los 8 tipos, así
+        // que se leen con este cast acotado en vez de un `switch` por tipo.
+        const { espaciado_vertical, ancho_contenido, fondo_bloque, separador_inferior } =
+          seccion.configuracion as BloqueConfiguracionBase
+
+        // `hero` siempre fue a sangre completa: si la sección no tiene
+        // `ancho_contenido` (guardada antes de esta fase), su default no es
+        // el genérico `'normal'` de `EnvoltorioSeccion` sino `'completo'` —
+        // mismo fallback que aplica `puck-config.tsx` en el lienzo del
+        // editor, para que el sitio publicado y el lienzo no diverjan.
+        const anchoContenidoEfectivo =
+          ancho_contenido ?? (seccion.tipo_seccion === 'hero' ? 'completo' : undefined)
+
         return (
           <EnvoltorioSeccion
             key={seccion.id}
             id={seccion.id}
             visible={seccion.visible}
+            espaciado_vertical={espaciado_vertical}
+            ancho_contenido={anchoContenidoEfectivo}
+            fondo_bloque={fondo_bloque}
+            separador_inferior={separador_inferior}
           >
             <BloqueSeccion
               seccion={seccion}
@@ -71,13 +91,16 @@ function BloqueSeccion({
   soloVisibles: boolean
 }) {
   switch (seccion.tipo_seccion) {
-    case 'hero':
+    case 'hero': {
+      const config = seccion.configuracion as HeroConfiguracion
       return (
         <BloqueHero
-          config={seccion.configuracion as HeroConfiguracion}
+          config={config}
           perfil={snapshot.perfil}
+          alineacionTitulo={ALINEACION_TEXTO_CLASE[config.alineacion_texto ?? 'centro']}
         />
       )
+    }
     case 'columnas':
       return (
         <BloqueColumnas

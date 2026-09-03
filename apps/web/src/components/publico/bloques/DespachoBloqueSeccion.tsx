@@ -3,6 +3,7 @@ import type { Proyecto } from '@/features/proyectos/types'
 import type { CertificacionPublica, PerfilPublico } from '@/features/publico/types'
 import type { RedSocial } from '@/features/redes-sociales/types'
 import type {
+  BloqueConfiguracionBase,
   CertificacionesConfiguracion,
   ContactoConfiguracion,
   LogrosConfiguracion,
@@ -12,6 +13,7 @@ import type {
   TipoSeccionAnidable,
 } from '@/features/secciones/types'
 import type { Skill } from '@/features/skills/types'
+import { ALINEACION_TEXTO_CLASE } from '@/lib/escalas-bloque'
 import { BloqueCertificaciones } from './BloqueCertificaciones'
 import { BloqueContacto } from './BloqueContacto'
 import { BloqueLogros } from './BloqueLogros'
@@ -54,17 +56,45 @@ type DespachoBloqueSeccionProps = {
  * criterio de "un solo lugar de verdad" que ya aplica `EnvoltorioSeccion`
  * para el espaciado.
  */
+/**
+ * Resuelve la alineación del `<h2>` (Fase 3.4, `alineacion_texto`) desde una
+ * `configuracion` genérica sin castear al tipo completo de cada bloque —
+ * `alineacion_texto` es parte de `BloqueConfiguracionBase`, compartida por
+ * los 8 tipos, así que se puede leer con este cast acotado.
+ *
+ * Falta el campo (sección guardada antes de esta fase, o hijo de una
+ * `columnas` que nunca lo tuvo) → usa el aspecto que ese TIPO de bloque ya
+ * tenía hardcodeado antes de esta fase, no un default único para los 8:
+ * `contacto`/`skills` siempre tuvieron el título centrado (mismo criterio
+ * que `hero`, que no pasa por este dispatcher — ver su propio fallback en
+ * `puck-config.tsx`/`RenderizadorSecciones.tsx`); el resto ya era
+ * izquierda. Sin este caso especial, publicar esta fase descentraría el
+ * título de contacto/skills en cualquier sitio ya existente.
+ */
+function resolverAlineacionTitulo(
+  configuracion: object,
+  tipoSeccion: TipoSeccionAnidable,
+): string {
+  const { alineacion_texto } = configuracion as BloqueConfiguracionBase
+  const defaultDelTipo =
+    tipoSeccion === 'contacto' || tipoSeccion === 'skills' ? 'centro' : 'izquierda'
+  return ALINEACION_TEXTO_CLASE[alineacion_texto ?? defaultDelTipo]
+}
+
 export function DespachoBloqueSeccion({
   tipo_seccion,
   titulo_visible,
   configuracion,
   datos,
 }: DespachoBloqueSeccionProps) {
+  const alineacionTitulo = resolverAlineacionTitulo(configuracion, tipo_seccion)
+
   switch (tipo_seccion) {
     case 'sobre-mi':
       return (
         <BloqueSobreMi
           titulo={titulo_visible}
+          alineacionTitulo={alineacionTitulo}
           config={configuracion as SobreMiConfiguracion}
           perfil={datos.perfil}
         />
@@ -73,6 +103,7 @@ export function DespachoBloqueSeccion({
       return (
         <BloqueProyectos
           titulo={titulo_visible}
+          alineacionTitulo={alineacionTitulo}
           config={configuracion as ProyectosConfiguracion}
           proyectos={datos.proyectos}
         />
@@ -81,6 +112,7 @@ export function DespachoBloqueSeccion({
       return (
         <BloqueCertificaciones
           titulo={titulo_visible}
+          alineacionTitulo={alineacionTitulo}
           config={configuracion as CertificacionesConfiguracion}
           certificaciones={datos.certificaciones}
         />
@@ -89,6 +121,7 @@ export function DespachoBloqueSeccion({
       return (
         <BloqueLogros
           titulo={titulo_visible}
+          alineacionTitulo={alineacionTitulo}
           config={configuracion as LogrosConfiguracion}
           logros={datos.logros}
         />
@@ -97,6 +130,7 @@ export function DespachoBloqueSeccion({
       return (
         <BloqueContacto
           titulo={titulo_visible}
+          alineacionTitulo={alineacionTitulo}
           config={configuracion as ContactoConfiguracion}
           perfil={datos.perfil}
           redesSociales={datos.redes_sociales}
@@ -106,6 +140,7 @@ export function DespachoBloqueSeccion({
       return (
         <BloqueSkills
           titulo={titulo_visible}
+          alineacionTitulo={alineacionTitulo}
           config={configuracion as SkillsConfiguracion}
           skills={datos.skills}
         />
