@@ -171,6 +171,66 @@ describe('ProyectoFormDialog (nuevo)', () => {
     ).toBeInTheDocument()
   })
 
+  it('permite fecha_fin igual a fecha_inicio (un proyecto puede empezar y terminar el mismo día)', async () => {
+    const user = userEvent.setup()
+    renderDialog()
+
+    await user.type(screen.getByLabelText(/título/i), 'Proyecto de un día')
+    await user.type(
+      screen.getByLabelText(/descripción/i),
+      'Descripción del proyecto',
+    )
+    fireEvent.change(screen.getByLabelText(/fecha de inicio/i), {
+      target: { value: '2024-01-01' },
+    })
+    fireEvent.change(screen.getByLabelText(/fecha de fin/i), {
+      target: { value: '2024-01-01' },
+    })
+    await user.type(screen.getByLabelText(/^estado$/i), 'finalizado')
+
+    await user.click(
+      screen.getByRole('button', { name: /crear y continuar/i }),
+    )
+
+    await waitFor(() => expect(crearMutateMock).toHaveBeenCalledTimes(1))
+    expect(crearMutateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fecha_inicio: '2024-01-01',
+        fecha_fin: '2024-01-01',
+      }),
+      expect.objectContaining({ onSuccess: expect.any(Function) }),
+    )
+  })
+
+  it('rechaza fecha_fin anterior a fecha_inicio', async () => {
+    const user = userEvent.setup()
+    renderDialog()
+
+    await user.type(screen.getByLabelText(/título/i), 'Proyecto inválido')
+    await user.type(
+      screen.getByLabelText(/descripción/i),
+      'Descripción del proyecto',
+    )
+    fireEvent.change(screen.getByLabelText(/fecha de inicio/i), {
+      target: { value: '2024-06-10' },
+    })
+    fireEvent.change(screen.getByLabelText(/fecha de fin/i), {
+      target: { value: '2024-06-01' },
+    })
+    await user.type(screen.getByLabelText(/^estado$/i), 'finalizado')
+
+    await user.click(
+      screen.getByRole('button', { name: /crear y continuar/i }),
+    )
+
+    expect(
+      await screen.findByText(
+        /la fecha de fin no puede ser anterior a la de inicio/i,
+      ),
+    ).toBeInTheDocument()
+    expect(crearMutateMock).not.toHaveBeenCalled()
+  })
+
   it('edita un proyecto existente sin pasar por el paso de creación', async () => {
     const user = userEvent.setup()
     const onOpenChange = vi.fn()

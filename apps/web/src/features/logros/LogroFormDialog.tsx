@@ -47,6 +47,10 @@ export function LogroFormDialog({
 }: LogroFormDialogProps) {
   const esNuevo = !logro
 
+  // Ayuda de UX nativa del navegador (defensa adicional, no reemplaza la
+  // validación de Zod): la fecha no puede ser futura.
+  const hoy = new Date().toISOString().slice(0, 10)
+
   const crear = useCrearLogro()
   const actualizar = useActualizarLogro(logro?.id ?? '')
 
@@ -156,7 +160,7 @@ export function LogroFormDialog({
                   <FormItem>
                     <FormLabel>Fecha</FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} />
+                      <Input type="date" max={hoy} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

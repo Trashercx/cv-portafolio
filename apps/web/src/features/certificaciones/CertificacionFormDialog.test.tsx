@@ -144,6 +144,33 @@ describe('CertificacionFormDialog (nueva)', () => {
     expect(onOpenChange).toHaveBeenCalledWith(false)
   })
 
+  it('rechaza una fecha de expiración anterior o igual a la de emisión, con el error en el campo correcto', async () => {
+    const user = userEvent.setup()
+    renderDialog()
+
+    await user.type(screen.getByLabelText(/^nombre$/i), 'AWS Certified')
+    await user.type(screen.getByLabelText(/institución/i), 'Amazon')
+    fireEvent.change(screen.getByLabelText(/fecha de emisión/i), {
+      target: { value: '2024-06-01' },
+    })
+    fireEvent.change(screen.getByLabelText(/fecha de expiración/i), {
+      target: { value: '2024-06-01' },
+    })
+    await user.type(
+      screen.getByLabelText(/url de verificación/i),
+      'https://aws.amazon.com/verify/123',
+    )
+
+    await user.click(screen.getByRole('button', { name: /guardar/i }))
+
+    expect(
+      await screen.findByText(
+        /la fecha de expiración debe ser posterior a la de emisión/i,
+      ),
+    ).toBeInTheDocument()
+    expect(crearMutateMock).not.toHaveBeenCalled()
+  })
+
   it('modo edición: precarga la certificación existente y llama a actualizar, no a crear', async () => {
     const user = userEvent.setup()
     const queryClient = new QueryClient()

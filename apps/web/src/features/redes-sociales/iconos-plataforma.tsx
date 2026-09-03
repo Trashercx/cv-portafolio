@@ -78,7 +78,7 @@ export function PlataformaIcono({ iconoDefecto, className }: PlataformaIconoProp
         <svg
           viewBox="0 0 24 24"
           className="size-4"
-          fill={`#${icono.hex}`}
+          fill="currentColor"
           aria-hidden="true"
         >
           <path d={icono.path} />

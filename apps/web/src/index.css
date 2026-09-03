@@ -138,6 +138,34 @@
     }
   }
 
+  /*
+   * Pista animada del carrusel de skills (`BloqueSkills.tsx`). La animación
+   * vive en una clase (no en `style` inline) a propósito: `style` no puede
+   * expresar pseudo-clases (`:hover`) ni media queries
+   * (`prefers-reduced-motion`), y ambas son requisitos funcionales acá
+   * (pausar al pasar el mouse, respetar la preferencia de accesibilidad del
+   * visitante). La duración sí varía por instancia (según `velocidad` y la
+   * cantidad de repeticiones internas de la pista) y se inyecta vía la
+   * custom property `--duracion-marquee`, que sí es válida en `style`
+   * inline porque no depende de pseudo-clases ni media queries.
+   */
+  .carrusel-skills-pista {
+    animation-name: marquee;
+    animation-duration: var(--duracion-marquee, 30s);
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+  }
+
+  .carrusel-skills:hover .carrusel-skills-pista {
+    animation-play-state: paused;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .carrusel-skills-pista {
+      animation: none;
+    }
+  }
+
   @keyframes gradient-shift {
     0% {
       background-position: 0% 50%;
