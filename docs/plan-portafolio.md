@@ -300,6 +300,8 @@ Tres excepciones deliberadas, todas justificadas por el propio requisito de edic
 
 > **Regla de negocio a aplicar en la aplicación (no solo en el esquema):** solo un registro de `FONDO_SITIO` por administrador puede tener `activo = true` a la vez; mismo mecanismo que `TEMA` (índice único parcial en PostgreSQL + validación en NestJS).
 
+> **Regla de negocio a aplicar en la aplicación (no solo en el esquema):** `SKILL.nombre` debe ser único por administrador sin distinguir mayúsculas/minúsculas — no pueden coexistir, por ejemplo, "Java" y "java" en el mismo carrusel de skills (Fase 3.2 del rediseño del editor, hallazgo de "skills duplicados"). Un `@@unique` declarativo de Prisma no sirve aquí porque compara de forma sensible a mayúsculas/minúsculas; se refuerza con un índice único funcional en PostgreSQL sobre `(usuario_admin_id, lower(nombre))`, mismo mecanismo manual que `tema_admin_activo_unico` y `fondo_sitio_admin_activo_unico`, más la validación correspondiente en SkillsService.
+
 ## 5. Despliegue y operación en el VPS
 
 Consideraciones para que el VPS propio quede simple de mantener siendo tú el único administrador del sistema.

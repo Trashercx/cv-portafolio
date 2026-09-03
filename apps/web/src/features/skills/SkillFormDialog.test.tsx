@@ -12,6 +12,8 @@ const crearState: { isPending: boolean; error: unknown } = {
   error: null,
 }
 
+const skillsExistentesMock: Skill[] = []
+
 vi.mock('./useSkills', () => ({
   useCrearSkill: () => ({
     mutate: crearMutateMock,
@@ -23,6 +25,7 @@ vi.mock('./useSkills', () => ({
     isPending: false,
     error: null,
   }),
+  useSkills: () => ({ data: skillsExistentesMock, isLoading: false }),
 }))
 
 function renderDialog(onOpenChange = vi.fn()) {
@@ -55,10 +58,47 @@ describe('SkillFormDialog (nuevo)', () => {
   beforeEach(() => {
     crearState.isPending = false
     crearState.error = null
+    skillsExistentesMock.length = 0
   })
 
   afterEach(() => {
     vi.clearAllMocks()
+  })
+
+  it('rechaza un nombre duplicado (case-insensitive/trim) contra el catálogo existente', async () => {
+    const user = userEvent.setup()
+    skillsExistentesMock.push({ ...SKILL_EXISTENTE, nombre: 'React' })
+    renderDialog()
+
+    await user.type(screen.getByLabelText(/^nombre$/i), '  react  ')
+    await user.click(screen.getByRole('button', { name: /guardar/i }))
+
+    expect(
+      await screen.findByText(/ya existe un skill con ese nombre/i),
+    ).toBeInTheDocument()
+    expect(crearMutateMock).not.toHaveBeenCalled()
+  })
+
+  it('autocompleta el nombre a partir del ícono elegido si el campo está vacío', async () => {
+    const user = userEvent.setup()
+    renderDialog()
+
+    await user.click(screen.getByRole('combobox', { name: /ícono/i }))
+    await user.click(await screen.findByRole('option', { name: 'nodejs' }))
+
+    expect(screen.getByLabelText(/^nombre$/i)).toHaveValue('Node.js')
+  })
+
+  it('no sobreescribe un nombre ya escrito a mano al elegir un ícono', async () => {
+    const user = userEvent.setup()
+    renderDialog()
+
+    await user.type(screen.getByLabelText(/^nombre$/i), 'Mi nombre custom')
+
+    await user.click(screen.getByRole('combobox', { name: /ícono/i }))
+    await user.click(await screen.findByRole('option', { name: 'nodejs' }))
+
+    expect(screen.getByLabelText(/^nombre$/i)).toHaveValue('Mi nombre custom')
   })
 
   it('no llama a la mutación cuando falta un campo obligatorio', async () => {
