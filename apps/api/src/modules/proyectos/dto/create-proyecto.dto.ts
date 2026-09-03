@@ -1,12 +1,13 @@
 import {
   IsBoolean,
-  IsDateString,
   IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
   IsUrl,
 } from 'class-validator';
+import { EsFechaIso } from '../../../common/validators/es-fecha-iso.decorator';
+import { EsPosteriorA } from '../../../common/validators/es-posterior-a.decorator';
 
 /**
  * UC-03 (Gestionar proyectos) — campos exactos según
@@ -32,11 +33,18 @@ export class CreateProyectoDto {
   @IsUrl({ require_tld: false })
   url_repositorio?: string;
 
-  @IsDateString()
+  /** Un proyecto no empieza en el futuro. */
+  @EsFechaIso({ noFutura: true })
   fecha_inicio: string;
 
+  /**
+   * Sin `noFutura`: un proyecto puede seguir "en curso" y su fecha de fin
+   * planeada ser futura. Puede coincidir con `fecha_inicio` (proyecto de un
+   * solo día), de ahí `oIgual: true`.
+   */
   @IsOptional()
-  @IsDateString()
+  @EsFechaIso()
+  @EsPosteriorA('fecha_inicio', { oIgual: true })
   fecha_fin?: string;
 
   @IsString()

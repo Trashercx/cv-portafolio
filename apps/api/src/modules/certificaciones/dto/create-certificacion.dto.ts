@@ -1,5 +1,4 @@
 import {
-  IsDateString,
   IsInt,
   IsNotEmpty,
   IsOptional,
@@ -7,6 +6,8 @@ import {
   IsUrl,
   IsUUID,
 } from 'class-validator';
+import { EsFechaIso } from '../../../common/validators/es-fecha-iso.decorator';
+import { EsPosteriorA } from '../../../common/validators/es-posterior-a.decorator';
 
 /**
  * UC-04 (Gestionar certificaciones) — campos exactos según
@@ -23,11 +24,18 @@ export class CreateCertificacionDto {
   @IsNotEmpty()
   institucion: string;
 
-  @IsDateString()
+  /** Una certificación no se emite en el futuro. */
+  @EsFechaIso({ noFutura: true })
   fecha_emision: string;
 
+  /**
+   * Sin `noFutura`: una fecha de expiración casi siempre es futura.
+   * Debe ser estrictamente posterior a `fecha_emision` (no puede expirar
+   * el mismo día que se emite).
+   */
   @IsOptional()
-  @IsDateString()
+  @EsFechaIso()
+  @EsPosteriorA('fecha_emision')
   fecha_expiracion?: string;
 
   @IsUrl({ require_tld: false })
