@@ -229,4 +229,49 @@
       background-position: 40px 40px;
     }
   }
+
+  @keyframes wave-drift {
+    from {
+      background-position: 0 0, 0 0;
+    }
+    to {
+      background-position: 0 72px, 0 112px;
+    }
+  }
+
+  @keyframes malla-drift-1 {
+    from {
+      transform: translate(0, 0) scale(1);
+    }
+    to {
+      transform: translate(4%, 3%) scale(1.06);
+    }
+  }
+
+  @keyframes malla-drift-2 {
+    from {
+      transform: translate(0, 0) scale(1);
+    }
+    to {
+      transform: translate(-3%, 4%) scale(1.05);
+    }
+  }
+
+  @keyframes malla-drift-3 {
+    from {
+      transform: translate(0, 0) scale(1);
+    }
+    to {
+      transform: translate(3%, -4%) scale(1.07);
+    }
+  }
+
+  @keyframes diagonal-drift {
+    from {
+      background-position: 0 0;
+    }
+    to {
+      background-position: 80px 80px;
+    }
+  }
 }

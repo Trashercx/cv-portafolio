@@ -17,6 +17,23 @@ export type TemaColores = Pick<
 >
 
 /**
+ * Mapea los 4 tokens NUEVOS de `fuente_principal` (los únicos que el
+ * formulario de Tema ofrece de acá en adelante, ver `tema-schema.ts`) a un
+ * stack de `font-family` que sí resuelve visualmente en el navegador. Los
+ * valores legados (`'Inter'`, `'Poppins'`, `'Merriweather'`, `'Georgia'`,
+ * de temas ya guardados) no están acá a propósito: pasan directo como
+ * `font-family` sin traducir (ver el `??` de abajo), preservando el
+ * comportamiento previo exacto para no romper temas existentes.
+ */
+const MAPA_FUENTE_PRINCIPAL: Record<string, string> = {
+  manrope: "'Manrope Variable', 'Inter', ui-sans-serif, system-ui, sans-serif",
+  sans_sistema:
+    "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+  serif_sistema: "ui-serif, Georgia, Cambria, 'Times New Roman', serif",
+  mono_sistema: "ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace",
+}
+
+/**
  * Variables CSS del tema (UC-08/UC-12), sin colores hardcodeados en ningún
  * componente. Reutilizada por `TemaPage` (vista previa en el panel) y por el
  * sitio público (`PublicHomePage`), aplicadas sobre el contenedor raíz de
@@ -29,7 +46,8 @@ export function temaComoVariablesCss(tema: TemaColores): CSSProperties {
     '--color-secundario': tema.color_secundario,
     '--color-fondo': tema.color_fondo,
     '--color-texto': tema.color_texto,
-    fontFamily: tema.fuente_principal,
+    fontFamily:
+      MAPA_FUENTE_PRINCIPAL[tema.fuente_principal] ?? tema.fuente_principal,
     // Bug preexistente (Fase 3.1): `--color-fondo` se declaraba pero nunca
     // se aplicaba como `background-color` en ningún lado — el contenedor
     // raíz de `PublicHomePage`/`PanelVersiones`/`PuckRoot` (editor) queda
