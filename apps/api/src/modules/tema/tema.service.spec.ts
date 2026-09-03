@@ -43,7 +43,7 @@ describe('TemaService (UC-08)', () => {
     color_secundario: '#222222',
     color_fondo: '#000000',
     color_texto: '#ffffff',
-    fuente_principal: 'Inter',
+    fuente_principal: 'Inter' as const,
     modo: 'oscuro' as const,
   };
 

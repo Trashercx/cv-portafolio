@@ -1,4 +1,5 @@
 import { IsBoolean, IsIn, IsOptional, IsString, IsUUID } from 'class-validator';
+import { BloqueConfiguracionBaseDto } from './bloque-configuracion-base.dto';
 
 /**
  * `configuracion` para `tipo_seccion = 'hero'` (UC-07), parámetros exactos
@@ -18,8 +19,13 @@ import { IsBoolean, IsIn, IsOptional, IsString, IsUUID } from 'class-validator';
  * 3 campos sigue validando en 200. El `ValidationPipe` global (`main.ts`)
  * también tiene `transform: true`, por si algún día `configuracion` se tipa
  * como DTO anidado directo en el controller.
+ *
+ * `altura`/`overlay_fondo`/`tamano_titulo` (Fase 3.4) son propios de este
+ * bloque, además de los 5 campos base heredados de
+ * `BloqueConfiguracionBaseDto`. Mismo criterio de `@IsOptional()` + default:
+ * ninguna fila vieja los tiene.
  */
-export class HeroConfiguracionDto {
+export class HeroConfiguracionDto extends BloqueConfiguracionBaseDto {
   @IsString()
   titulo: string;
 
@@ -51,4 +57,16 @@ export class HeroConfiguracionDto {
   @IsOptional()
   @IsIn(['con_marco', 'sin_fondo'])
   estilo_foto: 'con_marco' | 'sin_fondo' = 'con_marco';
+
+  @IsOptional()
+  @IsIn(['normal', 'grande', 'pantalla_completa'])
+  altura: 'normal' | 'grande' | 'pantalla_completa' = 'normal';
+
+  @IsOptional()
+  @IsIn(['ninguno', 'oscuro', 'claro'])
+  overlay_fondo: 'ninguno' | 'oscuro' | 'claro' = 'ninguno';
+
+  @IsOptional()
+  @IsIn(['normal', 'grande'])
+  tamano_titulo: 'normal' | 'grande' = 'normal';
 }
