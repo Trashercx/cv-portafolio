@@ -1,24 +1,12 @@
 import type {
-  CertificacionesConfiguracion,
-  ContactoConfiguracion,
+  ColumnasConfiguracion,
   HeroConfiguracion,
-  LogrosConfiguracion,
-  ProyectosConfiguracion,
   Seccion,
-  SkillsConfiguracion,
-  SobreMiConfiguracion,
 } from '@/features/secciones/types'
 import type { SnapshotSitio } from '@/features/publico/types'
 import { EnvoltorioSeccion } from './EnvoltorioSeccion'
-import {
-  BloqueCertificaciones,
-  BloqueContacto,
-  BloqueHero,
-  BloqueLogros,
-  BloqueProyectos,
-  BloqueSkills,
-  BloqueSobreMi,
-} from './bloques'
+import { BloqueColumnas, BloqueHero } from './bloques'
+import { DespachoBloqueSeccion } from './bloques/DespachoBloqueSeccion'
 
 type RenderizadorSeccionesProps = {
   snapshot: SnapshotSitio
@@ -61,7 +49,11 @@ export function RenderizadorSecciones({
             id={seccion.id}
             visible={seccion.visible}
           >
-            <BloqueSeccion seccion={seccion} snapshot={snapshot} />
+            <BloqueSeccion
+              seccion={seccion}
+              snapshot={snapshot}
+              soloVisibles={soloVisibles}
+            />
           </EnvoltorioSeccion>
         )
       })}
@@ -72,9 +64,11 @@ export function RenderizadorSecciones({
 function BloqueSeccion({
   seccion,
   snapshot,
+  soloVisibles,
 }: {
   seccion: Seccion
   snapshot: SnapshotSitio
+  soloVisibles: boolean
 }) {
   switch (seccion.tipo_seccion) {
     case 'hero':
@@ -84,56 +78,22 @@ function BloqueSeccion({
           perfil={snapshot.perfil}
         />
       )
-    case 'sobre-mi':
+    case 'columnas':
       return (
-        <BloqueSobreMi
-          titulo={seccion.titulo_visible}
-          config={seccion.configuracion as SobreMiConfiguracion}
-          perfil={snapshot.perfil}
-        />
-      )
-    case 'proyectos':
-      return (
-        <BloqueProyectos
-          titulo={seccion.titulo_visible}
-          config={seccion.configuracion as ProyectosConfiguracion}
-          proyectos={snapshot.proyectos}
-        />
-      )
-    case 'certificaciones':
-      return (
-        <BloqueCertificaciones
-          titulo={seccion.titulo_visible}
-          config={seccion.configuracion as CertificacionesConfiguracion}
-          certificaciones={snapshot.certificaciones}
-        />
-      )
-    case 'logros':
-      return (
-        <BloqueLogros
-          titulo={seccion.titulo_visible}
-          config={seccion.configuracion as LogrosConfiguracion}
-          logros={snapshot.logros}
-        />
-      )
-    case 'contacto':
-      return (
-        <BloqueContacto
-          titulo={seccion.titulo_visible}
-          config={seccion.configuracion as ContactoConfiguracion}
-          perfil={snapshot.perfil}
-          redesSociales={snapshot.redes_sociales}
-        />
-      )
-    case 'skills':
-      return (
-        <BloqueSkills
-          titulo={seccion.titulo_visible}
-          config={seccion.configuracion as SkillsConfiguracion}
-          skills={snapshot.skills}
+        <BloqueColumnas
+          config={seccion.configuracion as ColumnasConfiguracion}
+          datos={snapshot}
+          soloVisibles={soloVisibles}
         />
       )
     default:
-      return null
+      return (
+        <DespachoBloqueSeccion
+          tipo_seccion={seccion.tipo_seccion}
+          titulo_visible={seccion.titulo_visible}
+          configuracion={seccion.configuracion}
+          datos={snapshot}
+        />
+      )
   }
 }

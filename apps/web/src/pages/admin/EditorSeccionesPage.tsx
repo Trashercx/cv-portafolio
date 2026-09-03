@@ -29,8 +29,11 @@ import {
 } from '@/features/secciones/useSecciones'
 import {
   TIPO_SECCION_LABEL,
+  type BloqueColumnaHijo,
+  type ColumnasConfiguracion,
   type Seccion,
   type TipoSeccion,
+  type TipoSeccionAnidable,
 } from '@/features/secciones/types'
 import { useDatosEditor, type MetadataEditor } from '@/features/editor/useDatosEditor'
 import { usePublicarVersion, useVersiones } from '@/features/publicacion/usePublicacion'
@@ -132,7 +135,7 @@ const FALLBACK_HERO_LEGADO = {
  * `configuracion` real guardada, que sigue ganando si esos campos sí están
  * presentes.
  */
-function seccionesAContenidoInicial(secciones: Seccion[]): EditorContentItem[] {
+export function seccionesAContenidoInicial(secciones: Seccion[]): EditorContentItem[] {
   return [...secciones]
     .sort((a, b) => a.orden - b.orden)
     .map((seccion) => {
@@ -140,6 +143,12 @@ function seccionesAContenidoInicial(secciones: Seccion[]): EditorContentItem[] {
         puckConfig.components[seccion.tipo_seccion]?.defaultProps ?? {}
       const fallbackLegado =
         seccion.tipo_seccion === 'hero' ? FALLBACK_HERO_LEGADO : {}
+      const configuracion =
+        seccion.tipo_seccion === 'columnas'
+          ? reconstruirConfiguracionColumnas(
+              seccion.configuracion as ColumnasConfiguracion,
+            )
+          : seccion.configuracion
       return {
         type: seccion.tipo_seccion,
         props: {
@@ -149,10 +158,53 @@ function seccionesAContenidoInicial(secciones: Seccion[]): EditorContentItem[] {
           _seccionId: seccion.id,
           _visible: seccion.visible,
           _tituloVisible: seccion.titulo_visible,
-          ...seccion.configuracion,
+          ...configuracion,
         },
       } as EditorContentItem
     })
+}
+
+/**
+ * Dirección inversa de `sanearSlots` (UC-17, Fase 3.3): reconstruye
+ * `columna_1/2/3` de una `Seccion` `columnas` recién llegada del backend
+ * (cada hijo como `BloqueColumnaHijo`, SIN `id`/`_seccionId` — nunca fueron
+ * filas propias) a la forma `ComponentData[]` que exige el lienzo de Puck
+ * para montarlos dentro de sus zonas de slot.
+ */
+function reconstruirConfiguracionColumnas(configuracion: ColumnasConfiguracion) {
+  return {
+    ...configuracion,
+    columna_1: hijosColumnaAContenido(configuracion.columna_1),
+    columna_2: hijosColumnaAContenido(configuracion.columna_2),
+    columna_3: hijosColumnaAContenido(configuracion.columna_3),
+  }
+}
+
+/**
+ * Convierte los `BloqueColumnaHijo[]` persistidos de una columna a
+ * `EditorContentItem[]`: parte de `defaultProps` del bloque hijo
+ * correspondiente (mismo criterio que `seccionesAContenidoInicial` para
+ * filas de nivel superior — cubre hijos guardados antes de agregar un campo
+ * nuevo a su DTO) y genera un `id` nuevo client-side en cada carga, porque
+ * estos hijos nunca tuvieron un `id` propio y Puck exige uno único por ítem,
+ * incluidos los anidados en slots, para su manejo interno de DnD/keys.
+ */
+function hijosColumnaAContenido(
+  hijos: BloqueColumnaHijo[] | undefined,
+): EditorContentItem[] {
+  return (hijos ?? []).map((hijo) => {
+    const defaultProps = puckConfig.components[hijo.tipo_seccion]?.defaultProps ?? {}
+    return {
+      type: hijo.tipo_seccion,
+      props: {
+        ...defaultProps,
+        id: crypto.randomUUID(),
+        _visible: hijo.visible,
+        _tituloVisible: hijo.titulo_visible,
+        ...hijo.configuracion,
+      },
+    } as EditorContentItem
+  })
 }
 
 /** Separa las props internas (prefijo `_`, más el `id` que agrega Puck) de la `configuracion` real que acepta el backend. */
@@ -165,6 +217,58 @@ function separarProps(props: EditorContentItem['props']) {
       _tituloVisible: string
     }
   return { id, _seccionId, _visible, _tituloVisible, configuracion }
+}
+
+/**
+ * UC-17 (Fase 3.3): transforma los `columna_1/2/3` de un ítem `columnas` en
+ * edición (arrays `ComponentData[]` reales de Puck, cada hijo con props que
+ * incluyen `id`/`_visible`/`_tituloVisible` y posiblemente `_seccionId` si el
+ * bloque fue arrastrado desde el nivel superior) a la forma
+ * `BloqueColumnaHijo` que acepta el backend en `Seccion.configuracion` — ver
+ * contrato en `docs/plan-portafolio.md` §4.
+ *
+ * Descarta `_seccionId` siempre, incluso si el hijo lo tenía (consecuencia
+ * deliberada, documentada ahí mismo: anidar una sección existente le borra
+ * la fila; sacarla de nuevo crea una fila nueva). Esto se resuelve solo,
+ * gratis, por el diff ya existente de nivel superior de `guardarCambios`
+ * (una sección que "desaparece" del `content` de nivel superior porque se
+ * anidó se elimina igual que cualquier sección borrada) — no hace falta
+ * tocar esa lógica de crear/eliminar.
+ */
+export function sanearSlots(configuracion: Record<string, unknown>): ColumnasConfiguracion {
+  const {
+    distribucion,
+    alineacion_vertical,
+    espaciado,
+    columna_1,
+    columna_2,
+    columna_3,
+  } = configuracion as ColumnasConfiguracion & {
+    columna_1: EditorContentItem[]
+    columna_2: EditorContentItem[]
+    columna_3: EditorContentItem[]
+  }
+
+  const sanearColumna = (columna: EditorContentItem[] | undefined): BloqueColumnaHijo[] =>
+    (columna ?? []).map((item) => {
+      const { _visible, _tituloVisible, configuracion: configuracionHijo } =
+        separarProps(item.props)
+      return {
+        tipo_seccion: item.type as TipoSeccionAnidable,
+        titulo_visible: _tituloVisible,
+        visible: _visible,
+        configuracion: configuracionHijo,
+      }
+    })
+
+  return {
+    distribucion,
+    alineacion_vertical,
+    espaciado,
+    columna_1: sanearColumna(columna_1),
+    columna_2: sanearColumna(columna_2),
+    columna_3: sanearColumna(columna_3),
+  }
 }
 
 /**
@@ -288,9 +392,22 @@ export function EditorSeccionesPage() {
     try {
       for (let i = 0; i < contentActualizado.length; i += 1) {
         const item = contentActualizado[i]
-        const { id, _seccionId, _visible, _tituloVisible, configuracion } =
-          separarProps(item.props)
+        const {
+          id,
+          _seccionId,
+          _visible,
+          _tituloVisible,
+          configuracion: configuracionCruda,
+        } = separarProps(item.props)
         const tipo = item.type as TipoSeccion
+        // Un ítem `columnas` guarda sus hijos como `ComponentData[]` reales
+        // de Puck mientras se edita (ver `PuckSeccionesComponents`) — hay que
+        // sanearlos a `BloqueColumnaHijo[]` antes de mandarlos al backend, la
+        // única forma que acepta `Seccion.configuracion` (UC-17).
+        const configuracion =
+          tipo === 'columnas'
+            ? sanearSlots(configuracionCruda as Record<string, unknown>)
+            : configuracionCruda
 
         if (!_seccionId) {
           const creada = await crearSeccion.mutateAsync({
@@ -365,11 +482,20 @@ export function EditorSeccionesPage() {
       // arriba solo invalidan la query sin esperar su refetch.
       seccionesPersistentesRef.current = contentActualizado.map(
         (item, index) => {
-          const { _seccionId, _visible, _tituloVisible, configuracion } =
-            separarProps(item.props)
+          const {
+            _seccionId,
+            _visible,
+            _tituloVisible,
+            configuracion: configuracionCruda,
+          } = separarProps(item.props)
+          const tipo = item.type as TipoSeccion
+          const configuracion =
+            tipo === 'columnas'
+              ? sanearSlots(configuracionCruda as Record<string, unknown>)
+              : configuracionCruda
           return {
             id: _seccionId as string,
-            tipo_seccion: item.type as TipoSeccion,
+            tipo_seccion: tipo,
             titulo_visible: _tituloVisible,
             orden: index,
             visible: _visible,
