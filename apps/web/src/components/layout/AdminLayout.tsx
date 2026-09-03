@@ -10,6 +10,8 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from '@/components/ui/sidebar'
+import { PaletaComandos } from '@/features/paleta-comandos/PaletaComandos'
+import { ProveedorPaletaComandos } from '@/features/paleta-comandos/contexto-paleta'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/auth-store'
 
@@ -66,35 +68,38 @@ export function AdminLayout() {
 
   return (
     <ThemeProvider>
-      <SidebarProvider open={sidebarAbierta} onOpenChange={setSidebarAbierta}>
-        <AppSidebar />
-        <SidebarInset>
-          <header className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b bg-background p-4">
-            <SidebarTrigger />
-            <div className="flex items-center gap-4">
-              <ThemeToggle />
-              <div className="h-6 w-px bg-border" />
-              {admin?.nombre ? (
-                <span className="text-sm text-muted-foreground">
-                  {admin.nombre}
-                </span>
-              ) : null}
-              <Button variant="outline" size="sm" onClick={handleLogout}>
-                <LogOut />
-                Cerrar sesión
-              </Button>
-            </div>
-          </header>
-          <main
-            className={cn(
-              'p-4',
-              esRutaDeAnchoCompleto ? 'w-full' : 'mx-auto w-full max-w-5xl',
-            )}
-          >
-            <Outlet />
-          </main>
-        </SidebarInset>
-      </SidebarProvider>
+      <ProveedorPaletaComandos>
+        <PaletaComandos />
+        <SidebarProvider open={sidebarAbierta} onOpenChange={setSidebarAbierta}>
+          <AppSidebar />
+          <SidebarInset>
+            <header className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b bg-background p-4">
+              <SidebarTrigger />
+              <div className="flex items-center gap-4">
+                <ThemeToggle />
+                <div className="h-6 w-px bg-border" />
+                {admin?.nombre ? (
+                  <span className="text-sm text-muted-foreground">
+                    {admin.nombre}
+                  </span>
+                ) : null}
+                <Button variant="outline" size="sm" onClick={handleLogout}>
+                  <LogOut />
+                  Cerrar sesión
+                </Button>
+              </div>
+            </header>
+            <main
+              className={cn(
+                'p-4',
+                esRutaDeAnchoCompleto ? 'w-full' : 'mx-auto w-full max-w-5xl',
+              )}
+            >
+              <Outlet />
+            </main>
+          </SidebarInset>
+        </SidebarProvider>
+      </ProveedorPaletaComandos>
     </ThemeProvider>
   )
 }

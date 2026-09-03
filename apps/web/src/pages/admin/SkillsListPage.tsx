@@ -18,6 +18,7 @@ import {
   useReordenarSkills,
   useSkills,
 } from '@/features/skills/useSkills'
+import { useComandosContextuales } from '@/features/paleta-comandos/contexto-paleta'
 import { ApiError } from '@/lib/api-client'
 import { calcularIntercambioOrdenPorId } from '@/lib/reorder'
 
@@ -48,6 +49,10 @@ export function SkillsListPage() {
     setItemEditando(skill)
     setDialogoAbierto(true)
   }
+
+  useComandosContextuales([
+    { id: 'nuevo-skill', etiqueta: 'Nuevo skill', accion: abrirNuevo },
+  ])
 
   return (
     <div className="grid gap-4">

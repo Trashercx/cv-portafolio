@@ -20,4 +20,18 @@ if (typeof window !== 'undefined') {
   if (!window.HTMLElement.prototype.scrollIntoView) {
     window.HTMLElement.prototype.scrollIntoView = () => {}
   }
+  // jsdom tampoco implementa `matchMedia`, usado por `useIsMobile`
+  // (`use-mobile.ts`) dentro del bloque `Sidebar` de shadcn.
+  if (!window.matchMedia) {
+    window.matchMedia = (query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
+    }) as unknown as MediaQueryList
+  }
 }
