@@ -9,7 +9,7 @@ Sitio de portafolio/CV personal con panel de administración privado. Stack: Rea
 - Autenticación: `@nestjs/passport` + `passport-jwt`, administrador único, sin endpoint de registro.
 - Multimedia: AWS S3 (`@aws-sdk/client-s3` + multer-s3), con sharp/multer-sharp-s3 para miniaturas. CloudFront es opcional, no obligatorio en v1.
 - UI: Tailwind CSS + shadcn/ui.
-- Estado/formularios: TanStack Query, Zustand, React Hook Form + Zod, Tiptap para texto enriquecido.
+- Estado/formularios: TanStack Query, Zustand, React Hook Form + Zod, Tiptap para texto enriquecido (**decidido, todavía NO implementado**: los campos largos actuales, como la biografía del perfil, son `<Textarea>` plano — no confundir con trabajo ya hecho).
 - Hosting: VPS propio con Docker + Dokploy o Coolify.
 
 ## Dónde está el detalle

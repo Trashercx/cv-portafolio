@@ -65,7 +65,7 @@ Base ya definida: React en el frontend, NestJS en el backend, PostgreSQL como ba
 | TanStack Query | Cache de datos del servidor en el frontend | Sincroniza el panel admin con la API sin escribir lógica de cache manual. |
 | Zustand | Estado local del editor visual | Estado ligero para la sesión de edición (bloque seleccionado, orden en curso) antes de guardar. |
 | React Hook Form + Zod | Formularios y validación | Mismo esquema de validación reutilizable en frontend y como referencia para los DTO de NestJS. |
-| Tiptap | Editor de texto enriquecido | Para campos largos como la biografía o la descripción de un proyecto, con salida en JSON/HTML controlado. |
+| Tiptap | Editor de texto enriquecido | Para campos largos como la biografía o la descripción de un proyecto, con salida en JSON/HTML controlado. **Decidido, todavía no implementado** (revisado en Fase 3.1, 2 sept 2026): los campos largos existentes (p. ej. `resumen_bio` del perfil) siguen usando `<Textarea>` plano de shadcn. No asumir que ya está integrado. |
 
 ### Pruebas y calidad
 
