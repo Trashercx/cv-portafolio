@@ -5,7 +5,9 @@ import type { Media } from '@/features/media/types'
  * docs/plan-tecnico.md sección 5 — `Seccion.tipo_seccion` solo puede ser uno
  * de estos valores, cada uno con su propio DTO de `configuracion` en el
  * backend (`apps/api/src/modules/secciones/dto/configuracion/`). Las 6
- * originales (UC-07) más `skills` (UC-07 + UC-16, Fase 2).
+ * originales (UC-07) más `skills` (UC-07 + UC-16, Fase 2) más `columnas`
+ * (UC-17, Fase 3.3 del rediseño del editor — layouts multi-columna con la
+ * Slots API de Puck).
  */
 export const TIPOS_SECCION = [
   'hero',
@@ -15,6 +17,7 @@ export const TIPOS_SECCION = [
   'logros',
   'contacto',
   'skills',
+  'columnas',
 ] as const
 
 export type TipoSeccion = (typeof TIPOS_SECCION)[number]
@@ -28,7 +31,17 @@ export const TIPO_SECCION_LABEL: Record<TipoSeccion, string> = {
   logros: 'Logros',
   contacto: 'Contacto',
   skills: 'Skills',
+  columnas: 'Columnas',
 }
+
+/**
+ * Tipos de bloque que se pueden anidar dentro de una columna de un
+ * contenedor `columnas` (UC-17). Nunca `'hero'` (la portada ocupa todo el
+ * ancho por diseño) ni `'columnas'` (evita anidamiento sin límite) — ver
+ * docs/plan-portafolio.md §4, restricción reforzada tanto en el `allow` del
+ * slot de Puck (`puck-config.tsx`) como en el DTO del backend.
+ */
+export type TipoSeccionAnidable = Exclude<TipoSeccion, 'hero' | 'columnas'>
 
 export type HeroConfiguracion = {
   titulo: string
@@ -85,6 +98,38 @@ export type ContactoConfiguracion = {
   mostrar_formulario: boolean
 }
 
+export type DistribucionColumnas = '1-1' | '1-2' | '2-1' | '1-1-1'
+export type AlineacionVerticalColumnas = 'inicio' | 'centro' | 'fin' | 'estirado'
+export type EspaciadoColumnas = 'compacto' | 'normal' | 'amplio'
+
+/**
+ * Bloque hijo dentro de una columna: misma forma que tendría como `Seccion`
+ * propia, SIN `id`/`usuario_admin_id`/`orden` (esos solo existen para filas
+ * reales de nivel superior) — ver docs/plan-portafolio.md §4.
+ */
+export type BloqueColumnaHijo = {
+  tipo_seccion: TipoSeccionAnidable
+  titulo_visible: string
+  visible: boolean
+  configuracion: object
+}
+
+/**
+ * `configuracion` para `tipo_seccion = 'columnas'` (UC-17). Espeja
+ * `ColumnasConfiguracionDto` (backend, `apps/api/src/modules/secciones/dto/configuracion/`).
+ * `columna_3` está siempre presente, incluso cuando `distribucion` es de 2
+ * columnas y queda vacío — así el `render` decide qué se ve, no la forma del
+ * dato.
+ */
+export type ColumnasConfiguracion = {
+  distribucion: DistribucionColumnas
+  alineacion_vertical: AlineacionVerticalColumnas
+  espaciado: EspaciadoColumnas
+  columna_1: BloqueColumnaHijo[]
+  columna_2: BloqueColumnaHijo[]
+  columna_3: BloqueColumnaHijo[]
+}
+
 export type ConfiguracionPorTipo = {
   hero: HeroConfiguracion
   'sobre-mi': SobreMiConfiguracion
@@ -93,6 +138,7 @@ export type ConfiguracionPorTipo = {
   logros: LogrosConfiguracion
   contacto: ContactoConfiguracion
   skills: SkillsConfiguracion
+  columnas: ColumnasConfiguracion
 }
 
 /** Forma exacta de `Seccion` devuelta por `GET /admin/secciones`. */

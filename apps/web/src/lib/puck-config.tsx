@@ -1,4 +1,4 @@
-import type { Config, CustomField } from '@measured/puck'
+import type { Config, CustomField, Slot } from '@measured/puck'
 import { EnvoltorioSeccion } from '@/components/publico/EnvoltorioSeccion'
 import {
   BloqueCertificaciones,
@@ -13,14 +13,59 @@ import { leerMetadata } from '@/features/editor/useDatosEditor'
 import { PuckRoot } from '@/features/editor/PuckRoot'
 import { useMediaList } from '@/features/media/useMediaLibrary'
 import type {
+  AlineacionVerticalColumnas,
   CertificacionesConfiguracion,
+  ColumnasConfiguracion,
   ContactoConfiguracion,
+  DistribucionColumnas,
+  EspaciadoColumnas,
   HeroConfiguracion,
   LogrosConfiguracion,
   ProyectosConfiguracion,
   SkillsConfiguracion,
   SobreMiConfiguracion,
+  TipoSeccionAnidable,
 } from '@/features/secciones/types'
+
+/**
+ * Tipos de bloque que se pueden soltar dentro de una columna (UC-17), en el
+ * mismo orden/valores que `allow` de cada slot más abajo — mismo criterio
+ * reforzado en el DTO del backend (`docs/plan-portafolio.md` §4): nunca
+ * `'hero'` (la portada ocupa todo el ancho por diseño) ni `'columnas'`
+ * (evita anidamiento sin límite).
+ */
+const BLOQUES_ANIDABLES: TipoSeccionAnidable[] = [
+  'sobre-mi',
+  'proyectos',
+  'certificaciones',
+  'logros',
+  'contacto',
+  'skills',
+]
+
+// Clases Tailwind literales para el layout de columnas (nunca construidas en
+// runtime concatenando fragmentos dinámicos) — misma tabla que usa
+// `BloqueColumnas` (`@/components/publico/bloques/BloqueColumnas`) para que
+// el lienzo del editor se vea idéntico al sitio público.
+const GRID_COLS_POR_DISTRIBUCION: Record<DistribucionColumnas, string> = {
+  '1-1': 'grid-cols-1 sm:grid-cols-2',
+  '1-2': 'grid-cols-1 sm:grid-cols-[1fr_2fr]',
+  '2-1': 'grid-cols-1 sm:grid-cols-[2fr_1fr]',
+  '1-1-1': 'grid-cols-1 sm:grid-cols-3',
+}
+
+const ALINEACION_VERTICAL_CLASE: Record<AlineacionVerticalColumnas, string> = {
+  inicio: 'items-start',
+  centro: 'items-center',
+  fin: 'items-end',
+  estirado: 'items-stretch',
+}
+
+const ESPACIADO_CLASE: Record<EspaciadoColumnas, string> = {
+  compacto: 'gap-4',
+  normal: 'gap-8',
+  amplio: 'gap-12',
+}
 
 /**
  * Props internas que agregamos a cada bloque de Puck, con prefijo `_` para
@@ -113,6 +158,25 @@ export type PuckSeccionesComponents = {
   logros: ConInternos<LogrosConfiguracion>
   contacto: ConInternos<ContactoConfiguracion>
   skills: ConInternos<SkillsConfiguracion>
+  /**
+   * A diferencia de los demás bloques, `columna_1/2/3` NO reutilizan
+   * `ColumnasConfiguracion` tal cual (ahí son `BloqueColumnaHijo[]`, la forma
+   * persistida en el backend): mientras el bloque vive en el lienzo de Puck,
+   * cada columna es un `Slot` (marcador de la Slots API de Puck) — a nivel de
+   * `Data.content` eso se resuelve a `ComponentData[]` reales (con `id`/
+   * `type`/props propios de cada bloque hijo registrado en este mismo
+   * `Config`), y dentro de `render()` se resuelve a un `SlotComponent`
+   * (función-componente que Puck reemplaza por su propia zona de
+   * drag-and-drop). Ver `EditorSeccionesPage.sanearSlots` para la conversión
+   * a `BloqueColumnaHijo[]` recién al guardar.
+   */
+  columnas: ConInternos<
+    Omit<ColumnasConfiguracion, 'columna_1' | 'columna_2' | 'columna_3'> & {
+      columna_1: Slot
+      columna_2: Slot
+      columna_3: Slot
+    }
+  >
 }
 
 /**
@@ -132,7 +196,7 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
   categories: {
     diseno: {
       title: 'Diseño',
-      components: ['hero'],
+      components: ['hero', 'columnas'],
     },
     contenido: {
       title: 'Contenido',
@@ -432,6 +496,118 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
               config={{ direccion, velocidad }}
               skills={datos.skills}
             />
+          </EnvoltorioSeccion>
+        )
+      },
+    },
+    /**
+     * Contenedor "Columnas" (UC-17, Fase 3.3): layout multi-columna con la
+     * Slots API de Puck. NO es un placeholder — cada zona `columna_1/2/3` es
+     * una zona de drag-and-drop real donde se pueden soltar los 6 tipos de
+     * bloque anidables (`BLOQUES_ANIDABLES`), reforzado con `allow` (nunca
+     * `hero` ni `columnas`, ver comentario de `BLOQUES_ANIDABLES`). A
+     * diferencia de los demás bloques, este SÍ es una `Seccion` cuya
+     * `configuracion` guarda además el contenido de sus hijos (ver
+     * `docs/plan-portafolio.md` §4 y `EditorSeccionesPage.sanearSlots`).
+     */
+    columnas: {
+      label: 'Columnas',
+      defaultProps: {
+        distribucion: '1-1',
+        alineacion_vertical: 'inicio',
+        espaciado: 'normal',
+        columna_1: [],
+        columna_2: [],
+        columna_3: [],
+        _visible: true,
+        _tituloVisible: 'Columnas',
+      },
+      fields: {
+        distribucion: {
+          type: 'select',
+          label: 'Distribución',
+          options: [
+            { label: 'Dos columnas iguales (1-1)', value: '1-1' },
+            { label: 'Angosta + ancha (1-2)', value: '1-2' },
+            { label: 'Ancha + angosta (2-1)', value: '2-1' },
+            { label: 'Tres columnas (1-1-1)', value: '1-1-1' },
+          ],
+        },
+        alineacion_vertical: {
+          type: 'select',
+          label: 'Alineación vertical',
+          options: [
+            { label: 'Arriba', value: 'inicio' },
+            { label: 'Centro', value: 'centro' },
+            { label: 'Abajo', value: 'fin' },
+            { label: 'Estirado (misma altura)', value: 'estirado' },
+          ],
+        },
+        espaciado: {
+          type: 'select',
+          label: 'Espaciado',
+          options: [
+            { label: 'Compacto', value: 'compacto' },
+            { label: 'Normal', value: 'normal' },
+            { label: 'Amplio', value: 'amplio' },
+          ],
+        },
+        columna_1: {
+          type: 'slot',
+          label: 'Columna 1',
+          allow: BLOQUES_ANIDABLES,
+        },
+        columna_2: {
+          type: 'slot',
+          label: 'Columna 2',
+          allow: BLOQUES_ANIDABLES,
+        },
+        columna_3: {
+          type: 'slot',
+          label: 'Columna 3',
+          allow: BLOQUES_ANIDABLES,
+        },
+        _visible: VISIBLE_FIELD,
+        _tituloVisible: TITULO_VISIBLE_FIELD,
+      },
+      // Oculta el campo "Columna 3" en el sidebar cuando la distribución
+      // elegida es de 2 columnas — mejora de UX, no la fuente de verdad de
+      // qué se renderiza (esa la decide `render` de abajo, no este campo:
+      // si `columna_3` ya tenía contenido de una distribución anterior,
+      // simplemente deja de mostrarse hasta volver a elegir '1-1-1').
+      resolveFields: (data, { fields }) => {
+        if (data.props.distribucion === '1-1-1') return fields
+        return Object.fromEntries(
+          Object.entries(fields).filter(([nombreCampo]) => nombreCampo !== 'columna_3'),
+        ) as typeof fields
+      },
+      render: ({
+        distribucion,
+        alineacion_vertical,
+        espaciado,
+        columna_1: Columna1,
+        columna_2: Columna2,
+        columna_3: Columna3,
+        _visible,
+      }) => {
+        const tresColumnas = distribucion === '1-1-1'
+        return (
+          <EnvoltorioSeccion visible={_visible}>
+            <div
+              className={`grid ${GRID_COLS_POR_DISTRIBUCION[distribucion]} ${ALINEACION_VERTICAL_CLASE[alineacion_vertical]} ${ESPACIADO_CLASE[espaciado]}`}
+            >
+              <div className="grid gap-6">
+                <Columna1 />
+              </div>
+              <div className="grid gap-6">
+                <Columna2 />
+              </div>
+              {tresColumnas ? (
+                <div className="grid gap-6">
+                  <Columna3 />
+                </div>
+              ) : null}
+            </div>
           </EnvoltorioSeccion>
         )
       },
