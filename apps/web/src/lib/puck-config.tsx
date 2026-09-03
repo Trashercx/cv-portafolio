@@ -12,8 +12,10 @@ import {
 import { leerMetadata } from '@/features/editor/useDatosEditor'
 import { PuckRoot } from '@/features/editor/PuckRoot'
 import { useMediaList } from '@/features/media/useMediaLibrary'
+import { ALINEACION_TEXTO_CLASE } from '@/lib/escalas-bloque'
 import type {
   AlineacionVerticalColumnas,
+  BloqueConfiguracionBase,
   CertificacionesConfiguracion,
   ColumnasConfiguracion,
   ContactoConfiguracion,
@@ -100,6 +102,72 @@ const TITULO_VISIBLE_FIELD = {
 } as const
 
 /**
+ * Fase 3.4 (personalización visual por bloque): los 5 campos de
+ * `BloqueConfiguracionBase`, compartidos por los 8 tipos de bloque — se
+ * definen una sola vez acá y se hace spread en el `fields` de cada
+ * componente, en vez de repetir las mismas 5 definiciones 8 veces. Los
+ * valores (`'compacto'|'normal'|'amplio'`, etc.) son exactamente los mismos
+ * tokens que `apps/web/src/lib/escalas-bloque.ts` traduce a clases Tailwind
+ * literales — este archivo nunca construye una clase, solo persiste el
+ * token elegido.
+ */
+const CAMPOS_BASE_BLOQUE = {
+  espaciado_vertical: {
+    type: 'select',
+    label: 'Espaciado vertical',
+    options: [
+      { label: 'Compacto', value: 'compacto' },
+      { label: 'Normal', value: 'normal' },
+      { label: 'Amplio', value: 'amplio' },
+    ],
+  },
+  ancho_contenido: {
+    type: 'select',
+    label: 'Ancho del contenido',
+    options: [
+      { label: 'Estrecho', value: 'estrecho' },
+      { label: 'Normal', value: 'normal' },
+      { label: 'Amplio', value: 'amplio' },
+      { label: 'Completo', value: 'completo' },
+    ],
+  },
+  alineacion_texto: {
+    type: 'select',
+    label: 'Alineación del título',
+    options: [
+      { label: 'Izquierda', value: 'izquierda' },
+      { label: 'Centro', value: 'centro' },
+    ],
+  },
+  fondo_bloque: {
+    type: 'select',
+    label: 'Fondo del bloque',
+    options: [
+      { label: 'Ninguno', value: 'ninguno' },
+      { label: 'Sutil', value: 'sutil' },
+      { label: 'Tarjeta', value: 'tarjeta' },
+    ],
+  },
+  separador_inferior: {
+    type: 'radio',
+    label: 'Separador inferior',
+    options: [
+      { label: 'Sí', value: true },
+      { label: 'No', value: false },
+    ],
+  },
+} as const
+
+/** `defaultProps` de los 5 campos base, iguales para los 8 tipos de bloque (ver comentario de `CAMPOS_BASE_BLOQUE`). */
+const DEFAULT_PROPS_BASE_BLOQUE: Required<BloqueConfiguracionBase> = {
+  espaciado_vertical: 'normal',
+  ancho_contenido: 'normal',
+  alineacion_texto: 'izquierda',
+  fondo_bloque: 'ninguno',
+  separador_inferior: true,
+}
+
+/**
  * Field personalizado de Puck para `hero.imagen_fondo_media_id`: en vez de
  * duplicar el flujo de subida de `MediaUploadField`, deja elegir entre las
  * imágenes ya existentes en la biblioteca (UC-09) — más simple de integrar
@@ -180,15 +248,16 @@ export type PuckSeccionesComponents = {
 }
 
 /**
- * Config de Puck (UC-07, rediseñada en Fase 3.1): un componente por
- * `tipo_seccion`, con `fields` que reflejan exactamente el DTO de
- * `configuracion` de cada tipo (ver
- * `apps/api/src/modules/secciones/dto/configuracion/`). Cada `render`
- * compone el mismo bloque real que usa el sitio público (`bloques/`, vía
- * `EnvoltorioSeccion` para el espaciado/aviso "Oculta") en vez de un
- * placeholder esquemático: el lienzo de Puck es así un WYSIWYG genuino. Los
- * datos de contenido (perfil, proyectos, certificaciones, etc.) no viajan
- * como prop de cada bloque de Puck — se leen de `puck.metadata.datos`
+ * Config de Puck (UC-07, rediseñada en Fase 3.1; personalización visual por
+ * bloque agregada en Fase 3.4): un componente por `tipo_seccion`, con
+ * `fields` que reflejan exactamente el DTO de `configuracion` de cada tipo
+ * (ver `apps/api/src/modules/secciones/dto/configuracion/`) — los 5 campos
+ * compartidos de `CAMPOS_BASE_BLOQUE` más los propios de cada tipo. Cada
+ * `render` compone el mismo bloque real que usa el sitio público (`bloques/`,
+ * vía `EnvoltorioSeccion` para el espaciado/ancho/fondo/separador) en vez de
+ * un placeholder esquemático: el lienzo de Puck es así un WYSIWYG genuino.
+ * Los datos de contenido (perfil, proyectos, certificaciones, etc.) no
+ * viajan como prop de cada bloque de Puck — se leen de `puck.metadata.datos`
  * (`DatosEditor`, ver `useDatosEditor`), inyectado una sola vez por
  * `EditorSeccionesPage` vía la prop `metadata` de `<Puck>`.
  */
@@ -222,6 +291,17 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
         mostrar_foto_perfil: true,
         posicion_foto: 'centrada',
         estilo_foto: 'con_marco',
+        altura: 'normal',
+        overlay_fondo: 'ninguno',
+        tamano_titulo: 'normal',
+        ...DEFAULT_PROPS_BASE_BLOQUE,
+        // El hero siempre fue a sangre completa y con el título centrado —
+        // los defaults compartidos ('normal'/'izquierda') romperían ese
+        // aspecto para cualquier hero nuevo. Ver el mismo override en su
+        // `render` (fallback cuando `ancho_contenido`/`alineacion_texto`
+        // faltan en una `Seccion` guardada antes de esta fase).
+        ancho_contenido: 'completo',
+        alineacion_texto: 'centro',
         _visible: true,
         _tituloVisible: 'Portada',
       },
@@ -257,6 +337,33 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
             { label: 'Sin fondo', value: 'sin_fondo' },
           ],
         },
+        altura: {
+          type: 'select',
+          label: 'Altura',
+          options: [
+            { label: 'Normal', value: 'normal' },
+            { label: 'Grande', value: 'grande' },
+            { label: 'Pantalla completa', value: 'pantalla_completa' },
+          ],
+        },
+        overlay_fondo: {
+          type: 'select',
+          label: 'Overlay sobre la imagen de fondo',
+          options: [
+            { label: 'Ninguno', value: 'ninguno' },
+            { label: 'Oscuro', value: 'oscuro' },
+            { label: 'Claro', value: 'claro' },
+          ],
+        },
+        tamano_titulo: {
+          type: 'select',
+          label: 'Tamaño del título',
+          options: [
+            { label: 'Normal', value: 'normal' },
+            { label: 'Grande', value: 'grande' },
+          ],
+        },
+        ...CAMPOS_BASE_BLOQUE,
         _visible: VISIBLE_FIELD,
         _tituloVisible: TITULO_VISIBLE_FIELD,
       },
@@ -269,6 +376,14 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
         mostrar_foto_perfil,
         posicion_foto,
         estilo_foto,
+        altura,
+        overlay_fondo,
+        tamano_titulo,
+        espaciado_vertical,
+        ancho_contenido,
+        alineacion_texto,
+        fondo_bloque,
+        separador_inferior,
         _visible,
         puck,
       }) => {
@@ -285,10 +400,29 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
           mostrar_foto_perfil,
           posicion_foto,
           estilo_foto,
+          altura,
+          overlay_fondo,
+          tamano_titulo,
         }
         return (
-          <EnvoltorioSeccion visible={_visible}>
-            <BloqueHero config={config} perfil={datos.perfil} />
+          <EnvoltorioSeccion
+            visible={_visible}
+            espaciado_vertical={espaciado_vertical}
+            // Fallback propio del hero ('completo'/'centro'), no el genérico
+            // de `escalas-bloque.ts` ('normal'/'izquierda'): una `Seccion`
+            // hero guardada antes de esta fase no tiene estos campos en su
+            // `configuracion`, y el hero siempre fue a sangre completa con
+            // el título centrado — usar el default compartido rompería ese
+            // aspecto en cualquier hero ya publicado.
+            ancho_contenido={ancho_contenido ?? 'completo'}
+            fondo_bloque={fondo_bloque}
+            separador_inferior={separador_inferior}
+          >
+            <BloqueHero
+              config={config}
+              perfil={datos.perfil}
+              alineacionTitulo={ALINEACION_TEXTO_CLASE[alineacion_texto ?? 'centro']}
+            />
           </EnvoltorioSeccion>
         )
       },
@@ -297,6 +431,16 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
       label: 'Sobre mí',
       defaultProps: {
         mostrar_foto: true,
+        posicion_foto: 'izquierda',
+        forma_foto: 'circular',
+        ...DEFAULT_PROPS_BASE_BLOQUE,
+        // Antes de esta fase este bloque era `max-w-3xl` (más angosto que
+        // el default compartido `max-w-5xl`) — no hay token exacto para
+        // 3xl en la escala de 4 valores de `ancho_contenido`, así que se
+        // aproxima con el más cercano disponible ('estrecho' = `max-w-2xl`)
+        // en vez de dejarlo caer en el default genérico, que lo ensancharía
+        // de verdad en cualquier sitio ya publicado.
+        ancho_contenido: 'estrecho',
         _visible: true,
         _tituloVisible: 'Sobre mí',
       },
@@ -309,17 +453,55 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
             { label: 'No', value: false },
           ],
         },
+        posicion_foto: {
+          type: 'select',
+          label: 'Posición de la foto',
+          options: [
+            { label: 'Izquierda', value: 'izquierda' },
+            { label: 'Derecha', value: 'derecha' },
+          ],
+        },
+        forma_foto: {
+          type: 'select',
+          label: 'Forma de la foto',
+          options: [
+            { label: 'Circular', value: 'circular' },
+            { label: 'Cuadrada', value: 'cuadrada' },
+          ],
+        },
+        ...CAMPOS_BASE_BLOQUE,
         _visible: VISIBLE_FIELD,
         _tituloVisible: TITULO_VISIBLE_FIELD,
       },
-      render: ({ mostrar_foto, _visible, _tituloVisible, puck }) => {
+      render: ({
+        mostrar_foto,
+        posicion_foto,
+        forma_foto,
+        espaciado_vertical,
+        ancho_contenido,
+        alineacion_texto,
+        fondo_bloque,
+        separador_inferior,
+        _visible,
+        _tituloVisible,
+        puck,
+      }) => {
         const { datos } = leerMetadata(puck)
         return (
-          <EnvoltorioSeccion visible={_visible}>
+          <EnvoltorioSeccion
+            visible={_visible}
+            espaciado_vertical={espaciado_vertical}
+            // Fallback propio ('estrecho'), no el genérico ('normal'): ver
+            // el comentario del `defaultProps` de este mismo bloque.
+            ancho_contenido={ancho_contenido ?? 'estrecho'}
+            fondo_bloque={fondo_bloque}
+            separador_inferior={separador_inferior}
+          >
             <BloqueSobreMi
               titulo={_tituloVisible}
-              config={{ mostrar_foto }}
+              config={{ mostrar_foto, posicion_foto, forma_foto }}
               perfil={datos.perfil}
+              alineacionTitulo={ALINEACION_TEXTO_CLASE[alineacion_texto ?? 'izquierda']}
             />
           </EnvoltorioSeccion>
         )
@@ -330,6 +512,10 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
       defaultProps: {
         cantidad_a_mostrar: 3,
         solo_destacados: false,
+        columnas: 3,
+        estilo_tarjeta: 'simple',
+        mostrar_descripcion: true,
+        ...DEFAULT_PROPS_BASE_BLOQUE,
         _visible: true,
         _tituloVisible: 'Proyectos',
       },
@@ -347,23 +533,69 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
             { label: 'No', value: false },
           ],
         },
+        columnas: {
+          type: 'select',
+          label: 'Columnas',
+          options: [
+            { label: '2', value: 2 },
+            { label: '3', value: 3 },
+          ],
+        },
+        estilo_tarjeta: {
+          type: 'select',
+          label: 'Estilo de tarjeta',
+          options: [
+            { label: 'Simple', value: 'simple' },
+            { label: 'Con sombra', value: 'con_sombra' },
+          ],
+        },
+        mostrar_descripcion: {
+          type: 'radio',
+          label: 'Mostrar descripción',
+          options: [
+            { label: 'Sí', value: true },
+            { label: 'No', value: false },
+          ],
+        },
+        ...CAMPOS_BASE_BLOQUE,
         _visible: VISIBLE_FIELD,
         _tituloVisible: TITULO_VISIBLE_FIELD,
       },
       render: ({
         cantidad_a_mostrar,
         solo_destacados,
+        columnas,
+        estilo_tarjeta,
+        mostrar_descripcion,
+        espaciado_vertical,
+        ancho_contenido,
+        alineacion_texto,
+        fondo_bloque,
+        separador_inferior,
         _visible,
         _tituloVisible,
         puck,
       }) => {
         const { datos } = leerMetadata(puck)
         return (
-          <EnvoltorioSeccion visible={_visible}>
+          <EnvoltorioSeccion
+            visible={_visible}
+            espaciado_vertical={espaciado_vertical}
+            ancho_contenido={ancho_contenido}
+            fondo_bloque={fondo_bloque}
+            separador_inferior={separador_inferior}
+          >
             <BloqueProyectos
               titulo={_tituloVisible}
-              config={{ cantidad_a_mostrar, solo_destacados }}
+              config={{
+                cantidad_a_mostrar,
+                solo_destacados,
+                columnas,
+                estilo_tarjeta,
+                mostrar_descripcion,
+              }}
               proyectos={datos.proyectos}
+              alineacionTitulo={ALINEACION_TEXTO_CLASE[alineacion_texto ?? 'izquierda']}
             />
           </EnvoltorioSeccion>
         )
@@ -373,6 +605,10 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
       label: 'Certificaciones',
       defaultProps: {
         orden: 'fecha',
+        columnas: 3,
+        estilo_tarjeta: 'simple',
+        mostrar_fecha: true,
+        ...DEFAULT_PROPS_BASE_BLOQUE,
         _visible: true,
         _tituloVisible: 'Certificaciones',
       },
@@ -385,17 +621,62 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
             { label: 'Manual', value: 'manual' },
           ],
         },
+        columnas: {
+          type: 'select',
+          label: 'Columnas',
+          options: [
+            { label: '2', value: 2 },
+            { label: '3', value: 3 },
+          ],
+        },
+        estilo_tarjeta: {
+          type: 'select',
+          label: 'Estilo de tarjeta',
+          options: [
+            { label: 'Simple', value: 'simple' },
+            { label: 'Con sombra', value: 'con_sombra' },
+          ],
+        },
+        mostrar_fecha: {
+          type: 'radio',
+          label: 'Mostrar fecha',
+          options: [
+            { label: 'Sí', value: true },
+            { label: 'No', value: false },
+          ],
+        },
+        ...CAMPOS_BASE_BLOQUE,
         _visible: VISIBLE_FIELD,
         _tituloVisible: TITULO_VISIBLE_FIELD,
       },
-      render: ({ orden, _visible, _tituloVisible, puck }) => {
+      render: ({
+        orden,
+        columnas,
+        estilo_tarjeta,
+        mostrar_fecha,
+        espaciado_vertical,
+        ancho_contenido,
+        alineacion_texto,
+        fondo_bloque,
+        separador_inferior,
+        _visible,
+        _tituloVisible,
+        puck,
+      }) => {
         const { datos } = leerMetadata(puck)
         return (
-          <EnvoltorioSeccion visible={_visible}>
+          <EnvoltorioSeccion
+            visible={_visible}
+            espaciado_vertical={espaciado_vertical}
+            ancho_contenido={ancho_contenido}
+            fondo_bloque={fondo_bloque}
+            separador_inferior={separador_inferior}
+          >
             <BloqueCertificaciones
               titulo={_tituloVisible}
-              config={{ orden }}
+              config={{ orden, columnas, estilo_tarjeta, mostrar_fecha }}
               certificaciones={datos.certificaciones}
+              alineacionTitulo={ALINEACION_TEXTO_CLASE[alineacion_texto ?? 'izquierda']}
             />
           </EnvoltorioSeccion>
         )
@@ -404,22 +685,56 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
     logros: {
       label: 'Logros',
       defaultProps: {
+        estilo_lista: 'tarjetas',
+        ...DEFAULT_PROPS_BASE_BLOQUE,
+        // Mismo caso que `sobre-mi`: era `max-w-3xl`, sin token exacto en
+        // la escala de 4 valores — se aproxima con 'estrecho' (`max-w-2xl`)
+        // en vez del default genérico, que lo ensancharía en cualquier
+        // sitio ya publicado.
+        ancho_contenido: 'estrecho',
         _visible: true,
         _tituloVisible: 'Logros',
       },
       fields: {
         categoria_filtro: { type: 'text', label: 'Filtrar por categoría (opcional)' },
+        estilo_lista: {
+          type: 'select',
+          label: 'Estilo de lista',
+          options: [
+            { label: 'Tarjetas', value: 'tarjetas' },
+            { label: 'Línea de tiempo', value: 'linea_tiempo' },
+          ],
+        },
+        ...CAMPOS_BASE_BLOQUE,
         _visible: VISIBLE_FIELD,
         _tituloVisible: TITULO_VISIBLE_FIELD,
       },
-      render: ({ categoria_filtro, _visible, _tituloVisible, puck }) => {
+      render: ({
+        categoria_filtro,
+        estilo_lista,
+        espaciado_vertical,
+        ancho_contenido,
+        alineacion_texto,
+        fondo_bloque,
+        separador_inferior,
+        _visible,
+        _tituloVisible,
+        puck,
+      }) => {
         const { datos } = leerMetadata(puck)
         return (
-          <EnvoltorioSeccion visible={_visible}>
+          <EnvoltorioSeccion
+            visible={_visible}
+            espaciado_vertical={espaciado_vertical}
+            ancho_contenido={ancho_contenido ?? 'estrecho'}
+            fondo_bloque={fondo_bloque}
+            separador_inferior={separador_inferior}
+          >
             <BloqueLogros
               titulo={_tituloVisible}
-              config={{ categoria_filtro }}
+              config={{ categoria_filtro, estilo_lista }}
               logros={datos.logros}
+              alineacionTitulo={ALINEACION_TEXTO_CLASE[alineacion_texto ?? 'izquierda']}
             />
           </EnvoltorioSeccion>
         )
@@ -429,6 +744,13 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
       label: 'Contacto',
       defaultProps: {
         mostrar_formulario: false,
+        estilo_redes: 'iconos',
+        ...DEFAULT_PROPS_BASE_BLOQUE,
+        // El título de contacto siempre estuvo centrado (mismo criterio que
+        // hero/skills), y el bloque era `max-w-2xl` (el token exacto
+        // 'estrecho') — ver el mismo override en su `render`.
+        alineacion_texto: 'centro',
+        ancho_contenido: 'estrecho',
         _visible: true,
         _tituloVisible: 'Contacto',
       },
@@ -441,18 +763,45 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
             { label: 'No (solo enlaces/CV)', value: false },
           ],
         },
+        estilo_redes: {
+          type: 'select',
+          label: 'Estilo de las redes sociales',
+          options: [
+            { label: 'Íconos', value: 'iconos' },
+            { label: 'Botones', value: 'botones' },
+          ],
+        },
+        ...CAMPOS_BASE_BLOQUE,
         _visible: VISIBLE_FIELD,
         _tituloVisible: TITULO_VISIBLE_FIELD,
       },
-      render: ({ mostrar_formulario, _visible, _tituloVisible, puck }) => {
+      render: ({
+        mostrar_formulario,
+        estilo_redes,
+        espaciado_vertical,
+        ancho_contenido,
+        alineacion_texto,
+        fondo_bloque,
+        separador_inferior,
+        _visible,
+        _tituloVisible,
+        puck,
+      }) => {
         const { datos } = leerMetadata(puck)
         return (
-          <EnvoltorioSeccion visible={_visible}>
+          <EnvoltorioSeccion
+            visible={_visible}
+            espaciado_vertical={espaciado_vertical}
+            ancho_contenido={ancho_contenido ?? 'estrecho'}
+            fondo_bloque={fondo_bloque}
+            separador_inferior={separador_inferior}
+          >
             <BloqueContacto
               titulo={_tituloVisible}
-              config={{ mostrar_formulario }}
+              config={{ mostrar_formulario, estilo_redes }}
               perfil={datos.perfil}
               redesSociales={datos.redes_sociales}
+              alineacionTitulo={ALINEACION_TEXTO_CLASE[alineacion_texto ?? 'centro']}
             />
           </EnvoltorioSeccion>
         )
@@ -463,6 +812,13 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
       defaultProps: {
         direccion: 'izquierda',
         velocidad: 'media',
+        tamano_icono: 'lg',
+        mostrar_nombres: true,
+        pausar_al_pasar: true,
+        ...DEFAULT_PROPS_BASE_BLOQUE,
+        // El título de skills siempre estuvo centrado (mismo criterio que
+        // hero/contacto) — ver el mismo override en su `render`.
+        alineacion_texto: 'centro',
         _visible: true,
         _tituloVisible: 'Skills',
       },
@@ -484,17 +840,64 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
             { label: 'Rápida', value: 'rapida' },
           ],
         },
+        tamano_icono: {
+          type: 'select',
+          label: 'Tamaño del ícono',
+          options: [
+            { label: 'Pequeño', value: 'sm' },
+            { label: 'Mediano', value: 'md' },
+            { label: 'Grande', value: 'lg' },
+          ],
+        },
+        mostrar_nombres: {
+          type: 'radio',
+          label: 'Mostrar nombres',
+          options: [
+            { label: 'Sí', value: true },
+            { label: 'No', value: false },
+          ],
+        },
+        pausar_al_pasar: {
+          type: 'radio',
+          label: 'Pausar al pasar el mouse',
+          options: [
+            { label: 'Sí', value: true },
+            { label: 'No', value: false },
+          ],
+        },
+        ...CAMPOS_BASE_BLOQUE,
         _visible: VISIBLE_FIELD,
         _tituloVisible: TITULO_VISIBLE_FIELD,
       },
-      render: ({ direccion, velocidad, _visible, _tituloVisible, puck }) => {
+      render: ({
+        direccion,
+        velocidad,
+        tamano_icono,
+        mostrar_nombres,
+        pausar_al_pasar,
+        espaciado_vertical,
+        ancho_contenido,
+        alineacion_texto,
+        fondo_bloque,
+        separador_inferior,
+        _visible,
+        _tituloVisible,
+        puck,
+      }) => {
         const { datos } = leerMetadata(puck)
         return (
-          <EnvoltorioSeccion visible={_visible}>
+          <EnvoltorioSeccion
+            visible={_visible}
+            espaciado_vertical={espaciado_vertical}
+            ancho_contenido={ancho_contenido}
+            fondo_bloque={fondo_bloque}
+            separador_inferior={separador_inferior}
+          >
             <BloqueSkills
               titulo={_tituloVisible}
-              config={{ direccion, velocidad }}
+              config={{ direccion, velocidad, tamano_icono, mostrar_nombres, pausar_al_pasar }}
               skills={datos.skills}
+              alineacionTitulo={ALINEACION_TEXTO_CLASE[alineacion_texto ?? 'centro']}
             />
           </EnvoltorioSeccion>
         )
@@ -509,6 +912,9 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
      * diferencia de los demás bloques, este SÍ es una `Seccion` cuya
      * `configuracion` guarda además el contenido de sus hijos (ver
      * `docs/plan-portafolio.md` §4 y `EditorSeccionesPage.sanearSlots`).
+     * Fase 3.4: solo gana los 5 campos base (sin campos propios nuevos) —
+     * el contenedor en sí no tiene título propio, así que no recibe
+     * `alineacion_texto` resuelto hacia ningún `<h2>`.
      */
     columnas: {
       label: 'Columnas',
@@ -519,6 +925,12 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
         columna_1: [],
         columna_2: [],
         columna_3: [],
+        ...DEFAULT_PROPS_BASE_BLOQUE,
+        // El contenedor de columnas (UC-17, Fase 3.3) nunca tuvo `max-w`
+        // propio — igual que `hero`, el default compartido lo angostaría en
+        // cualquier sitio ya publicado. Ver el mismo override en su
+        // `render`.
+        ancho_contenido: 'completo',
         _visible: true,
         _tituloVisible: 'Columnas',
       },
@@ -567,6 +979,7 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
           label: 'Columna 3',
           allow: BLOQUES_ANIDABLES,
         },
+        ...CAMPOS_BASE_BLOQUE,
         _visible: VISIBLE_FIELD,
         _tituloVisible: TITULO_VISIBLE_FIELD,
       },
@@ -588,11 +1001,21 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
         columna_1: Columna1,
         columna_2: Columna2,
         columna_3: Columna3,
+        espaciado_vertical,
+        ancho_contenido,
+        fondo_bloque,
+        separador_inferior,
         _visible,
       }) => {
         const tresColumnas = distribucion === '1-1-1'
         return (
-          <EnvoltorioSeccion visible={_visible}>
+          <EnvoltorioSeccion
+            visible={_visible}
+            espaciado_vertical={espaciado_vertical}
+            ancho_contenido={ancho_contenido ?? 'completo'}
+            fondo_bloque={fondo_bloque}
+            separador_inferior={separador_inferior}
+          >
             <div
               className={`grid ${GRID_COLS_POR_DISTRIBUCION[distribucion]} ${ALINEACION_VERTICAL_CLASE[alineacion_vertical]} ${ESPACIADO_CLASE[espaciado]}`}
             >

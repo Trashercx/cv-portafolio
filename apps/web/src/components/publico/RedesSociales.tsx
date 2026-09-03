@@ -2,6 +2,7 @@ import type { Media } from '@/features/media/types'
 import { PlataformaIcono } from '@/features/redes-sociales/iconos-plataforma'
 import type { RedSocial } from '@/features/redes-sociales/types'
 import { API_BASE_URL } from '@/lib/api-client'
+import { cn } from '@/lib/utils'
 import { EnlaceBloque } from './contexto-renderizado'
 
 type RedesSocialesProps = {
@@ -14,14 +15,22 @@ type RedesSocialesProps = {
    * publicado" en vez de la fila `Perfil` en vivo.
    */
   cvMedia: Media | null
+  /**
+   * `ContactoConfiguracion.estilo_redes` (Fase 3.4). `'iconos'` (default):
+   * el look que ya existía — insignia + nombre en una píldora con borde.
+   * `'botones'`: variante más marcada, con fondo sólido de `--color-primario`,
+   * pensada para llamar más la atención sobre cada red.
+   */
+  estilo?: 'iconos' | 'botones'
 }
 
 /**
  * Enlaces de redes sociales + descarga del CV (UC-14). Compartido entre la
  * sección "contacto" del sitio público y la vista previa del panel.
  */
-export function RedesSociales({ redes, cvMedia }: RedesSocialesProps) {
+export function RedesSociales({ redes, cvMedia, estilo = 'iconos' }: RedesSocialesProps) {
   const ordenadas = [...redes].sort((a, b) => a.orden - b.orden)
+  const esBotones = estilo === 'botones'
 
   return (
     <div className="grid gap-4">
@@ -33,7 +42,17 @@ export function RedesSociales({ redes, cvMedia }: RedesSocialesProps) {
                 href={red.url}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition-colors hover:bg-accent"
+                style={
+                  esBotones
+                    ? { backgroundColor: 'var(--color-primario)', color: 'var(--color-texto)' }
+                    : undefined
+                }
+                className={cn(
+                  'inline-flex items-center gap-2 rounded-md text-sm font-medium transition-colors',
+                  esBotones
+                    ? 'px-4 py-2.5 hover:opacity-90'
+                    : 'border px-3 py-2 hover:bg-accent',
+                )}
               >
                 <PlataformaIcono iconoDefecto={red.plataforma.icono_defecto} />
                 {red.plataforma.nombre}

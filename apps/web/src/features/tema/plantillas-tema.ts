@@ -23,7 +23,7 @@ export const PLANTILLAS_TEMA: PlantillaTema[] = [
     color_secundario: '#0891b2',
     color_fondo: '#f0f9ff',
     color_texto: '#0c4a6e',
-    fuente_principal: 'Inter',
+    fuente_principal: 'sans_sistema',
     modo: 'claro',
   },
   {
@@ -33,7 +33,7 @@ export const PLANTILLAS_TEMA: PlantillaTema[] = [
     color_secundario: '#be123c',
     color_fondo: '#fff7ed',
     color_texto: '#7c2d12',
-    fuente_principal: 'Poppins',
+    fuente_principal: 'manrope',
     modo: 'claro',
   },
   {
@@ -43,7 +43,7 @@ export const PLANTILLAS_TEMA: PlantillaTema[] = [
     color_secundario: '#65a30d',
     color_fondo: '#f0fdf4',
     color_texto: '#14532d',
-    fuente_principal: 'Merriweather',
+    fuente_principal: 'serif_sistema',
     modo: 'claro',
   },
   {
@@ -53,7 +53,7 @@ export const PLANTILLAS_TEMA: PlantillaTema[] = [
     color_secundario: '#57534e',
     color_fondo: '#fafaf9',
     color_texto: '#292524',
-    fuente_principal: 'Georgia',
+    fuente_principal: 'serif_sistema',
     modo: 'claro',
   },
   {
@@ -63,7 +63,7 @@ export const PLANTILLAS_TEMA: PlantillaTema[] = [
     color_secundario: '#71717a',
     color_fondo: '#18181b',
     color_texto: '#f4f4f5',
-    fuente_principal: 'Inter',
+    fuente_principal: 'manrope',
     modo: 'oscuro',
   },
   {
@@ -73,7 +73,7 @@ export const PLANTILLAS_TEMA: PlantillaTema[] = [
     color_secundario: '#0284c7',
     color_fondo: '#0f172a',
     color_texto: '#e2e8f0',
-    fuente_principal: 'Inter',
+    fuente_principal: 'manrope',
     modo: 'oscuro',
   },
 ]

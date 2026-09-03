@@ -2,11 +2,14 @@ import type { CSSProperties } from 'react'
 import { IconoSkill } from '@/features/skills/iconos-skill'
 import type { Skill } from '@/features/skills/types'
 import type { SkillsConfiguracion } from '@/features/secciones/types'
+import { cn } from '@/lib/utils'
 
 type BloqueSkillsProps = {
   titulo: string
   config: SkillsConfiguracion
   skills: Skill[]
+  /** Clase ya resuelta de `ALINEACION_TEXTO_CLASE` (Fase 3.4), aplicada al `<h2>`. */
+  alineacionTitulo?: string
 }
 
 /**
@@ -38,28 +41,39 @@ const ANCHO_MINIMO_PISTA = 1280
 
 type ItemPistaProps = {
   skill: Skill
+  tamanoIcono: NonNullable<SkillsConfiguracion['tamano_icono']>
+  mostrarNombre: boolean
 }
 
-function ItemPista({ skill }: ItemPistaProps) {
+function ItemPista({ skill, tamanoIcono, mostrarNombre }: ItemPistaProps) {
   return (
     <div className="flex shrink-0 flex-col items-center gap-2 px-4">
-      <IconoSkill icono={skill.icono} tamano="lg" />
-      <span className="text-xs text-muted-foreground">{skill.nombre}</span>
+      <IconoSkill icono={skill.icono} tamano={tamanoIcono} />
+      {mostrarNombre ? (
+        <span className="text-xs text-muted-foreground">{skill.nombre}</span>
+      ) : null}
     </div>
   )
 }
 
-/** Bloque `skills`, compartido entre el sitio público y el lienzo del editor de Puck (Fase 3.1). */
-export function BloqueSkills({ titulo, config, skills }: BloqueSkillsProps) {
+/** Bloque `skills`, compartido entre el sitio público y el lienzo del editor de Puck (Fase 3.1, extendido Fase 3.4). */
+export function BloqueSkills({ titulo, config, skills, alineacionTitulo }: BloqueSkillsProps) {
   const visibles = [...skills]
     .filter((skill) => skill.visible)
     .sort((a, b) => a.orden - b.orden)
 
+  // Fase 3.4: default `'lg'` — el carrusel ya usaba `tamano="lg"` fijo desde
+  // Fase 3.2, así que preservar ese valor como default es lo que mantiene
+  // idéntico el aspecto de cualquier sitio ya publicado con este bloque.
+  const tamanoIcono = config.tamano_icono ?? 'lg'
+  const mostrarNombres = config.mostrar_nombres ?? true
+  const pausarAlPasar = config.pausar_al_pasar ?? true
+
   if (visibles.length === 0) {
     return (
-      <div className="mx-auto grid max-w-5xl gap-6 text-center">
-        <h2 className="text-2xl font-semibold">{titulo}</h2>
-        <p className="text-muted-foreground">Todavía no hay skills cargados.</p>
+      <div className="grid gap-6">
+        <h2 className={cn('text-2xl font-semibold', alineacionTitulo)}>{titulo}</h2>
+        <p className="text-center text-muted-foreground">Todavía no hay skills cargados.</p>
       </div>
     )
   }
@@ -81,8 +95,8 @@ export function BloqueSkills({ titulo, config, skills }: BloqueSkillsProps) {
   const direccionAnimacion = config.direccion === 'izquierda' ? 'normal' : 'reverse'
 
   return (
-    <div className="mx-auto grid max-w-5xl gap-6 overflow-hidden">
-      <h2 className="text-2xl font-semibold text-center">{titulo}</h2>
+    <div className="grid gap-6 overflow-hidden">
+      <h2 className={cn('text-2xl font-semibold', alineacionTitulo)}>{titulo}</h2>
       {/*
         Dos pistas hermanas con contenido IDÉNTICO (patrón estándar de
         marquee infinito), animadas juntas con `translateX(-50%)`: como
@@ -92,7 +106,15 @@ export function BloqueSkills({ titulo, config, skills }: BloqueSkillsProps) {
         una (arregla el desfase de medio `gap` que tenía la versión anterior
         con un único track + `gap-8`, reemplazado acá por `px-4` por ítem).
       */}
-      <div className="carrusel-skills overflow-hidden">
+      <div
+        className={cn(
+          'carrusel-skills overflow-hidden',
+          // Fase 3.4 (`pausar_al_pasar`): la regla `:hover { animation-play-state:
+          // paused }` de `index.css` ahora depende de este modificador — antes
+          // pausaba incondicionalmente al pasar el mouse.
+          pausarAlPasar && 'carrusel-skills--pausable',
+        )}
+      >
         <div
           className="carrusel-skills-pista flex w-max"
           style={
@@ -104,12 +126,22 @@ export function BloqueSkills({ titulo, config, skills }: BloqueSkillsProps) {
         >
           <div className="flex w-max">
             {pista.map((skill, index) => (
-              <ItemPista key={`pista-a-${skill.id}-${index}`} skill={skill} />
+              <ItemPista
+                key={`pista-a-${skill.id}-${index}`}
+                skill={skill}
+                tamanoIcono={tamanoIcono}
+                mostrarNombre={mostrarNombres}
+              />
             ))}
           </div>
           <div className="flex w-max" aria-hidden="true">
             {pista.map((skill, index) => (
-              <ItemPista key={`pista-b-${skill.id}-${index}`} skill={skill} />
+              <ItemPista
+                key={`pista-b-${skill.id}-${index}`}
+                skill={skill}
+                tamanoIcono={tamanoIcono}
+                mostrarNombre={mostrarNombres}
+              />
             ))}
           </div>
         </div>

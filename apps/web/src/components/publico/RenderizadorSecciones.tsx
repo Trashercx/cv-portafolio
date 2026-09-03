@@ -1,12 +1,39 @@
 import type {
+  AnchoContenidoBloque,
+  BloqueConfiguracionBase,
   ColumnasConfiguracion,
   HeroConfiguracion,
   Seccion,
+  TipoSeccion,
 } from '@/features/secciones/types'
 import type { SnapshotSitio } from '@/features/publico/types'
+import { ALINEACION_TEXTO_CLASE } from '@/lib/escalas-bloque'
 import { EnvoltorioSeccion } from './EnvoltorioSeccion'
 import { BloqueColumnas, BloqueHero } from './bloques'
 import { DespachoBloqueSeccion } from './bloques/DespachoBloqueSeccion'
+
+/**
+ * Fallback de `ancho_contenido` por tipo cuando la `Seccion` no lo tiene en
+ * su `configuracion` (guardada antes de la Fase 3.4) — el default genérico
+ * de `EnvoltorioSeccion` (`'normal'`, `max-w-5xl`) no coincide con lo que
+ * cada uno de estos tipos ya tenía hardcodeado antes de esta fase (`hero`/
+ * `columnas` no tenían ningún `max-w`; `sobre-mi`/`logros`/`contacto` eran
+ * más angostos que `max-w-5xl`). Sin este mapa, publicar esta fase cambiaría
+ * el ancho de esos 5 tipos en cualquier sitio ya existente. Mismo mapa que
+ * usa `puck-config.tsx` en cada `render`, para que el lienzo y el sitio
+ * publicado no diverjan; los tipos que no aparecen acá (`proyectos`,
+ * `certificaciones`, `skills`) ya eran `max-w-5xl`, así que usan el default
+ * genérico de `EnvoltorioSeccion` sin necesitar una entrada propia.
+ */
+const ANCHO_CONTENIDO_POR_DEFECTO_POR_TIPO: Partial<
+  Record<TipoSeccion, AnchoContenidoBloque>
+> = {
+  hero: 'completo',
+  columnas: 'completo',
+  'sobre-mi': 'estrecho',
+  logros: 'estrecho',
+  contacto: 'estrecho',
+}
 
 type RenderizadorSeccionesProps = {
   snapshot: SnapshotSitio
@@ -43,11 +70,24 @@ export function RenderizadorSecciones({
       {secciones.map((seccion) => {
         if (soloVisibles && !seccion.visible) return null
 
+        // Los 4 campos de `BloqueConfiguracionBase` que le tocan a
+        // `EnvoltorioSeccion` (Fase 3.4) — compartidos por los 8 tipos, así
+        // que se leen con este cast acotado en vez de un `switch` por tipo.
+        const { espaciado_vertical, ancho_contenido, fondo_bloque, separador_inferior } =
+          seccion.configuracion as BloqueConfiguracionBase
+
+        const anchoContenidoEfectivo =
+          ancho_contenido ?? ANCHO_CONTENIDO_POR_DEFECTO_POR_TIPO[seccion.tipo_seccion]
+
         return (
           <EnvoltorioSeccion
             key={seccion.id}
             id={seccion.id}
             visible={seccion.visible}
+            espaciado_vertical={espaciado_vertical}
+            ancho_contenido={anchoContenidoEfectivo}
+            fondo_bloque={fondo_bloque}
+            separador_inferior={separador_inferior}
           >
             <BloqueSeccion
               seccion={seccion}
@@ -71,13 +111,16 @@ function BloqueSeccion({
   soloVisibles: boolean
 }) {
   switch (seccion.tipo_seccion) {
-    case 'hero':
+    case 'hero': {
+      const config = seccion.configuracion as HeroConfiguracion
       return (
         <BloqueHero
-          config={seccion.configuracion as HeroConfiguracion}
+          config={config}
           perfil={snapshot.perfil}
+          alineacionTitulo={ALINEACION_TEXTO_CLASE[config.alineacion_texto ?? 'centro']}
         />
       )
+    }
     case 'columnas':
       return (
         <BloqueColumnas

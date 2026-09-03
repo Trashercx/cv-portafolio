@@ -2,19 +2,38 @@ import { FileIcon } from 'lucide-react'
 import type { CertificacionPublica } from '@/features/publico/types'
 import type { CertificacionesConfiguracion } from '@/features/secciones/types'
 import { formatearFecha } from '@/lib/formato'
+import { cn } from '@/lib/utils'
 import { EnlaceBloque } from '../contexto-renderizado'
 
 type BloqueCertificacionesProps = {
   titulo: string
   config: CertificacionesConfiguracion
   certificaciones: CertificacionPublica[]
+  /** Clase ya resuelta de `ALINEACION_TEXTO_CLASE` (Fase 3.4), aplicada al `<h2>`. */
+  alineacionTitulo?: string
 }
 
-/** Bloque `certificaciones`, compartido entre el sitio público y el lienzo del editor de Puck (Fase 3.1). */
+/** Clase de columnas del grid según `config.columnas` (Fase 3.4). */
+const COLUMNAS_CLASE: Record<NonNullable<CertificacionesConfiguracion['columnas']>, string> = {
+  2: 'sm:grid-cols-2',
+  3: 'sm:grid-cols-2 lg:grid-cols-3',
+}
+
+/** Clase de la tarjeta según `config.estilo_tarjeta` (Fase 3.4). */
+const ESTILO_TARJETA_CLASE: Record<
+  NonNullable<CertificacionesConfiguracion['estilo_tarjeta']>,
+  string
+> = {
+  simple: 'border',
+  con_sombra: 'border shadow-md',
+}
+
+/** Bloque `certificaciones`, compartido entre el sitio público y el lienzo del editor de Puck (Fase 3.1, extendido Fase 3.4). */
 export function BloqueCertificaciones({
   titulo,
   config,
   certificaciones,
+  alineacionTitulo,
 }: BloqueCertificacionesProps) {
   const ordenadas = [...certificaciones].sort((a, b) =>
     config.orden === 'fecha'
@@ -22,20 +41,25 @@ export function BloqueCertificaciones({
       : a.orden - b.orden,
   )
 
+  const mostrarFecha = config.mostrar_fecha ?? true
+
   return (
-    <div className="mx-auto grid max-w-5xl gap-6">
-      <h2 className="text-2xl font-semibold">{titulo}</h2>
+    <div className="grid gap-6">
+      <h2 className={cn('text-2xl font-semibold', alineacionTitulo)}>{titulo}</h2>
       {ordenadas.length === 0 ? (
         <p className="text-muted-foreground">
           Todavía no hay certificaciones.
         </p>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className={cn('grid gap-4', COLUMNAS_CLASE[config.columnas ?? 3])}>
           {ordenadas.map((certificacion) => (
             <EnlaceBloque
               key={certificacion.id}
               to={`/certificacion/${certificacion.id}`}
-              className="grid gap-2 rounded-lg border p-4 transition-colors hover:bg-accent"
+              className={cn(
+                'grid gap-2 rounded-lg p-4 transition-colors hover:bg-accent',
+                ESTILO_TARJETA_CLASE[config.estilo_tarjeta ?? 'simple'],
+              )}
             >
               {certificacion.logo ? (
                 // Tarjeta clicable (navega al detalle, UC-13): el zoom/lightbox
@@ -61,9 +85,11 @@ export function BloqueCertificaciones({
               <p className="text-sm text-muted-foreground">
                 {certificacion.institucion}
               </p>
-              <p className="text-xs text-muted-foreground">
-                {formatearFecha(certificacion.fecha_emision)}
-              </p>
+              {mostrarFecha ? (
+                <p className="text-xs text-muted-foreground">
+                  {formatearFecha(certificacion.fecha_emision)}
+                </p>
+              ) : null}
             </EnlaceBloque>
           ))}
         </div>
