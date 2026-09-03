@@ -224,6 +224,163 @@ describe('VersionesSitioService (UC-10 Previsualizar, UC-11 Publicar/revertir)',
     });
   });
 
+  describe('armarSnapshot - resolución recursiva dentro de una sección "columnas" (Fase 3.3, UC-17)', () => {
+    const mediaResuelta = {
+      id: 'media-fondo-columnas-1',
+      url: 'https://cdn.example.com/media-fondo-columnas-1.jpg',
+      s3_key: 'secciones/media-fondo-columnas-1.jpg',
+      tipo: 'imagen',
+      ancho: 1920,
+      alto: 1080,
+      alt_text: null,
+    };
+
+    it('una sección "columnas" cuyos hijos no son hero pasa sin cambios', async () => {
+      const seccionColumnas = {
+        id: 'seccion-columnas-1',
+        tipo_seccion: 'columnas',
+        configuracion: {
+          distribucion: '1-1',
+          alineacion_vertical: 'inicio',
+          espaciado: 'normal',
+          columna_1: [
+            {
+              tipo_seccion: 'sobre-mi',
+              titulo_visible: 'Sobre mí',
+              visible: true,
+              configuracion: { mostrar_foto: true },
+            },
+          ],
+          columna_2: [
+            {
+              tipo_seccion: 'contacto',
+              titulo_visible: 'Contacto',
+              visible: true,
+              configuracion: { mostrar_formulario: false },
+            },
+          ],
+          columna_3: [],
+        },
+      };
+      seccionesService.listar.mockResolvedValue([seccionColumnas]);
+      prisma.versionSitio.create.mockImplementation(({ data }) =>
+        Promise.resolve({ id: 'v1', ...data }),
+      );
+
+      const resultado = await service.preview('admin-1');
+      const snapshot = resultado.snapshot as unknown as SnapshotSitio;
+
+      expect(prisma.media.findMany).not.toHaveBeenCalled();
+      expect(snapshot.secciones[0]).toEqual(seccionColumnas);
+    });
+
+    /**
+     * Caso hipotético: hoy `@EsListaDeBloques()` nunca permite que un hijo
+     * de una columna sea `tipo_seccion='hero'`, pero este fixture se
+     * construye directamente (sin pasar por el validador) para probar que
+     * la recursión de `resolverImagenesFondoHero` funciona igual que en el
+     * caso de nivel superior, en vez de depender en silencio de que este
+     * caso nunca ocurra.
+     */
+    it('una sección "columnas" con un hijo hero con imagen_fondo_media_id válida sí la resuelve', async () => {
+      const seccionColumnas = {
+        id: 'seccion-columnas-2',
+        tipo_seccion: 'columnas',
+        configuracion: {
+          distribucion: '1-2',
+          alineacion_vertical: 'centro',
+          espaciado: 'amplio',
+          columna_1: [
+            {
+              tipo_seccion: 'hero',
+              titulo_visible: 'Hero anidado (hipotético)',
+              visible: true,
+              configuracion: {
+                titulo: 'Hola',
+                subtitulo: 'Mundo',
+                imagen_fondo_media_id: 'media-fondo-columnas-1',
+              },
+            },
+          ],
+          columna_2: [],
+          columna_3: [],
+        },
+      };
+      seccionesService.listar.mockResolvedValue([seccionColumnas]);
+      prisma.media.findMany.mockResolvedValue([mediaResuelta]);
+      prisma.versionSitio.create.mockImplementation(({ data }) =>
+        Promise.resolve({ id: 'v1', ...data }),
+      );
+
+      const resultado = await service.preview('admin-1');
+      const snapshot = resultado.snapshot as unknown as SnapshotSitio;
+
+      expect(prisma.media.findMany).toHaveBeenCalledWith({
+        where: { id: { in: ['media-fondo-columnas-1'] } },
+      });
+
+      const configuracionColumnas = snapshot.secciones[0]
+        .configuracion as Record<string, unknown>;
+      const columna1 = configuracionColumnas.columna_1 as Array<{
+        configuracion: Record<string, unknown>;
+      }>;
+      expect(columna1[0].configuracion.imagen_fondo).toEqual(mediaResuelta);
+      expect(columna1[0].configuracion.titulo).toBe('Hola');
+      expect(configuracionColumnas.columna_2).toEqual([]);
+      expect(configuracionColumnas.columna_3).toEqual([]);
+    });
+
+    it('recolecta ids de imagen de fondo de hero de nivel superior y de dentro de columnas en una sola consulta batch', async () => {
+      const seccionHeroNivelSuperior = {
+        id: 'seccion-hero-top',
+        tipo_seccion: 'hero',
+        configuracion: {
+          titulo: 'Portada',
+          subtitulo: 'Nivel superior',
+          imagen_fondo_media_id: 'media-top',
+        },
+      };
+      const seccionColumnas = {
+        id: 'seccion-columnas-3',
+        tipo_seccion: 'columnas',
+        configuracion: {
+          distribucion: '1-1-1',
+          alineacion_vertical: 'fin',
+          espaciado: 'compacto',
+          columna_1: [
+            {
+              tipo_seccion: 'hero',
+              titulo_visible: 'Hero anidado (hipotético)',
+              visible: true,
+              configuracion: {
+                titulo: 'Hola',
+                subtitulo: 'Mundo',
+                imagen_fondo_media_id: 'media-anidada',
+              },
+            },
+          ],
+          columna_2: [],
+          columna_3: [],
+        },
+      };
+      seccionesService.listar.mockResolvedValue([
+        seccionHeroNivelSuperior,
+        seccionColumnas,
+      ]);
+      prisma.media.findMany.mockResolvedValue([]);
+      prisma.versionSitio.create.mockImplementation(({ data }) =>
+        Promise.resolve({ id: 'v1', ...data }),
+      );
+
+      await service.preview('admin-1');
+
+      expect(prisma.media.findMany).toHaveBeenCalledTimes(1);
+      expect(prisma.media.findMany).toHaveBeenCalledWith({
+        where: { id: { in: ['media-top', 'media-anidada'] } },
+      });
+    });
+  });
+
   describe('publicar (UC-11)', () => {
     it('arma el mismo snapshot que preview pero crea una fila publicado con publicado_en', async () => {
       prisma.versionSitio.create.mockResolvedValue({
