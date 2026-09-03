@@ -2,6 +2,7 @@ import type { Media } from '@/features/media/types'
 import { PlataformaIcono } from '@/features/redes-sociales/iconos-plataforma'
 import type { RedSocial } from '@/features/redes-sociales/types'
 import { API_BASE_URL } from '@/lib/api-client'
+import { EnlaceBloque } from './contexto-renderizado'
 
 type RedesSocialesProps = {
   redes: RedSocial[]
@@ -28,7 +29,7 @@ export function RedesSociales({ redes, cvMedia }: RedesSocialesProps) {
         <ul className="flex flex-wrap justify-center gap-3">
           {ordenadas.map((red) => (
             <li key={red.id}>
-              <a
+              <EnlaceBloque
                 href={red.url}
                 target="_blank"
                 rel="noreferrer"
@@ -36,20 +37,20 @@ export function RedesSociales({ redes, cvMedia }: RedesSocialesProps) {
               >
                 <PlataformaIcono iconoDefecto={red.plataforma.icono_defecto} />
                 {red.plataforma.nombre}
-              </a>
+              </EnlaceBloque>
             </li>
           ))}
         </ul>
       ) : null}
 
       {cvMedia ? (
-        <a
+        <EnlaceBloque
           href={`${API_BASE_URL}/cv`}
           style={{ backgroundColor: 'var(--color-primario)' }}
           className="mx-auto inline-block rounded-md px-6 py-2.5 text-sm font-medium text-white"
         >
           Descargar CV
-        </a>
+        </EnlaceBloque>
       ) : null}
     </div>
   )

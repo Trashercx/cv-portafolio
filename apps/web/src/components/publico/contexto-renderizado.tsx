@@ -1,0 +1,90 @@
+import { createContext, useContext, type ReactNode } from 'react'
+import { Link } from 'react-router-dom'
+
+export type ModoRenderizado = 'publico' | 'editor'
+
+/**
+ * Distingue si `RenderizadorSecciones`/los bloques de `bloques/` se están
+ * pintando en el sitio público real (UC-12, navegación normal) o dentro del
+ * lienzo del editor de Puck (Fase 3.1, `PuckRoot`). El default es `'publico'`
+ * a propósito: `RenderizadorSecciones` (usado también por `PanelVersiones`,
+ * que sí navega normalmente en la vista previa dentro de un `Dialog` del
+ * panel) no necesita envolverse en `ProveedorModoRenderizado` para conservar
+ * su comportamiento actual — solo el lienzo de Puck (que vive dentro de un
+ * `<Router>` real vía `createPortal`, ver notas de Fase 3.1) necesita anular
+ * la navegación real de los enlaces.
+ */
+const ContextoModoRenderizado = createContext<ModoRenderizado>('publico')
+
+export function ProveedorModoRenderizado({
+  modo,
+  children,
+}: {
+  modo: ModoRenderizado
+  children: ReactNode
+}) {
+  return (
+    <ContextoModoRenderizado.Provider value={modo}>
+      {children}
+    </ContextoModoRenderizado.Provider>
+  )
+}
+
+export function useModoRenderizado(): ModoRenderizado {
+  return useContext(ContextoModoRenderizado)
+}
+
+type EnlaceBloqueProps = {
+  /** Ruta interna (react-router). Mutuamente excluyente con `href`. */
+  to?: string
+  /** URL externa o absoluta. Mutuamente excluyente con `to`. */
+  href?: string
+  target?: string
+  rel?: string
+  className?: string
+  style?: React.CSSProperties
+  'aria-label'?: string
+  children: ReactNode
+}
+
+/**
+ * Enlace usado por los bloques de `bloques/` y por `RedesSociales` en vez de
+ * `<Link>`/`<a>` directo. En modo `'publico'` navega normalmente; en modo
+ * `'editor'` (lienzo de Puck) renderiza un `<div role="link"
+ * aria-disabled="true">` con el mismo `className`/`style` — el `Router` de
+ * react-router sigue disponible dentro del iframe de Puck (`createPortal`
+ * conserva el árbol de contexto de React), así que un `<Link>`/`<a>` real
+ * navegaría fuera del editor si no se intercepta acá.
+ */
+export function EnlaceBloque({
+  to,
+  href,
+  target,
+  rel,
+  children,
+  ...resto
+}: EnlaceBloqueProps) {
+  const modo = useModoRenderizado()
+
+  if (modo === 'editor') {
+    return (
+      <div role="link" aria-disabled="true" {...resto}>
+        {children}
+      </div>
+    )
+  }
+
+  if (to) {
+    return (
+      <Link to={to} {...resto}>
+        {children}
+      </Link>
+    )
+  }
+
+  return (
+    <a href={href} target={target} rel={rel} {...resto}>
+      {children}
+    </a>
+  )
+}

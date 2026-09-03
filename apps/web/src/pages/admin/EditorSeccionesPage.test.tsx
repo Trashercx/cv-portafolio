@@ -1,5 +1,6 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import type { ReactNode } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import { toast } from 'sonner'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -29,9 +30,17 @@ function renderEditor() {
  * `Puck` y se ejercita la lógica de sincronización de
  * `EditorSeccionesPage` inyectando directamente un `content` simulado en
  * el store de Zustand que alimenta el botón "Guardar cambios".
+ *
+ * Desde Fase 3.1 la barra de acciones propia (Borrador/Publicado, Vista
+ * previa, Historial de versiones, Publicar, Guardar cambios) vive dentro del
+ * header nativo de Puck vía `overrides.headerActions` en vez de un `<div>`
+ * separado encima del lienzo — el stub debe seguir invocándola para que
+ * estos elementos sigan siendo consultables por rol/nombre en los tests de
+ * abajo, igual que antes de la migración.
  */
 vi.mock('@measured/puck', () => ({
-  Puck: () => null,
+  Puck: (props: { overrides?: { headerActions?: () => ReactNode } }) =>
+    props.overrides?.headerActions ? props.overrides.headerActions() : null,
 }))
 
 const SECCION_HERO: Seccion = {
@@ -75,6 +84,46 @@ const reordenarMutateAsyncMock = vi.fn()
 const seccionesMock: { data: Seccion[] } = {
   data: [SECCION_HERO, SECCION_CONTACTO],
 }
+
+/**
+ * `useDatosEditor` (Fase 3.1) compone 9 hooks reales de TanStack Query
+ * (`usePerfil`, `useProyectos`, etc.) para alimentar el lienzo con el
+ * contenido real del sitio — montarlos de verdad exigiría envolver el
+ * render en un `QueryClientProvider` y mockear cada endpoint por separado,
+ * sin aportar ninguna cobertura nueva sobre lo que este archivo ya prueba
+ * (la sincronización de `guardarCambios`). Se mockea entero, como documenta
+ * `docs/plan-tecnico.md` sección "Fase 3.1".
+ */
+vi.mock('@/features/editor/useDatosEditor', () => ({
+  useDatosEditor: () => ({
+    datos: {
+      perfil: null,
+      tema: null,
+      proyectos: [],
+      certificaciones: [],
+      logros: [],
+      redes_sociales: [],
+      skills: [],
+      fondo: null,
+      mediaPorId: new Map(),
+    },
+    isLoading: false,
+    error: null,
+  }),
+  leerMetadata: () => ({
+    datos: {
+      perfil: null,
+      tema: null,
+      proyectos: [],
+      certificaciones: [],
+      logros: [],
+      redes_sociales: [],
+      skills: [],
+      fondo: null,
+      mediaPorId: new Map(),
+    },
+  }),
+}))
 
 vi.mock('@/features/secciones/useSecciones', () => ({
   useSecciones: () => ({
@@ -409,8 +458,13 @@ describe('EditorSeccionesPage (UC-07, UC-10, UC-11)', () => {
     expect(
       screen.getByText(/edición está bloqueada temporalmente/i),
     ).toBeInTheDocument()
+    // `hidden: true`: mientras `guardando` es `true`, este botón vive dentro
+    // del wrapper `inert` (Fase 3.1 lo movió a `overrides.headerActions`,
+    // adentro de `<Puck>`) — `inert` lo saca del árbol de accesibilidad, así
+    // que hay que pedir explícitamente los elementos "ocultos" para seguir
+    // pudiendo consultarlo por rol.
     expect(
-      screen.getByRole('button', { name: /guardando/i }),
+      screen.getByRole('button', { name: /guardando/i, hidden: true }),
     ).toBeDisabled()
 
     act(() => {
@@ -472,7 +526,14 @@ describe('EditorSeccionesPage (UC-07, UC-10, UC-11)', () => {
     // diff del segundo guardado debe basarse en lo realmente persistido
     // (el `ref` actualizado tras el primer guardado), no en ese cache
     // desactualizado.
-    await user.click(boton)
+    //
+    // Se vuelve a consultar el botón (no se reutiliza `boton`): tras un
+    // guardado exitoso `EditorSeccionesPage` remonta `<Puck key={editorKey}>`
+    // completo, y desde Fase 3.1 la barra de acciones vive dentro de ese
+    // árbol (`overrides.headerActions`) — el nodo DOM original queda
+    // desmontado, igual que le pasaría a cualquier referencia guardada de
+    // antemano, no solo a la de este test.
+    await user.click(screen.getByRole('button', { name: /guardar cambios/i }))
 
     await waitFor(() =>
       expect(reordenarMutateAsyncMock).toHaveBeenCalledTimes(2),

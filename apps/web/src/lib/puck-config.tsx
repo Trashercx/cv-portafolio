@@ -1,4 +1,16 @@
 import type { Config, CustomField } from '@measured/puck'
+import { EnvoltorioSeccion } from '@/components/publico/EnvoltorioSeccion'
+import {
+  BloqueCertificaciones,
+  BloqueContacto,
+  BloqueHero,
+  BloqueLogros,
+  BloqueProyectos,
+  BloqueSkills,
+  BloqueSobreMi,
+} from '@/components/publico/bloques'
+import { leerMetadata } from '@/features/editor/useDatosEditor'
+import { PuckRoot } from '@/features/editor/PuckRoot'
 import { useMediaList } from '@/features/media/useMediaLibrary'
 import type {
   CertificacionesConfiguracion,
@@ -45,9 +57,13 @@ const TITULO_VISIBLE_FIELD = {
 /**
  * Field personalizado de Puck para `hero.imagen_fondo_media_id`: en vez de
  * duplicar el flujo de subida de `MediaUploadField`, deja elegir entre las
- * imágenes ya existentes en la biblioteca (`GET /admin/media?tipo=imagen`,
- * UC-09) — más simple de integrar dentro del sidebar de Puck que reusar un
- * input de archivo ahí mismo.
+ * imágenes ya existentes en la biblioteca (UC-09) — más simple de integrar
+ * dentro del sidebar de Puck que reusar un input de archivo ahí mismo.
+ *
+ * `useMediaList()` se llama **sin** filtro de tipo (`GET /admin/media`, sin
+ * `?tipo=`) y el filtro a `tipo === 'imagen'` se hace en cliente: así esta
+ * entrada de caché es la misma que ya usa `useDatosEditor` para resolver
+ * `mediaPorId` (una sola petición de red compartida en vez de dos).
  */
 const imagenFondoField: CustomField<string | undefined> = {
   type: 'custom',
@@ -64,7 +80,8 @@ function SelectorImagenFondo({
   value: string | undefined
   onChange: (value: string | undefined) => void
 }) {
-  const { data: imagenes, isLoading } = useMediaList('imagen')
+  const { data: media, isLoading } = useMediaList()
+  const imagenes = (media ?? []).filter((item) => item.tipo === 'imagen')
 
   return (
     <select
@@ -74,7 +91,7 @@ function SelectorImagenFondo({
       onChange={(event) => onChange(event.target.value || undefined)}
     >
       <option value="">Sin imagen de fondo</option>
-      {(imagenes ?? []).map((imagen) => (
+      {imagenes.map((imagen) => (
         <option key={imagen.id} value={imagen.id}>
           {imagen.alt_text || imagen.url}
         </option>
@@ -99,13 +116,39 @@ export type PuckSeccionesComponents = {
 }
 
 /**
- * Config de Puck (UC-07): un componente por `tipo_seccion`, con `fields`
- * que reflejan exactamente el DTO de `configuracion` de cada tipo (ver
- * `apps/api/src/modules/secciones/dto/configuracion/`). Los `render` son
- * previsualizaciones simples con Tailwind — el sitio público real llega en
- * Sprint 4 y leerá el snapshot publicado, no este editor.
+ * Config de Puck (UC-07, rediseñada en Fase 3.1): un componente por
+ * `tipo_seccion`, con `fields` que reflejan exactamente el DTO de
+ * `configuracion` de cada tipo (ver
+ * `apps/api/src/modules/secciones/dto/configuracion/`). Cada `render`
+ * compone el mismo bloque real que usa el sitio público (`bloques/`, vía
+ * `EnvoltorioSeccion` para el espaciado/aviso "Oculta") en vez de un
+ * placeholder esquemático: el lienzo de Puck es así un WYSIWYG genuino. Los
+ * datos de contenido (perfil, proyectos, certificaciones, etc.) no viajan
+ * como prop de cada bloque de Puck — se leen de `puck.metadata.datos`
+ * (`DatosEditor`, ver `useDatosEditor`), inyectado una sola vez por
+ * `EditorSeccionesPage` vía la prop `metadata` de `<Puck>`.
  */
-export const puckConfig: Config<PuckSeccionesComponents> = {
+export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> = {
+  categories: {
+    diseno: {
+      title: 'Diseño',
+      components: ['hero'],
+    },
+    contenido: {
+      title: 'Contenido',
+      components: [
+        'sobre-mi',
+        'proyectos',
+        'certificaciones',
+        'logros',
+        'contacto',
+        'skills',
+      ],
+    },
+  },
+  root: {
+    render: PuckRoot,
+  },
   components: {
     hero: {
       label: 'Portada (hero)',
@@ -156,31 +199,35 @@ export const puckConfig: Config<PuckSeccionesComponents> = {
       render: ({
         titulo,
         subtitulo,
+        imagen_fondo_media_id,
         texto_boton,
         enlace_boton,
         mostrar_foto_perfil,
         posicion_foto,
         estilo_foto,
         _visible,
-      }) => (
-        <BloquePreview visible={_visible} etiqueta="Portada">
-          <h1 className="text-2xl font-bold text-foreground">{titulo}</h1>
-          <p className="text-muted-foreground">{subtitulo}</p>
-          {texto_boton ? (
-            <span className="inline-block rounded-md bg-primary px-3 py-1.5 text-sm text-primary-foreground">
-              {texto_boton}
-              {enlace_boton ? ` → ${enlace_boton}` : ''}
-            </span>
-          ) : null}
-          <p className="text-xs text-muted-foreground">
-            Foto de perfil:{' '}
-            {mostrar_foto_perfil
-              ? `${posicion_foto} · ${estilo_foto}`
-              : 'oculta'}
-            .
-          </p>
-        </BloquePreview>
-      ),
+        puck,
+      }) => {
+        const { datos } = leerMetadata(puck)
+        const config: HeroConfiguracion = {
+          titulo,
+          subtitulo,
+          imagen_fondo_media_id,
+          imagen_fondo: imagen_fondo_media_id
+            ? datos.mediaPorId.get(imagen_fondo_media_id)
+            : undefined,
+          texto_boton,
+          enlace_boton,
+          mostrar_foto_perfil,
+          posicion_foto,
+          estilo_foto,
+        }
+        return (
+          <EnvoltorioSeccion visible={_visible}>
+            <BloqueHero config={config} perfil={datos.perfil} />
+          </EnvoltorioSeccion>
+        )
+      },
     },
     'sobre-mi': {
       label: 'Sobre mí',
@@ -201,14 +248,18 @@ export const puckConfig: Config<PuckSeccionesComponents> = {
         _visible: VISIBLE_FIELD,
         _tituloVisible: TITULO_VISIBLE_FIELD,
       },
-      render: ({ mostrar_foto, _visible }) => (
-        <BloquePreview visible={_visible} etiqueta="Sobre mí">
-          <p className="text-sm text-muted-foreground">
-            Contenido tomado del perfil (UC-02). Foto:{' '}
-            {mostrar_foto ? 'visible' : 'oculta'}.
-          </p>
-        </BloquePreview>
-      ),
+      render: ({ mostrar_foto, _visible, _tituloVisible, puck }) => {
+        const { datos } = leerMetadata(puck)
+        return (
+          <EnvoltorioSeccion visible={_visible}>
+            <BloqueSobreMi
+              titulo={_tituloVisible}
+              config={{ mostrar_foto }}
+              perfil={datos.perfil}
+            />
+          </EnvoltorioSeccion>
+        )
+      },
     },
     proyectos: {
       label: 'Proyectos',
@@ -235,14 +286,24 @@ export const puckConfig: Config<PuckSeccionesComponents> = {
         _visible: VISIBLE_FIELD,
         _tituloVisible: TITULO_VISIBLE_FIELD,
       },
-      render: ({ cantidad_a_mostrar, solo_destacados, _visible }) => (
-        <BloquePreview visible={_visible} etiqueta="Proyectos">
-          <p className="text-sm text-muted-foreground">
-            Muestra {cantidad_a_mostrar} proyecto(s)
-            {solo_destacados ? ' (solo destacados)' : ''}.
-          </p>
-        </BloquePreview>
-      ),
+      render: ({
+        cantidad_a_mostrar,
+        solo_destacados,
+        _visible,
+        _tituloVisible,
+        puck,
+      }) => {
+        const { datos } = leerMetadata(puck)
+        return (
+          <EnvoltorioSeccion visible={_visible}>
+            <BloqueProyectos
+              titulo={_tituloVisible}
+              config={{ cantidad_a_mostrar, solo_destacados }}
+              proyectos={datos.proyectos}
+            />
+          </EnvoltorioSeccion>
+        )
+      },
     },
     certificaciones: {
       label: 'Certificaciones',
@@ -263,11 +324,18 @@ export const puckConfig: Config<PuckSeccionesComponents> = {
         _visible: VISIBLE_FIELD,
         _tituloVisible: TITULO_VISIBLE_FIELD,
       },
-      render: ({ orden, _visible }) => (
-        <BloquePreview visible={_visible} etiqueta="Certificaciones">
-          <p className="text-sm text-muted-foreground">Orden: {orden}.</p>
-        </BloquePreview>
-      ),
+      render: ({ orden, _visible, _tituloVisible, puck }) => {
+        const { datos } = leerMetadata(puck)
+        return (
+          <EnvoltorioSeccion visible={_visible}>
+            <BloqueCertificaciones
+              titulo={_tituloVisible}
+              config={{ orden }}
+              certificaciones={datos.certificaciones}
+            />
+          </EnvoltorioSeccion>
+        )
+      },
     },
     logros: {
       label: 'Logros',
@@ -280,15 +348,18 @@ export const puckConfig: Config<PuckSeccionesComponents> = {
         _visible: VISIBLE_FIELD,
         _tituloVisible: TITULO_VISIBLE_FIELD,
       },
-      render: ({ categoria_filtro, _visible }) => (
-        <BloquePreview visible={_visible} etiqueta="Logros">
-          <p className="text-sm text-muted-foreground">
-            {categoria_filtro
-              ? `Filtrado por categoría: ${categoria_filtro}`
-              : 'Sin filtro de categoría.'}
-          </p>
-        </BloquePreview>
-      ),
+      render: ({ categoria_filtro, _visible, _tituloVisible, puck }) => {
+        const { datos } = leerMetadata(puck)
+        return (
+          <EnvoltorioSeccion visible={_visible}>
+            <BloqueLogros
+              titulo={_tituloVisible}
+              config={{ categoria_filtro }}
+              logros={datos.logros}
+            />
+          </EnvoltorioSeccion>
+        )
+      },
     },
     contacto: {
       label: 'Contacto',
@@ -309,15 +380,19 @@ export const puckConfig: Config<PuckSeccionesComponents> = {
         _visible: VISIBLE_FIELD,
         _tituloVisible: TITULO_VISIBLE_FIELD,
       },
-      render: ({ mostrar_formulario, _visible }) => (
-        <BloquePreview visible={_visible} etiqueta="Contacto">
-          <p className="text-sm text-muted-foreground">
-            {mostrar_formulario
-              ? 'Con formulario de contacto.'
-              : 'Solo enlaces de redes y descarga de CV.'}
-          </p>
-        </BloquePreview>
-      ),
+      render: ({ mostrar_formulario, _visible, _tituloVisible, puck }) => {
+        const { datos } = leerMetadata(puck)
+        return (
+          <EnvoltorioSeccion visible={_visible}>
+            <BloqueContacto
+              titulo={_tituloVisible}
+              config={{ mostrar_formulario }}
+              perfil={datos.perfil}
+              redesSociales={datos.redes_sociales}
+            />
+          </EnvoltorioSeccion>
+        )
+      },
     },
     skills: {
       label: 'Skills',
@@ -348,35 +423,18 @@ export const puckConfig: Config<PuckSeccionesComponents> = {
         _visible: VISIBLE_FIELD,
         _tituloVisible: TITULO_VISIBLE_FIELD,
       },
-      render: ({ direccion, velocidad, _visible }) => (
-        <BloquePreview visible={_visible} etiqueta="Skills">
-          <p className="text-sm text-muted-foreground">
-            Carrusel hacia la {direccion}, velocidad {velocidad}.
-          </p>
-        </BloquePreview>
-      ),
+      render: ({ direccion, velocidad, _visible, _tituloVisible, puck }) => {
+        const { datos } = leerMetadata(puck)
+        return (
+          <EnvoltorioSeccion visible={_visible}>
+            <BloqueSkills
+              titulo={_tituloVisible}
+              config={{ direccion, velocidad }}
+              skills={datos.skills}
+            />
+          </EnvoltorioSeccion>
+        )
+      },
     },
   },
-}
-
-function BloquePreview({
-  etiqueta,
-  visible,
-  children,
-}: {
-  etiqueta: string
-  visible: boolean
-  children: React.ReactNode
-}) {
-  return (
-    <div
-      className={`rounded-md border bg-card p-4 ${visible ? '' : 'opacity-40'}`}
-    >
-      <p className="mb-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
-        {etiqueta}
-        {!visible ? ' · oculta' : ''}
-      </p>
-      <div className="grid gap-2">{children}</div>
-    </div>
-  )
 }
