@@ -434,6 +434,13 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
         posicion_foto: 'izquierda',
         forma_foto: 'circular',
         ...DEFAULT_PROPS_BASE_BLOQUE,
+        // Antes de esta fase este bloque era `max-w-3xl` (más angosto que
+        // el default compartido `max-w-5xl`) — no hay token exacto para
+        // 3xl en la escala de 4 valores de `ancho_contenido`, así que se
+        // aproxima con el más cercano disponible ('estrecho' = `max-w-2xl`)
+        // en vez de dejarlo caer en el default genérico, que lo ensancharía
+        // de verdad en cualquier sitio ya publicado.
+        ancho_contenido: 'estrecho',
         _visible: true,
         _tituloVisible: 'Sobre mí',
       },
@@ -484,7 +491,9 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
           <EnvoltorioSeccion
             visible={_visible}
             espaciado_vertical={espaciado_vertical}
-            ancho_contenido={ancho_contenido}
+            // Fallback propio ('estrecho'), no el genérico ('normal'): ver
+            // el comentario del `defaultProps` de este mismo bloque.
+            ancho_contenido={ancho_contenido ?? 'estrecho'}
             fondo_bloque={fondo_bloque}
             separador_inferior={separador_inferior}
           >
@@ -678,6 +687,11 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
       defaultProps: {
         estilo_lista: 'tarjetas',
         ...DEFAULT_PROPS_BASE_BLOQUE,
+        // Mismo caso que `sobre-mi`: era `max-w-3xl`, sin token exacto en
+        // la escala de 4 valores — se aproxima con 'estrecho' (`max-w-2xl`)
+        // en vez del default genérico, que lo ensancharía en cualquier
+        // sitio ya publicado.
+        ancho_contenido: 'estrecho',
         _visible: true,
         _tituloVisible: 'Logros',
       },
@@ -712,7 +726,7 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
           <EnvoltorioSeccion
             visible={_visible}
             espaciado_vertical={espaciado_vertical}
-            ancho_contenido={ancho_contenido}
+            ancho_contenido={ancho_contenido ?? 'estrecho'}
             fondo_bloque={fondo_bloque}
             separador_inferior={separador_inferior}
           >
@@ -733,8 +747,10 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
         estilo_redes: 'iconos',
         ...DEFAULT_PROPS_BASE_BLOQUE,
         // El título de contacto siempre estuvo centrado (mismo criterio que
-        // hero/skills) — ver el mismo override en su `render`.
+        // hero/skills), y el bloque era `max-w-2xl` (el token exacto
+        // 'estrecho') — ver el mismo override en su `render`.
         alineacion_texto: 'centro',
+        ancho_contenido: 'estrecho',
         _visible: true,
         _tituloVisible: 'Contacto',
       },
@@ -776,7 +792,7 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
           <EnvoltorioSeccion
             visible={_visible}
             espaciado_vertical={espaciado_vertical}
-            ancho_contenido={ancho_contenido}
+            ancho_contenido={ancho_contenido ?? 'estrecho'}
             fondo_bloque={fondo_bloque}
             separador_inferior={separador_inferior}
           >
@@ -910,6 +926,11 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
         columna_2: [],
         columna_3: [],
         ...DEFAULT_PROPS_BASE_BLOQUE,
+        // El contenedor de columnas (UC-17, Fase 3.3) nunca tuvo `max-w`
+        // propio — igual que `hero`, el default compartido lo angostaría en
+        // cualquier sitio ya publicado. Ver el mismo override en su
+        // `render`.
+        ancho_contenido: 'completo',
         _visible: true,
         _tituloVisible: 'Columnas',
       },
@@ -991,7 +1012,7 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
           <EnvoltorioSeccion
             visible={_visible}
             espaciado_vertical={espaciado_vertical}
-            ancho_contenido={ancho_contenido}
+            ancho_contenido={ancho_contenido ?? 'completo'}
             fondo_bloque={fondo_bloque}
             separador_inferior={separador_inferior}
           >

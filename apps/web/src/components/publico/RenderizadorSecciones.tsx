@@ -1,14 +1,39 @@
 import type {
+  AnchoContenidoBloque,
   BloqueConfiguracionBase,
   ColumnasConfiguracion,
   HeroConfiguracion,
   Seccion,
+  TipoSeccion,
 } from '@/features/secciones/types'
 import type { SnapshotSitio } from '@/features/publico/types'
 import { ALINEACION_TEXTO_CLASE } from '@/lib/escalas-bloque'
 import { EnvoltorioSeccion } from './EnvoltorioSeccion'
 import { BloqueColumnas, BloqueHero } from './bloques'
 import { DespachoBloqueSeccion } from './bloques/DespachoBloqueSeccion'
+
+/**
+ * Fallback de `ancho_contenido` por tipo cuando la `Seccion` no lo tiene en
+ * su `configuracion` (guardada antes de la Fase 3.4) — el default genérico
+ * de `EnvoltorioSeccion` (`'normal'`, `max-w-5xl`) no coincide con lo que
+ * cada uno de estos tipos ya tenía hardcodeado antes de esta fase (`hero`/
+ * `columnas` no tenían ningún `max-w`; `sobre-mi`/`logros`/`contacto` eran
+ * más angostos que `max-w-5xl`). Sin este mapa, publicar esta fase cambiaría
+ * el ancho de esos 5 tipos en cualquier sitio ya existente. Mismo mapa que
+ * usa `puck-config.tsx` en cada `render`, para que el lienzo y el sitio
+ * publicado no diverjan; los tipos que no aparecen acá (`proyectos`,
+ * `certificaciones`, `skills`) ya eran `max-w-5xl`, así que usan el default
+ * genérico de `EnvoltorioSeccion` sin necesitar una entrada propia.
+ */
+const ANCHO_CONTENIDO_POR_DEFECTO_POR_TIPO: Partial<
+  Record<TipoSeccion, AnchoContenidoBloque>
+> = {
+  hero: 'completo',
+  columnas: 'completo',
+  'sobre-mi': 'estrecho',
+  logros: 'estrecho',
+  contacto: 'estrecho',
+}
 
 type RenderizadorSeccionesProps = {
   snapshot: SnapshotSitio
@@ -51,13 +76,8 @@ export function RenderizadorSecciones({
         const { espaciado_vertical, ancho_contenido, fondo_bloque, separador_inferior } =
           seccion.configuracion as BloqueConfiguracionBase
 
-        // `hero` siempre fue a sangre completa: si la sección no tiene
-        // `ancho_contenido` (guardada antes de esta fase), su default no es
-        // el genérico `'normal'` de `EnvoltorioSeccion` sino `'completo'` —
-        // mismo fallback que aplica `puck-config.tsx` en el lienzo del
-        // editor, para que el sitio publicado y el lienzo no diverjan.
         const anchoContenidoEfectivo =
-          ancho_contenido ?? (seccion.tipo_seccion === 'hero' ? 'completo' : undefined)
+          ancho_contenido ?? ANCHO_CONTENIDO_POR_DEFECTO_POR_TIPO[seccion.tipo_seccion]
 
         return (
           <EnvoltorioSeccion

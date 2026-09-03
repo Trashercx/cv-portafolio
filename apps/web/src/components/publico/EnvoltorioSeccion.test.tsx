@@ -6,12 +6,21 @@ import { EnvoltorioSeccion } from './EnvoltorioSeccion'
  * Fase 3.4 (personalización visual por bloque): `EnvoltorioSeccion` es el
  * único lugar que compone las clases de `escalas-bloque.ts` a partir de
  * `BloqueConfiguracionBase` — este archivo cubre que cada combinación
- * produzca la clase esperada y que, cuando un campo no viene (sección
- * guardada antes de esta fase), se use el mismo default documentado ahí
- * (el mismo aspecto que el código ya tenía hardcodeado).
+ * produzca la clase esperada, y que sin ninguna prop use el default genérico
+ * documentado en `escalas-bloque.ts` (`'normal'`/`max-w-5xl`, `'ninguno'`,
+ * `border-b`).
+ *
+ * OJO: ese default genérico es el que corresponde a los bloques que YA eran
+ * `max-w-5xl` antes de esta fase (`proyectos`, `certificaciones`, `skills`).
+ * `hero`/`columnas` (`'completo'`) y `sobre-mi`/`logros`/`contacto`
+ * (`'estrecho'`) tenían un ancho distinto hardcodeado — cada uno de esos 5
+ * pasa su propio fallback explícito a `EnvoltorioSeccion` en vez de dejarla
+ * caer en este default genérico (ver el comentario junto a cada
+ * `ancho_contenido ?? '...'` en `puck-config.tsx`/`RenderizadorSecciones.tsx`
+ * — no se prueba acá, sino en los tests de esos archivos).
  */
 describe('EnvoltorioSeccion (Fase 3.4)', () => {
-  it('sin ninguna prop de configuración usa los defaults (idénticos al aspecto hardcodeado previo)', () => {
+  it('sin ninguna prop de configuración usa el default genérico (aspecto que ya tenían proyectos/certificaciones/skills)', () => {
     render(
       <EnvoltorioSeccion visible id="seccion-1">
         <p>Contenido</p>
