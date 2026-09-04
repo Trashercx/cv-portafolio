@@ -89,11 +89,38 @@ function obtenerColorIconoSkill(icono: string): string {
  * coherentes entre sí (a diferencia del `className` libre anterior, donde
  * el monograma quedaba con `text-[10px]` fijo sin importar el tamaño del
  * contenedor pedido por cada consumidor).
+ *
+ * `contenedorPx`/`iconoPx` son el equivalente en píxeles de las clases
+ * Tailwind `size-*` de arriba (`size-7`=28px/`size-4`=16px,
+ * `size-10`=40px/`size-5`=20px, `size-14`=56px/`size-7`=28px), aplicados
+ * como `style` inline además de (no en reemplazo de) esas clases: fallback
+ * defensivo para el iframe de Puck, donde una condición de carrera propia de
+ * `@measured/puck` (`AutoFrame couldn't load a stylesheet`) puede dejar el
+ * mirror de estilos del iframe sin resolver todavía cuando el ícono se
+ * pinta — un `style` inline no depende de que cargue ningún stylesheet.
  */
 const TAMANOS_ICONO_SKILL = {
-  sm: { contenedor: 'size-7', icono: 'size-4', monograma: 'text-[8px]' },
-  md: { contenedor: 'size-10', icono: 'size-5', monograma: 'text-[10px]' },
-  lg: { contenedor: 'size-14', icono: 'size-7', monograma: 'text-xs' },
+  sm: {
+    contenedor: 'size-7',
+    icono: 'size-4',
+    monograma: 'text-[8px]',
+    contenedorPx: 28,
+    iconoPx: 16,
+  },
+  md: {
+    contenedor: 'size-10',
+    icono: 'size-5',
+    monograma: 'text-[10px]',
+    contenedorPx: 40,
+    iconoPx: 20,
+  },
+  lg: {
+    contenedor: 'size-14',
+    icono: 'size-7',
+    monograma: 'text-xs',
+    contenedorPx: 56,
+    iconoPx: 28,
+  },
 } as const
 
 type TamanoIconoSkill = keyof typeof TAMANOS_ICONO_SKILL
@@ -124,14 +151,20 @@ export function IconoSkill({ icono, tamano = 'md', className }: IconoSkillProps)
         obtenerColorIconoSkill(icono),
         className,
       )}
+      style={{ width: medida.contenedorPx, height: medida.contenedorPx }}
     >
       {config.tipo === 'lucide' && (
-        <config.Icono className={medida.icono} aria-hidden="true" />
+        <config.Icono
+          className={medida.icono}
+          style={{ width: medida.iconoPx, height: medida.iconoPx }}
+          aria-hidden="true"
+        />
       )}
       {config.tipo === 'simple-icons' && (
         <svg
           viewBox="0 0 24 24"
           className={medida.icono}
+          style={{ width: medida.iconoPx, height: medida.iconoPx }}
           fill="currentColor"
           aria-hidden="true"
         >

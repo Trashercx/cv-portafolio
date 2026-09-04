@@ -75,9 +75,14 @@ const SNAPSHOT: SnapshotSitio = {
 }
 
 const useSitioMock = vi.fn()
+const useModoTemaMock = vi.fn(() => ({ modo: 'claro', setModo: vi.fn() }))
 
 vi.mock('@/features/publico/usePublico', () => ({
   useSitio: () => useSitioMock(),
+}))
+
+vi.mock('@/hooks/useModoTema', () => ({
+  useModoTema: () => useModoTemaMock(),
 }))
 
 function renderHome() {
@@ -136,5 +141,35 @@ describe('PublicHomePage (UC-12)', () => {
     renderHome()
 
     expect(screen.getByText('Error de red')).toBeInTheDocument()
+  })
+
+  it('aplica la clase "dark" al contenedor raíz cuando el modo es oscuro', () => {
+    useSitioMock.mockReturnValue({
+      data: SNAPSHOT,
+      isLoading: false,
+      error: null,
+    })
+    useModoTemaMock.mockReturnValue({ modo: 'oscuro', setModo: vi.fn() })
+
+    const { container } = renderHome()
+
+    const raiz = container.querySelector('[data-tema-modo="oscuro"]')
+    expect(raiz).not.toBeNull()
+    expect(raiz).toHaveClass('dark')
+  })
+
+  it('no aplica la clase "dark" al contenedor raíz cuando el modo es claro', () => {
+    useSitioMock.mockReturnValue({
+      data: SNAPSHOT,
+      isLoading: false,
+      error: null,
+    })
+    useModoTemaMock.mockReturnValue({ modo: 'claro', setModo: vi.fn() })
+
+    const { container } = renderHome()
+
+    const raiz = container.querySelector('[data-tema-modo="claro"]')
+    expect(raiz).not.toBeNull()
+    expect(raiz).not.toHaveClass('dark')
   })
 })

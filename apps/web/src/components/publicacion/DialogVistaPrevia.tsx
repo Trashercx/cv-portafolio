@@ -14,6 +14,7 @@ import { usePreviewVersion } from '@/features/publicacion/usePublicacion'
 import type { VersionSitio } from '@/features/publicacion/types'
 import { temaComoVariablesCss } from '@/lib/tema-css'
 import type { ModoTema } from '@/lib/tema-oscuro'
+import { cn } from '@/lib/utils'
 
 type DialogVistaPreviaProps = {
   open: boolean
@@ -49,10 +50,14 @@ type DialogVistaPreviaProps = {
  * apertura — el síntoma reportado de "la vista previa se cierra sola".
  * Levantar el estado al padre (que nunca se remonta) resuelve la causa raíz.
  *
- * Modo oscuro (Fase 4.6): mismo tratamiento que `PuckRoot` (el otro
- * "lienzo" que previsualiza el sitio dentro del panel) — refleja el toggle
- * de `ThemeProvider` del panel con la misma paleta oscura derivada, para
- * que este diálogo no diverja visualmente del lienzo real.
+ * Modo oscuro (Fase 4.6, corregido): mismo tratamiento que `PuckRoot` (el
+ * otro "lienzo" que previsualiza el sitio dentro del panel) — refleja el
+ * toggle de `ThemeProvider` del panel con la misma paleta oscura derivada
+ * (variables CSS) y, además, con la clase `dark` en el contenedor, para que
+ * los tokens genéricos de shadcn/Tailwind que usan los `Bloque*.tsx`
+ * (`text-muted-foreground`, `bg-card`, etc.) también conmuten — sin esa
+ * clase quedaban fijos en su valor claro. Así este diálogo no diverja
+ * visualmente del lienzo real.
  */
 export function DialogVistaPrevia({
   open,
@@ -92,7 +97,10 @@ export function DialogVistaPrevia({
               ? temaComoVariablesCss(previewVersion.snapshot.tema, modo)
               : undefined
           }
-          className="flex-1 overflow-y-auto rounded-lg border"
+          className={cn(
+            'flex-1 overflow-y-auto rounded-lg border',
+            modo === 'oscuro' && 'dark',
+          )}
         >
           {preview.isPending && !previewVersion ? (
             <p className="p-4 text-sm text-muted-foreground">
