@@ -1,5 +1,6 @@
 import { ProveedorDetallePublico } from '@/components/publico/contexto-detalle'
 import { FondoAnimado } from '@/components/publico/FondoAnimado'
+import { Footer } from '@/components/publico/Footer'
 import { RenderizadorSecciones } from '@/components/publico/RenderizadorSecciones'
 import { useSitio } from '@/features/publico/usePublico'
 import { ApiError } from '@/lib/api-client'
@@ -54,6 +55,11 @@ export function PublicHomePage() {
         <ProveedorDetallePublico>
           <RenderizadorSecciones snapshot={snapshot} />
         </ProveedorDetallePublico>
+        <Footer
+          perfil={snapshot.perfil}
+          redes={snapshot.redes_sociales}
+          cvMedia={snapshot.perfil?.cv_media ?? null}
+        />
       </div>
     </div>
   )

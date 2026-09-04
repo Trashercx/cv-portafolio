@@ -10,6 +10,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from '@/components/ui/sidebar'
+import { AvisoSesionExpirando } from '@/features/auth/AvisoSesionExpirando'
 import { PaletaComandos } from '@/features/paleta-comandos/PaletaComandos'
 import { ProveedorPaletaComandos } from '@/features/paleta-comandos/contexto-paleta'
 import { cn } from '@/lib/utils'
@@ -70,6 +71,7 @@ export function AdminLayout() {
     <ThemeProvider>
       <ProveedorPaletaComandos>
         <PaletaComandos />
+        <AvisoSesionExpirando />
         <SidebarProvider open={sidebarAbierta} onOpenChange={setSidebarAbierta}>
           <AppSidebar />
           <SidebarInset>
