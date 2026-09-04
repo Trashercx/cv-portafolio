@@ -11,6 +11,14 @@ import { useAuthStore, type AdminSession } from '@/store/auth-store'
  * que `POST /auth/login`): eso es lo que hace que `useSesionExpirando`
  * recalcule y el aviso desaparezca solo, sin que este hook necesite saber
  * nada de la UI que lo dispara.
+ *
+ * `meta.mensajeError` (no un `onError` local): el `mutationCache` global de
+ * `query-client.ts` ya muestra un toast por cada error de mutación —
+ * agregar un `onError` acá duplicaría el aviso (el genérico del cache más
+ * el propio), ambos se ejecutan siempre, TanStack Query no hace que uno
+ * suprima al otro. Mismo patrón que el resto de las mutaciones del
+ * proyecto (`useTemas`, `useUpsertPerfil`, etc.), ninguna define `onError`
+ * propio.
  */
 export function useRefrescarSesion() {
   return useMutation({
@@ -20,6 +28,9 @@ export function useRefrescarSesion() {
       }),
     onSuccess: (admin) => {
       useAuthStore.getState().setAdmin(admin)
+    },
+    meta: {
+      mensajeError: 'No se pudo renovar la sesión. Cerrá sesión y volvé a ingresar.',
     },
   })
 }

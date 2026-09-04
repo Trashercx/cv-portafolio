@@ -48,7 +48,7 @@ export function AvisoSesionExpirando() {
         <AlertDialogHeader>
           <AlertDialogTitle>Tu sesión está por expirar</AlertDialogTitle>
           <AlertDialogDescription>
-            Por seguridad, tu sesión está a punto de cerrarse por inactividad.
+            Por seguridad, tu sesión está a punto de cerrarse por tiempo.
             Elige "Seguir conectado" para continuar, o "Cerrar sesión" para
             salir ahora.
           </AlertDialogDescription>
