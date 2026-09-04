@@ -1,5 +1,6 @@
 import {
   IsBoolean,
+  IsIn,
   IsInt,
   IsNotEmpty,
   IsOptional,
@@ -47,8 +48,13 @@ export class CreateProyectoDto {
   @EsPosteriorA('fecha_inicio', { oIgual: true })
   fecha_fin?: string;
 
+  // 3 valores cerrados (ver `docs/plan-portafolio.md`); espeja el `z.enum`
+  // de `proyecto-schema.ts` en el frontend. `estado` se queda `string` en
+  // Prisma (sin migración), igual criterio ya documentado ahí para
+  // `VersionSitio.estado`.
   @IsString()
   @IsNotEmpty()
+  @IsIn(['en_progreso', 'finalizado', 'pausado'])
   estado: string;
 
   @IsBoolean()

@@ -2,6 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { MediaField } from '@/components/media/MediaField'
+import { CampoFechaConCalendario } from '@/components/shared/CampoFechaConCalendario'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,6 +30,7 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import type { Media } from '@/features/media/types'
 import { useMedia } from '@/features/media/useMediaLibrary'
 import { useConfirmarDescarte } from '@/hooks/useConfirmarDescarte'
@@ -156,12 +158,13 @@ export function CertificacionFormDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={intentarCerrar}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>
               {esNuevo ? 'Nueva certificación' : 'Editar certificación'}
             </DialogTitle>
           </DialogHeader>
+          <ScrollArea className="max-h-[70vh] pr-4">
           <Form {...form}>
             <form
               onSubmit={form.handleSubmit(onSubmit)}
@@ -201,9 +204,17 @@ export function CertificacionFormDialog({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Fecha de emisión</FormLabel>
-                      <FormControl>
-                        <Input type="date" max={hoy} {...field} />
-                      </FormControl>
+                      <div className="flex gap-2">
+                        <FormControl>
+                          <Input type="date" max={hoy} {...field} />
+                        </FormControl>
+                        <CampoFechaConCalendario
+                          value={field.value}
+                          onChange={field.onChange}
+                          max={hoy}
+                          triggerAriaLabel="Abrir calendario para elegir la emisión"
+                        />
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -214,13 +225,21 @@ export function CertificacionFormDialog({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Fecha de expiración (opcional)</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="date"
+                      <div className="flex gap-2">
+                        <FormControl>
+                          <Input
+                            type="date"
+                            min={form.watch('fecha_emision') || undefined}
+                            {...field}
+                          />
+                        </FormControl>
+                        <CampoFechaConCalendario
+                          value={field.value ?? ''}
+                          onChange={field.onChange}
                           min={form.watch('fecha_emision') || undefined}
-                          {...field}
+                          triggerAriaLabel="Abrir calendario para elegir la expiración"
                         />
-                      </FormControl>
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -305,6 +324,7 @@ export function CertificacionFormDialog({
               </DialogFooter>
             </form>
           </Form>
+          </ScrollArea>
         </DialogContent>
       </Dialog>
 

@@ -37,6 +37,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { Separator } from '@/components/ui/separator'
 import { useConfirmarDescarte } from '@/hooks/useConfirmarDescarte'
 import { ApiError } from '@/lib/api-client'
@@ -146,6 +147,7 @@ export function TemaFormDialog() {
           <DialogHeader>
             <DialogTitle>Nuevo tema</DialogTitle>
           </DialogHeader>
+          <ScrollArea className="max-h-[70vh] pr-4">
           <div className="grid gap-2">
             <Label htmlFor="plantilla-tema">Plantilla predefinida (opcional)</Label>
             <Select value={plantillaId} onValueChange={aplicarPlantilla}>
@@ -289,6 +291,7 @@ export function TemaFormDialog() {
               </DialogFooter>
             </form>
           </Form>
+          </ScrollArea>
         </DialogContent>
       </Dialog>
 
