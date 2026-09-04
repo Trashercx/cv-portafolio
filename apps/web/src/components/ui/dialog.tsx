@@ -48,12 +48,21 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  container,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & {
   showCloseButton?: boolean
+  /**
+   * Nodo DOM donde `DialogPrimitive.Portal` monta el diálogo (por defecto,
+   * `document.body`). Los consumidores del sitio público (`DialogDetalle`,
+   * `DialogVistaPrevia`) lo usan para montar el modal DENTRO del `<div>`
+   * temado (variables CSS `--color-*` + clase `dark`) en vez de como hermano
+   * de `document.body`, donde esas custom properties no cascadean.
+   */
+  container?: Element | DocumentFragment | null
 }) {
   return (
-    <DialogPortal>
+    <DialogPortal container={container}>
       <DialogOverlay />
       <DialogPrimitive.Content
         data-slot="dialog-content"

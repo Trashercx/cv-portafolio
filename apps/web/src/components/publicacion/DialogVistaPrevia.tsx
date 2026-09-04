@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { ProveedorDetallePublico } from '@/components/publico/contexto-detalle'
 import { RenderizadorSecciones } from '@/components/publico/RenderizadorSecciones'
 import { useTheme } from '@/components/theme/ThemeProvider'
@@ -68,6 +69,13 @@ export function DialogVistaPrevia({
   const preview = usePreviewVersion()
   const { theme } = useTheme()
   const modo: ModoTema = theme === 'dark' ? 'oscuro' : 'claro'
+  // Nodo DOM del `<div>` interior temado (mismo criterio que `PublicHomePage`
+  // — `useState`, no `useRef`, porque necesitamos re-render cuando el nodo
+  // real se monta), pasado como `container` a `ProveedorDetallePublico` para
+  // que el modal de detalle de proyecto/certificación/logro monte dentro del
+  // árbol con las variables CSS del tema y la clase `dark`, en vez de como
+  // hermano de `document.body` (fix tema/modo oscuro en modales públicos).
+  const [nodoTemado, setNodoTemado] = useState<HTMLDivElement | null>(null)
 
   const handleOpenChange = (siguienteAbierto: boolean) => {
     onOpenChange(siguienteAbierto)
@@ -91,39 +99,57 @@ export function DialogVistaPrevia({
             secciones ocultas se muestran atenuadas: no se publicarán.
           </DialogDescription>
         </DialogHeader>
-        <div
-          style={
-            previewVersion?.snapshot.tema
-              ? temaComoVariablesCss(previewVersion.snapshot.tema, modo)
-              : undefined
-          }
-          className={cn(
-            'flex-1 overflow-y-auto rounded-lg border',
-            modo === 'oscuro' && 'dark',
-          )}
-        >
-          {preview.isPending && !previewVersion ? (
-            <p className="p-4 text-sm text-muted-foreground">
-              Generando vista previa…
-            </p>
-          ) : null}
-          {previewVersion ? (
-            // `ProveedorDetallePublico` (Fase 4.3): sin envolver acá, un click
-            // en una tarjeta de proyecto/certificación/logro dentro de esta
-            // vista previa navegaba fuera del panel admin hacia
-            // `/proyecto/:id` (`RenderizadorSecciones`, sin
-            // `ProveedorModoRenderizado` explícito, default a modo
-            // `'publico'` con `Link` real — ver `contexto-renderizado.tsx`).
-            // Envolver acá corrige ese salto: el click ahora abre el mismo
-            // modal de detalle que en el sitio público, sin sacar al admin
-            // de `EditorSeccionesPage`.
-            <ProveedorDetallePublico>
-              <RenderizadorSecciones
-                snapshot={previewVersion.snapshot}
-                soloVisibles={false}
-              />
-            </ProveedorDetallePublico>
-          ) : null}
+        {/*
+          Gutter exterior (Fase 4.1, punto 4): en modo oscuro, tanto
+          `DialogContent` (`bg-background`) como el `<div>` interior temado
+          (`--color-fondo` derivado en oscuro) quedan casi negros y
+          visualmente indistinguibles entre sí. `bg-muted` es un token
+          shadcn perceptiblemente más claro que `--background` en oscuro,
+          así que separa "el modal" de "el sitio previsualizado dentro del
+          modal" con una diferencia real, no cosmética. El scroll vive acá
+          afuera; el `<div>` temado de adentro se lee como una tarjeta/
+          artboard independiente (`shadow-sm`), no full-bleed contra el
+          modal.
+        */}
+        <div className="flex-1 overflow-y-auto rounded-lg border bg-muted p-3">
+          <div
+            ref={setNodoTemado}
+            style={
+              previewVersion?.snapshot.tema
+                ? temaComoVariablesCss(previewVersion.snapshot.tema, modo)
+                : undefined
+            }
+            className={cn(
+              'rounded-md border shadow-sm',
+              modo === 'oscuro' && 'dark',
+            )}
+          >
+            {preview.isPending && !previewVersion ? (
+              <p className="p-4 text-sm text-muted-foreground">
+                Generando vista previa…
+              </p>
+            ) : null}
+            {previewVersion ? (
+              // `ProveedorDetallePublico` (Fase 4.3): sin envolver acá, un
+              // click en una tarjeta de proyecto/certificación/logro dentro
+              // de esta vista previa navegaba fuera del panel admin hacia
+              // `/proyecto/:id` (`RenderizadorSecciones`, sin
+              // `ProveedorModoRenderizado` explícito, default a modo
+              // `'publico'` con `Link` real — ver `contexto-renderizado.tsx`).
+              // Envolver acá corrige ese salto: el click ahora abre el mismo
+              // modal de detalle que en el sitio público, sin sacar al admin
+              // de `EditorSeccionesPage`. `container={nodoTemado}` además
+              // monta ese modal dentro de este `<div>` temado (fix tema/modo
+              // oscuro en modales públicos), no como hermano de
+              // `document.body`.
+              <ProveedorDetallePublico container={nodoTemado}>
+                <RenderizadorSecciones
+                  snapshot={previewVersion.snapshot}
+                  soloVisibles={false}
+                />
+              </ProveedorDetallePublico>
+            ) : null}
+          </div>
         </div>
       </DialogContent>
     </Dialog>
