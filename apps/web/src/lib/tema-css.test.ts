@@ -145,6 +145,12 @@ describe('temaComoVariablesCss — superficies shadcn', () => {
     expect(resultado['--foreground']).toBe(resultado['--color-texto'])
   })
 
+  it('declara color: var(--foreground) en el contenedor raíz, para que sea el punto real de partida de la herencia de color de sus descendientes', () => {
+    const resultado = temaComoVariablesCss(baseTema)
+
+    expect(resultado.color).toBe('var(--foreground)')
+  })
+
   it('incluye las 11 variables de superficie genéricas de shadcn', () => {
     const resultado = variablesCss(temaComoVariablesCss(baseTema))
 

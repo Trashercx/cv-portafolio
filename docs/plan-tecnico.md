@@ -329,6 +329,18 @@ Disparada por QA manual del usuario sobre el PR anterior. Sin backend, sin migra
 
 Pruebas: `tema-superficies.test.ts` nuevo, `tema-css.test.ts` extendido; suite completa verde en `apps/web` (231 tests).
 
+### Quinta ronda post-Fase 4.6 — toggle invertido, texto que no seguía el modo, footer duplicado, ícono de PDF y scrollbar de modales
+
+Disparada por QA manual del usuario sobre el PR anterior. Sin backend, sin migraciones.
+
+- **Ícono del toggle día/noche invertido**: `ToggleModoTema.tsx` mostraba `Sun`/`Moon` exactamente al revés de lo que su propio comentario documentaba (sol en modo oscuro, luna en modo claro). Corregido para que el ícono represente el modo ACTUAL.
+- **El texto no seguía el modo salvo en Hero (bug real de cascada CSS, no percepción)**: la mayoría de los `Bloque*.tsx` no declaran `color` propio — heredaban el valor YA RESUELTO de `body` (`--foreground` global de `index.css`, nunca tocado por el sitio público), porque la herencia de CSS propaga el valor computado, no una referencia viva a la custom property que sí se sobreescribía en el `<div>` raíz. `BloqueHero.tsx` funcionaba porque re-lee `var(--color-texto)` explícitamente en su propio elemento. Fix de una sola línea en el único punto de entrada compartido: `temaComoVariablesCss` (`tema-css.ts`) ahora también devuelve `color: 'var(--foreground)'`, convirtiendo el `<div>` raíz en el punto real de partida de la herencia — sin tocar ningún `Bloque*.tsx`.
+- **Footer duplicaba la sección Contacto**: `Footer.tsx` mostraba los mismos enlaces de redes/CV que `BloqueContacto.tsx`. Se quitaron del Footer (queda solo nombre + año) — decisión confirmada con el usuario, que ya mantiene/mantendrá una sección Contacto en la página (si no la tuviera, UC-14 dejaría de cumplirse en ninguna parte del sitio, riesgo señalado explícitamente por `code-reviewer` y aceptado por el usuario).
+- **Ícono de PDF también en tarjetas de Certificaciones**: extraído a `apps/web/src/components/media/IconoDocumento.tsx` (insignia circular roja reusable), usado ahora tanto en `MediaPreview.tsx` como en `BloqueCertificaciones.tsx`.
+- **Scrollbar de los modales de detalle público**: a diferencia del carousel de Galería (oculta, ronda anterior), acá se mantiene visible pero estilizada con los tokens del tema (`scrollbar-color`/`::-webkit-scrollbar-thumb` apuntando a `var(--border)`), porque es la única señal de contenido scrolleable en un modal de detalle potencialmente largo.
+
+Pruebas: `tema-css.test.ts` extendido (`color: 'var(--foreground)'`); `Footer.test.tsx` actualizado; suite completa verde en `apps/web` (233 tests).
+
 ## 3. Índice UC → tareas → subagente → sprint
 
 `code-reviewer` y `release-manager` aplican a **toda** fila antes de cerrar la tarea o hacer commit — no se repiten en cada celda.

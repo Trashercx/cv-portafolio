@@ -30,13 +30,19 @@ type DialogDetalleProps = {
  * el propio `children` (un `Detalle*Contenido`) ya trae su propio `<h1>`
  * visible, pero Radix exige un título/descripción accesibles en todo
  * `DialogContent`.
+ *
+ * Scrollbar delgada coloreada con el tema (fix 5ta ronda), NO oculta: a
+ * diferencia del carousel de Galería (ronda anterior), que sí la oculta
+ * porque ya tiene flechas/dots como navegación alternativa, este modal de
+ * detalle puede tener contenido largo y la scrollbar es la única señal de
+ * que hay más para scrollear.
  */
 export function DialogDetalle({ open, onOpenChange, children, container }: DialogDetalleProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         container={container}
-        className="flex h-[90vh] flex-col overflow-y-auto sm:max-w-[95vw]"
+        className="flex h-[90vh] flex-col overflow-y-auto sm:max-w-[95vw] [scrollbar-color:var(--border)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border"
       >
         <DialogHeader className="sr-only">
           <DialogTitle>Detalle</DialogTitle>

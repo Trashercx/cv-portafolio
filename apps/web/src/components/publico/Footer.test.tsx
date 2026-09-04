@@ -1,20 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { Media } from '@/features/media/types'
 import type { PerfilPublico } from '@/features/publico/types'
-import type { RedSocial } from '@/features/redes-sociales/types'
 import { Footer } from './Footer'
-
-const CV_MEDIA: Media = {
-  id: 'media-cv',
-  url: 'https://cdn.example.com/cv.pdf',
-  s3_key: 'cv.pdf',
-  tipo: 'documento',
-  ancho: null,
-  alto: null,
-  alt_text: null,
-  created_at: '2026-01-01T00:00:00.000Z',
-}
 
 const PERFIL: PerfilPublico = {
   id: 'perfil-1',
@@ -27,16 +14,7 @@ const PERFIL: PerfilPublico = {
   ubicacion: 'Lima, Perú',
   updated_at: '2026-01-01T00:00:00.000Z',
   imagen_perfil: null,
-  cv_media: CV_MEDIA,
-}
-
-const RED: RedSocial = {
-  id: 'red-1',
-  usuario_admin_id: 'admin-1',
-  plataforma_id: 'plataforma-1',
-  url: 'https://github.com/oscar',
-  orden: 0,
-  plataforma: { id: 'plataforma-1', nombre: 'GitHub', icono_defecto: 'github' },
+  cv_media: null,
 }
 
 describe('Footer', () => {
@@ -49,31 +27,35 @@ describe('Footer', () => {
     vi.useRealTimers()
   })
 
-  it('muestra el nombre del perfil, el año actual y las redes sociales', () => {
-    render(<Footer perfil={PERFIL} redes={[RED]} cvMedia={CV_MEDIA} />)
+  it('muestra el nombre del perfil y el año actual', () => {
+    render(<Footer perfil={PERFIL} />)
 
     expect(screen.getByText(/oscar burga/i)).toBeInTheDocument()
     expect(screen.getByText(/2026/)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /github/i })).toBeInTheDocument()
-    expect(
-      screen.getByRole('link', { name: /descargar cv/i }),
-    ).toBeInTheDocument()
   })
 
   // Fase 4.7 (fix de visibilidad): el toggle de modo claro/oscuro se movió
   // fuera del Footer, a un botón flotante en `PublicHomePage`.
   it('ya no incluye el toggle de modo claro/oscuro (se movió a un botón flotante)', () => {
-    render(<Footer perfil={PERFIL} redes={[RED]} cvMedia={CV_MEDIA} />)
+    render(<Footer perfil={PERFIL} />)
 
     expect(
       screen.queryByRole('button', { name: /cambiar a modo/i }),
     ).not.toBeInTheDocument()
   })
 
+  // Fix 5ta ronda: los enlaces de redes sociales/CV se sacaron del Footer,
+  // porque duplicaban exactamente el mismo contenido que la sección
+  // `contacto` (`BloqueContacto`) ya muestra cuando el admin la agrega.
+  it('ya no incluye enlaces de redes sociales ni el botón de descargar CV', () => {
+    render(<Footer perfil={PERFIL} />)
+
+    expect(screen.queryByRole('link')).not.toBeInTheDocument()
+  })
+
   it('solo muestra el año cuando no hay perfil', () => {
-    render(<Footer perfil={null} redes={[]} cvMedia={null} />)
+    render(<Footer perfil={null} />)
 
     expect(screen.getByText(/^© 2026$/)).toBeInTheDocument()
-    expect(screen.queryByRole('link')).not.toBeInTheDocument()
   })
 })
