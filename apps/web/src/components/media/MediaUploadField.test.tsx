@@ -124,12 +124,12 @@ describe('MediaUploadField', () => {
     expect(screen.queryByRole('img')).not.toBeInTheDocument()
     expect(screen.getByText('certificado.pdf')).toBeInTheDocument()
 
-    // Al ampliar, se embebe como documento (no como <img> roto).
+    // Al ampliar, se embebe como documento (no como <img> roto) usando
+    // `<object data type="application/pdf">` (ver comentario en
+    // MediaPreview.tsx sobre por qué no un `<iframe sandbox>`).
     await user.click(screen.getByRole('button', { name: /ver documento/i }))
-    expect(screen.getByTitle('certificado.pdf')).toHaveAttribute(
-      'src',
-      expect.stringMatching(/^blob:mock-/),
-    )
+    const objeto = document.querySelector('object[type="application/pdf"]')
+    expect(objeto).toHaveAttribute('data', expect.stringMatching(/^blob:mock-/))
 
     expect(screen.getByText(/pendiente de subir/i)).toBeInTheDocument()
     expect(uploadMutateMock).not.toHaveBeenCalled()

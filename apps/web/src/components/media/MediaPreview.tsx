@@ -32,7 +32,7 @@ type MediaPreviewProps = {
  * autenticidad/legibilidad" del certificado con solo un logo pequeño.
  *
  * Imágenes se amplían con `<img>`; cualquier otro tipo se embebe con
- * `<iframe>` dentro del mismo diálogo, más un enlace para abrirlo en una
+ * `<object>` dentro del mismo diálogo, más un enlace para abrirlo en una
  * pestaña nueva. Deliberadamente no usa una librería de lightbox ni
  * `react-pdf`/`pdf.js`: el `Dialog` de shadcn/ui ya cubre el caso.
  */
@@ -86,25 +86,35 @@ export function MediaPreview({
           ) : (
             <div className="grid gap-2">
               {/*
-                Fase 4.1, punto 4: `sandbox=""` (el más restrictivo posible)
-                bloqueaba el visor de PDF nativo de Chrome, que necesita
-                `allow-same-origin` para poder ejecutar su propio plugin de
-                render. La URL siempre apunta al bucket S3/CloudFront propio
-                de la app (nunca a contenido de terceros embebido), así que
-                relajar el sandbox a `allow-same-origin` no expone al admin a
-                contenido no confiable. Chrome además necesita `allow-scripts`
-                junto con `allow-same-origin` para que su visor nativo de PDF
-                (PDFium) pueda inicializarse dentro de un iframe sandboxeado;
-                el iframe sigue aislado del origen padre por la same-origin
-                policy real del navegador, porque `url` nunca comparte origen
-                con esta app.
+                Fase 4.1, punto 4 (fix definitivo): desde Chrome 78 el visor
+                nativo de PDF corre en un iframe cross-process que el propio
+                navegador ya aísla — envolverlo en un `<iframe sandbox>`
+                adicional entra en conflicto con ese aislamiento y Chrome
+                sigue bloqueándolo sin importar la combinación de flags
+                (problema documentado en el issue tracker de Chromium y en
+                web.dev, no de configuración propia de este proyecto). La
+                solución consistente es usar `<object data type=
+                "application/pdf">` en su lugar: no necesita sandboxearse
+                (el visor ya viene aislado) y soporta contenido de fallback
+                nativo si el navegador no puede renderizarlo.
               */}
-              <iframe
-                src={url}
-                title={titulo}
-                sandbox="allow-same-origin allow-scripts"
+              <object
+                data={url}
+                type="application/pdf"
                 className="h-[70vh] w-full rounded-md border"
-              />
+              >
+                <div className="flex h-full flex-col items-center justify-center gap-2 p-4 text-center text-sm text-muted-foreground">
+                  <p>Tu navegador no pudo mostrar la vista previa del PDF.</p>
+                  <a
+                    href={url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-primary underline underline-offset-4"
+                  >
+                    Abrir en pestaña nueva
+                  </a>
+                </div>
+              </object>
               <a
                 href={url}
                 target="_blank"

@@ -86,13 +86,16 @@ describe('CertificacionDetallePage (UC-13)', () => {
 
     await user.click(screen.getByRole('button', { name: /ver documento/i }))
 
-    expect(screen.getByTitle('AWS Certified Cloud Practitioner')).toHaveAttribute(
-      'src',
-      'https://cdn.example.com/certificado.pdf',
+    // `<object data type="application/pdf">` en vez de `<iframe sandbox>`
+    // (ver comentario en MediaPreview.tsx).
+    const objeto = document.querySelector('object[type="application/pdf"]')
+    expect(objeto).toHaveAttribute('data', 'https://cdn.example.com/certificado.pdf')
+
+    const enlaces = screen.getAllByRole('link', { name: /abrir en pestaña nueva/i })
+    expect(enlaces.length).toBeGreaterThanOrEqual(1)
+    enlaces.forEach((enlace) =>
+      expect(enlace).toHaveAttribute('href', 'https://cdn.example.com/certificado.pdf'),
     )
-    expect(
-      screen.getByRole('link', { name: /abrir en pestaña nueva/i }),
-    ).toHaveAttribute('href', 'https://cdn.example.com/certificado.pdf')
   })
 
   it('muestra un 404 amigable cuando la certificación no existe en lo publicado', () => {

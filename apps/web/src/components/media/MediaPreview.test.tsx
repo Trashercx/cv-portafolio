@@ -45,12 +45,24 @@ describe('MediaPreview', () => {
 
     await user.click(screen.getByRole('button', { name: /ver documento/i }))
 
-    expect(screen.getByTitle('certificado.pdf')).toHaveAttribute(
-      'src',
-      'https://cdn.example.com/certificado.pdf',
+    // El embed usa `<object data type="application/pdf">` (no `<iframe
+    // sandbox>`): el visor nativo de PDF de Chrome ya corre aislado desde
+    // Chrome 78, y sandboxear un iframe adicional entra en conflicto con
+    // ese aislamiento (ver comentario en MediaPreview.tsx). `<object>` no
+    // se consulta por rol de accesibilidad, así que se verifica su
+    // atributo `data` directamente.
+    const objeto = document.querySelector('object[type="application/pdf"]')
+    expect(objeto).toHaveAttribute('data', 'https://cdn.example.com/certificado.pdf')
+
+    // Puede haber dos enlaces "Abrir en pestaña nueva": el que siempre está
+    // visible debajo del embed, y el del contenido de fallback DENTRO del
+    // `<object>` (jsdom no simula la carga real del recurso, así que ese
+    // fallback también queda presente en el DOM de prueba). Ambos deben
+    // apuntar al mismo PDF.
+    const enlaces = screen.getAllByRole('link', { name: /abrir en pestaña nueva/i })
+    expect(enlaces.length).toBeGreaterThanOrEqual(1)
+    enlaces.forEach((enlace) =>
+      expect(enlace).toHaveAttribute('href', 'https://cdn.example.com/certificado.pdf'),
     )
-    expect(
-      screen.getByRole('link', { name: /abrir en pestaña nueva/i }),
-    ).toHaveAttribute('href', 'https://cdn.example.com/certificado.pdf')
   })
 })

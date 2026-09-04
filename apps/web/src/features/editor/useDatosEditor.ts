@@ -24,9 +24,17 @@ import { useTemas } from '@/features/tema/useTemas'
  * relación ya viene resuelta a su `Media` completa — acá en cambio hace
  * falta resolverla a mano contra los endpoints admin (ver comentario de
  * `useDatosEditor` sobre los 3 huecos de media).
+ *
+ * `mediaPorId` es un objeto plano (`Record`), no un `Map`: Puck cruza
+ * `puck.metadata` hacia el iframe del lienzo (y por su historial de
+ * undo/redo) por una vía que en la práctica termina serializando ese valor
+ * como si fuera `JSON.stringify` — lo que convierte cualquier `Map` en `{}`
+ * y provocaba `mediaPorId.get is not a function`. El snapshot público nunca
+ * tuvo este problema porque ya aplana la media directamente en cada campo;
+ * acá se unifica al mismo criterio para eliminar la clase de bug de raíz.
  */
 export type DatosEditor = Omit<SnapshotSitio, 'secciones'> & {
-  mediaPorId: Map<string, Media>
+  mediaPorId: Record<string, Media>
 }
 
 export type MetadataEditor = { datos: DatosEditor }
@@ -40,7 +48,7 @@ const DATOS_VACIOS: DatosEditor = {
   redes_sociales: [],
   skills: [],
   fondo: null,
-  mediaPorId: new Map(),
+  mediaPorId: {},
 }
 
 /**
@@ -116,7 +124,7 @@ export function useDatosEditor(): ResultadoUseDatosEditor {
   const error = queries.find((query) => query.error)?.error ?? null
 
   const mediaPorId = useMemo(
-    () => new Map((mediaQuery.data ?? []).map((media) => [media.id, media])),
+    () => Object.fromEntries((mediaQuery.data ?? []).map((media) => [media.id, media])),
     [mediaQuery.data],
   )
 
@@ -144,10 +152,10 @@ export function useDatosEditor(): ResultadoUseDatosEditor {
       ? {
           ...perfilAdmin,
           imagen_perfil: perfilAdmin.imagen_perfil_id
-            ? (mediaPorId.get(perfilAdmin.imagen_perfil_id) ?? null)
+            ? (mediaPorId[perfilAdmin.imagen_perfil_id] ?? null)
             : null,
           cv_media: perfilAdmin.cv_media_id
-            ? (mediaPorId.get(perfilAdmin.cv_media_id) ?? null)
+            ? (mediaPorId[perfilAdmin.cv_media_id] ?? null)
             : null,
         }
       : null
@@ -156,7 +164,7 @@ export function useDatosEditor(): ResultadoUseDatosEditor {
       (certificacion) => ({
         ...certificacion,
         logo: certificacion.logo_media_id
-          ? (mediaPorId.get(certificacion.logo_media_id) ?? null)
+          ? (mediaPorId[certificacion.logo_media_id] ?? null)
           : null,
       }),
     )
