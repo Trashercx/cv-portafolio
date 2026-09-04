@@ -3,6 +3,13 @@ import { create } from 'zustand'
 export type AdminSession = {
   email: string
   nombre: string
+  /**
+   * ISO 8601. Momento en que expira la cookie httpOnly `access_token`
+   * (devuelto por `POST /auth/login` y `POST /auth/refresh`). Lo usa
+   * `useSesionExpirando` para calcular cuándo mostrar el aviso de expiración
+   * (Fase 4.4) — nunca se usa para autorizar nada, solo para UX.
+   */
+  expiresAt: string
 }
 
 type AuthState = {

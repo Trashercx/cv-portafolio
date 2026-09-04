@@ -30,3 +30,15 @@ export function parseDurationToMs(
 
   return value * unitToMs[unit];
 }
+
+/**
+ * Calcula la fecha/hora de expiración de la sesión a partir de `JWT_EXPIRES_IN`,
+ * reusando `parseDurationToMs`. La usan tanto `login` como `refrescar` en
+ * `AuthService` para que el `expiresAt` devuelto al frontend quede sincronizado
+ * con el `maxAge` de la cookie `access_token` seteada en el controller.
+ */
+export function calcularExpiracion(
+  duration: string | undefined = process.env.JWT_EXPIRES_IN,
+): Date {
+  return new Date(Date.now() + parseDurationToMs(duration));
+}

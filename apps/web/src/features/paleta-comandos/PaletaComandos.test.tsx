@@ -102,7 +102,11 @@ describe('PaletaComandos', () => {
 
   it('cierra la sesión y navega al login al ejecutar "Cerrar sesión"', async () => {
     useAuthStore.setState({
-      admin: { email: 'admin@example.com', nombre: 'Oscar' },
+      admin: {
+        email: 'admin@example.com',
+        nombre: 'Oscar',
+        expiresAt: new Date(Date.now() + 60_000).toISOString(),
+      },
       isAuthenticated: true,
     })
     const user = userEvent.setup()
