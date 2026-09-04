@@ -30,7 +30,7 @@ const DATOS: MetadataEditor['datos'] = {
   redes_sociales: [],
   skills: [],
   fondo: null,
-  mediaPorId: new Map([[MEDIA_FONDO.id, MEDIA_FONDO]]),
+  mediaPorId: { [MEDIA_FONDO.id]: MEDIA_FONDO },
 }
 
 /**

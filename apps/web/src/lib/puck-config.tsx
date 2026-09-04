@@ -420,7 +420,7 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
           subtitulo,
           imagen_fondo_media_id,
           imagen_fondo: imagen_fondo_media_id
-            ? datos.mediaPorId.get(imagen_fondo_media_id)
+            ? datos.mediaPorId[imagen_fondo_media_id]
             : undefined,
           texto_boton,
           enlace_boton,
@@ -1007,7 +1007,7 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
         const { datos } = leerMetadata(puck)
         const fotosResueltas: GaleriaFoto[] = fotos.map((foto) => ({
           ...foto,
-          media: foto.media_id ? datos.mediaPorId.get(foto.media_id) : undefined,
+          media: foto.media_id ? datos.mediaPorId[foto.media_id] : undefined,
         }))
         return (
           <EnvoltorioSeccion

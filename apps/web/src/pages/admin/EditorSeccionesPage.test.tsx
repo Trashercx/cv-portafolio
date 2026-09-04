@@ -131,7 +131,7 @@ vi.mock('@/features/editor/useDatosEditor', () => ({
       redes_sociales: [],
       skills: [],
       fondo: null,
-      mediaPorId: new Map(),
+      mediaPorId: {},
     },
     isLoading: false,
     error: null,
@@ -146,7 +146,7 @@ vi.mock('@/features/editor/useDatosEditor', () => ({
       redes_sociales: [],
       skills: [],
       fondo: null,
-      mediaPorId: new Map(),
+      mediaPorId: {},
     },
   }),
 }))
