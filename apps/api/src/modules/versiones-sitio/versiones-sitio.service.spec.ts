@@ -278,7 +278,7 @@ describe('VersionesSitioService (UC-10 Previsualizar, UC-11 Publicar/revertir)',
      * Caso hipotético: hoy `@EsListaDeBloques()` nunca permite que un hijo
      * de una columna sea `tipo_seccion='hero'`, pero este fixture se
      * construye directamente (sin pasar por el validador) para probar que
-     * la recursión de `resolverImagenesFondoHero` funciona igual que en el
+     * la recursión de `resolverMediaDeSecciones` funciona igual que en el
      * caso de nivel superior, en vez de depender en silencio de que este
      * caso nunca ocurra.
      */

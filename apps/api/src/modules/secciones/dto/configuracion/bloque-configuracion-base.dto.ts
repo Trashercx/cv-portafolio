@@ -1,7 +1,7 @@
 import { IsBoolean, IsIn, IsOptional } from 'class-validator';
 
 /**
- * Campos de personalización compartidos por los 8 tipos de bloque del
+ * Campos de personalización compartidos por los 9 tipos de bloque del
  * editor visual (Fase 3.4, UC-07). Cada DTO de `configuracion` por
  * `tipo_seccion` (`hero-configuracion.dto.ts`, etc.) EXTIENDE esta clase
  * (herencia normal de TypeScript) en vez de repetir estos 5 campos, así
