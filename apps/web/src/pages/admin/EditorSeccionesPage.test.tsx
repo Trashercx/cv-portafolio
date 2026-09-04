@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Seccion } from '@/features/secciones/types'
 import type { SnapshotSitio } from '@/features/publico/types'
 import type { VersionSitio } from '@/features/publicacion/types'
+import { ThemeProvider } from '@/components/theme/ThemeProvider'
 import { useEditorSeccionesStore } from '@/store/editor-secciones-store'
 import { EditorSeccionesPage } from './EditorSeccionesPage'
 
@@ -14,11 +15,22 @@ vi.mock('sonner', () => ({
   toast: { success: vi.fn(), error: vi.fn() },
 }))
 
+/**
+ * `<ThemeProvider>` (Fase 4.6): en producción `EditorSeccionesPage` siempre
+ * se monta dentro de `AdminLayout`, que ya envuelve en `ThemeProvider` — sin
+ * él acá, `DialogVistaPrevia.tsx` (que ahora lee `useTheme()` para reflejar
+ * el modo oscuro del panel, igual que `PuckRoot`) tiraría porque su
+ * `DialogTrigger` se monta aunque el diálogo nunca se abra. Es un hueco de
+ * fidelidad del harness respecto al árbol real, no una restricción de
+ * negocio de esta suite.
+ */
 function renderEditor() {
   return render(
-    <MemoryRouter>
-      <EditorSeccionesPage />
-    </MemoryRouter>,
+    <ThemeProvider>
+      <MemoryRouter>
+        <EditorSeccionesPage />
+      </MemoryRouter>
+    </ThemeProvider>,
   )
 }
 
@@ -759,9 +771,11 @@ describe('EditorSeccionesPage (UC-07, UC-10, UC-11)', () => {
     // Radix marca `aria-hidden` mientras el diálogo de Vista previa está
     // abierto) para aislar específicamente el efecto del remount.
     rerender(
-      <MemoryRouter>
-        <EditorSeccionesPage />
-      </MemoryRouter>,
+      <ThemeProvider>
+        <MemoryRouter>
+          <EditorSeccionesPage />
+        </MemoryRouter>
+      </ThemeProvider>,
     )
 
     // El diálogo de "Vista previa" debe seguir abierto y con su contenido:

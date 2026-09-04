@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react'
 import type { Tema } from '@/features/tema/types'
+import { derivarPaletaOscura, type ModoTema } from './tema-oscuro'
 
 /**
  * Subconjunto de `Tema` necesario para calcular las variables CSS (UC-08).
@@ -39,13 +40,22 @@ const MAPA_FUENTE_PRINCIPAL: Record<string, string> = {
  * sitio público (`PublicHomePage`), aplicadas sobre el contenedor raíz de
  * cada uno — el tema de la vista previa del panel puede ser distinto al del
  * snapshot publicado si el admin todavía no publicó un cambio de tema.
+ *
+ * `modo` (Fase 4.6) es opt-in con default `'claro'`: cuando es `'oscuro'`,
+ * los 4 colores se reemplazan por la paleta derivada de
+ * `derivarPaletaOscura` antes de mapearlos a variables CSS.
+ * `fuente_principal` no se ve afectada por el modo.
  */
-export function temaComoVariablesCss(tema: TemaColores): CSSProperties {
+export function temaComoVariablesCss(
+  tema: TemaColores,
+  modo: ModoTema = 'claro',
+): CSSProperties {
+  const colores = modo === 'oscuro' ? derivarPaletaOscura(tema) : tema
   return {
-    '--color-primario': tema.color_primario,
-    '--color-secundario': tema.color_secundario,
-    '--color-fondo': tema.color_fondo,
-    '--color-texto': tema.color_texto,
+    '--color-primario': colores.color_primario,
+    '--color-secundario': colores.color_secundario,
+    '--color-fondo': colores.color_fondo,
+    '--color-texto': colores.color_texto,
     fontFamily:
       MAPA_FUENTE_PRINCIPAL[tema.fuente_principal] ?? tema.fuente_principal,
     // Bug preexistente (Fase 3.1): `--color-fondo` se declaraba pero nunca
