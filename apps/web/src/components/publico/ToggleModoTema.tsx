@@ -16,8 +16,9 @@ type ToggleModoTemaProps = {
  *
  * Botón simple (no `Switch`, para no depender de un componente shadcn extra
  * en el árbol público) que alterna el modo actualmente resuelto; el ícono
- * mostrado es el del modo AL QUE SE PASARÍA al hacer click (mismo patrón que
- * `ThemeToggle`: sol visible en claro invita a pasar a oscuro y viceversa).
+ * mostrado es el del modo ACTUAL (sol visible en claro invita a pasar a
+ * oscuro, luna visible en oscuro invita a pasar a claro) — corregido en la
+ * 5ta ronda, antes estaba al revés de lo que este mismo comentario ya decía.
  *
  * Montado como botón flotante fijo en `PublicHomePage` (fix de visibilidad,
  * Fase 4.7): `className` permite agregar `shadow-lg`/posicionamiento desde
@@ -44,9 +45,9 @@ export function ToggleModoTema({ className }: ToggleModoTemaProps = {}) {
       )}
     >
       {esOscuro ? (
-        <Sun className="size-4" aria-hidden="true" />
-      ) : (
         <Moon className="size-4" aria-hidden="true" />
+      ) : (
+        <Sun className="size-4" aria-hidden="true" />
       )}
     </button>
   )

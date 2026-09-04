@@ -97,11 +97,7 @@ export function PublicHomePage() {
         <ProveedorDetallePublico container={nodoRaiz}>
           <RenderizadorSecciones snapshot={snapshot} />
         </ProveedorDetallePublico>
-        <Footer
-          perfil={snapshot.perfil}
-          redes={snapshot.redes_sociales}
-          cvMedia={snapshot.perfil?.cv_media ?? null}
-        />
+        <Footer perfil={snapshot.perfil} />
         <div className="fixed bottom-4 right-4 z-50">
           <ToggleModoTema className="shadow-lg" />
         </div>

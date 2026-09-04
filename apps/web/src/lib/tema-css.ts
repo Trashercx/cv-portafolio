@@ -82,5 +82,15 @@ export function temaComoVariablesCss(
     // así siempre pintado con el color de fondo del tema activo, no con el
     // fondo por defecto del navegador.
     backgroundColor: 'var(--color-fondo)',
+    // Fix (5ta ronda): mismo motivo que `backgroundColor` arriba, pero para
+    // el texto. La herencia de CSS propaga el VALOR YA RESUELTO de `color`,
+    // no una referencia viva a la custom property — así que sobreescribir
+    // `--foreground` en este `<div>` no alcanza a los hijos que no vuelven a
+    // declarar `color` ellos mismos (la mayoría de los `Bloque*.tsx`, que
+    // heredan el `color` que `body` ya resolvió a partir de `--foreground`
+    // global de `index.css`, nunca tocado por el sitio público). Declarar
+    // `color` explícitamente acá convierte a este `<div>` en el punto real
+    // de partida de la herencia para sus descendientes sin color propio.
+    color: 'var(--foreground)',
   } as CSSProperties
 }

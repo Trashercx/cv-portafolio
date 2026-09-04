@@ -1,4 +1,4 @@
-import { FileIcon } from 'lucide-react'
+import { IconoDocumento } from '@/components/media/IconoDocumento'
 import { useAbrirDetalle } from '@/components/publico/contexto-detalle'
 import type { CertificacionPublica } from '@/features/publico/types'
 import type { CertificacionesConfiguracion } from '@/features/secciones/types'
@@ -79,10 +79,7 @@ export function BloqueCertificaciones({
                     className="size-12 object-contain"
                   />
                 ) : (
-                  <FileIcon
-                    className="size-12 text-muted-foreground"
-                    aria-label="Documento del certificado"
-                  />
+                  <IconoDocumento className="size-12" iconoClassName="size-6" />
                 )
               ) : null}
               <h3 className="font-semibold">{certificacion.nombre}</h3>
