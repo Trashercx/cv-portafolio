@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ProyectoFormDialog } from './ProyectoFormDialog'
@@ -169,6 +169,70 @@ describe('ProyectoFormDialog (nuevo)', () => {
     expect(
       screen.getByRole('button', { name: /^guardar$/i }),
     ).toBeInTheDocument()
+  })
+
+  it('regresión: cerrar el modal (Esc) justo después del primer "Crear y continuar" NO pide confirmar el descarte — el proyecto ya está persistido', async () => {
+    const user = userEvent.setup()
+    const onOpenChange = vi.fn()
+    renderDialog(onOpenChange)
+
+    await user.type(screen.getByLabelText(/título/i), 'Proyecto X')
+    await user.type(
+      screen.getByLabelText(/descripción/i),
+      'Descripción del proyecto',
+    )
+    fireEvent.change(screen.getByLabelText(/fecha de inicio/i), {
+      target: { value: '2024-01-01' },
+    })
+    await user.type(screen.getByLabelText(/^estado$/i), 'en_progreso')
+
+    await user.click(
+      screen.getByRole('button', { name: /crear y continuar/i }),
+    )
+    await waitFor(() => expect(crearMutateMock).toHaveBeenCalledTimes(1))
+
+    // Simula la creación exitosa (mismo flujo que el test anterior).
+    const opciones = crearMutateMock.mock.calls[0][1] as {
+      onSuccess: (creado: { id: string }) => void
+    }
+    act(() => {
+      opciones.onSuccess({ id: 'proyecto-creado' })
+    })
+    await screen.findByText(/^tecnologías$/i)
+
+    // Cierra sin haber hecho el segundo guardado (Esc, como haría el admin
+    // tras cargar tecnologías/imágenes): el `onSuccess` de la creación debe
+    // haber limpiado `isDirty` con `form.reset(values)`, así que esto NO
+    // debe disparar el `AlertDialog` de "¿Descartar cambios?" — el proyecto
+    // en sí ya está guardado, solo se pierde la sesión de carga de
+    // tecnologías/imágenes, que no es lo que ese mensaje comunica.
+    await user.keyboard('{Escape}')
+
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    expect(onOpenChange).toHaveBeenCalledWith(false)
+  })
+
+  it('pide confirmación al intentar cerrar (Esc) con cambios sin guardar antes del primer "Crear y continuar"', async () => {
+    const user = userEvent.setup()
+    const onOpenChange = vi.fn()
+    renderDialog(onOpenChange)
+
+    await user.type(screen.getByLabelText(/título/i), 'Texto sucio sin guardar')
+
+    await user.keyboard('{Escape}')
+
+    const confirmacion = await screen.findByRole('alertdialog')
+    expect(
+      within(confirmacion).getByText(/¿descartar cambios\?/i),
+    ).toBeInTheDocument()
+    expect(onOpenChange).not.toHaveBeenCalledWith(false)
+    expect(crearMutateMock).not.toHaveBeenCalled()
+
+    await user.click(
+      within(confirmacion).getByRole('button', { name: /^descartar$/i }),
+    )
+
+    expect(onOpenChange).toHaveBeenCalledWith(false)
   })
 
   it('permite fecha_fin igual a fecha_inicio (un proyecto puede empezar y terminar el mismo día)', async () => {

@@ -37,10 +37,24 @@ function renderEditor() {
  * separado encima del lienzo — el stub debe seguir invocándola para que
  * estos elementos sigan siendo consultables por rol/nombre en los tests de
  * abajo, igual que antes de la migración.
+ *
+ * `headerActions` se usa acá como REFERENCIA DE COMPONENTE (`<HeaderActions />`),
+ * no como una llamada directa (`headerActions()`): así reproduce el mismo
+ * comportamiento del `Puck` real (confirmado leyendo
+ * `node_modules/@measured/puck/dist/index.js`, donde `CustomHeaderActions`
+ * también se usa como tipo de componente JSX) — una función/objeto literal
+ * nuevo en cada render de `EditorSeccionesPage` (la prop `overrides` se
+ * declara inline) hace que React remonte todo ese subárbol. Es justo lo que
+ * necesita el test de "Vista previa no se cierra sola" más abajo (Fase 4.1,
+ * punto 2) para poder detectar una regresión si el estado de
+ * `DialogVistaPrevia` volviera a vivir dentro de ese subárbol en vez de en
+ * `EditorSeccionesPage`.
  */
 vi.mock('@measured/puck', () => ({
-  Puck: (props: { overrides?: { headerActions?: () => ReactNode } }) =>
-    props.overrides?.headerActions ? props.overrides.headerActions() : null,
+  Puck: (props: { overrides?: { headerActions?: () => ReactNode } }) => {
+    const HeaderActions = props.overrides?.headerActions
+    return HeaderActions ? <HeaderActions /> : null
+  },
 }))
 
 const SECCION_HERO: Seccion = {
@@ -619,14 +633,19 @@ describe('EditorSeccionesPage (UC-07, UC-10, UC-11)', () => {
     expect(reordenarMutateAsyncMock).not.toHaveBeenCalled()
   })
 
-  it('muestra el badge "Publicado" cuando la versión más reciente ya fue publicada', async () => {
+  it('muestra el badge "Publicado" cuando la versión más reciente ya fue publicada, sin el banner de cambios sin publicar', async () => {
     renderEditor()
 
     expect(await screen.findByText('Publicado')).toBeInTheDocument()
     expect(screen.queryByText('Borrador')).not.toBeInTheDocument()
+    // Fase 4.1, punto 6: el banner solo se muestra cuando hay cambios sin
+    // publicar, no cuando la última versión ya es la publicada.
+    expect(
+      screen.queryByText(/todavía no publicaste/i),
+    ).not.toBeInTheDocument()
   })
 
-  it('muestra el badge "Borrador" cuando la versión más reciente todavía no se publicó', async () => {
+  it('muestra el badge "Borrador" y el banner de cambios sin publicar cuando la versión más reciente todavía no se publicó', async () => {
     publicacionMocks.versiones = [
       VERSION_PREVIEW,
       VERSION_ACTUAL,
@@ -635,6 +654,12 @@ describe('EditorSeccionesPage (UC-07, UC-10, UC-11)', () => {
     renderEditor()
 
     expect(await screen.findByText('Borrador')).toBeInTheDocument()
+    // Fase 4.1, punto 6: refuerzo visual más notorio que el badge chico,
+    // para que "no veo el cambio en `/`" se entienda como "todavía no
+    // publicaste", no como un bug.
+    expect(
+      screen.getByText(/todavía no publicaste/i),
+    ).toBeInTheDocument()
   })
 
   it('no muestra el badge "Publicado" mientras el historial de versiones todavía está cargando', () => {
@@ -676,7 +701,7 @@ describe('EditorSeccionesPage (UC-07, UC-10, UC-11)', () => {
     expect(publicarMutateMock).toHaveBeenCalledTimes(1)
   })
 
-  it('"Historial de versiones" abre un diálogo con el historial completo y permite previsualizar sin salir del editor', async () => {
+  it('"Historial de versiones" abre un diálogo con el historial completo, sin su propio botón de vista previa (Fase 4.1, punto 3: la única "Vista previa" que queda es la de la barra del editor)', async () => {
     const user = userEvent.setup()
     renderEditor()
 
@@ -692,10 +717,18 @@ describe('EditorSeccionesPage (UC-07, UC-10, UC-11)', () => {
       within(dialogo).getAllByText(/historial de versiones/i),
     ).toHaveLength(2)
 
-    await user.click(
-      within(dialogo).getByRole('button', { name: /previsualizar cambios/i }),
-    )
+    expect(
+      within(dialogo).queryByRole('button', { name: /previsualizar cambios/i }),
+    ).not.toBeInTheDocument()
+  })
 
+  it('"Vista previa" (barra del editor) abre el diálogo y genera una vista previa contra el contenido actual', async () => {
+    const user = userEvent.setup()
+    renderEditor()
+
+    await user.click(screen.getByRole('button', { name: /^vista previa$/i }))
+
+    const dialogo = await screen.findByRole('dialog')
     expect(previewMutateMock).toHaveBeenCalled()
     // La sección visible se pinta normal, y la oculta se muestra igual pero
     // marcada como "no se publicará" (soloVisibles=false en la preview).
@@ -704,6 +737,40 @@ describe('EditorSeccionesPage (UC-07, UC-10, UC-11)', () => {
     expect(
       within(dialogo).getByText('Oculta · no se publicará'),
     ).toBeInTheDocument()
+  })
+
+  it('"Vista previa" no se cierra sola cuando el resto de la página se re-renderiza y remonta el subárbol de headerActions (Fase 4.1, punto 2: regresión del bug reportado)', async () => {
+    const user = userEvent.setup()
+    const { rerender } = renderEditor()
+
+    await user.click(screen.getByRole('button', { name: /^vista previa$/i }))
+    await screen.findByRole('dialog')
+    expect(
+      screen.getByRole('heading', { name: 'Vista previa' }),
+    ).toBeInTheDocument()
+
+    // Cualquier cambio de estado en `EditorSeccionesPage` re-crea el objeto
+    // `overrides` (declarado inline en el JSX de `<Puck>`), lo que el mock
+    // de `Puck` de este archivo remonta como un subárbol nuevo (mismo
+    // comportamiento que el `Puck` real, ver el comentario de cabecera de
+    // ese mock) — antes del fix, esto reseteaba el `useState` local de
+    // `DialogVistaPrevia` a `open=false`. Se fuerza ese re-render con
+    // `rerender` (en vez de interactuar con otro botón de la barra, que
+    // Radix marca `aria-hidden` mientras el diálogo de Vista previa está
+    // abierto) para aislar específicamente el efecto del remount.
+    rerender(
+      <MemoryRouter>
+        <EditorSeccionesPage />
+      </MemoryRouter>,
+    )
+
+    // El diálogo de "Vista previa" debe seguir abierto y con su contenido:
+    // con el estado levantado a `EditorSeccionesPage` (que nunca se
+    // remonta), el remount del subárbol de `headerActions` ya no lo afecta.
+    expect(
+      screen.getByRole('heading', { name: 'Vista previa' }),
+    ).toBeInTheDocument()
+    expect(screen.getByText('Hola')).toBeInTheDocument()
   })
 
   it('"Deshacer última publicación" solo aparece en la publicada inmediatamente anterior a la actual, y confirma antes de revertir', async () => {

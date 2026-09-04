@@ -1,16 +1,9 @@
 import { useState } from 'react'
 import { ConfirmActionDialog } from '@/components/shared/ConfirmActionDialog'
-import { RenderizadorSecciones } from '@/components/publico/RenderizadorSecciones'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import {
-  usePreviewVersion,
-  useRevertirVersion,
-  useVersiones,
-} from '@/features/publicacion/usePublicacion'
-import type { VersionSitio } from '@/features/publicacion/types'
+import { useRevertirVersion, useVersiones } from '@/features/publicacion/usePublicacion'
 import { ApiError } from '@/lib/api-client'
-import { temaComoVariablesCss } from '@/lib/tema-css'
 
 function mensajeDeError(error: unknown, fallback: string): string {
   return error instanceof ApiError ? error.message : fallback
@@ -25,13 +18,17 @@ function formatearFechaHora(fecha: string | null): string {
 }
 
 /**
- * UC-10 (Previsualizar cambios) y la parte de "historial + deshacer" de
- * UC-11 (Publicar o revertir una versión), extraídas como componente
- * compartido para que `EditorSeccionesPage` pueda mostrarlas sin salir del
- * editor (Sprint 7, fusión de Editor visual + Publicación) sin duplicar este
- * JSX. El botón "Publicar" en sí vive en la barra superior de
- * `EditorSeccionesPage` (es el "botón único de publicación" del reporte), no
- * aquí.
+ * La parte de "historial + deshacer" de UC-11 (Publicar o revertir una
+ * versión), extraída como componente compartido para que
+ * `EditorSeccionesPage` pueda mostrarla sin salir del editor (Sprint 7,
+ * fusión de Editor visual + Publicación) sin duplicar este JSX. El botón
+ * "Publicar" en sí vive en la barra superior de `EditorSeccionesPage` (es el
+ * "botón único de publicación" del reporte), no aquí.
+ *
+ * UC-10 (Previsualizar cambios) ya NO vive acá (Fase 4.1, punto 3): tenía su
+ * propio botón "Previsualizar cambios" duplicando `DialogVistaPrevia`
+ * (barra del editor) — este panel queda enfocado solo en el historial
+ * (listar versiones, volver a una anterior).
  *
  * "La actual" = la versión `publicado` de `publicado_en` más reciente (mismo
  * criterio que `VersionesSitioService.obtenerUltimaPublicada`, que es lo que
@@ -47,12 +44,8 @@ function formatearFechaHora(fecha: string | null): string {
  */
 export function PanelVersiones() {
   const versionesQuery = useVersiones()
-  const preview = usePreviewVersion()
   const revertir = useRevertirVersion()
 
-  const [previewVersion, setPreviewVersion] = useState<VersionSitio | null>(
-    null,
-  )
   const [revirtiendo, setRevirtiendo] = useState(false)
 
   const versiones = versionesQuery.data ?? []
@@ -66,12 +59,6 @@ export function PanelVersiones() {
     )
   const actual = versionesPublicadasPorFecha[0]
   const anteriorInmediataALaActual = versionesPublicadasPorFecha[1]
-
-  const handlePreview = () => {
-    preview.mutate(undefined, {
-      onSuccess: (version) => setPreviewVersion(version),
-    })
-  }
 
   /**
    * Siempre revierte pasando `actual.id`, nunca el `id` de la fila donde
@@ -91,44 +78,6 @@ export function PanelVersiones() {
 
   return (
     <div className="grid gap-6">
-      <section className="grid gap-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-sm font-medium text-muted-foreground">
-            Vista previa
-          </h2>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handlePreview}
-            disabled={preview.isPending}
-          >
-            {preview.isPending
-              ? 'Generando vista previa…'
-              : 'Previsualizar cambios'}
-          </Button>
-        </div>
-
-        {previewVersion ? (
-          <div
-            style={
-              previewVersion.snapshot.tema
-                ? temaComoVariablesCss(previewVersion.snapshot.tema)
-                : undefined
-            }
-            className="max-h-[24rem] overflow-y-auto rounded-lg border"
-          >
-            <RenderizadorSecciones
-              snapshot={previewVersion.snapshot}
-              soloVisibles={false}
-            />
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">
-            Las secciones ocultas se mostrarán atenuadas: no se publicarán.
-          </p>
-        )}
-      </section>
-
       <section className="grid gap-3">
         <h2 className="font-heading text-sm font-medium text-muted-foreground">
           Historial de versiones

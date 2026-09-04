@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -153,17 +153,57 @@ describe('RedFormDialog (nuevo)', () => {
     expect(crearMutateMock).not.toHaveBeenCalled()
   })
 
-  it('resetea el formulario al reabrir sin guardar (mismo estado "nuevo")', async () => {
+  it('pide confirmación al intentar cerrar sin guardar (Esc) en vez de cerrar de inmediato', async () => {
     const user = userEvent.setup()
     render(<WrapperControlado red={null} />)
 
     await user.type(screen.getByLabelText(/^url$/i), 'texto sucio sin guardar')
+
+    // Esc, como haría el admin sin querer: no debe cerrar de inmediato.
+    await user.keyboard('{Escape}')
+
+    const confirmacion = await screen.findByRole('alertdialog')
+    expect(
+      within(confirmacion).getByText(/¿descartar cambios\?/i),
+    ).toBeInTheDocument()
+    // El formulario sigue montado, con el valor sucio intacto.
     expect(screen.getByLabelText(/^url$/i)).toHaveValue(
       'texto sucio sin guardar',
     )
+  })
 
-    // cierra sin guardar (Escape, como haría el admin)
+  it('"Cancelar" en la confirmación mantiene el modal abierto con los cambios', async () => {
+    const user = userEvent.setup()
+    render(<WrapperControlado red={null} />)
+
+    await user.type(screen.getByLabelText(/^url$/i), 'texto sucio sin guardar')
     await user.keyboard('{Escape}')
+
+    const confirmacion = await screen.findByRole('alertdialog')
+    await user.click(
+      within(confirmacion).getByRole('button', { name: /^cancelar$/i }),
+    )
+
+    await waitFor(() =>
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument(),
+    )
+    expect(screen.getByLabelText(/^url$/i)).toHaveValue(
+      'texto sucio sin guardar',
+    )
+  })
+
+  it('"Descartar" en la confirmación cierra el modal, y resetea el formulario al reabrir (mismo estado "nuevo")', async () => {
+    const user = userEvent.setup()
+    render(<WrapperControlado red={null} />)
+
+    await user.type(screen.getByLabelText(/^url$/i), 'texto sucio sin guardar')
+
+    // cierra sin guardar (Escape, como haría el admin), confirmando el descarte
+    await user.keyboard('{Escape}')
+    const confirmacion = await screen.findByRole('alertdialog')
+    await user.click(
+      within(confirmacion).getByRole('button', { name: /^descartar$/i }),
+    )
     await waitFor(() =>
       expect(
         screen.queryByLabelText(/^url$/i),

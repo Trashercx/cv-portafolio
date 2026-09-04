@@ -1,6 +1,16 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -19,6 +29,7 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
+import { useConfirmarDescarte } from '@/hooks/useConfirmarDescarte'
 import { ApiError } from '@/lib/api-client'
 import { logroSchema, type LogroFormValues } from './logro-schema'
 import type { Logro } from './types'
@@ -79,6 +90,11 @@ export function LogroFormDialog({
     )
   }, [open, logro, form])
 
+  // UC-XX (Fase 4.1, punto 1): evita cerrar el modal sin avisar (click
+  // afuera/Esc) cuando hay cambios sin guardar en el form.
+  const { intentarCerrar, confirmando, confirmar, cancelar } =
+    useConfirmarDescarte(form.formState.isDirty, onOpenChange)
+
   const mutacionActiva = esNuevo ? crear : actualizar
 
   // Reutiliza el mismo schema de Zod que ya valida el campo (nunca duplica
@@ -115,63 +131,24 @@ export function LogroFormDialog({
         : null
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{esNuevo ? 'Nuevo logro' : 'Editar logro'}</DialogTitle>
-        </DialogHeader>
-        <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onSubmit)}
-            noValidate
-            className="grid gap-4"
-          >
-            <FormField
-              control={form.control}
-              name="titulo"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Título</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="descripcion"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Descripción</FormLabel>
-                  <FormControl>
-                    <Textarea rows={4} {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <div className="grid grid-cols-2 gap-4">
+    <>
+      <Dialog open={open} onOpenChange={intentarCerrar}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{esNuevo ? 'Nuevo logro' : 'Editar logro'}</DialogTitle>
+          </DialogHeader>
+          <Form {...form}>
+            <form
+              onSubmit={form.handleSubmit(onSubmit)}
+              noValidate
+              className="grid gap-4"
+            >
               <FormField
                 control={form.control}
-                name="fecha"
+                name="titulo"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Fecha</FormLabel>
-                    <FormControl>
-                      <Input type="date" max={hoy} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="categoria"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Categoría</FormLabel>
+                    <FormLabel>Título</FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
@@ -179,64 +156,125 @@ export function LogroFormDialog({
                   </FormItem>
                 )}
               />
-            </div>
-            <FormField
-              control={form.control}
-              name="url_referencia"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>URL de referencia (opcional)</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                  {urlReferenciaValida ? (
-                    <a
-                      href={urlReferencia}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-primary underline"
-                    >
-                      Ver enlace ↗
-                    </a>
-                  ) : null}
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="orden"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Orden</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      value={field.value}
-                      onChange={(event) =>
-                        field.onChange(event.target.valueAsNumber)
-                      }
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="descripcion"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Descripción</FormLabel>
+                    <FormControl>
+                      <Textarea rows={4} {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="fecha"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Fecha</FormLabel>
+                      <FormControl>
+                        <Input type="date" max={hoy} {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="categoria"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Categoría</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <FormField
+                control={form.control}
+                name="url_referencia"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>URL de referencia (opcional)</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    {urlReferenciaValida ? (
+                      <a
+                        href={urlReferencia}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-primary underline"
+                      >
+                        Ver enlace ↗
+                      </a>
+                    ) : null}
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="orden"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Orden</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        value={field.value}
+                        onChange={(event) =>
+                          field.onChange(event.target.valueAsNumber)
+                        }
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            {errorMessage ? (
-              <p role="alert" className="text-sm text-destructive">
-                {errorMessage}
-              </p>
-            ) : null}
+              {errorMessage ? (
+                <p role="alert" className="text-sm text-destructive">
+                  {errorMessage}
+                </p>
+              ) : null}
 
-            <DialogFooter>
-              <Button type="submit" disabled={mutacionActiva.isPending}>
-                {mutacionActiva.isPending ? 'Guardando…' : 'Guardar'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+              <DialogFooter>
+                <Button type="submit" disabled={mutacionActiva.isPending}>
+                  {mutacionActiva.isPending ? 'Guardando…' : 'Guardar'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog
+        open={confirmando}
+        onOpenChange={(siguienteAbierto) => {
+          if (!siguienteAbierto) cancelar()
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Descartar cambios?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Vas a perder lo que escribiste.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelar}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmar}>Descartar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }
