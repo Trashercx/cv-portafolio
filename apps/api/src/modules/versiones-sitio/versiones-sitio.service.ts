@@ -85,7 +85,7 @@ export class VersionesSitioService {
     return {
       perfil,
       tema,
-      secciones: await this.resolverImagenesFondoHero(secciones),
+      secciones: await this.resolverMediaDeSecciones(secciones),
       proyectos,
       certificaciones,
       logros,
@@ -96,42 +96,54 @@ export class VersionesSitioService {
   }
 
   /**
-   * Resuelve `configuracion.imagen_fondo_media_id` a una `Media` completa
-   * para cada sección `tipo_seccion='hero'` (mismo patrón que
-   * `perfil.imagen_perfil`/`certificacion.logo`: el snapshot público nunca
-   * debe requerir que el consumidor busque un id de media por su cuenta).
+   * Resuelve referencias a `Media` por id a la `Media` completa, para cada
+   * sección que las tenga (mismo patrón que `perfil.imagen_perfil`/
+   * `certificacion.logo`: el snapshot público nunca debe requerir que el
+   * consumidor busque un id de media por su cuenta):
+   *
+   * - `tipo_seccion='hero'`: `configuracion.imagen_fondo_media_id` →
+   *   `configuracion.imagen_fondo`.
+   * - `tipo_seccion='galeria'` (Fase 4.5, UC-18): cada
+   *   `configuracion.fotos[].media_id` → `fotos[].media`.
+   *
+   * Renombrado desde `resolverImagenesFondoHero`/`recolectarIdsImagenFondoHero`/
+   * `aplicarImagenesFondoHero` en Fase 4.5: dejó de ser exclusivo de `hero`
+   * al sumarse `galeria`, así que el nombre ya no reflejaba su alcance.
    *
    * RECURSIVA (Fase 3.3, UC-17): una sección `tipo_seccion='columnas'`
    * guarda sus bloques hijo en `configuracion.columna_1/columna_2/
    * columna_3` con la MISMA forma que tendrían como fila propia (ver
    * `ColumnasConfiguracionDto`), así que esta función entra en esos 3
-   * arrays y aplica la misma resolución a cada hijo. Hoy `@EsListaDeBloques`
-   * nunca permite que un hijo sea `hero` (restricción de anidamiento de un
-   * solo nivel, ver `es-lista-de-bloques.decorator.ts`), pero esta función
-   * no depende de esa garantía: la prohibición de anidar `hero` es una
-   * decisión de producto explícita del validador, no algo que este resolver
-   * deba asumir en silencio.
+   * arrays y aplica la misma resolución a cada hijo (incluida una
+   * `galeria` anidada, tratada igual que un `hero` anidado). Hoy
+   * `@EsListaDeBloques` nunca permite anidar `hero` ni `columnas`
+   * (restricción de anidamiento de un solo nivel, ver
+   * `es-lista-de-bloques.decorator.ts`), pero SÍ permite anidar `galeria`;
+   * de todos modos esta función no depende de esa garantía en ningún caso:
+   * qué se puede anidar es una decisión de producto explícita del
+   * validador, no algo que este resolver deba asumir en silencio.
    *
    * Sigue siendo una sola consulta batch (`findMany` con `id: { in: [...] }`)
-   * para TODAS las secciones hero de todo el árbol (nivel superior + dentro
-   * de columnas), recolectadas en una sola pasada antes de la única consulta
-   * a `Media` — nunca una consulta por sección/hijo. Un id que no
-   * corresponda a ningún `Media` existente (referencia rota) se omite en
-   * silencio: `imagen_fondo` simplemente no se agrega, sin lanzar excepción.
+   * para TODA la media referenciada en todo el árbol (hero + galería, nivel
+   * superior + dentro de columnas), recolectada en una sola pasada antes de
+   * la única consulta a `Media` — nunca una consulta por sección/hijo/foto.
+   * Un id que no corresponda a ningún `Media` existente (referencia rota) se
+   * omite en silencio: `imagen_fondo`/`foto.media` simplemente no se agrega,
+   * sin lanzar excepción.
    */
-  private async resolverImagenesFondoHero(
+  private async resolverMediaDeSecciones(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     secciones: any[],
   ): Promise<SnapshotSeccion[]> {
-    const idsImagenFondo = [
-      ...new Set(this.recolectarIdsImagenFondoHero(secciones)),
+    const idsMedia = [
+      ...new Set(this.recolectarIdsMediaDeSecciones(secciones)),
     ];
 
     const mediaPorId = new Map<string, SnapshotMedia>();
 
-    if (idsImagenFondo.length > 0) {
+    if (idsMedia.length > 0) {
       const medias = await this.prisma.media.findMany({
-        where: { id: { in: idsImagenFondo } },
+        where: { id: { in: idsMedia } },
       });
 
       medias.forEach((media) =>
@@ -139,17 +151,18 @@ export class VersionesSitioService {
       );
     }
 
-    return this.aplicarImagenesFondoHero(secciones, mediaPorId);
+    return this.aplicarMediaDeSecciones(secciones, mediaPorId);
   }
 
   /**
    * Recorrido recursivo de recolección (sin consultar `Media` todavía): junta
-   * todos los `imagen_fondo_media_id` de secciones `hero`, tanto de nivel
-   * superior como dentro de `configuracion.columna_1/2/3` de secciones
+   * todos los `imagen_fondo_media_id` de secciones `hero` y todos los
+   * `fotos[].media_id` de secciones `galeria` (Fase 4.5, UC-18), tanto de
+   * nivel superior como dentro de `configuracion.columna_1/2/3` de secciones
    * `columnas` (a cualquier profundidad, aunque hoy el validador solo permite
    * un nivel).
    */
-  private recolectarIdsImagenFondoHero(
+  private recolectarIdsMediaDeSecciones(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     secciones: any[],
   ): string[] {
@@ -160,9 +173,17 @@ export class VersionesSitioService {
         return typeof id === 'string' && id.length > 0 ? [id] : [];
       }
 
+      if (seccion.tipo_seccion === 'galeria') {
+        return this.fotosDeSeccion(seccion)
+          .map((foto) => foto.media_id)
+          .filter(
+            (id): id is string => typeof id === 'string' && id.length > 0,
+          );
+      }
+
       if (seccion.tipo_seccion === 'columnas') {
         return this.columnasDeSeccion(seccion).flatMap((columna) =>
-          this.recolectarIdsImagenFondoHero(columna),
+          this.recolectarIdsMediaDeSecciones(columna),
         );
       }
 
@@ -172,11 +193,12 @@ export class VersionesSitioService {
 
   /**
    * Recorrido recursivo de aplicación: reconstruye cada sección `hero` con
-   * `imagen_fondo` agregada (si corresponde) y cada sección `columnas` con
-   * sus 3 arrays reconstruidos recursivamente. Cualquier otro `tipo_seccion`
-   * se devuelve sin cambios.
+   * `imagen_fondo` agregada (si corresponde), cada sección `galeria` con
+   * `fotos[].media` agregada a cada foto que resolvió (Fase 4.5, UC-18), y
+   * cada sección `columnas` con sus 3 arrays reconstruidos recursivamente.
+   * Cualquier otro `tipo_seccion` se devuelve sin cambios.
    */
-  private aplicarImagenesFondoHero(
+  private aplicarMediaDeSecciones(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     secciones: any[],
     mediaPorId: Map<string, SnapshotMedia>,
@@ -200,6 +222,26 @@ export class VersionesSitioService {
         } as SnapshotSeccion;
       }
 
+      if (seccion.tipo_seccion === 'galeria') {
+        const configuracion = (seccion.configuracion ?? {}) as Record<
+          string,
+          unknown
+        >;
+        const fotos = this.fotosDeSeccion(seccion).map((foto) => {
+          const media =
+            typeof foto?.media_id === 'string'
+              ? mediaPorId.get(foto.media_id)
+              : undefined;
+
+          return media ? { ...foto, media } : foto;
+        });
+
+        return {
+          ...seccion,
+          configuracion: { ...configuracion, fotos },
+        } as SnapshotSeccion;
+      }
+
       if (seccion.tipo_seccion === 'columnas') {
         const configuracion = (seccion.configuracion ?? {}) as Record<
           string,
@@ -207,7 +249,7 @@ export class VersionesSitioService {
         >;
         const [columna1, columna2, columna3] = this.columnasDeSeccion(
           seccion,
-        ).map((columna) => this.aplicarImagenesFondoHero(columna, mediaPorId));
+        ).map((columna) => this.aplicarMediaDeSecciones(columna, mediaPorId));
 
         return {
           ...seccion,
@@ -222,6 +264,24 @@ export class VersionesSitioService {
 
       return seccion as SnapshotSeccion;
     });
+  }
+
+  /**
+   * `configuracion.fotos` de una sección `galeria` (Fase 4.5, UC-18),
+   * siempre como array de objetos plano (si faltara o no fuera array por un
+   * dato corrupto/legado, se trata como vacío en vez de lanzar).
+   */
+  private fotosDeSeccion(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    seccion: any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ): any[] {
+    const configuracion = (seccion.configuracion ?? {}) as Record<
+      string,
+      unknown
+    >;
+
+    return Array.isArray(configuracion.fotos) ? configuracion.fotos : [];
   }
 
   /**
