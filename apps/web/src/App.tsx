@@ -15,6 +15,7 @@ import { SkillsListPage } from '@/pages/admin/SkillsListPage'
 import { FondoSitioPage } from '@/pages/admin/FondoSitioPage'
 import { TemaPage } from '@/pages/admin/TemaPage'
 import { CertificacionDetallePage } from '@/pages/public/CertificacionDetallePage'
+import { LogroDetallePage } from '@/pages/public/LogroDetallePage'
 import { ProyectoDetallePage } from '@/pages/public/ProyectoDetallePage'
 import { PublicHomePage } from '@/pages/public/PublicHomePage'
 
@@ -35,6 +36,7 @@ function App() {
             path="/certificacion/:id"
             element={<CertificacionDetallePage />}
           />
+          <Route path="/logro/:id" element={<LogroDetallePage />} />
 
           {/* Zona de administración */}
           <Route path="/admin/login" element={<LoginPage />} />

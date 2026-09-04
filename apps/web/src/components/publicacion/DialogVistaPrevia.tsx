@@ -1,3 +1,4 @@
+import { ProveedorDetallePublico } from '@/components/publico/contexto-detalle'
 import { RenderizadorSecciones } from '@/components/publico/RenderizadorSecciones'
 import { Button } from '@/components/ui/button'
 import {
@@ -90,10 +91,21 @@ export function DialogVistaPrevia({
             </p>
           ) : null}
           {previewVersion ? (
-            <RenderizadorSecciones
-              snapshot={previewVersion.snapshot}
-              soloVisibles={false}
-            />
+            // `ProveedorDetallePublico` (Fase 4.3): sin envolver acá, un click
+            // en una tarjeta de proyecto/certificación/logro dentro de esta
+            // vista previa navegaba fuera del panel admin hacia
+            // `/proyecto/:id` (`RenderizadorSecciones`, sin
+            // `ProveedorModoRenderizado` explícito, default a modo
+            // `'publico'` con `Link` real — ver `contexto-renderizado.tsx`).
+            // Envolver acá corrige ese salto: el click ahora abre el mismo
+            // modal de detalle que en el sitio público, sin sacar al admin
+            // de `EditorSeccionesPage`.
+            <ProveedorDetallePublico>
+              <RenderizadorSecciones
+                snapshot={previewVersion.snapshot}
+                soloVisibles={false}
+              />
+            </ProveedorDetallePublico>
           ) : null}
         </div>
       </DialogContent>
