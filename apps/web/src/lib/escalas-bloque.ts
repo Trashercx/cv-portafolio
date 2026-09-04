@@ -46,3 +46,16 @@ export const FONDO_BLOQUE_CLASE: Record<FondoBloqueBloque, string> = {
   sutil: 'bg-muted/30',
   tarjeta: 'bg-card border rounded-xl',
 }
+
+/**
+ * UC-18 (Fase 4.5, bloque `galeria`): clases Tailwind literales para
+ * `columnas_grid` cuando `disposicion === 'grid'` — mismo criterio de tabla
+ * token → clase literal que el resto de este archivo. Responsive: 1 columna
+ * en mobile (evita fotos ilegibles/apretadas) y recién a partir de `sm`
+ * escala hasta el valor elegido.
+ */
+export const COLUMNAS_GRID_CLASE: Record<2 | 3 | 4, string> = {
+  2: 'grid-cols-1 sm:grid-cols-2',
+  3: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
+  4: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4',
+}

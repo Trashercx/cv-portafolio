@@ -3,6 +3,7 @@ import { EnvoltorioSeccion } from '@/components/publico/EnvoltorioSeccion'
 import {
   BloqueCertificaciones,
   BloqueContacto,
+  BloqueGaleria,
   BloqueHero,
   BloqueLogros,
   BloqueProyectos,
@@ -21,6 +22,8 @@ import type {
   ContactoConfiguracion,
   DistribucionColumnas,
   EspaciadoColumnas,
+  GaleriaConfiguracion,
+  GaleriaFoto,
   HeroConfiguracion,
   LogrosConfiguracion,
   ProyectosConfiguracion,
@@ -34,7 +37,8 @@ import type {
  * mismo orden/valores que `allow` de cada slot más abajo — mismo criterio
  * reforzado en el DTO del backend (`docs/plan-portafolio.md` §4): nunca
  * `'hero'` (la portada ocupa todo el ancho por diseño) ni `'columnas'`
- * (evita anidamiento sin límite).
+ * (evita anidamiento sin límite). `'galeria'` (UC-18, Fase 4.5) se suma acá
+ * igual que cualquier otro bloque de contenido.
  */
 const BLOQUES_ANIDABLES: TipoSeccionAnidable[] = [
   'sobre-mi',
@@ -43,6 +47,7 @@ const BLOQUES_ANIDABLES: TipoSeccionAnidable[] = [
   'logros',
   'contacto',
   'skills',
+  'galeria',
 ]
 
 // Clases Tailwind literales para el layout de columnas (nunca construidas en
@@ -168,25 +173,45 @@ const DEFAULT_PROPS_BASE_BLOQUE: Required<BloqueConfiguracionBase> = {
 }
 
 /**
- * Field personalizado de Puck para `hero.imagen_fondo_media_id`: en vez de
- * duplicar el flujo de subida de `MediaUploadField`, deja elegir entre las
- * imágenes ya existentes en la biblioteca (UC-09) — más simple de integrar
- * dentro del sidebar de Puck que reusar un input de archivo ahí mismo.
+ * Field personalizado de Puck para elegir UNA imagen de la biblioteca de
+ * medios (UC-09): en vez de duplicar el flujo de subida de
+ * `MediaUploadField`, deja elegir entre las imágenes ya existentes — más
+ * simple de integrar dentro del sidebar de Puck que reusar un input de
+ * archivo ahí mismo. Usado por `hero.imagen_fondo_media_id` desde su
+ * creación y, desde Fase 4.5 (UC-18), reusado tal cual dentro de
+ * `arrayFields.media_id` del bloque `galeria` (una foto a la vez por cada
+ * ítem del array) — de ahí el nombre neutro (ya no exclusivo del hero).
  *
  * `useMediaList()` se llama **sin** filtro de tipo (`GET /admin/media`, sin
  * `?tipo=`) y el filtro a `tipo === 'imagen'` se hace en cliente: así esta
  * entrada de caché es la misma que ya usa `useDatosEditor` para resolver
  * `mediaPorId` (una sola petición de red compartida en vez de dos).
  */
-const imagenFondoField: CustomField<string | undefined> = {
+const selectorMediaField: CustomField<string | undefined> = {
   type: 'custom',
-  label: 'Imagen de fondo (biblioteca de medios)',
+  label: 'Imagen (biblioteca de medios)',
   render: ({ value, onChange }) => (
-    <SelectorImagenFondo value={value} onChange={onChange} />
+    <SelectorMedia value={value} onChange={onChange} />
   ),
 }
 
-function SelectorImagenFondo({
+/**
+ * Variante de `selectorMediaField` para `arrayFields.media_id` del bloque
+ * `galeria` (Fase 4.5, UC-18): a diferencia de `hero.imagen_fondo_media_id`
+ * (opcional), `GaleriaFoto.media_id` es obligatorio — mismo componente
+ * `SelectorMedia`, solo cambia el tipo del field para que Puck no permita
+ * `undefined` en cada ítem del array (mapea a `''` mientras no se eligió
+ * ninguna imagen todavía).
+ */
+const selectorMediaRequeridoField: CustomField<string> = {
+  type: 'custom',
+  label: 'Imagen (biblioteca de medios)',
+  render: ({ value, onChange }) => (
+    <SelectorMedia value={value} onChange={(nuevoValor) => onChange(nuevoValor ?? '')} />
+  ),
+}
+
+function SelectorMedia({
   value,
   onChange,
 }: {
@@ -203,7 +228,7 @@ function SelectorImagenFondo({
       disabled={isLoading}
       onChange={(event) => onChange(event.target.value || undefined)}
     >
-      <option value="">Sin imagen de fondo</option>
+      <option value="">Sin imagen</option>
       {imagenes.map((imagen) => (
         <option key={imagen.id} value={imagen.id}>
           {imagen.alt_text || imagen.url}
@@ -226,6 +251,7 @@ export type PuckSeccionesComponents = {
   logros: ConInternos<LogrosConfiguracion>
   contacto: ConInternos<ContactoConfiguracion>
   skills: ConInternos<SkillsConfiguracion>
+  galeria: ConInternos<GaleriaConfiguracion>
   /**
    * A diferencia de los demás bloques, `columna_1/2/3` NO reutilizan
    * `ColumnasConfiguracion` tal cual (ahí son `BloqueColumnaHijo[]`, la forma
@@ -276,6 +302,7 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
         'logros',
         'contacto',
         'skills',
+        'galeria',
       ],
     },
   },
@@ -308,7 +335,7 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
       fields: {
         titulo: { type: 'text', label: 'Título' },
         subtitulo: { type: 'textarea', label: 'Subtítulo' },
-        imagen_fondo_media_id: imagenFondoField,
+        imagen_fondo_media_id: selectorMediaField,
         texto_boton: { type: 'text', label: 'Texto del botón (opcional)' },
         enlace_boton: { type: 'text', label: 'Enlace del botón (opcional)' },
         mostrar_foto_perfil: {
@@ -904,10 +931,107 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
       },
     },
     /**
+     * Galería de fotos (UC-18, Fase 4.5): `fields.fotos` usa el campo nativo
+     * `type: 'array'` de Puck (`ArrayField`) — cada ítem reusa
+     * `selectorMediaRequeridoField` (variante obligatoria de
+     * `selectorMediaField`) para elegir la foto, misma biblioteca de medios
+     * que `hero.imagen_fondo_media_id`, más un título opcional. El array
+     * guardado en `Seccion.configuracion.fotos` nunca trae `media` resuelta
+     * (eso solo lo agrega el backend en el snapshot público, o este mismo
+     * `render` contra `datos.mediaPorId` para el lienzo) — ver `GaleriaFoto`.
+     */
+    galeria: {
+      label: 'Galería',
+      defaultProps: {
+        fotos: [],
+        disposicion: 'carousel',
+        columnas_grid: 3,
+        ...DEFAULT_PROPS_BASE_BLOQUE,
+        _visible: true,
+        _tituloVisible: 'Galería',
+      },
+      fields: {
+        fotos: {
+          type: 'array',
+          label: 'Fotos',
+          defaultItemProps: { media_id: '', titulo: '' },
+          arrayFields: {
+            media_id: selectorMediaRequeridoField,
+            titulo: { type: 'text', label: 'Título (opcional)' },
+          },
+        },
+        disposicion: {
+          type: 'radio',
+          label: 'Disposición',
+          options: [
+            { label: 'Carrusel', value: 'carousel' },
+            { label: 'Grilla', value: 'grid' },
+          ],
+        },
+        columnas_grid: {
+          type: 'select',
+          label: 'Columnas de la grilla',
+          options: [
+            { label: '2', value: 2 },
+            { label: '3', value: 3 },
+            { label: '4', value: 4 },
+          ],
+        },
+        ...CAMPOS_BASE_BLOQUE,
+        _visible: VISIBLE_FIELD,
+        _tituloVisible: TITULO_VISIBLE_FIELD,
+      },
+      // Oculta "Columnas de la grilla" cuando la disposición elegida es
+      // 'carousel' — mismo criterio de UX que `columnas.resolveFields` para
+      // "Columna 3": mejora del sidebar, no la fuente de verdad de qué se
+      // renderiza (eso lo decide `BloqueGaleria` con `disposicion === 'grid'`).
+      resolveFields: (data, { fields }) => {
+        if (data.props.disposicion === 'grid') return fields
+        return Object.fromEntries(
+          Object.entries(fields).filter(([nombreCampo]) => nombreCampo !== 'columnas_grid'),
+        ) as typeof fields
+      },
+      render: ({
+        fotos,
+        disposicion,
+        columnas_grid,
+        espaciado_vertical,
+        ancho_contenido,
+        alineacion_texto,
+        fondo_bloque,
+        separador_inferior,
+        _visible,
+        _tituloVisible,
+        puck,
+      }) => {
+        const { datos } = leerMetadata(puck)
+        const fotosResueltas: GaleriaFoto[] = fotos.map((foto) => ({
+          ...foto,
+          media: foto.media_id ? datos.mediaPorId.get(foto.media_id) : undefined,
+        }))
+        return (
+          <EnvoltorioSeccion
+            visible={_visible}
+            espaciado_vertical={espaciado_vertical}
+            ancho_contenido={ancho_contenido}
+            fondo_bloque={fondo_bloque}
+            separador_inferior={separador_inferior}
+          >
+            <BloqueGaleria
+              titulo={_tituloVisible}
+              config={{ fotos: fotosResueltas, disposicion, columnas_grid }}
+              alineacionTitulo={ALINEACION_TEXTO_CLASE[alineacion_texto ?? 'izquierda']}
+            />
+          </EnvoltorioSeccion>
+        )
+      },
+    },
+    /**
      * Contenedor "Columnas" (UC-17, Fase 3.3): layout multi-columna con la
      * Slots API de Puck. NO es un placeholder — cada zona `columna_1/2/3` es
-     * una zona de drag-and-drop real donde se pueden soltar los 6 tipos de
-     * bloque anidables (`BLOQUES_ANIDABLES`), reforzado con `allow` (nunca
+     * una zona de drag-and-drop real donde se pueden soltar los tipos de
+     * bloque anidables (`BLOQUES_ANIDABLES`, incluye `galeria` desde UC-18),
+     * reforzado con `allow` (nunca
      * `hero` ni `columnas`, ver comentario de `BLOQUES_ANIDABLES`). A
      * diferencia de los demás bloques, este SÍ es una `Seccion` cuya
      * `configuracion` guarda además el contenido de sus hijos (ver

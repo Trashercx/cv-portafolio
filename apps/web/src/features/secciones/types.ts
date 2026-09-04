@@ -7,7 +7,8 @@ import type { Media } from '@/features/media/types'
  * backend (`apps/api/src/modules/secciones/dto/configuracion/`). Las 6
  * originales (UC-07) más `skills` (UC-07 + UC-16, Fase 2) más `columnas`
  * (UC-17, Fase 3.3 del rediseño del editor — layouts multi-columna con la
- * Slots API de Puck).
+ * Slots API de Puck) más `galeria` (UC-18, Fase 4.5 — galería de fotos con
+ * carousel/grid y lightbox).
  */
 export const TIPOS_SECCION = [
   'hero',
@@ -18,6 +19,7 @@ export const TIPOS_SECCION = [
   'contacto',
   'skills',
   'columnas',
+  'galeria',
 ] as const
 
 export type TipoSeccion = (typeof TIPOS_SECCION)[number]
@@ -32,6 +34,7 @@ export const TIPO_SECCION_LABEL: Record<TipoSeccion, string> = {
   contacto: 'Contacto',
   skills: 'Skills',
   columnas: 'Columnas',
+  galeria: 'Galería',
 }
 
 /**
@@ -39,7 +42,9 @@ export const TIPO_SECCION_LABEL: Record<TipoSeccion, string> = {
  * contenedor `columnas` (UC-17). Nunca `'hero'` (la portada ocupa todo el
  * ancho por diseño) ni `'columnas'` (evita anidamiento sin límite) — ver
  * docs/plan-portafolio.md §4, restricción reforzada tanto en el `allow` del
- * slot de Puck (`puck-config.tsx`) como en el DTO del backend.
+ * slot de Puck (`puck-config.tsx`) como en el DTO del backend. `'galeria'`
+ * (UC-18, Fase 4.5) cae automáticamente acá: una galería de fotos puede
+ * vivir dentro de una columna igual que cualquier otro bloque de contenido.
  */
 export type TipoSeccionAnidable = Exclude<TipoSeccion, 'hero' | 'columnas'>
 
@@ -49,9 +54,10 @@ export type AlineacionTextoBloque = 'izquierda' | 'centro'
 export type FondoBloqueBloque = 'ninguno' | 'sutil' | 'tarjeta'
 
 /**
- * Fase 3.4 (personalización visual por bloque): campos compartidos por los 8
+ * Fase 3.4 (personalización visual por bloque): campos compartidos por los 9
  * tipos de bloque (`hero`, `sobre-mi`, `proyectos`, `certificaciones`,
- * `logros`, `contacto`, `skills`, `columnas`). Todos opcionales con default
+ * `logros`, `contacto`, `skills`, `columnas`, `galeria` — este último desde
+ * Fase 4.5, UC-18). Todos opcionales con default
  * en el frontend (`apps/web/src/lib/escalas-bloque.ts`) — el backend, en
  * paralelo, valida exactamente estos mismos nombres/valores en cada DTO de
  * `configuracion`. Una `Seccion` guardada antes de esta fase no los trae en
@@ -194,6 +200,30 @@ export type ColumnasConfiguracion = BloqueConfiguracionBase & {
   columna_3: BloqueColumnaHijo[]
 }
 
+/**
+ * Una foto de la galería (UC-18). `POST/PATCH /admin/secciones` solo acepta
+ * `media_id`/`titulo` en el body — nunca `media` (eso lo agrega el backend
+ * solo al resolver el snapshot público/preview, mismo patrón que
+ * `hero.imagen_fondo` o `certificacion.logo`). En el editor admin, `media` se
+ * resuelve en el propio `render` del bloque `galeria` (`puck-config.tsx`)
+ * contra `datos.mediaPorId`, nunca persistido tal cual.
+ */
+export type GaleriaFoto = {
+  media_id: string
+  titulo?: string
+  media?: Media
+}
+
+/** `configuracion` para `tipo_seccion = 'galeria'` (UC-18, Fase 4.5). Espeja `GaleriaConfiguracionDto`. */
+export type GaleriaConfiguracion = BloqueConfiguracionBase & {
+  /** @default [] */
+  fotos: GaleriaFoto[]
+  /** @default 'carousel' */
+  disposicion?: 'carousel' | 'grid'
+  /** @default 3 — solo aplica si `disposicion === 'grid'`. */
+  columnas_grid?: 2 | 3 | 4
+}
+
 export type ConfiguracionPorTipo = {
   hero: HeroConfiguracion
   'sobre-mi': SobreMiConfiguracion
@@ -203,6 +233,7 @@ export type ConfiguracionPorTipo = {
   contacto: ContactoConfiguracion
   skills: SkillsConfiguracion
   columnas: ColumnasConfiguracion
+  galeria: GaleriaConfiguracion
 }
 
 /** Forma exacta de `Seccion` devuelta por `GET /admin/secciones`. */
