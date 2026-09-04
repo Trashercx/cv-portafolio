@@ -121,3 +121,57 @@ describe('temaComoVariablesCss — modo', () => {
     expect(oscuro.fontFamily).toBe(claro.fontFamily)
   })
 })
+
+/**
+ * Fase 4.7 (fix de convergencia visual del sitio público): las 11 superficies
+ * genéricas de shadcn/Tailwind (`derivarSuperficiesShadcn`, `tema-superficies.ts`)
+ * se incluyen como variables CSS junto a las 4 de negocio, para que
+ * componentes que usan clases como `bg-card`/`text-muted-foreground` también
+ * se pinten según el `Tema` activo en vez de los valores fijos de `index.css`.
+ */
+describe('temaComoVariablesCss — superficies shadcn', () => {
+  const baseTema = {
+    color_primario: '#2563eb',
+    color_secundario: '#7c3aed',
+    color_fondo: '#ffffff',
+    color_texto: '#0f172a',
+    fuente_principal: 'manrope',
+  }
+
+  it('incluye --background/--foreground iguales a los tokens de negocio de fondo/texto', () => {
+    const resultado = variablesCss(temaComoVariablesCss(baseTema))
+
+    expect(resultado['--background']).toBe(resultado['--color-fondo'])
+    expect(resultado['--foreground']).toBe(resultado['--color-texto'])
+  })
+
+  it('incluye las 11 variables de superficie genéricas de shadcn', () => {
+    const resultado = variablesCss(temaComoVariablesCss(baseTema))
+
+    for (const variable of [
+      '--background',
+      '--foreground',
+      '--card',
+      '--card-foreground',
+      '--popover',
+      '--popover-foreground',
+      '--muted',
+      '--muted-foreground',
+      '--border',
+      '--accent',
+      '--accent-foreground',
+    ]) {
+      expect(resultado[variable]).toMatch(/^#[0-9a-f]{6}$/i)
+    }
+  })
+
+  it("modo='oscuro' deriva --background/--card/--muted/--border de la paleta oscura, distintos del modo claro", () => {
+    const claro = variablesCss(temaComoVariablesCss(baseTema, 'claro'))
+    const oscuro = variablesCss(temaComoVariablesCss(baseTema, 'oscuro'))
+
+    expect(oscuro['--background']).not.toBe(claro['--background'])
+    expect(oscuro['--card']).not.toBe(claro['--card'])
+    expect(oscuro['--muted']).not.toBe(claro['--muted'])
+    expect(oscuro['--border']).not.toBe(claro['--border'])
+  })
+})

@@ -3,6 +3,7 @@ import { ProveedorDetallePublico } from '@/components/publico/contexto-detalle'
 import { FondoAnimado } from '@/components/publico/FondoAnimado'
 import { Footer } from '@/components/publico/Footer'
 import { RenderizadorSecciones } from '@/components/publico/RenderizadorSecciones'
+import { ToggleModoTema } from '@/components/publico/ToggleModoTema'
 import { useSitio } from '@/features/publico/usePublico'
 import { useModoTema } from '@/hooks/useModoTema'
 import { ApiError } from '@/lib/api-client'
@@ -17,7 +18,7 @@ import { cn } from '@/lib/utils'
  *
  * Modo oscuro (Fase 4.6): `useModoTema()` resuelve `prefers-color-scheme`
  * del sistema salvo que el visitante haya elegido un override manual (botón
- * `ToggleModoTema`, montado en `Footer`); ese `modo` se pasa a
+ * `ToggleModoTema`, ver más abajo dónde se monta); ese `modo` se pasa a
  * `temaComoVariablesCss` para pintar la paleta oscura derivada
  * (`lib/tema-oscuro.ts`) en vez de una paleta hardcodeada.
  * `data-tema-modo` queda en el contenedor raíz para overrides puntuales de
@@ -28,6 +29,11 @@ import { cn } from '@/lib/utils'
  * etc., definidos en `index.css` bajo `.dark {}`), que solo conmuta cuando
  * algún ancestro tiene esa clase — sin ella, esos tokens quedaban fijos en
  * su valor claro sin importar `modo`.
+ *
+ * `ToggleModoTema` (fix de visibilidad, Fase 4.7) se monta acá como botón
+ * flotante fijo en la esquina inferior derecha, en vez de dentro de
+ * `Footer`: al fondo del scroll pasaba fácilmente desapercibido para el
+ * visitante.
  */
 export function PublicHomePage() {
   const { data: snapshot, isLoading, error } = useSitio()
@@ -96,6 +102,9 @@ export function PublicHomePage() {
           redes={snapshot.redes_sociales}
           cvMedia={snapshot.perfil?.cv_media ?? null}
         />
+        <div className="fixed bottom-4 right-4 z-50">
+          <ToggleModoTema className="shadow-lg" />
+        </div>
       </div>
     </div>
   )

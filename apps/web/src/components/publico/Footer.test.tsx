@@ -60,6 +60,16 @@ describe('Footer', () => {
     ).toBeInTheDocument()
   })
 
+  // Fase 4.7 (fix de visibilidad): el toggle de modo claro/oscuro se movió
+  // fuera del Footer, a un botón flotante en `PublicHomePage`.
+  it('ya no incluye el toggle de modo claro/oscuro (se movió a un botón flotante)', () => {
+    render(<Footer perfil={PERFIL} redes={[RED]} cvMedia={CV_MEDIA} />)
+
+    expect(
+      screen.queryByRole('button', { name: /cambiar a modo/i }),
+    ).not.toBeInTheDocument()
+  })
+
   it('solo muestra el año cuando no hay perfil', () => {
     render(<Footer perfil={null} redes={[]} cvMedia={null} />)
 

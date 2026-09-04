@@ -1,4 +1,4 @@
-import { FileIcon } from 'lucide-react'
+import { FileText } from 'lucide-react'
 import { useState } from 'react'
 import {
   Dialog,
@@ -64,7 +64,9 @@ export function MediaPreview({
           <img src={url} alt={alt ?? ''} className={cn('size-full', objectFitClass)} />
         ) : (
           <span className="flex size-full flex-col items-center justify-center gap-1 bg-muted p-2 text-center">
-            <FileIcon className="size-8 text-muted-foreground" />
+            <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-[#DC2626]/10">
+              <FileText className="size-5 text-[#DC2626]" aria-hidden="true" />
+            </span>
             <span className="line-clamp-2 text-xs text-muted-foreground">
               {nombre || 'Ver documento'}
             </span>
