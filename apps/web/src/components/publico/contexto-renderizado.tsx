@@ -88,3 +88,39 @@ export function EnlaceBloque({
     </a>
   )
 }
+
+type TarjetaClicableProps = {
+  /** Handler de click, ignorado en modo `'editor'`. */
+  onClick?: () => void
+  className?: string
+  style?: React.CSSProperties
+  'aria-label'?: string
+  children: ReactNode
+}
+
+/**
+ * Igual criterio que `EnlaceBloque`, pero para tarjetas que abren un modal
+ * de detalle (Fase 4.3, `ProveedorDetallePublico`) en vez de navegar a una
+ * URL propia: en modo `'editor'` sigue siendo un `<div role="link"
+ * aria-disabled="true">` inerte (idéntico a como se veía antes de esta
+ * fase, para no cambiar el comportamiento del lienzo de Puck); en modo
+ * `'publico'` es un `<button type="button">` real (accesible por teclado
+ * out-of-the-box) que dispara `onClick`.
+ */
+export function TarjetaClicable({ onClick, children, ...resto }: TarjetaClicableProps) {
+  const modo = useModoRenderizado()
+
+  if (modo === 'editor') {
+    return (
+      <div role="link" aria-disabled="true" {...resto}>
+        {children}
+      </div>
+    )
+  }
+
+  return (
+    <button type="button" onClick={onClick} {...resto}>
+      {children}
+    </button>
+  )
+}

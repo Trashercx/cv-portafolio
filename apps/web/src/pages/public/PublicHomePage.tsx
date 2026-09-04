@@ -1,3 +1,4 @@
+import { ProveedorDetallePublico } from '@/components/publico/contexto-detalle'
 import { FondoAnimado } from '@/components/publico/FondoAnimado'
 import { RenderizadorSecciones } from '@/components/publico/RenderizadorSecciones'
 import { useSitio } from '@/features/publico/usePublico'
@@ -50,7 +51,9 @@ export function PublicHomePage() {
     >
       {snapshot.fondo ? <FondoAnimado fondo={snapshot.fondo} /> : null}
       <div className="relative z-10">
-        <RenderizadorSecciones snapshot={snapshot} />
+        <ProveedorDetallePublico>
+          <RenderizadorSecciones snapshot={snapshot} />
+        </ProveedorDetallePublico>
       </div>
     </div>
   )

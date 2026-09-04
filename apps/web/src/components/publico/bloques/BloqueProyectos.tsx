@@ -1,7 +1,8 @@
+import { useAbrirDetalle } from '@/components/publico/contexto-detalle'
 import type { Proyecto } from '@/features/proyectos/types'
 import type { ProyectosConfiguracion } from '@/features/secciones/types'
 import { cn } from '@/lib/utils'
-import { EnlaceBloque } from '../contexto-renderizado'
+import { TarjetaClicable } from '../contexto-renderizado'
 
 type BloqueProyectosProps = {
   titulo: string
@@ -39,6 +40,7 @@ export function BloqueProyectos({
     .slice(0, config.cantidad_a_mostrar)
 
   const mostrarDescripcion = config.mostrar_descripcion ?? true
+  const abrirDetalle = useAbrirDetalle()
 
   return (
     <div className="grid gap-6">
@@ -48,11 +50,12 @@ export function BloqueProyectos({
       ) : (
         <div className={cn('grid gap-4', COLUMNAS_CLASE[config.columnas ?? 3])}>
           {filtrados.map((proyecto) => (
-            <EnlaceBloque
+            <TarjetaClicable
               key={proyecto.id}
-              to={`/proyecto/${proyecto.id}`}
+              onClick={() => abrirDetalle('proyecto', proyecto)}
+              aria-label={proyecto.titulo}
               className={cn(
-                'grid gap-2 rounded-lg p-4 transition-colors hover:bg-accent',
+                'grid gap-2 rounded-lg p-4 text-left transition-colors hover:bg-accent',
                 ESTILO_TARJETA_CLASE[config.estilo_tarjeta ?? 'simple'],
               )}
             >
@@ -69,7 +72,7 @@ export function BloqueProyectos({
                   {proyecto.descripcion}
                 </p>
               ) : null}
-            </EnlaceBloque>
+            </TarjetaClicable>
           ))}
         </div>
       )}

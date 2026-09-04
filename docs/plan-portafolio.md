@@ -119,7 +119,7 @@ Dos actores: el **Administrador** (tú, usuario único autenticado) y el **Visit
 | ID | Caso de uso | Parámetros / campos clave | Criterio de aceptación |
 |---|---|---|---|
 | UC-12 | Ver el sitio publicado | última versión publicada | El contenido, orden de secciones y tema mostrados corresponden siempre a la última versión publicada, nunca a un borrador. |
-| UC-13 | Ver detalle de un proyecto o certificación | identificador del elemento | Cada proyecto/certificación es accesible individualmente con toda su información e imágenes. |
+| UC-13 | Ver detalle de un proyecto, certificación o logro | identificador del elemento | Cada proyecto/certificación/logro es accesible individualmente con toda su información e imágenes, desde un modal al hacer click en la home o desde un link directo compartible (`/proyecto/:id`, `/certificacion/:id`, `/logro/:id`). |
 | UC-14 | Acceder a redes y descargar el CV | enlaces de redes, archivo de CV | Los enlaces y la descarga del CV funcionan sin requerir autenticación. |
 
 ## 4. Modelo de datos y diagrama ER

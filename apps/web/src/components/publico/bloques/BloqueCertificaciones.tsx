@@ -1,9 +1,10 @@
 import { FileIcon } from 'lucide-react'
+import { useAbrirDetalle } from '@/components/publico/contexto-detalle'
 import type { CertificacionPublica } from '@/features/publico/types'
 import type { CertificacionesConfiguracion } from '@/features/secciones/types'
 import { formatearFecha } from '@/lib/formato'
 import { cn } from '@/lib/utils'
-import { EnlaceBloque } from '../contexto-renderizado'
+import { TarjetaClicable } from '../contexto-renderizado'
 
 type BloqueCertificacionesProps = {
   titulo: string
@@ -42,6 +43,7 @@ export function BloqueCertificaciones({
   )
 
   const mostrarFecha = config.mostrar_fecha ?? true
+  const abrirDetalle = useAbrirDetalle()
 
   return (
     <div className="grid gap-6">
@@ -53,21 +55,23 @@ export function BloqueCertificaciones({
       ) : (
         <div className={cn('grid gap-4', COLUMNAS_CLASE[config.columnas ?? 3])}>
           {ordenadas.map((certificacion) => (
-            <EnlaceBloque
+            <TarjetaClicable
               key={certificacion.id}
-              to={`/certificacion/${certificacion.id}`}
+              onClick={() => abrirDetalle('certificacion', certificacion)}
+              aria-label={certificacion.nombre}
               className={cn(
-                'grid gap-2 rounded-lg p-4 transition-colors hover:bg-accent',
+                'grid gap-2 rounded-lg p-4 text-left transition-colors hover:bg-accent',
                 ESTILO_TARJETA_CLASE[config.estilo_tarjeta ?? 'simple'],
               )}
             >
               {certificacion.logo ? (
-                // Tarjeta clicable (navega al detalle, UC-13): el zoom/lightbox
-                // del logo o documento vive en `CertificacionDetallePage`, no
-                // acá — anidar el `Dialog` de `MediaPreview` dentro de este
-                // enlace interceptaría el click de navegación. Si el logo es
-                // un PDF (feedback externo, UC-04) se muestra un ícono en vez
-                // de un `<img>` roto.
+                // Tarjeta clicable (abre el detalle en un modal, UC-13): el
+                // zoom/lightbox del logo o documento vive dentro del propio
+                // modal (`DetalleCertificacionContenido`), no acá — mostrar
+                // solo un ícono/miniatura estática en la tarjeta evita anidar
+                // el `Dialog` de `MediaPreview` dentro de este botón. Si el
+                // logo es un PDF (feedback externo, UC-04) se muestra un
+                // ícono en vez de un `<img>` roto.
                 certificacion.logo.tipo === 'imagen' ? (
                   <img
                     src={certificacion.logo.url}
@@ -90,7 +94,7 @@ export function BloqueCertificaciones({
                   {formatearFecha(certificacion.fecha_emision)}
                 </p>
               ) : null}
-            </EnlaceBloque>
+            </TarjetaClicable>
           ))}
         </div>
       )}

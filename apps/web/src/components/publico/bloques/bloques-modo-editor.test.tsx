@@ -8,12 +8,16 @@ import { BloqueCertificaciones } from './BloqueCertificaciones'
 import { BloqueProyectos } from './BloqueProyectos'
 
 /**
- * Red de seguridad de navegación (Fase 3.1, `EnlaceBloque`): dentro del
- * lienzo de Puck el `Router` de react-router sigue montado (`createPortal`
- * conserva el árbol de contexto de React dentro del iframe), así que un
- * `<Link>`/`<a>` real navegaría fuera del editor si no se intercepta. Este
- * archivo verifica los dos bloques con enlaces navegables (proyectos y
- * certificaciones) en ambos modos.
+ * Red de seguridad de navegación (Fase 3.1, `EnlaceBloque`/`TarjetaClicable`
+ * desde Fase 4.3): dentro del lienzo de Puck el `Router` de react-router
+ * sigue montado (`createPortal` conserva el árbol de contexto de React
+ * dentro del iframe), así que un `<Link>`/`<a>` real navegaría fuera del
+ * editor si no se intercepta. Este archivo verifica que las tarjetas de
+ * proyectos y certificaciones sigan siendo inertes en modo `'editor'`
+ * (idéntico a antes de la Fase 4.3), y que en modo `'publico'` ya no
+ * naveguen directo a `/proyecto/:id`/`/certificacion/:id` sino que rendericen
+ * un `<button>` (el click que abre el modal de detalle se cubre en
+ * `BloqueProyectos.test.tsx`/`BloqueCertificaciones.test.tsx`).
  */
 
 const PROYECTO: Proyecto = {
@@ -75,7 +79,7 @@ describe('BloqueProyectos en modo editor', () => {
     expect(tarjeta).not.toHaveAttribute('href')
   })
 
-  it('en modo público sí renderiza un <a> navegable al detalle del proyecto', () => {
+  it('en modo público renderiza un <button> clicable en vez de un <a> (abre el detalle en un modal, Fase 4.3)', () => {
     renderConModo(
       'publico',
       <BloqueProyectos
@@ -85,10 +89,9 @@ describe('BloqueProyectos en modo editor', () => {
       />,
     )
 
-    expect(screen.getByRole('link')).toHaveAttribute(
-      'href',
-      '/proyecto/proyecto-1',
-    )
+    const tarjeta = screen.getByRole('button', { name: /portafolio/i })
+    expect(tarjeta.tagName).toBe('BUTTON')
+    expect(screen.queryByRole('link')).not.toBeInTheDocument()
   })
 })
 
@@ -109,7 +112,7 @@ describe('BloqueCertificaciones en modo editor', () => {
     expect(tarjeta).not.toHaveAttribute('href')
   })
 
-  it('en modo público sí renderiza un <a> navegable al detalle de la certificación', () => {
+  it('en modo público renderiza un <button> clicable en vez de un <a> (abre el detalle en un modal, Fase 4.3)', () => {
     renderConModo(
       'publico',
       <BloqueCertificaciones
@@ -119,6 +122,8 @@ describe('BloqueCertificaciones en modo editor', () => {
       />,
     )
 
-    expect(screen.getByRole('link')).toHaveAttribute('href', '/certificacion/cert-1')
+    const tarjeta = screen.getByRole('button', { name: /aws certified/i })
+    expect(tarjeta.tagName).toBe('BUTTON')
+    expect(screen.queryByRole('link')).not.toBeInTheDocument()
   })
 })
