@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { ProveedorDetallePublico } from '@/components/publico/contexto-detalle'
 import { FondoAnimado } from '@/components/publico/FondoAnimado'
 import { Footer } from '@/components/publico/Footer'
@@ -32,6 +32,12 @@ import { cn } from '@/lib/utils'
 export function PublicHomePage() {
   const { data: snapshot, isLoading, error } = useSitio()
   const { modo } = useModoTema()
+  // Nodo DOM del `<div>` raíz temado, expuesto como estado reactivo (no
+  // `useRef`, cuyo `.current` no dispara re-render) para que
+  // `ProveedorDetallePublico` pueda pasarlo como `container` del modal de
+  // detalle (fix tema/modo oscuro en modales públicos) recién cuando el
+  // nodo real ya está montado.
+  const [nodoRaiz, setNodoRaiz] = useState<HTMLDivElement | null>(null)
 
   useEffect(() => {
     if (!snapshot) return
@@ -73,6 +79,7 @@ export function PublicHomePage() {
 
   return (
     <div
+      ref={setNodoRaiz}
       style={
         snapshot.tema ? temaComoVariablesCss(snapshot.tema, modo) : undefined
       }
@@ -81,7 +88,7 @@ export function PublicHomePage() {
     >
       {snapshot.fondo ? <FondoAnimado fondo={snapshot.fondo} /> : null}
       <div className="relative z-10">
-        <ProveedorDetallePublico>
+        <ProveedorDetallePublico container={nodoRaiz}>
           <RenderizadorSecciones snapshot={snapshot} />
         </ProveedorDetallePublico>
         <Footer

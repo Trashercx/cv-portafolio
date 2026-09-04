@@ -92,12 +92,17 @@ export function MediaPreview({
                 render. La URL siempre apunta al bucket S3/CloudFront propio
                 de la app (nunca a contenido de terceros embebido), así que
                 relajar el sandbox a `allow-same-origin` no expone al admin a
-                contenido no confiable.
+                contenido no confiable. Chrome además necesita `allow-scripts`
+                junto con `allow-same-origin` para que su visor nativo de PDF
+                (PDFium) pueda inicializarse dentro de un iframe sandboxeado;
+                el iframe sigue aislado del origen padre por la same-origin
+                policy real del navegador, porque `url` nunca comparte origen
+                con esta app.
               */}
               <iframe
                 src={url}
                 title={titulo}
-                sandbox="allow-same-origin"
+                sandbox="allow-same-origin allow-scripts"
                 className="h-[70vh] w-full rounded-md border"
               />
               <a

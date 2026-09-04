@@ -239,6 +239,11 @@ function separarProps(props: EditorContentItem['props']) {
  */
 export function sanearSlots(configuracion: Record<string, unknown>): ColumnasConfiguracion {
   const {
+    espaciado_vertical,
+    ancho_contenido,
+    alineacion_texto,
+    fondo_bloque,
+    separador_inferior,
     distribucion,
     alineacion_vertical,
     espaciado,
@@ -264,6 +269,11 @@ export function sanearSlots(configuracion: Record<string, unknown>): ColumnasCon
     })
 
   return {
+    espaciado_vertical,
+    ancho_contenido,
+    alineacion_texto,
+    fondo_bloque,
+    separador_inferior,
     distribucion,
     alineacion_vertical,
     espaciado,

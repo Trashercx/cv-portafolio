@@ -35,7 +35,18 @@ const ContextoAbrirDetalle = createContext<AbrirDetalle>(() => {})
  * `CertificacionDetallePage`, que sí lo hacen para el acceso directo por
  * URL.
  */
-export function ProveedorDetallePublico({ children }: { children: ReactNode }) {
+type ProveedorDetallePublicoProps = {
+  children: ReactNode
+  /**
+   * Reenviado a `DialogDetalle`/`DialogContent` (fix de tema/modo oscuro en
+   * modales públicos): el nodo DOM temado del consumidor (`PublicHomePage`/
+   * `DialogVistaPrevia`), para que el modal monte dentro de ese árbol en vez
+   * de como hermano de `document.body`. Ver comentario de `DialogDetalle`.
+   */
+  container?: Element | DocumentFragment | null
+}
+
+export function ProveedorDetallePublico({ children, container }: ProveedorDetallePublicoProps) {
   const [detalle, setDetalle] = useState<ItemDetalle | null>(null)
 
   const abrirDetalle = useCallback<AbrirDetalle>((tipo, item) => {
@@ -63,7 +74,11 @@ export function ProveedorDetallePublico({ children }: { children: ReactNode }) {
   return (
     <ContextoAbrirDetalle.Provider value={abrirDetalle}>
       {children}
-      <DialogDetalle open={detalle !== null} onOpenChange={handleOpenChange}>
+      <DialogDetalle
+        open={detalle !== null}
+        onOpenChange={handleOpenChange}
+        container={container}
+      >
         {contenido}
       </DialogDetalle>
     </ContextoAbrirDetalle.Provider>

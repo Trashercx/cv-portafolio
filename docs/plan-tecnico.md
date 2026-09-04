@@ -297,6 +297,17 @@ Rondo de fixes disparada por un reporte técnico externo sobre el sitio publicad
 
 Pruebas: `PublicHomePage.test.tsx` extendido (clase `dark` condicional al `modo`); `BloqueHero.test.tsx` nuevo (fallback de tamaño solo en modo `'editor'`, sin regresión en modo `'publico'`).
 
+### Segunda ronda post-Fase 4.6 — columnas que no guardaban, PDF bloqueado y modales públicos sin tema
+
+Disparada por QA manual del usuario sobre el PR anterior. 4 fixes independientes, cada uno investigado por código antes de tocar nada. Sin backend, sin migraciones.
+
+- **Columnas no persistía (pérdida de datos real)**: `sanearSlots()` en `EditorSeccionesPage.tsx` reconstruía el payload del bloque `columnas` con una whitelist incompleta — nunca incluía los 5 campos base (`espaciado_vertical`, `ancho_contenido`, `alineacion_texto`, `fondo_bloque`, `separador_inferior`) de `BloqueConfiguracionBase`, así que se pintaban en vivo (Puck los tenía en memoria) pero se descartaban silenciosamente al guardar. El backend ya los aceptaba sin cambios (`ColumnasConfiguracionDto extends BloqueConfiguracionBaseDto`) — el bug era 100% de ese destructuring/`return` incompleto en el frontend.
+- **PDF bloqueado en Chrome**: la Fase 4.1 solo agregó `allow-same-origin` al `sandbox` del iframe de preview — insuficiente, porque el visor nativo de PDF de Chrome (PDFium) también necesita `allow-scripts` para inicializarse dentro de un iframe sandboxeado. Confirmado que `Media.url` siempre viene de `S3MediaStorageService` (nunca del propio origen de la app en producción), así que agregar `allow-scripts` es seguro — el iframe sigue aislado del origen padre por la same-origin policy real del navegador, y la sesión admin vive en cookie `httpOnly` de todos modos.
+- **Modales públicos de detalle sin tema/modo oscuro**: `DialogContent` (`components/ui/dialog.tsx`) portaba el modal a `document.body` (default de `DialogPrimitive.Portal` de Radix) — un nodo hermano, no ancestro, del `<div>` raíz temado de `PublicHomePage.tsx`/`DialogVistaPrevia.tsx`, así que las variables CSS del `Tema` y la clase `dark` nunca cascadeaban al modal. Fix: `container` explícito propagado en cadena (`DialogContent`→`DialogDetalle`→`ProveedorDetallePublico`) hasta el nodo DOM temado real, expuesto como estado vía callback-ref (`useState`, no `useRef`, para reaccionar una vez montado). `Lightbox.tsx` quedó fuera a propósito (usa colores hardcodeados, no depende de los tokens del tema).
+- **Vista previa del editor con bajo contraste ("se ve en negro")**: no era una regresión de la clase `dark` de la ronda anterior — con el panel admin en modo oscuro, `DialogContent` (`bg-background`) y el `<div>` interior temado (`--color-fondo` derivado, también casi negro por diseño) quedaban indistinguibles entre sí. Fix: gutter exterior `bg-muted` (token perceptiblemente más claro que `--background` en oscuro) alrededor del `<div>` temado, que ahora se lee como una tarjeta/artboard independiente del chrome del modal.
+
+Pruebas: `EditorSeccionesPage.columnas.test.ts` extendido (los 5 campos base sobreviven a `sanearSlots`); suite completa (212 tests) verde sin regresiones en el resto del flujo de modales/vista previa.
+
 ## 3. Índice UC → tareas → subagente → sprint
 
 `code-reviewer` y `release-manager` aplican a **toda** fila antes de cerrar la tarea o hacer commit — no se repiten en cada celda.

@@ -11,6 +11,15 @@ type DialogDetalleProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   children: ReactNode
+  /**
+   * Nodo DOM del `<div>` temado que envuelve esta sección (ver
+   * `PublicHomePage`/`DialogVistaPrevia`), reenviado tal cual a
+   * `DialogContent` para que el modal monte dentro del árbol con las
+   * variables CSS del tema y la clase `dark`, en vez de como hermano de
+   * `document.body`. `undefined`/`null` cae al default de Radix
+   * (`document.body`).
+   */
+  container?: Element | DocumentFragment | null
 }
 
 /**
@@ -22,10 +31,13 @@ type DialogDetalleProps = {
  * visible, pero Radix exige un título/descripción accesibles en todo
  * `DialogContent`.
  */
-export function DialogDetalle({ open, onOpenChange, children }: DialogDetalleProps) {
+export function DialogDetalle({ open, onOpenChange, children, container }: DialogDetalleProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex h-[90vh] flex-col overflow-y-auto sm:max-w-[95vw]">
+      <DialogContent
+        container={container}
+        className="flex h-[90vh] flex-col overflow-y-auto sm:max-w-[95vw]"
+      >
         <DialogHeader className="sr-only">
           <DialogTitle>Detalle</DialogTitle>
           <DialogDescription>Detalle del elemento seleccionado.</DialogDescription>

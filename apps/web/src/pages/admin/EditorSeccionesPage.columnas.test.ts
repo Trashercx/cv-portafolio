@@ -91,6 +91,33 @@ describe('sanearSlots (UC-17)', () => {
     })
   })
 
+  it('preserva los 5 campos base (BloqueConfiguracionBase) del propio bloque columnas, no solo los de sus hijos', () => {
+    const configuracion = {
+      espaciado_vertical: 'amplio' as const,
+      ancho_contenido: 'estrecho' as const,
+      alineacion_texto: 'centro' as const,
+      fondo_bloque: 'tarjeta' as const,
+      separador_inferior: false,
+      distribucion: '1-1' as const,
+      alineacion_vertical: 'inicio' as const,
+      espaciado: 'normal' as const,
+      columna_1: [],
+      columna_2: [],
+      columna_3: [],
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } as any
+
+    const resultado = sanearSlots(configuracion)
+
+    expect(resultado).toMatchObject({
+      espaciado_vertical: 'amplio',
+      ancho_contenido: 'estrecho',
+      alineacion_texto: 'centro',
+      fondo_bloque: 'tarjeta',
+      separador_inferior: false,
+    })
+  })
+
   it('columna_3 vacía se sanea a un array vacío, no a undefined', () => {
     const configuracion = {
       distribucion: '1-1' as const,
