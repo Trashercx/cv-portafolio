@@ -61,7 +61,11 @@ describe('POST /auth/login (e2e, UC-01)', () => {
     expect(response.body).toEqual({
       email: adminEmail,
       nombre: expect.any(String),
+      expiresAt: expect.any(String),
     });
+    expect(new Date(response.body.expiresAt).getTime()).toBeGreaterThan(
+      Date.now(),
+    );
     expect(response.body.password_hash).toBeUndefined();
 
     const setCookieHeader = response.headers['set-cookie'];
@@ -118,5 +122,71 @@ describe('POST /auth/login (e2e, UC-01)', () => {
       .post('/auth/login')
       .send({ email: adminEmail, password: adminPassword })
       .expect(401);
+  });
+});
+
+describe('POST /auth/refresh (e2e, UC-01 extensión de sesión)', () => {
+  let app: INestApplication;
+  let prisma: PrismaService;
+
+  const adminEmail = process.env.ADMIN_EMAIL as string;
+  const adminPassword = process.env.ADMIN_PASSWORD_SEED as string;
+
+  beforeAll(async () => {
+    const moduleFixture: TestingModule = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
+
+    app = moduleFixture.createNestApplication();
+    app.use(cookieParser());
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      }),
+    );
+    await app.init();
+
+    prisma = moduleFixture.get(PrismaService);
+  });
+
+  afterAll(async () => {
+    await prisma.usuarioAdmin.updateMany({
+      where: { email: adminEmail },
+      data: { intentos_fallidos: 0, bloqueado_hasta: null },
+    });
+    await app.close();
+  });
+
+  it('sin cookie responde 401', async () => {
+    await request(app.getHttpServer()).post('/auth/refresh').expect(401);
+  });
+
+  it('con una sesión vigente responde 200, renueva la cookie y devuelve el mismo shape que login', async () => {
+    const agent = request.agent(app.getHttpServer());
+    await agent
+      .post('/auth/login')
+      .send({ email: adminEmail, password: adminPassword })
+      .expect(200);
+
+    const response = await agent.post('/auth/refresh').expect(200);
+
+    expect(response.body).toEqual({
+      email: adminEmail,
+      nombre: expect.any(String),
+      expiresAt: expect.any(String),
+    });
+
+    const setCookieHeader = response.headers['set-cookie'];
+    expect(setCookieHeader).toBeDefined();
+    const cookies = Array.isArray(setCookieHeader)
+      ? setCookieHeader
+      : [setCookieHeader];
+    const accessTokenCookie = cookies.find((c: string) =>
+      c.startsWith('access_token='),
+    );
+    expect(accessTokenCookie).toBeDefined();
+    expect(accessTokenCookie).toMatch(/HttpOnly/i);
   });
 });

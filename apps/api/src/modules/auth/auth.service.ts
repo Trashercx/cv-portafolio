@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
+import { calcularExpiracion } from './parse-duration';
 
 /** UC-01: número de intentos fallidos permitidos antes de bloquear la cuenta. */
 const MAX_INTENTOS_FALLIDOS = 3;
@@ -20,6 +21,7 @@ export interface LoginResult {
     email: string;
     nombre: string;
   };
+  expiresAt: Date;
 }
 
 @Injectable()
@@ -86,6 +88,36 @@ export class AuthService {
     return {
       accessToken,
       admin: { email: admin.email, nombre: admin.nombre },
+      expiresAt: calcularExpiracion(),
+    };
+  }
+
+  /**
+   * UC-01 (extensión de sesión): emite un token nuevo para un admin ya
+   * autenticado (JWT válido y no vencido, verificado por `JwtAuthGuard` antes
+   * de llegar acá). No hay "gracia" para refrescar un token ya expirado: si el
+   * guard lo dejó pasar es porque todavía es válido.
+   */
+  async refrescar(userId: string): Promise<LoginResult> {
+    const admin = await this.prisma.usuarioAdmin.findUnique({
+      where: { id: userId },
+    });
+
+    // No debería ocurrir con un JWT válido (el admin único no se borra en
+    // caliente), pero se cubre por robustez.
+    if (!admin) {
+      throw new UnauthorizedException('Credenciales inválidas');
+    }
+
+    const accessToken = await this.jwtService.signAsync({
+      sub: admin.id,
+      email: admin.email,
+    });
+
+    return {
+      accessToken,
+      admin: { email: admin.email, nombre: admin.nombre },
+      expiresAt: calcularExpiracion(),
     };
   }
 }
