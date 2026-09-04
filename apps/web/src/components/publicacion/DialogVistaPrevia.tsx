@@ -1,5 +1,6 @@
 import { ProveedorDetallePublico } from '@/components/publico/contexto-detalle'
 import { RenderizadorSecciones } from '@/components/publico/RenderizadorSecciones'
+import { useTheme } from '@/components/theme/ThemeProvider'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -12,6 +13,7 @@ import {
 import { usePreviewVersion } from '@/features/publicacion/usePublicacion'
 import type { VersionSitio } from '@/features/publicacion/types'
 import { temaComoVariablesCss } from '@/lib/tema-css'
+import type { ModoTema } from '@/lib/tema-oscuro'
 
 type DialogVistaPreviaProps = {
   open: boolean
@@ -46,6 +48,11 @@ type DialogVistaPreviaProps = {
  * Publicado), un `useState` local acá se reseteaba a `open=false` en cada
  * apertura — el síntoma reportado de "la vista previa se cierra sola".
  * Levantar el estado al padre (que nunca se remonta) resuelve la causa raíz.
+ *
+ * Modo oscuro (Fase 4.6): mismo tratamiento que `PuckRoot` (el otro
+ * "lienzo" que previsualiza el sitio dentro del panel) — refleja el toggle
+ * de `ThemeProvider` del panel con la misma paleta oscura derivada, para
+ * que este diálogo no diverja visualmente del lienzo real.
  */
 export function DialogVistaPrevia({
   open,
@@ -54,6 +61,8 @@ export function DialogVistaPrevia({
   onPreviewVersion,
 }: DialogVistaPreviaProps) {
   const preview = usePreviewVersion()
+  const { theme } = useTheme()
+  const modo: ModoTema = theme === 'dark' ? 'oscuro' : 'claro'
 
   const handleOpenChange = (siguienteAbierto: boolean) => {
     onOpenChange(siguienteAbierto)
@@ -80,7 +89,7 @@ export function DialogVistaPrevia({
         <div
           style={
             previewVersion?.snapshot.tema
-              ? temaComoVariablesCss(previewVersion.snapshot.tema)
+              ? temaComoVariablesCss(previewVersion.snapshot.tema, modo)
               : undefined
           }
           className="flex-1 overflow-y-auto rounded-lg border"

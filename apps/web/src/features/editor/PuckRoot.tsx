@@ -1,9 +1,10 @@
-import { useEffect, useRef, type MouseEvent, type ReactNode } from 'react'
+import { useRef, type MouseEvent, type ReactNode } from 'react'
 import type { PuckContext } from '@measured/puck'
 import { FondoAnimado } from '@/components/publico/FondoAnimado'
 import { ProveedorModoRenderizado } from '@/components/publico/contexto-renderizado'
 import { useTheme } from '@/components/theme/ThemeProvider'
 import { temaComoVariablesCss } from '@/lib/tema-css'
+import type { ModoTema } from '@/lib/tema-oscuro'
 import { leerMetadata } from './useDatosEditor'
 
 type PuckRootProps = {
@@ -18,18 +19,24 @@ type PuckRootProps = {
  * sitio público, más dos cuidados propios de vivir dentro de un iframe
  * embebido en el panel de administración:
  *
- * - **Fuga de `.dark`**: `CopyHostStyles` de Puck copia `class="dark"` del
- *   `<html>` padre al `<html>` del iframe al montar (`syncAttributes`, solo
- *   una vez). El `ThemeProvider` del panel pone `.dark` en
- *   `document.documentElement` para el modo oscuro del *chrome* admin, pero
- *   el sitio público nunca tiene esa clase — sin este efecto, el lienzo
- *   heredaría el modo oscuro del panel aunque el tema del sitio no lo
- *   contemple. Se limpia en cada render del `theme` del panel (no solo al
- *   montar) para cubrir el caso de que el admin cambie de tema con el editor
- *   ya abierto. Usa `ownerDocument` del nodo (no `document` global) porque,
- *   aunque el contenido se pinta dentro del iframe vía `createPortal`, sigue
- *   siendo el mismo módulo de React que en el documento padre — `document`
- *   a secas seguiría apuntando al documento equivocado.
+ * - **Modo oscuro reflejado, no aislado (Fase 4.6)**: el `theme` del
+ *   `ThemeProvider` del panel (`'light'`/`'dark'`, chrome del propio admin)
+ *   se mapea a `modo: ModoTema` (`'claro'`/`'oscuro'`) y se pasa a
+ *   `temaComoVariablesCss` para que el lienzo pinte la paleta oscura
+ *   derivada (`lib/tema-oscuro.ts`) cuando el admin tiene el panel en modo
+ *   oscuro — mismo comportamiento que tendría el visitante del sitio
+ *   público con `prefers-color-scheme: dark` (ver `useModoTema.ts`), así el
+ *   editor queda fiel a lo publicado también en modo oscuro. Antes de esta
+ *   fase, un `useEffect` cortaba activamente la fuga de la clase `.dark`
+ *   que `CopyHostStyles` de Puck copia del `<html>` padre al `<html>` del
+ *   iframe (`syncAttributes`) — eso servía cuando el sitio público no tenía
+ *   ningún soporte de modo oscuro, pero ahora sí lo tiene, así que aislar la
+ *   fuga escondería el comportamiento real. La fuga de `.dark` en sí sigue
+ *   sin usarse para nada acá: el lienzo nunca lee esa clase, solo lee
+ *   `modo`, derivado explícitamente de `theme` — el chrome del panel
+ *   (botones, inputs de shadcn con variantes `dark:`) sigue sin filtrarse al
+ *   contenido del sitio, que se pinta enteramente vía las variables CSS de
+ *   `temaComoVariablesCss`, no vía clases `dark:` de Tailwind.
  * - **Red de seguridad de navegación**: los bloques reales usan
  *   `EnlaceBloque` (que no navega en modo `'editor'`), pero por si algún
  *   `<a>` se cuela sin pasar por ahí, este `onClickCapture` cancela
@@ -39,10 +46,7 @@ export function PuckRoot({ children, puck }: PuckRootProps) {
   const { datos } = leerMetadata(puck)
   const { theme } = useTheme()
   const wrapperRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    wrapperRef.current?.ownerDocument.documentElement.classList.remove('dark')
-  }, [theme])
+  const modo: ModoTema = theme === 'dark' ? 'oscuro' : 'claro'
 
   const handleClickCapture = (event: MouseEvent<HTMLDivElement>) => {
     if ((event.target as HTMLElement).closest?.('a')) {
@@ -53,7 +57,7 @@ export function PuckRoot({ children, puck }: PuckRootProps) {
   return (
     <div
       ref={wrapperRef}
-      style={datos.tema ? temaComoVariablesCss(datos.tema) : undefined}
+      style={datos.tema ? temaComoVariablesCss(datos.tema, modo) : undefined}
       className="relative min-h-full"
       onClickCapture={handleClickCapture}
     >

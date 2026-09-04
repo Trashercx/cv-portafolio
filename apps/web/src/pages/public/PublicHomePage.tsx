@@ -3,6 +3,7 @@ import { FondoAnimado } from '@/components/publico/FondoAnimado'
 import { Footer } from '@/components/publico/Footer'
 import { RenderizadorSecciones } from '@/components/publico/RenderizadorSecciones'
 import { useSitio } from '@/features/publico/usePublico'
+import { useModoTema } from '@/hooks/useModoTema'
 import { ApiError } from '@/lib/api-client'
 import { temaComoVariablesCss } from '@/lib/tema-css'
 
@@ -11,9 +12,18 @@ import { temaComoVariablesCss } from '@/lib/tema-css'
  * la última versión publicada, nunca contenido en vivo/borrador) y pinta sus
  * secciones visibles, en orden, con el tema del snapshot aplicado como
  * variables CSS (mismo patrón que `TemaPage`, ver `temaComoVariablesCss`).
+ *
+ * Modo oscuro (Fase 4.6): `useModoTema()` resuelve `prefers-color-scheme`
+ * del sistema salvo que el visitante haya elegido un override manual (botón
+ * `ToggleModoTema`, montado en `Footer`); ese `modo` se pasa a
+ * `temaComoVariablesCss` para pintar la paleta oscura derivada
+ * (`lib/tema-oscuro.ts`) en vez de una paleta hardcodeada.
+ * `data-tema-modo` queda en el contenedor raíz para overrides puntuales de
+ * CSS/QA a futuro, sin uso propio todavía.
  */
 export function PublicHomePage() {
   const { data: snapshot, isLoading, error } = useSitio()
+  const { modo } = useModoTema()
 
   if (isLoading) {
     return (
@@ -47,7 +57,10 @@ export function PublicHomePage() {
 
   return (
     <div
-      style={snapshot.tema ? temaComoVariablesCss(snapshot.tema) : undefined}
+      style={
+        snapshot.tema ? temaComoVariablesCss(snapshot.tema, modo) : undefined
+      }
+      data-tema-modo={modo}
       className="relative min-h-svh"
     >
       {snapshot.fondo ? <FondoAnimado fondo={snapshot.fondo} /> : null}
