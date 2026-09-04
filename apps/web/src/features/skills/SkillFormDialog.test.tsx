@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -203,7 +203,7 @@ describe('SkillFormDialog (nuevo)', () => {
     expect(crearMutateMock).not.toHaveBeenCalled()
   })
 
-  it('resetea el formulario al reabrir sin guardar (mismo estado "nuevo")', async () => {
+  it('pide confirmación al intentar cerrar sin guardar (Esc), y "Descartar" cierra el modal y resetea el formulario al reabrir (mismo estado "nuevo")', async () => {
     const user = userEvent.setup()
     render(<WrapperControlado skill={null} />)
 
@@ -212,8 +212,17 @@ describe('SkillFormDialog (nuevo)', () => {
       'texto sucio sin guardar',
     )
 
-    // cierra sin guardar (Escape, como haría el admin)
+    // cierra sin guardar (Escape, como haría el admin): no cierra de
+    // inmediato, pide confirmación primero.
     await user.keyboard('{Escape}')
+    const confirmacion = await screen.findByRole('alertdialog')
+    expect(
+      within(confirmacion).getByText(/¿descartar cambios\?/i),
+    ).toBeInTheDocument()
+
+    await user.click(
+      within(confirmacion).getByRole('button', { name: /^descartar$/i }),
+    )
     await waitFor(() =>
       expect(screen.queryByLabelText(/^nombre$/i)).not.toBeInTheDocument(),
     )

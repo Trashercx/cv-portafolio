@@ -1,6 +1,16 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -28,6 +38,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
+import { useConfirmarDescarte } from '@/hooks/useConfirmarDescarte'
 import { ApiError } from '@/lib/api-client'
 import { PLANTILLAS_TEMA } from './plantillas-tema'
 import { temaSchema, type TemaFormValues } from './tema-schema'
@@ -95,6 +106,19 @@ export function TemaFormDialog() {
     })
   }
 
+  const cerrar = (nextOpen: boolean) => {
+    setOpen(nextOpen)
+    if (!nextOpen) {
+      form.reset(DEFAULT_VALUES)
+      setPlantillaId(ID_PLANTILLA_PERSONALIZADA)
+    }
+  }
+
+  // UC-XX (Fase 4.1, punto 1): evita cerrar el modal sin avisar (click
+  // afuera/Esc) cuando hay cambios sin guardar en el form.
+  const { intentarCerrar, confirmando, confirmar, cancelar } =
+    useConfirmarDescarte(form.formState.isDirty, cerrar)
+
   const onSubmit = (values: TemaFormValues) => {
     crear.mutate(values, {
       onSuccess: () => {
@@ -113,167 +137,180 @@ export function TemaFormDialog() {
         : null
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(nextOpen) => {
-        setOpen(nextOpen)
-        if (!nextOpen) {
-          form.reset(DEFAULT_VALUES)
-          setPlantillaId(ID_PLANTILLA_PERSONALIZADA)
-        }
-      }}
-    >
-      <DialogTrigger asChild>
-        <Button>Nuevo tema</Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Nuevo tema</DialogTitle>
-        </DialogHeader>
-        <div className="grid gap-2">
-          <Label htmlFor="plantilla-tema">Plantilla predefinida (opcional)</Label>
-          <Select value={plantillaId} onValueChange={aplicarPlantilla}>
-            <SelectTrigger id="plantilla-tema" className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ID_PLANTILLA_PERSONALIZADA}>
-                Personalizado (en blanco)
-              </SelectItem>
-              {PLANTILLAS_TEMA.map((plantilla) => (
-                <SelectItem key={plantilla.id} value={plantilla.id}>
-                  <span className="flex items-center gap-2">
-                    <span className="flex gap-0.5">
-                      <span
-                        aria-hidden="true"
-                        className="size-3 rounded-full border"
-                        style={{ backgroundColor: plantilla.color_primario }}
-                      />
-                      <span
-                        aria-hidden="true"
-                        className="size-3 rounded-full border"
-                        style={{ backgroundColor: plantilla.color_secundario }}
-                      />
-                    </span>
-                    {plantilla.nombre} · {plantilla.modo}
-                  </span>
+    <>
+      <Dialog open={open} onOpenChange={intentarCerrar}>
+        <DialogTrigger asChild>
+          <Button>Nuevo tema</Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nuevo tema</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-2">
+            <Label htmlFor="plantilla-tema">Plantilla predefinida (opcional)</Label>
+            <Select value={plantillaId} onValueChange={aplicarPlantilla}>
+              <SelectTrigger id="plantilla-tema" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ID_PLANTILLA_PERSONALIZADA}>
+                  Personalizado (en blanco)
                 </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-muted-foreground">
-            Precarga los campos de abajo con una paleta lista; podés seguir
-            editándolos antes de crear el tema.
-          </p>
-        </div>
-
-        <Separator className="my-2" />
-
-        <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onSubmit)}
-            noValidate
-            className="grid gap-4"
-          >
-            <FormField
-              control={form.control}
-              name="nombre"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nombre</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="grid grid-cols-2 gap-4">
-              {CAMPOS_COLOR.map(({ name, label }) => (
-                <FormField
-                  key={name}
-                  control={form.control}
-                  name={name}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{label}</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="color"
-                          className="h-9 w-full p-1"
-                          {...field}
-                          value={String(field.value)}
+                {PLANTILLAS_TEMA.map((plantilla) => (
+                  <SelectItem key={plantilla.id} value={plantilla.id}>
+                    <span className="flex items-center gap-2">
+                      <span className="flex gap-0.5">
+                        <span
+                          aria-hidden="true"
+                          className="size-3 rounded-full border"
+                          style={{ backgroundColor: plantilla.color_primario }}
                         />
+                        <span
+                          aria-hidden="true"
+                          className="size-3 rounded-full border"
+                          style={{ backgroundColor: plantilla.color_secundario }}
+                        />
+                      </span>
+                      {plantilla.nombre} · {plantilla.modo}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Precarga los campos de abajo con una paleta lista; podés seguir
+              editándolos antes de crear el tema.
+            </p>
+          </div>
+
+          <Separator className="my-2" />
+
+          <Form {...form}>
+            <form
+              onSubmit={form.handleSubmit(onSubmit)}
+              noValidate
+              className="grid gap-4"
+            >
+              <FormField
+                control={form.control}
+                name="nombre"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nombre</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-2 gap-4">
+                {CAMPOS_COLOR.map(({ name, label }) => (
+                  <FormField
+                    key={name}
+                    control={form.control}
+                    name={name}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>{label}</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="color"
+                            className="h-9 w-full p-1"
+                            {...field}
+                            value={String(field.value)}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                ))}
+              </div>
+
+              <FormField
+                control={form.control}
+                name="fuente_principal"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tipografía principal</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              ))}
-            </div>
+                      <SelectContent>
+                        {OPCIONES_FUENTE.map((opcion) => (
+                          <SelectItem key={opcion.value} value={opcion.value}>
+                            {opcion.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="fuente_principal"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tipografía principal</FormLabel>
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <FormControl>
-                      <SelectTrigger className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {OPCIONES_FUENTE.map((opcion) => (
-                        <SelectItem key={opcion.value} value={opcion.value}>
-                          {opcion.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="modo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Modo</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="claro">Claro</SelectItem>
+                        <SelectItem value="oscuro">Oscuro</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <FormField
-              control={form.control}
-              name="modo"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Modo</FormLabel>
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <FormControl>
-                      <SelectTrigger className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="claro">Claro</SelectItem>
-                      <SelectItem value="oscuro">Oscuro</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              {errorMessage ? (
+                <p role="alert" className="text-sm text-destructive">
+                  {errorMessage}
+                </p>
+              ) : null}
 
-            {errorMessage ? (
-              <p role="alert" className="text-sm text-destructive">
-                {errorMessage}
-              </p>
-            ) : null}
+              <DialogFooter>
+                <Button type="submit" disabled={crear.isPending}>
+                  {crear.isPending ? 'Creando…' : 'Crear tema'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
 
-            <DialogFooter>
-              <Button type="submit" disabled={crear.isPending}>
-                {crear.isPending ? 'Creando…' : 'Crear tema'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+      <AlertDialog
+        open={confirmando}
+        onOpenChange={(siguienteAbierto) => {
+          if (!siguienteAbierto) cancelar()
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Descartar cambios?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Vas a perder lo que escribiste.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelar}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmar}>Descartar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }

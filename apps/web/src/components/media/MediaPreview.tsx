@@ -85,10 +85,19 @@ export function MediaPreview({
             />
           ) : (
             <div className="grid gap-2">
+              {/*
+                Fase 4.1, punto 4: `sandbox=""` (el más restrictivo posible)
+                bloqueaba el visor de PDF nativo de Chrome, que necesita
+                `allow-same-origin` para poder ejecutar su propio plugin de
+                render. La URL siempre apunta al bucket S3/CloudFront propio
+                de la app (nunca a contenido de terceros embebido), así que
+                relajar el sandbox a `allow-same-origin` no expone al admin a
+                contenido no confiable.
+              */}
               <iframe
                 src={url}
                 title={titulo}
-                sandbox=""
+                sandbox="allow-same-origin"
                 className="h-[70vh] w-full rounded-md border"
               />
               <a

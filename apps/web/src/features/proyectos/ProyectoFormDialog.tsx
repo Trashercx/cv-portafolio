@@ -1,6 +1,16 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -21,6 +31,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
 import { Textarea } from '@/components/ui/textarea'
+import { useConfirmarDescarte } from '@/hooks/useConfirmarDescarte'
 import { ApiError } from '@/lib/api-client'
 import { GaleriaImagenesProyecto } from './GaleriaImagenesProyecto'
 import { proyectoSchema, type ProyectoFormValues } from './proyecto-schema'
@@ -114,6 +125,14 @@ export function ProyectoFormDialog({
     }
   }
 
+  // Fase 4.1: evita cerrar el modal sin avisar (click afuera/Esc)
+  // cuando hay cambios sin guardar en el form. Envuelve
+  // `handleOpenChange` (que ya resetea el form/estado local al cerrar) en
+  // vez de reemplazarlo: solo se ejecuta tras confirmar el descarte, o de
+  // inmediato si no hay cambios sin guardar.
+  const { intentarCerrar, confirmando, confirmar, cancelar } =
+    useConfirmarDescarte(form.formState.isDirty, handleOpenChange)
+
   const esNuevoProyecto = !proyectoIdActivo
   const mutacionActiva = esNuevoProyecto ? crear : actualizar
 
@@ -134,7 +153,22 @@ export function ProyectoFormDialog({
       // No cierra el modal: recién con el `id` devuelto puede mostrarse
       // el selector de tecnologías y la galería de imágenes.
       crear.mutate(payload, {
-        onSuccess: (creado) => setProyectoIdActivo(creado.id),
+        onSuccess: (creado) => {
+          setProyectoIdActivo(creado.id)
+          // Bug reportado por code-reviewer (Fase 4.1): sin este reset, el
+          // form queda "sucio" contra su baseline original después de
+          // crear el proyecto (React Hook Form no limpia `isDirty` solo por
+          // enviar, únicamente con `reset()`). Si el admin cierra el modal
+          // (Esc/click afuera/X) sin hacer el segundo guardado, el guard de
+          // `useConfirmarDescarte` mostraba "¿Descartar cambios?" aunque el
+          // proyecto YA esté persistido — un falso positivo confuso, ya que
+          // solo se perdería la carga de tecnologías/imágenes de esta
+          // sesión, no los datos del proyecto en sí. `values` es la misma
+          // forma (`ProyectoFormValues`) que ya está mostrando el form, así
+          // que la nueva baseline coincide con lo guardado sin alterar lo
+          // que ve el admin.
+          form.reset(values)
+        },
       })
     } else {
       actualizar.mutate(payload, { onSuccess: () => handleOpenChange(false) })
@@ -149,80 +183,28 @@ export function ProyectoFormDialog({
         : null
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>
-            {esNuevoProyecto ? 'Nuevo proyecto' : 'Editar proyecto'}
-          </DialogTitle>
-        </DialogHeader>
-        <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onSubmit)}
-            noValidate
-            className="grid gap-4"
-          >
-            <FormField
-              control={form.control}
-              name="titulo"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Título</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="descripcion"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Descripción</FormLabel>
-                  <FormControl>
-                    <Textarea rows={4} {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="url_demo"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>URL de demo (opcional)</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="url_repositorio"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>URL del repositorio (opcional)</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <div className="grid grid-cols-2 gap-4">
+    <>
+      <Dialog open={open} onOpenChange={intentarCerrar}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {esNuevoProyecto ? 'Nuevo proyecto' : 'Editar proyecto'}
+            </DialogTitle>
+          </DialogHeader>
+          <Form {...form}>
+            <form
+              onSubmit={form.handleSubmit(onSubmit)}
+              noValidate
+              className="grid gap-4"
+            >
               <FormField
                 control={form.control}
-                name="fecha_inicio"
+                name="titulo"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Fecha de inicio</FormLabel>
+                    <FormLabel>Título</FormLabel>
                     <FormControl>
-                      <Input type="date" max={hoy} {...field} />
+                      <Input {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -230,118 +212,192 @@ export function ProyectoFormDialog({
               />
               <FormField
                 control={form.control}
-                name="fecha_fin"
+                name="descripcion"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Fecha de fin (opcional)</FormLabel>
+                    <FormLabel>Descripción</FormLabel>
+                    <FormControl>
+                      <Textarea rows={4} {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="url_demo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>URL de demo (opcional)</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="url_repositorio"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>URL del repositorio (opcional)</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="fecha_inicio"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Fecha de inicio</FormLabel>
+                      <FormControl>
+                        <Input type="date" max={hoy} {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="fecha_fin"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Fecha de fin (opcional)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="date"
+                          min={form.watch('fecha_inicio') || undefined}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <FormField
+                control={form.control}
+                name="estado"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Estado</FormLabel>
+                    <FormControl>
+                      <Input placeholder="p. ej. en_progreso" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="orden"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Orden</FormLabel>
                     <FormControl>
                       <Input
-                        type="date"
-                        min={form.watch('fecha_inicio') || undefined}
-                        {...field}
+                        type="number"
+                        value={field.value}
+                        onChange={(event) =>
+                          field.onChange(event.target.valueAsNumber)
+                        }
                       />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-            </div>
-            <FormField
-              control={form.control}
-              name="estado"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Estado</FormLabel>
-                  <FormControl>
-                    <Input placeholder="p. ej. en_progreso" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="orden"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Orden</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      value={field.value}
-                      onChange={(event) =>
-                        field.onChange(event.target.valueAsNumber)
-                      }
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="destacado"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-center gap-2 space-y-0">
-                  <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={(checked) =>
-                        field.onChange(checked === true)
-                      }
-                    />
-                  </FormControl>
-                  <FormLabel className="mt-0!">Destacado</FormLabel>
-                </FormItem>
-              )}
-            />
+              <FormField
+                control={form.control}
+                name="destacado"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center gap-2 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={(checked) =>
+                          field.onChange(checked === true)
+                        }
+                      />
+                    </FormControl>
+                    <FormLabel className="mt-0!">Destacado</FormLabel>
+                  </FormItem>
+                )}
+              />
 
-            {errorMessage ? (
-              <p role="alert" className="text-sm text-destructive">
-                {errorMessage}
-              </p>
-            ) : null}
+              {errorMessage ? (
+                <p role="alert" className="text-sm text-destructive">
+                  {errorMessage}
+                </p>
+              ) : null}
 
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => handleOpenChange(false)}
-              >
-                {esNuevoProyecto ? 'Cancelar' : 'Cerrar'}
-              </Button>
-              <Button type="submit" disabled={mutacionActiva.isPending}>
-                {esNuevoProyecto
-                  ? mutacionActiva.isPending
-                    ? 'Creando…'
-                    : 'Crear y continuar'
-                  : mutacionActiva.isPending
-                    ? 'Guardando…'
-                    : 'Guardar'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => intentarCerrar(false)}
+                >
+                  {esNuevoProyecto ? 'Cancelar' : 'Cerrar'}
+                </Button>
+                <Button type="submit" disabled={mutacionActiva.isPending}>
+                  {esNuevoProyecto
+                    ? mutacionActiva.isPending
+                      ? 'Creando…'
+                      : 'Crear y continuar'
+                    : mutacionActiva.isPending
+                      ? 'Guardando…'
+                      : 'Guardar'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
 
-        {proyectoIdActivo ? (
-          <>
-            <Separator />
-            <TecnologiaSelector
-              proyectoId={proyectoIdActivo}
-              tecnologiasAsociadas={proyectoFresco?.tecnologias ?? []}
-            />
-            <Separator />
-            <GaleriaImagenesProyecto
-              proyectoId={proyectoIdActivo}
-              imagenes={proyectoFresco?.imagenes ?? []}
-            />
-          </>
-        ) : (
-          <p className="text-sm text-muted-foreground">
-            Crea el proyecto para poder agregarle tecnologías e imágenes.
-          </p>
-        )}
-      </DialogContent>
-    </Dialog>
+          {proyectoIdActivo ? (
+            <>
+              <Separator />
+              <TecnologiaSelector
+                proyectoId={proyectoIdActivo}
+                tecnologiasAsociadas={proyectoFresco?.tecnologias ?? []}
+              />
+              <Separator />
+              <GaleriaImagenesProyecto
+                proyectoId={proyectoIdActivo}
+                imagenes={proyectoFresco?.imagenes ?? []}
+              />
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Crea el proyecto para poder agregarle tecnologías e imágenes.
+            </p>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog
+        open={confirmando}
+        onOpenChange={(siguienteAbierto) => {
+          if (!siguienteAbierto) cancelar()
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Descartar cambios?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Vas a perder lo que escribiste.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelar}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmar}>Descartar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }

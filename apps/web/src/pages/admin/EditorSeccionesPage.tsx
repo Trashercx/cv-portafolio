@@ -4,6 +4,7 @@ import { Info } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { ConfirmActionDialog } from '@/components/shared/ConfirmActionDialog'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { DialogVistaPrevia } from '@/components/publicacion/DialogVistaPrevia'
 import { PanelVersiones } from '@/components/publicacion/PanelVersiones'
 import { Badge } from '@/components/ui/badge'
@@ -37,6 +38,7 @@ import {
 } from '@/features/secciones/types'
 import { useDatosEditor, type MetadataEditor } from '@/features/editor/useDatosEditor'
 import { usePublicarVersion, useVersiones } from '@/features/publicacion/usePublicacion'
+import type { VersionSitio } from '@/features/publicacion/types'
 import { useEditorSeccionesStore } from '@/store/editor-secciones-store'
 
 type EditorData = Data<PuckSeccionesComponents>
@@ -319,6 +321,19 @@ export function EditorSeccionesPage() {
   const publicar = usePublicarVersion()
   const [historialAbierto, setHistorialAbierto] = useState(false)
 
+  // Estado de `DialogVistaPrevia` levantado acá (Fase 4.1, punto 2): ese
+  // componente se monta dentro de `overrides.headerActions` de `<Puck>`
+  // (más abajo), una función/objeto literal nuevo en cada render de esta
+  // página — Puck remonta ese subárbol cada vez que cambia esa referencia,
+  // lo que reseteaba un `useState` local a `open=false` apenas la
+  // invalidación de `VERSIONES_QUERY_KEY` (disparada por el propio
+  // `usePreviewVersion.onSuccess`) re-renderizaba esta página. Ver el
+  // comentario de cabecera de `DialogVistaPrevia` para el detalle completo.
+  const [previewAbierto, setPreviewAbierto] = useState(false)
+  const [previewVersion, setPreviewVersion] = useState<VersionSitio | null>(
+    null,
+  )
+
   // `GET /admin/versiones` (ver `useVersiones`) siempre devuelve el
   // historial más reciente primero: si esa primera fila es un `borrador`
   // (generado por "Previsualizar cambios"), todavía hay contenido sin
@@ -544,6 +559,27 @@ export function EditorSeccionesPage() {
         </DialogContent>
       </Dialog>
 
+      {/*
+        Fase 4.1, punto 6: el badge "Borrador" del header de Puck (más abajo)
+        es chico y fácil de pasar por alto — este banner persistente hace
+        explícito que "no veo el cambio en `/`" significa "todavía no
+        publicaste", no un bug. Puramente informativo (no bloquea la
+        interacción con el lienzo).
+      */}
+      {versionesQuery.isSuccess && hayCambiosSinPublicar ? (
+        <div
+          role="status"
+          className="flex items-center gap-2 border-b bg-secondary px-4 py-2 text-sm text-secondary-foreground"
+        >
+          <Info className="size-4 shrink-0" aria-hidden="true" />
+          <span>
+            Tenés cambios guardados que todavía no publicaste. Los
+            visitantes del sitio siguen viendo la última versión publicada
+            hasta que presiones "Publicar".
+          </span>
+        </div>
+      ) : null}
+
       {cargando ? (
         <p className="p-4 text-sm text-muted-foreground">
           Cargando secciones…
@@ -582,6 +618,40 @@ export function EditorSeccionesPage() {
                 : 'h-full'
             }
           >
+            {/*
+              Fase 4.1, punto 5: instancia acotada al lienzo (a diferencia de
+              la instancia general de `App.tsx`) — si `<Puck>` crashea (p.
+              ej. un campo de configuración de un bloque con un valor que
+              rompe el render), el resto del panel de administración
+              (sidebar, header, este mismo wrapper) sigue funcionando. El
+              fallback fuerza un remount completo de `<Puck>` reutilizando
+              `editorKey` (mismo mecanismo que ya usa `guardarCambios` tras
+              un guardado exitoso) además de limpiar el estado de error del
+              boundary.
+            */}
+            <ErrorBoundary
+              fallback={(reintentar) => (
+                <div className="flex h-full flex-col items-center justify-center gap-4 p-6 text-center">
+                  <div>
+                    <h2 className="text-lg font-semibold">
+                      El lienzo del editor tuvo un error
+                    </h2>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Podés reintentar sin perder el resto del panel de
+                      administración.
+                    </p>
+                  </div>
+                  <Button
+                    onClick={() => {
+                      setEditorKey((key) => key + 1)
+                      reintentar()
+                    }}
+                  >
+                    Reintentar
+                  </Button>
+                </div>
+              )}
+            >
             <Puck
               key={editorKey}
               config={puckConfig}
@@ -648,7 +718,12 @@ export function EditorSeccionesPage() {
                         </Popover>
                       </div>
                     ) : null}
-                    <DialogVistaPrevia />
+                    <DialogVistaPrevia
+                      open={previewAbierto}
+                      onOpenChange={setPreviewAbierto}
+                      previewVersion={previewVersion}
+                      onPreviewVersion={setPreviewVersion}
+                    />
                     <Button
                       variant="outline"
                       onClick={() => setHistorialAbierto(true)}
@@ -674,6 +749,7 @@ export function EditorSeccionesPage() {
                 ),
               }}
             />
+            </ErrorBoundary>
           </div>
           {guardando ? (
             <div

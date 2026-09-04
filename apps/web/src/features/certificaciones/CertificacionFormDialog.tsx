@@ -2,6 +2,16 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { MediaField } from '@/components/media/MediaField'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -21,6 +31,7 @@ import {
 import { Input } from '@/components/ui/input'
 import type { Media } from '@/features/media/types'
 import { useMedia } from '@/features/media/useMediaLibrary'
+import { useConfirmarDescarte } from '@/hooks/useConfirmarDescarte'
 import { ApiError } from '@/lib/api-client'
 import {
   certificacionSchema,
@@ -109,6 +120,11 @@ export function CertificacionFormDialog({
     setLogoSeleccionado(null)
   }, [open, certificacion, form])
 
+  // UC-XX (Fase 4.1, punto 1): evita cerrar el modal sin avisar (click
+  // afuera/Esc) cuando hay cambios sin guardar en el form.
+  const { intentarCerrar, confirmando, confirmar, cancelar } =
+    useConfirmarDescarte(form.formState.isDirty, onOpenChange)
+
   const mutacionActiva = esNuevo ? crear : actualizar
 
   const onSubmit = (values: CertificacionFormValues) => {
@@ -138,54 +154,28 @@ export function CertificacionFormDialog({
         : null
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
-            {esNuevo ? 'Nueva certificación' : 'Editar certificación'}
-          </DialogTitle>
-        </DialogHeader>
-        <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onSubmit)}
-            noValidate
-            className="grid gap-4"
-          >
-            <FormField
-              control={form.control}
-              name="nombre"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nombre</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="institucion"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Institución</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <div className="grid grid-cols-2 gap-4">
+    <>
+      <Dialog open={open} onOpenChange={intentarCerrar}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {esNuevo ? 'Nueva certificación' : 'Editar certificación'}
+            </DialogTitle>
+          </DialogHeader>
+          <Form {...form}>
+            <form
+              onSubmit={form.handleSubmit(onSubmit)}
+              noValidate
+              className="grid gap-4"
+            >
               <FormField
                 control={form.control}
-                name="fecha_emision"
+                name="nombre"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Fecha de emisión</FormLabel>
+                    <FormLabel>Nombre</FormLabel>
                     <FormControl>
-                      <Input type="date" max={hoy} {...field} />
+                      <Input {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -193,102 +183,150 @@ export function CertificacionFormDialog({
               />
               <FormField
                 control={form.control}
-                name="fecha_expiracion"
+                name="institucion"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Fecha de expiración (opcional)</FormLabel>
+                    <FormLabel>Institución</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="fecha_emision"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Fecha de emisión</FormLabel>
+                      <FormControl>
+                        <Input type="date" max={hoy} {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="fecha_expiracion"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Fecha de expiración (opcional)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="date"
+                          min={form.watch('fecha_emision') || undefined}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <FormField
+                control={form.control}
+                name="url_verificacion"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>URL de verificación</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="credencial_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>ID de credencial (opcional)</FormLabel>
+                    <FormControl>
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="orden"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Orden</FormLabel>
                     <FormControl>
                       <Input
-                        type="date"
-                        min={form.watch('fecha_emision') || undefined}
-                        {...field}
+                        type="number"
+                        value={field.value}
+                        onChange={(event) =>
+                          field.onChange(event.target.valueAsNumber)
+                        }
                       />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-            </div>
-            <FormField
-              control={form.control}
-              name="url_verificacion"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>URL de verificación</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="credencial_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>ID de credencial (opcional)</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="orden"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Orden</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      value={field.value}
-                      onChange={(event) =>
-                        field.onChange(event.target.valueAsNumber)
-                      }
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
 
-            <MediaField
-              label="Logo o documento del certificado (imagen o PDF)"
-              tiposPermitidos={['imagen', 'pdf']}
-              currentMediaId={form.watch('logo_media_id')}
-              currentPreviewUrl={logoParaPrevisualizar?.url}
-              currentMediaTipo={logoParaPrevisualizar?.tipo}
-              onUploaded={(media) => {
-                form.setValue('logo_media_id', media.id, {
-                  shouldDirty: true,
-                })
-                setLogoSeleccionado(media)
-              }}
-              onClear={() => {
-                form.setValue('logo_media_id', undefined, {
-                  shouldDirty: true,
-                })
-                setLogoSeleccionado(null)
-              }}
-            />
+              <MediaField
+                label="Logo o documento del certificado (imagen o PDF)"
+                tiposPermitidos={['imagen', 'pdf']}
+                currentMediaId={form.watch('logo_media_id')}
+                currentPreviewUrl={logoParaPrevisualizar?.url}
+                currentMediaTipo={logoParaPrevisualizar?.tipo}
+                onUploaded={(media) => {
+                  form.setValue('logo_media_id', media.id, {
+                    shouldDirty: true,
+                  })
+                  setLogoSeleccionado(media)
+                }}
+                onClear={() => {
+                  form.setValue('logo_media_id', undefined, {
+                    shouldDirty: true,
+                  })
+                  setLogoSeleccionado(null)
+                }}
+              />
 
-            {errorMessage ? (
-              <p role="alert" className="text-sm text-destructive">
-                {errorMessage}
-              </p>
-            ) : null}
+              {errorMessage ? (
+                <p role="alert" className="text-sm text-destructive">
+                  {errorMessage}
+                </p>
+              ) : null}
 
-            <DialogFooter>
-              <Button type="submit" disabled={mutacionActiva.isPending}>
-                {mutacionActiva.isPending ? 'Guardando…' : 'Guardar'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+              <DialogFooter>
+                <Button type="submit" disabled={mutacionActiva.isPending}>
+                  {mutacionActiva.isPending ? 'Guardando…' : 'Guardar'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog
+        open={confirmando}
+        onOpenChange={(siguienteAbierto) => {
+          if (!siguienteAbierto) cancelar()
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Descartar cambios?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Vas a perder lo que escribiste.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={cancelar}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmar}>Descartar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }
