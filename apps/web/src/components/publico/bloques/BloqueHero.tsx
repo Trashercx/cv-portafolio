@@ -1,7 +1,7 @@
 import type { PerfilPublico } from '@/features/publico/types'
 import type { HeroConfiguracion } from '@/features/secciones/types'
 import { cn } from '@/lib/utils'
-import { EnlaceBloque } from '../contexto-renderizado'
+import { EnlaceBloque, useModoRenderizado } from '../contexto-renderizado'
 
 type BloqueHeroProps = {
   config: HeroConfiguracion
@@ -37,6 +37,7 @@ const TAMANO_TITULO_CLASE: Record<NonNullable<HeroConfiguracion['tamano_titulo']
 
 /** Bloque `hero` (portada), compartido entre el sitio público y el lienzo del editor de Puck (Fase 3.1, extendido Fase 3.4). */
 export function BloqueHero({ config, perfil, alineacionTitulo }: BloqueHeroProps) {
+  const modoRenderizado = useModoRenderizado()
   const mostrarFoto =
     config.mostrar_foto_perfil &&
     config.posicion_foto !== 'ninguna' &&
@@ -52,11 +53,44 @@ export function BloqueHero({ config, perfil, alineacionTitulo }: BloqueHeroProps
       <img
         src={perfil.imagen_perfil.url}
         alt={perfil.imagen_perfil.alt_text ?? perfil.nombre_completo}
-        style={
-          config.estilo_foto === 'con_marco'
+        style={{
+          ...(config.estilo_foto === 'con_marco'
             ? { borderColor: 'var(--color-primario)' }
-            : undefined
-        }
+            : undefined),
+          // `width`/`height` fijos en píxeles y, en el branch de esquina,
+          // `position: absolute` con el offset correspondiente: fallback
+          // defensivo, SOLO en modo `'editor'` (lienzo de Puck), para una
+          // condición de carrera propia de `@measured/puck` (`AutoFrame
+          // couldn't load a stylesheet`) que puede dejar el mirror de
+          // estilos del iframe sin resolver todavía cuando la imagen se
+          // pinta — un `style` inline no depende de que cargue ningún
+          // stylesheet. En modo `'publico'` NO se agrega nada de esto: un
+          // `style` inline siempre gana sobre el shorthand de una clase
+          // Tailwind con el mismo nombre (`size-24`/`size-16 sm:size-20`),
+          // así que forzarlo ahí rompería el tamaño real (y el
+          // comportamiento responsive del caso esquina) en producción.
+          ...(modoRenderizado === 'editor'
+            ? {
+                // 96px = equivalente a `size-24` (caso centrada); 80px =
+                // equivalente a `sm:size-20`, el tamaño más grande de las
+                // clases responsive del caso esquina, usado como piso
+                // seguro — no replica el breakpoint exacto acá, pero es
+                // solo un fallback defensivo dentro del editor, no
+                // necesita ser pixel-perfect.
+                width: config.posicion_foto === 'centrada' ? 96 : 80,
+                height: config.posicion_foto === 'centrada' ? 96 : 80,
+                ...(config.posicion_foto !== 'centrada'
+                  ? {
+                      position: 'absolute',
+                      right: 16,
+                      ...(config.posicion_foto === 'esquina_superior'
+                        ? { top: 16 }
+                        : { bottom: 16 }),
+                    }
+                  : undefined),
+              }
+            : undefined),
+        }}
         className={
           config.posicion_foto === 'centrada'
             ? `relative z-10 mx-auto size-24 ${claseFoto}`
