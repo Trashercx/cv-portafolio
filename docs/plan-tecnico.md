@@ -318,6 +318,17 @@ Disparada por QA manual del usuario sobre el PR anterior. Sin migraciones; toca 
 
 Pruebas: `red-social-schema.test.ts`/`create-red-social.dto.spec.ts` nuevos (normalización de esquema, `mailto:` sin alterar, vacío sigue rechazado); tests existentes de `MediaPreview`/`MediaUploadField`/`CertificacionDetallePage` actualizados para el `<object>`; suite completa verde en `apps/web` (217 tests) y `apps/api` (217 tests).
 
+### Cuarta ronda post-Fase 4.6 — convergencia visual del sitio público, carousel de galería y toggle de modo
+
+Disparada por QA manual del usuario sobre el PR anterior. Sin backend, sin migraciones.
+
+- **El fondo animado dejó de "converger" con el resto del sitio**: no era un bug nuevo, sino una consecuencia directa del fix de modo oscuro — el sitio público usa dos sistemas de color independientes: los 4 tokens de negocio del `Tema` (`--color-*`, los únicos que pinta `FondoAnimado`) y los tokens genéricos de shadcn/Tailwind (`--background`/`--card`/`--muted`/`--border`/etc., los que usan `EnvoltorioSeccion`/`Bloque*.tsx`). Antes de activar `.dark`, el segundo grupo quedaba siempre en sus valores claros fijos, que por casualidad combinaban con casi cualquier paleta clara del `Tema`; al activar `.dark` correctamente, ese grupo saltó a sus valores oscuros fijos de Tailwind, sin relación con el `Tema`. Fix de raíz: nuevo `apps/web/src/lib/tema-superficies.ts` (`derivarSuperficiesShadcn`, reusa los helpers hex↔HSL ya existentes en `tema-oscuro.ts`, ahora exportados) deriva los 11 tokens de superficie/texto genéricos a partir de los mismos 4 colores del `Tema`, inyectados por `temaComoVariablesCss` junto a los `--color-*` — un solo punto de entrada, sin tocar `index.css` (que sigue siendo el fallback del chrome del panel admin) ni ningún `Bloque*.tsx`.
+- **Ícono de PDF plano**: `MediaPreview.tsx` reemplaza el `FileIcon` genérico por una insignia circular roja con `FileText`, mismo patrón que `IconoSkill`.
+- **Scrollbar horizontal del carousel de Galería**: `BloqueGaleria.tsx` la oculta vía CSS (`scrollbar-width:none`/`-ms-overflow-style:none`/`::-webkit-scrollbar:hidden`), sin afectar el scroll táctil ni las flechas/dots existentes.
+- **Confusión sobre modo claro/oscuro del sitio publicado**: investigado y descartado como bug — el editor refleja el toggle del PANEL admin (`ThemeProvider`, independiente), el sitio publicado sigue `prefers-color-scheme` del VISITANTE con override propio (`useModoTema`) — dos fuentes de modo deliberadamente independientes, exactamente lo pedido. Único hallazgo real: el toggle del sitio público (`ToggleModoTema`) vivía solo al final del `Footer`, poco visible — se movió a un botón flotante fijo (esquina inferior derecha) montado directamente en `PublicHomePage.tsx`.
+
+Pruebas: `tema-superficies.test.ts` nuevo, `tema-css.test.ts` extendido; suite completa verde en `apps/web` (231 tests).
+
 ## 3. Índice UC → tareas → subagente → sprint
 
 `code-reviewer` y `release-manager` aplican a **toda** fila antes de cerrar la tarea o hacer commit — no se repiten en cada celda.

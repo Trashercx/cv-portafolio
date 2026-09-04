@@ -12,7 +12,7 @@ export type ModoTema = 'claro' | 'oscuro'
 type Hsl = { h: number; s: number; l: number }
 
 /** Convierte un hex `#rgb`/`#rrggbb` a componentes RGB en [0, 255]. */
-function hexARgb(hex: string): { r: number; g: number; b: number } {
+export function hexARgb(hex: string): { r: number; g: number; b: number } {
   let valor = hex.trim().replace(/^#/, '')
   if (valor.length === 3) {
     valor = valor
@@ -29,7 +29,7 @@ function hexARgb(hex: string): { r: number; g: number; b: number } {
 }
 
 /** RGB (cada canal en [0, 255]) a HSL (`h` en grados [0, 360), `s`/`l` en [0, 100]). */
-function rgbAHsl(r: number, g: number, b: number): Hsl {
+export function rgbAHsl(r: number, g: number, b: number): Hsl {
   const rNorm = r / 255
   const gNorm = g / 255
   const bNorm = b / 255
@@ -60,7 +60,7 @@ function rgbAHsl(r: number, g: number, b: number): Hsl {
 }
 
 /** HSL de vuelta a hex `#rrggbb`. */
-function hslAHex({ h, s, l }: Hsl): string {
+export function hslAHex({ h, s, l }: Hsl): string {
   const sNorm = s / 100
   const lNorm = l / 100
   const c = (1 - Math.abs(2 * lNorm - 1)) * sNorm
@@ -98,7 +98,7 @@ function hslAHex({ h, s, l }: Hsl): string {
   return `#${canal(rp)}${canal(gp)}${canal(bp)}`
 }
 
-function clamp(valor: number, min: number, max: number): number {
+export function clamp(valor: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, valor))
 }
 

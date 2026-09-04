@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react'
 import type { Tema } from '@/features/tema/types'
 import { derivarPaletaOscura, type ModoTema } from './tema-oscuro'
+import { derivarSuperficiesShadcn } from './tema-superficies'
 
 /**
  * Subconjunto de `Tema` necesario para calcular las variables CSS (UC-08).
@@ -51,11 +52,28 @@ export function temaComoVariablesCss(
   modo: ModoTema = 'claro',
 ): CSSProperties {
   const colores = modo === 'oscuro' ? derivarPaletaOscura(tema) : tema
+  const superficies = derivarSuperficiesShadcn(tema, modo)
   return {
     '--color-primario': colores.color_primario,
     '--color-secundario': colores.color_secundario,
     '--color-fondo': colores.color_fondo,
     '--color-texto': colores.color_texto,
+    // Superficies genéricas de shadcn/Tailwind (Fase 4.7, fix de
+    // convergencia visual): derivadas del `Tema`, no de los valores fijos de
+    // `index.css` — unifica los dos sistemas de color del sitio público en
+    // una sola fuente de verdad. `index.css` sigue siendo el fallback del
+    // chrome del panel admin, que nunca aplica estas variables.
+    '--background': superficies.background,
+    '--foreground': superficies.foreground,
+    '--card': superficies.card,
+    '--card-foreground': superficies.cardForeground,
+    '--popover': superficies.popover,
+    '--popover-foreground': superficies.popoverForeground,
+    '--muted': superficies.muted,
+    '--muted-foreground': superficies.mutedForeground,
+    '--border': superficies.border,
+    '--accent': superficies.accent,
+    '--accent-foreground': superficies.accentForeground,
     fontFamily:
       MAPA_FUENTE_PRINCIPAL[tema.fuente_principal] ?? tema.fuente_principal,
     // Bug preexistente (Fase 3.1): `--color-fondo` se declaraba pero nunca

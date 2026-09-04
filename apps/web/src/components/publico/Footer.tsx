@@ -2,7 +2,6 @@ import type { Media } from '@/features/media/types'
 import type { PerfilPublico } from '@/features/publico/types'
 import type { RedSocial } from '@/features/redes-sociales/types'
 import { RedesSociales } from './RedesSociales'
-import { ToggleModoTema } from './ToggleModoTema'
 
 type FooterProps = {
   perfil: PerfilPublico | null
@@ -17,10 +16,10 @@ type FooterProps = {
  * `PublicHomePage` como hermano de `RenderizadorSecciones`, dentro del
  * contenedor que ya trae las variables CSS del tema aplicadas.
  *
- * `ToggleModoTema` (Fase 4.6) vive acá, junto al resto de controles
- * "de página" del visitante (no flotante): es el lugar de menor sorpresa,
- * visible sin taparle contenido a ninguna sección, y coherente con que el
- * footer ya es el contenedor de "metadatos del sitio" (redes, CV, año).
+ * `ToggleModoTema` (Fase 4.6) YA NO vive acá (fix de visibilidad, Fase 4.7):
+ * como botón "de página" al fondo del scroll pasaba fácilmente
+ * desapercibido. Ahora se monta como botón flotante fijo directamente en
+ * `PublicHomePage`, hermano de este `Footer`.
  */
 export function Footer({ perfil, redes, cvMedia }: FooterProps) {
   const anioActual = new Date().getFullYear()
@@ -32,9 +31,6 @@ export function Footer({ perfil, redes, cvMedia }: FooterProps) {
         <p className="text-sm text-muted-foreground">
           {perfil?.nombre_completo ? `${perfil.nombre_completo} © ${anioActual}` : `© ${anioActual}`}
         </p>
-        <div className="flex justify-center">
-          <ToggleModoTema />
-        </div>
       </div>
     </footer>
   )

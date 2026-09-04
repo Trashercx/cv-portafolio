@@ -149,6 +149,7 @@ function CarouselGaleria({ fotos, onAbrirFoto }: CarouselGaleriaProps) {
         onScroll={manejarScroll}
         className={cn(
           'flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth',
+          '[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden',
           prefiereReducido && 'scroll-auto',
         )}
       >

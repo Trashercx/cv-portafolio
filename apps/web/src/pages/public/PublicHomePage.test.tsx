@@ -158,6 +158,21 @@ describe('PublicHomePage (UC-12)', () => {
     expect(raiz).toHaveClass('dark')
   })
 
+  it('muestra el toggle de modo claro/oscuro como botón flotante (Fase 4.7)', () => {
+    useSitioMock.mockReturnValue({
+      data: SNAPSHOT,
+      isLoading: false,
+      error: null,
+    })
+    useModoTemaMock.mockReturnValue({ modo: 'claro', setModo: vi.fn() })
+
+    renderHome()
+
+    expect(
+      screen.getByRole('button', { name: /cambiar a modo oscuro/i }),
+    ).toBeInTheDocument()
+  })
+
   it('no aplica la clase "dark" al contenedor raíz cuando el modo es claro', () => {
     useSitioMock.mockReturnValue({
       data: SNAPSHOT,
