@@ -84,7 +84,7 @@ type ResultadoUseDatosEditor = {
  * bloque `hero` en `puck-config.tsx`, con `datos.mediaPorId`.
  *
  * `useMediaList()` se llama **sin** filtro de tipo — misma entrada de caché
- * que usa `imagenFondoField` en `puck-config.tsx` (una sola petición
+ * que usa `selectorMediaField` en `puck-config.tsx` (una sola petición
  * `GET /admin/media` compartida) — porque el logo de una certificación
  * puede ser un PDF, y `BloqueCertificaciones` necesita distinguir
  * `tipo === 'imagen'` de cualquier otro tipo para no romper un `<img>`.

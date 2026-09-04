@@ -6,6 +6,7 @@ import type {
   BloqueConfiguracionBase,
   CertificacionesConfiguracion,
   ContactoConfiguracion,
+  GaleriaConfiguracion,
   LogrosConfiguracion,
   ProyectosConfiguracion,
   SkillsConfiguracion,
@@ -16,6 +17,7 @@ import type { Skill } from '@/features/skills/types'
 import { ALINEACION_TEXTO_CLASE } from '@/lib/escalas-bloque'
 import { BloqueCertificaciones } from './BloqueCertificaciones'
 import { BloqueContacto } from './BloqueContacto'
+import { BloqueGaleria } from './BloqueGaleria'
 import { BloqueLogros } from './BloqueLogros'
 import { BloqueProyectos } from './BloqueProyectos'
 import { BloqueSkills } from './BloqueSkills'
@@ -24,11 +26,13 @@ import { BloqueSobreMi } from './BloqueSobreMi'
 /**
  * Subconjunto de `SnapshotSitio`/`DatosEditor` (`@/features/publico/types`,
  * `@/features/editor/useDatosEditor`) que necesita cualquier bloque de
- * contenido "anidable" (los 6 tipos que no son `hero` ni `columnas`, ver
+ * contenido "anidable" (los tipos que no son `hero` ni `columnas`, ver
  * `TipoSeccionAnidable`) para renderizarse. Ambos tipos de origen son
  * estructuralmente compatibles con este (tienen estos campos de sobra, más
  * `tema`/`secciones`/`fondo`/`mediaPorId` que este dispatcher no necesita) —
- * TypeScript los acepta tal cual, sin adaptador intermedio.
+ * TypeScript los acepta tal cual, sin adaptador intermedio. `galeria` (UC-18)
+ * es el único tipo anidable que NO necesita nada de acá: sus fotos ya vienen
+ * resueltas contra `media` dentro de la propia `configuracion.fotos`.
  */
 export type DatosDespachoBloque = {
   perfil: PerfilPublico | null
@@ -47,8 +51,8 @@ type DespachoBloqueSeccionProps = {
 }
 
 /**
- * Despacha un bloque de contenido según su `tipo_seccion` (los 6 tipos
- * anidables de UC-17 — nunca `hero` ni `columnas`, que tienen su propio
+ * Despacha un bloque de contenido según su `tipo_seccion` (los tipos
+ * anidables de UC-17/UC-18 — nunca `hero` ni `columnas`, que tienen su propio
  * tratamiento en cada consumidor). Extraído de `RenderizadorSecciones`
  * (Fase 3.3, UC-17) porque el mismo despacho ahora hace falta en dos
  * lugares: el nivel superior de `RenderizadorSecciones` (sitio público +
@@ -143,6 +147,18 @@ export function DespachoBloqueSeccion({
           alineacionTitulo={alineacionTitulo}
           config={configuracion as SkillsConfiguracion}
           skills={datos.skills}
+        />
+      )
+    case 'galeria':
+      // A diferencia de los demás casos, no necesita nada de `datos`: las
+      // fotos ya vienen resueltas contra `media` en `configuracion.fotos`
+      // (snapshot público) o se resuelven en el propio `render` del bloque
+      // en `puck-config.tsx` (lienzo del editor) — ver `GaleriaFoto`.
+      return (
+        <BloqueGaleria
+          titulo={titulo_visible}
+          alineacionTitulo={alineacionTitulo}
+          config={configuracion as GaleriaConfiguracion}
         />
       )
     default:

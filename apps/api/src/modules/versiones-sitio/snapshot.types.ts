@@ -39,16 +39,35 @@ export interface SnapshotConId {
 }
 
 /**
+ * Una foto de `SnapshotSeccionConfiguracion.fotos` (`tipo_seccion='galeria'`,
+ * Fase 4.5/UC-18) una vez resuelta para el snapshot: `media` se agrega si
+ * `media_id` resolvió a un `Media` existente, se omite en silencio si es una
+ * referencia rota (mismo criterio que `hero.imagen_fondo`).
+ */
+export interface SnapshotGaleriaFoto {
+  media_id: string;
+  titulo?: string;
+  media?: SnapshotMedia;
+}
+
+/**
  * `Seccion.configuracion` una vez resuelta para el snapshot: sigue siendo
  * JSON dinámico (varía según `tipo_seccion`, ver
- * `secciones/dto/configuracion`), pero cuando `tipo_seccion='hero'` y trae
- * `imagen_fondo_media_id`, `armarSnapshot()` agrega `imagen_fondo` con la
- * `Media` completa resuelta (mismo patrón que `perfil.imagen_perfil` y
- * `certificacion.logo`), para que el sitio público nunca tenga que resolver
- * ids de media por su cuenta.
+ * `secciones/dto/configuracion`), pero:
+ *
+ * - cuando `tipo_seccion='hero'` y trae `imagen_fondo_media_id`,
+ *   `armarSnapshot()` agrega `imagen_fondo` con la `Media` completa resuelta
+ *   (mismo patrón que `perfil.imagen_perfil` y `certificacion.logo`);
+ * - cuando `tipo_seccion='galeria'` (Fase 4.5/UC-18), cada elemento de
+ *   `fotos` gana `media` con la `Media` completa resuelta a partir de
+ *   `fotos[].media_id`;
+ *
+ * para que el sitio público nunca tenga que resolver ids de media por su
+ * cuenta.
  */
 export interface SnapshotSeccionConfiguracion {
   imagen_fondo?: SnapshotMedia;
+  fotos?: SnapshotGaleriaFoto[];
   [key: string]: unknown;
 }
 
