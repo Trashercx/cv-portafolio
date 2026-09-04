@@ -131,4 +131,56 @@ describe('AuthService (UC-01 Iniciar sesión)', () => {
     ).rejects.toThrow(UnauthorizedException);
     expect(prisma.usuarioAdmin.update).not.toHaveBeenCalled();
   });
+
+  it('login incluye expiresAt en el resultado', async () => {
+    const admin = adminBase();
+    prisma.usuarioAdmin.findUnique.mockResolvedValue(admin);
+    prisma.usuarioAdmin.update.mockResolvedValue(admin);
+
+    const antes = Date.now();
+    const result = await service.login(admin.email, PASSWORD_PLANO);
+    const despues = Date.now();
+
+    expect(result.expiresAt).toBeInstanceOf(Date);
+    expect(result.expiresAt.getTime()).toBeGreaterThan(antes);
+    expect(result.expiresAt.getTime()).toBeGreaterThanOrEqual(despues);
+  });
+
+  describe('refrescar (UC-01: extensión de sesión)', () => {
+    it('caso feliz: devuelve accessToken, admin y expiresAt para un admin existente', async () => {
+      const admin = adminBase();
+      prisma.usuarioAdmin.findUnique.mockResolvedValue(admin);
+
+      const antes = Date.now();
+      const result = await service.refrescar(admin.id);
+      const despues = Date.now();
+
+      expect(prisma.usuarioAdmin.findUnique).toHaveBeenCalledWith({
+        where: { id: admin.id },
+      });
+      expect(jwtService.signAsync).toHaveBeenCalledWith({
+        sub: admin.id,
+        email: admin.email,
+      });
+      expect(result.accessToken).toBe('signed.jwt.token');
+      expect(result.admin).toEqual({
+        email: admin.email,
+        nombre: admin.nombre,
+      });
+      expect(result.expiresAt).toBeInstanceOf(Date);
+      expect(result.expiresAt.getTime()).toBeGreaterThan(antes);
+      expect(result.expiresAt.getTime()).toBeGreaterThanOrEqual(despues);
+      // No debe tocar los contadores de bloqueo: refrescar no es un intento de login.
+      expect(prisma.usuarioAdmin.update).not.toHaveBeenCalled();
+    });
+
+    it('edge case: admin no encontrado lanza 401 sin emitir token', async () => {
+      prisma.usuarioAdmin.findUnique.mockResolvedValue(null);
+
+      await expect(service.refrescar('id-inexistente')).rejects.toThrow(
+        UnauthorizedException,
+      );
+      expect(jwtService.signAsync).not.toHaveBeenCalled();
+    });
+  });
 });
