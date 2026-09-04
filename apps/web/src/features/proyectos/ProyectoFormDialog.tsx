@@ -11,6 +11,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { CampoFechaConCalendario } from '@/components/shared/CampoFechaConCalendario'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -29,6 +30,14 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { Textarea } from '@/components/ui/textarea'
 import { useConfirmarDescarte } from '@/hooks/useConfirmarDescarte'
@@ -43,6 +52,30 @@ import {
 } from './useProyectoMutations'
 import { useProyecto } from './useProyectos'
 
+/** Espeja los 3 valores cerrados de `proyecto-schema.ts`/`CreateProyectoDto.estado` (`@IsIn`). */
+const OPCIONES_ESTADO: Array<{ value: ProyectoFormValues['estado']; label: string }> = [
+  { value: 'en_progreso', label: 'En progreso' },
+  { value: 'finalizado', label: 'Finalizado' },
+  { value: 'pausado', label: 'Pausado' },
+]
+
+const VALORES_ESTADO_VALIDOS = new Set<string>(
+  OPCIONES_ESTADO.map((opcion) => opcion.value),
+)
+
+/**
+ * `ProyectoBase.estado` sigue siendo `string` (igual que en el backend,
+ * ver `CreateProyectoDto`): un proyecto ya guardado antes de este cambio
+ * (Fase 4.2, punto 2) podría, en teoría, tener un valor fuera de los 3
+ * cerrados. Fallback conservador (mismo criterio que la foto de hero legada)
+ * para no dejar el `Select` en un estado inválido/sin selección.
+ */
+function normalizarEstadoProyecto(estado: string): ProyectoFormValues['estado'] {
+  return VALORES_ESTADO_VALIDOS.has(estado)
+    ? (estado as ProyectoFormValues['estado'])
+    : 'en_progreso'
+}
+
 const DEFAULT_VALUES: ProyectoFormValues = {
   titulo: '',
   descripcion: '',
@@ -50,7 +83,7 @@ const DEFAULT_VALUES: ProyectoFormValues = {
   url_repositorio: '',
   fecha_inicio: '',
   fecha_fin: '',
-  estado: '',
+  estado: 'en_progreso',
   destacado: false,
   orden: 0,
 }
@@ -109,7 +142,7 @@ export function ProyectoFormDialog({
             url_repositorio: proyecto.url_repositorio ?? '',
             fecha_inicio: proyecto.fecha_inicio.slice(0, 10),
             fecha_fin: proyecto.fecha_fin ? proyecto.fecha_fin.slice(0, 10) : '',
-            estado: proyecto.estado,
+            estado: normalizarEstadoProyecto(proyecto.estado),
             destacado: proyecto.destacado,
             orden: proyecto.orden,
           }
@@ -185,12 +218,13 @@ export function ProyectoFormDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={intentarCerrar}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>
               {esNuevoProyecto ? 'Nuevo proyecto' : 'Editar proyecto'}
             </DialogTitle>
           </DialogHeader>
+          <ScrollArea className="max-h-[70vh] pr-4">
           <Form {...form}>
             <form
               onSubmit={form.handleSubmit(onSubmit)}
@@ -256,9 +290,17 @@ export function ProyectoFormDialog({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Fecha de inicio</FormLabel>
-                      <FormControl>
-                        <Input type="date" max={hoy} {...field} />
-                      </FormControl>
+                      <div className="flex gap-2">
+                        <FormControl>
+                          <Input type="date" max={hoy} {...field} />
+                        </FormControl>
+                        <CampoFechaConCalendario
+                          value={field.value}
+                          onChange={field.onChange}
+                          max={hoy}
+                          triggerAriaLabel="Abrir calendario para elegir el inicio"
+                        />
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -269,13 +311,21 @@ export function ProyectoFormDialog({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Fecha de fin (opcional)</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="date"
+                      <div className="flex gap-2">
+                        <FormControl>
+                          <Input
+                            type="date"
+                            min={form.watch('fecha_inicio') || undefined}
+                            {...field}
+                          />
+                        </FormControl>
+                        <CampoFechaConCalendario
+                          value={field.value ?? ''}
+                          onChange={field.onChange}
                           min={form.watch('fecha_inicio') || undefined}
-                          {...field}
+                          triggerAriaLabel="Abrir calendario para elegir el fin"
                         />
-                      </FormControl>
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -287,9 +337,20 @@ export function ProyectoFormDialog({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Estado</FormLabel>
-                    <FormControl>
-                      <Input placeholder="p. ej. en_progreso" {...field} />
-                    </FormControl>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {OPCIONES_ESTADO.map((opcion) => (
+                          <SelectItem key={opcion.value} value={opcion.value}>
+                            {opcion.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -376,6 +437,7 @@ export function ProyectoFormDialog({
               Crea el proyecto para poder agregarle tecnologías e imágenes.
             </p>
           )}
+          </ScrollArea>
         </DialogContent>
       </Dialog>
 

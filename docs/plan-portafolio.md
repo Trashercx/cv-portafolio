@@ -101,7 +101,7 @@ Dos actores: el **Administrador** (tú, usuario único autenticado) y el **Visit
 |---|---|---|---|
 | UC-01 | Iniciar sesión | email, contraseña | Con credenciales válidas se emite un token de sesión; tras 3 intentos fallidos se aplica bloqueo temporal. |
 | UC-02 | Gestionar perfil personal | nombre completo, título profesional, resumen/bio, foto de perfil, CV en PDF, ubicación | Los cambios guardados aparecen reflejados en la sección "Sobre mí" del sitio publicado. |
-| UC-03 | Gestionar proyectos | título, descripción, tecnologías, URLs (demo/repositorio), fechas, estado, imágenes, orden, destacado | Un proyecto creado, editado o eliminado se refleja en la lista de proyectos respetando el orden definido. |
+| UC-03 | Gestionar proyectos | título, descripción, tecnologías, URLs (demo/repositorio), fechas, estado (en_progreso/finalizado/pausado), imágenes, orden, destacado | Un proyecto creado, editado o eliminado se refleja en la lista de proyectos respetando el orden definido. |
 | UC-04 | Gestionar certificaciones | nombre, institución, fecha de emisión/expiración, URL de verificación, logo | Las certificaciones se listan ordenadas por fecha u orden manual, con enlace de verificación funcional. |
 | UC-05 | Gestionar logros y reconocimientos | título, descripción, fecha, categoría, referencia | Un logro nuevo aparece en la sección correspondiente sin necesidad de despliegue de código. |
 | UC-06 | Gestionar enlaces de redes | plataforma (LinkedIn, GitHub, etc.), URL, orden | Cada enlace abre la red social correcta y respeta el orden e ícono configurado. |

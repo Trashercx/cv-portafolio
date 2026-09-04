@@ -132,7 +132,10 @@ describe('ProyectoFormDialog (nuevo)', () => {
     fireEvent.change(screen.getByLabelText(/fecha de inicio/i), {
       target: { value: '2024-01-01' },
     })
-    await user.type(screen.getByLabelText(/^estado$/i), 'en_progreso')
+    // "En progreso" ya es el valor por defecto del `Select` (Fase 4.2,
+    // punto 2), pero se elige explícitamente para no depender de ese default.
+    await user.click(screen.getByRole('combobox', { name: /^estado$/i }))
+    await user.click(await screen.findByRole('option', { name: 'En progreso' }))
 
     await user.click(
       screen.getByRole('button', { name: /crear y continuar/i }),
@@ -184,7 +187,8 @@ describe('ProyectoFormDialog (nuevo)', () => {
     fireEvent.change(screen.getByLabelText(/fecha de inicio/i), {
       target: { value: '2024-01-01' },
     })
-    await user.type(screen.getByLabelText(/^estado$/i), 'en_progreso')
+    // "En progreso" ya es el valor por defecto del `Select` (Fase 4.2,
+    // punto 2): no hace falta elegirlo, este test no aserta sobre `estado`.
 
     await user.click(
       screen.getByRole('button', { name: /crear y continuar/i }),
@@ -250,7 +254,8 @@ describe('ProyectoFormDialog (nuevo)', () => {
     fireEvent.change(screen.getByLabelText(/fecha de fin/i), {
       target: { value: '2024-01-01' },
     })
-    await user.type(screen.getByLabelText(/^estado$/i), 'finalizado')
+    // "En progreso" (valor por defecto del `Select`, Fase 4.2, punto 2) es
+    // suficiente acá: este test no aserta sobre `estado`.
 
     await user.click(
       screen.getByRole('button', { name: /crear y continuar/i }),
@@ -281,7 +286,8 @@ describe('ProyectoFormDialog (nuevo)', () => {
     fireEvent.change(screen.getByLabelText(/fecha de fin/i), {
       target: { value: '2024-06-01' },
     })
-    await user.type(screen.getByLabelText(/^estado$/i), 'finalizado')
+    // "En progreso" (valor por defecto del `Select`, Fase 4.2, punto 2) es
+    // suficiente acá: este test no aserta sobre `estado`.
 
     await user.click(
       screen.getByRole('button', { name: /crear y continuar/i }),

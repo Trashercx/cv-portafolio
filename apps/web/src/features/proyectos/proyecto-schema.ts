@@ -31,7 +31,12 @@ export const proyectoSchema = z
       .iso.date({ error: MENSAJE_FECHA_INVALIDA })
       .optional()
       .or(z.literal('')),
-    estado: z.string().min(1, 'El estado es obligatorio'),
+    // Espeja el `@IsIn(['en_progreso', 'finalizado', 'pausado'])` de
+    // `CreateProyectoDto.estado` (backend): mismos 3 valores cerrados, ya no
+    // texto libre.
+    estado: z.enum(['en_progreso', 'finalizado', 'pausado'], {
+      error: 'Elegí un estado válido',
+    }),
     destacado: z.boolean(),
     orden: z.number().int('El orden debe ser un número entero'),
   })

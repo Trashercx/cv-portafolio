@@ -1,6 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
+import { CampoFechaConCalendario } from '@/components/shared/CampoFechaConCalendario'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,6 +29,7 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { Textarea } from '@/components/ui/textarea'
 import { useConfirmarDescarte } from '@/hooks/useConfirmarDescarte'
 import { ApiError } from '@/lib/api-client'
@@ -133,10 +135,11 @@ export function LogroFormDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={intentarCerrar}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>{esNuevo ? 'Nuevo logro' : 'Editar logro'}</DialogTitle>
           </DialogHeader>
+          <ScrollArea className="max-h-[70vh] pr-4">
           <Form {...form}>
             <form
               onSubmit={form.handleSubmit(onSubmit)}
@@ -176,9 +179,17 @@ export function LogroFormDialog({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Fecha</FormLabel>
-                      <FormControl>
-                        <Input type="date" max={hoy} {...field} />
-                      </FormControl>
+                      <div className="flex gap-2">
+                        <FormControl>
+                          <Input type="date" max={hoy} {...field} />
+                        </FormControl>
+                        <CampoFechaConCalendario
+                          value={field.value}
+                          onChange={field.onChange}
+                          max={hoy}
+                          triggerAriaLabel="Abrir calendario para elegir la fecha"
+                        />
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -253,6 +264,7 @@ export function LogroFormDialog({
               </DialogFooter>
             </form>
           </Form>
+          </ScrollArea>
         </DialogContent>
       </Dialog>
 

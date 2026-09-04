@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 function Command({
   className,
@@ -87,19 +88,28 @@ function CommandInput({
   )
 }
 
+/**
+ * Envuelve el `cmdk-list` (que trae su propio `overflow-y-auto`) en el mismo
+ * `ScrollArea` que el resto del panel (Fase 4.2, punto 3), en vez del scroll
+ * nativo del navegador. `ScrollArea` solo se agrega POR FUERA de
+ * `CommandPrimitive.List` (nunca dentro, entre `List` y su `children`): el
+ * auto-scroll-to-selected de `cmdk` llama a `Element.scrollIntoView` sobre
+ * el ítem activo, que sube por los ancestros hasta encontrar el contenedor
+ * realmente scrolleable — acá, el `Viewport` de `ScrollArea` — sin que cmdk
+ * necesite saber que existe.
+ */
 function CommandList({
   className,
   ...props
 }: React.ComponentProps<typeof CommandPrimitive.List>) {
   return (
-    <CommandPrimitive.List
-      data-slot="command-list"
-      className={cn(
-        "max-h-[300px] scroll-py-1 overflow-x-hidden overflow-y-auto",
-        className
-      )}
-      {...props}
-    />
+    <ScrollArea className="max-h-[300px]">
+      <CommandPrimitive.List
+        data-slot="command-list"
+        className={cn("scroll-py-1 overflow-x-hidden", className)}
+        {...props}
+      />
+    </ScrollArea>
   )
 }
 
