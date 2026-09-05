@@ -59,6 +59,9 @@ const OPCIONES_TIPO: Array<{ value: FondoSitio['tipo']; label: string }> = [
   { value: 'aurora_animada', label: 'Aurora animada' },
   { value: 'particulas', label: 'Partículas' },
   { value: 'cuadricula_animada', label: 'Cuadrícula animada' },
+  { value: 'ondas', label: 'Ondas' },
+  { value: 'malla_difusa', label: 'Malla difusa' },
+  { value: 'lineas_diagonales', label: 'Líneas diagonales' },
 ]
 
 const OPCIONES_VELOCIDAD: Array<{

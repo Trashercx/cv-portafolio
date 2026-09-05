@@ -8,6 +8,9 @@ export type FondoSitio = {
     | 'aurora_animada'
     | 'particulas'
     | 'cuadricula_animada'
+    | 'ondas'
+    | 'malla_difusa'
+    | 'lineas_diagonales'
   configuracion: {
     velocidad: 'lenta' | 'media' | 'rapida'
     opacidad: number

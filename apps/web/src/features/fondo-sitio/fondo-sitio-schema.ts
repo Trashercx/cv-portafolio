@@ -8,6 +8,9 @@ export const fondoSitioSchema = z.object({
     'aurora_animada',
     'particulas',
     'cuadricula_animada',
+    'ondas',
+    'malla_difusa',
+    'lineas_diagonales',
   ]),
   configuracion: z.object({
     velocidad: z.enum(['lenta', 'media', 'rapida']),
