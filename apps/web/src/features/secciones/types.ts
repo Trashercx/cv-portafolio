@@ -151,7 +151,7 @@ export type CertificacionesConfiguracion = BloqueConfiguracionBase & {
   /** @default 3 */
   columnas?: 2 | 3
   /** @default 'simple' */
-  estilo_tarjeta?: 'simple' | 'con_sombra'
+  estilo_tarjeta?: 'simple' | 'con_sombra' | 'vidrio'
   /** @default true */
   mostrar_fecha?: boolean
 }

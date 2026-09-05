@@ -27,6 +27,7 @@ const ESTILO_TARJETA_CLASE: Record<
 > = {
   simple: 'border',
   con_sombra: 'border shadow-md',
+  vidrio: 'border border-border/50 bg-card/60 backdrop-blur-sm',
 }
 
 /** Bloque `certificaciones`, compartido entre el sitio público y el lienzo del editor de Puck (Fase 3.1, extendido Fase 3.4). */
@@ -44,6 +45,7 @@ export function BloqueCertificaciones({
 
   const mostrarFecha = config.mostrar_fecha ?? true
   const abrirDetalle = useAbrirDetalle()
+  const esVidrio = config.estilo_tarjeta === 'vidrio'
 
   return (
     <div className="grid gap-6">
@@ -60,7 +62,8 @@ export function BloqueCertificaciones({
               onClick={() => abrirDetalle('certificacion', certificacion)}
               aria-label={certificacion.nombre}
               className={cn(
-                'grid gap-2 rounded-lg p-4 text-left transition-colors hover:bg-accent',
+                'rounded-lg p-4 text-left transition-colors hover:bg-accent',
+                esVidrio ? 'flex items-center gap-4' : 'grid gap-2',
                 ESTILO_TARJETA_CLASE[config.estilo_tarjeta ?? 'simple'],
               )}
             >
@@ -76,21 +79,29 @@ export function BloqueCertificaciones({
                   <img
                     src={certificacion.logo.url}
                     alt={certificacion.logo.alt_text ?? certificacion.nombre}
-                    className="size-12 object-contain"
+                    className={cn(
+                      'object-contain',
+                      esVidrio ? 'size-12 shrink-0' : 'size-12',
+                    )}
                   />
                 ) : (
-                  <IconoDocumento className="size-12" iconoClassName="size-6" />
+                  <IconoDocumento
+                    className={cn('size-12', esVidrio ? 'shrink-0' : undefined)}
+                    iconoClassName="size-6"
+                  />
                 )
               ) : null}
-              <h3 className="font-semibold">{certificacion.nombre}</h3>
-              <p className="text-sm text-muted-foreground">
-                {certificacion.institucion}
-              </p>
-              {mostrarFecha ? (
-                <p className="text-xs text-muted-foreground">
-                  {formatearFecha(certificacion.fecha_emision)}
+              <div className={esVidrio ? 'grid gap-1' : 'contents'}>
+                <h3 className="font-semibold">{certificacion.nombre}</h3>
+                <p className="text-sm text-muted-foreground">
+                  {certificacion.institucion}
                 </p>
-              ) : null}
+                {mostrarFecha ? (
+                  <p className="text-xs text-muted-foreground">
+                    {formatearFecha(certificacion.fecha_emision)}
+                  </p>
+                ) : null}
+              </div>
             </TarjetaClicable>
           ))}
         </div>

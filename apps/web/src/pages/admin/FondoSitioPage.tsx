@@ -17,6 +17,9 @@ const TIPO_LABEL: Record<FondoSitio['tipo'], string> = {
   aurora_animada: 'Aurora animada',
   particulas: 'Partículas',
   cuadricula_animada: 'Cuadrícula animada',
+  ondas: 'Ondas',
+  malla_difusa: 'Malla difusa',
+  lineas_diagonales: 'Líneas diagonales',
 }
 
 const VELOCIDAD_LABEL: Record<FondoSitio['configuracion']['velocidad'], string> = {
