@@ -662,6 +662,7 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
           options: [
             { label: 'Simple', value: 'simple' },
             { label: 'Con sombra', value: 'con_sombra' },
+            { label: 'Vidrio', value: 'vidrio' },
           ],
         },
         mostrar_fecha: {

@@ -18,8 +18,8 @@ export class CertificacionesConfiguracionDto extends BloqueConfiguracionBaseDto 
   columnas: 2 | 3 = 3;
 
   @IsOptional()
-  @IsIn(['simple', 'con_sombra'])
-  estilo_tarjeta: 'simple' | 'con_sombra' = 'simple';
+  @IsIn(['simple', 'con_sombra', 'vidrio'])
+  estilo_tarjeta: 'simple' | 'con_sombra' | 'vidrio' = 'simple';
 
   @IsOptional()
   @IsBoolean()
