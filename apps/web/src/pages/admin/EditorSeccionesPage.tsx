@@ -17,6 +17,8 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Switch } from '@/components/ui/switch'
+import { useTheme } from '@/components/theme/ThemeProvider'
 import { puckConfig, type PuckSeccionesComponents } from '@/lib/puck-config'
 import { ApiError } from '@/lib/api-client'
 import {
@@ -367,6 +369,29 @@ export function EditorSeccionesPage() {
   const [editorKey, setEditorKey] = useState(0)
   const [guardando, setGuardando] = useState(false)
 
+  // Fase 7 (UC-08): modo de la vista previa (solo lienzo y `DialogVistaPrevia`).
+  const { theme } = useTheme()
+  const modoVistaPrevia = useEditorPanelStore((state) => state.modoVistaPrevia)
+  const setModoVistaPrevia = useEditorPanelStore(
+    (state) => state.setModoVistaPrevia,
+  )
+  const modoEfectivo = modoVistaPrevia ?? (theme === 'dark' ? 'oscuro' : 'claro')
+
+  // Fase 7 (UC-08): cambios sin guardar. Lo enciende `LienzoPuck` (`onCambio`)
+  // con cada acción de Puck que edita datos y lo apaga un guardado exitoso;
+  // `beforeunload`, la guardia de navegación interna
+  // (`GuardiaNavegacionEditor`) y el punto del botón "Guardar cambios" leen
+  // este mismo flag.
+  const hayCambiosSinGuardar = useEditorSeccionesStore(
+    (state) => state.hayCambiosSinGuardar,
+  )
+  const setHayCambiosSinGuardar = useEditorSeccionesStore(
+    (state) => state.setHayCambiosSinGuardar,
+  )
+  const setAccionGuardar = useEditorSeccionesStore(
+    (state) => state.setAccionGuardar,
+  )
+
   // Fuente de verdad de "qué hay persistido ahora mismo" para el diff de
   // `guardarCambios` (ver comentario de `SeccionPersistida` más arriba).
   const seccionesPersistentesRef = useRef<SeccionPersistida[]>([])
@@ -531,6 +556,7 @@ export function EditorSeccionesPage() {
       setContent(contentActualizado)
       setInitialData({ content: contentActualizado, root: {} })
       setEditorKey((key) => key + 1)
+      setHayCambiosSinGuardar(false)
       toast.success('Cambios guardados correctamente.')
     } catch {
       // No mostramos un toast de error aquí: cada sub-mutación
@@ -549,6 +575,51 @@ export function EditorSeccionesPage() {
       setGuardando(false)
     }
   }
+
+  // `Ctrl/Cmd+S` = guardar (Fase 7, UC-08). `guardarRef` siempre apunta a la
+  // versión más reciente de `guardarCambios` (cierra sobre `content`), así el
+  // atajo registrado una sola vez nunca guarda un estado viejo. Dentro del
+  // iframe del lienzo el atajo lo captura `PuckRoot` y delega en la acción
+  // registrada en el store; con el foco en el documento del panel lo captura
+  // el `keydown` de abajo. Ambos hacen `preventDefault` (si no, el navegador
+  // abriría "Guardar página como…").
+  const guardarRef = useRef<() => void>(() => {})
+  useEffect(() => {
+    guardarRef.current = () => {
+      if (!guardando && initialData) void guardarCambios()
+    }
+  })
+  useEffect(() => {
+    setAccionGuardar(() => guardarRef.current())
+    const alPresionar = (event: KeyboardEvent) => {
+      if (event.key.toLowerCase() === 's' && (event.ctrlKey || event.metaKey)) {
+        event.preventDefault()
+        guardarRef.current()
+      }
+    }
+    document.addEventListener('keydown', alPresionar)
+    return () => {
+      document.removeEventListener('keydown', alPresionar)
+      setAccionGuardar(null)
+    }
+  }, [setAccionGuardar])
+
+  // Aviso nativo del navegador al cerrar/recargar la pestaña con cambios.
+  useEffect(() => {
+    if (!hayCambiosSinGuardar) return
+    const alSalir = (event: BeforeUnloadEvent) => {
+      event.preventDefault()
+      // Algunos navegadores solo muestran el aviso si `returnValue` se asigna.
+      event.returnValue = ''
+    }
+    window.addEventListener('beforeunload', alSalir)
+    return () => window.removeEventListener('beforeunload', alSalir)
+  }, [hayCambiosSinGuardar])
+
+  // Al salir del editor (desmontar la página) ya no hay nada pendiente.
+  useEffect(() => {
+    return () => setHayCambiosSinGuardar(false)
+  }, [setHayCambiosSinGuardar])
 
   const cargando = seccionesQuery.isLoading || datosLoading
   const errorCarga = seccionesQuery.error ?? datosError
@@ -665,6 +736,7 @@ export function EditorSeccionesPage() {
               metadata={metadata}
               editorKey={editorKey}
               onChange={(data) => setContent(data.content)}
+              onCambio={() => setHayCambiosSinGuardar(true)}
               // Barra de acciones propia (Fase 3.1, migrada a `toolbar` de
               // `LienzoPuck` en Fase 5 — ver comentario de cabecera de este
               // componente): el estado Borrador/Publicado (UC-10/UC-11) y su
@@ -725,6 +797,39 @@ export function EditorSeccionesPage() {
                     previewVersion={previewVersion}
                     onPreviewVersion={setPreviewVersion}
                   />
+                  {/*
+                    Fase 7 (UC-08): el toggle cambia SOLO el modo del lienzo y
+                    de la vista previa, nunca el chrome del admin (ese lo
+                    gobierna `ThemeToggle`). "Seguir al panel" vuelve a `null`.
+                  */}
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id="vista-previa-oscuro"
+                      size="sm"
+                      aria-label="Vista previa en oscuro"
+                      checked={modoEfectivo === 'oscuro'}
+                      onCheckedChange={(oscuro) =>
+                        setModoVistaPrevia(oscuro ? 'oscuro' : 'claro')
+                      }
+                    />
+                    <label
+                      htmlFor="vista-previa-oscuro"
+                      className="whitespace-nowrap text-xs text-muted-foreground"
+                    >
+                      Vista previa en oscuro
+                    </label>
+                    {modoVistaPrevia !== null ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => setModoVistaPrevia(null)}
+                      >
+                        Seguir al panel
+                      </Button>
+                    ) : null}
+                  </div>
                   <Button
                     variant="outline"
                     size="sm"
@@ -749,7 +854,20 @@ export function EditorSeccionesPage() {
                     size="sm"
                     onClick={guardarCambios}
                     disabled={guardando || !initialData}
+                    title={
+                      hayCambiosSinGuardar
+                        ? 'Hay cambios sin guardar (Ctrl+S)'
+                        : 'Guardar cambios (Ctrl+S)'
+                    }
+                    data-sin-guardar={hayCambiosSinGuardar || undefined}
                   >
+                    {hayCambiosSinGuardar && !guardando ? (
+                      <span
+                        aria-hidden="true"
+                        data-testid="indicador-sin-guardar"
+                        className="size-2 rounded-full bg-primary-foreground"
+                      />
+                    ) : null}
                     {guardando ? 'Guardando…' : 'Guardar cambios'}
                   </Button>
                 </>

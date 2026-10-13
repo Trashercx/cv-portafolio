@@ -11,6 +11,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
+import { useNavegarProtegido } from '@/features/editor/navegacion-protegida'
 import {
   Sidebar,
   SidebarContent,
@@ -83,6 +84,8 @@ function esRutaActiva(pathname: string, to: string) {
  */
 export function AppSidebar() {
   const location = useLocation()
+  // Fase 7 (UC-08): salir del editor con cambios sin guardar pide confirmación.
+  const { interceptarClick } = useNavegarProtegido()
 
   return (
     <Sidebar collapsible="icon">
@@ -106,7 +109,10 @@ export function AppSidebar() {
                 return (
                   <SidebarMenuItem key={item.to}>
                     <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
-                      <NavLink to={item.to}>
+                      <NavLink
+                        to={item.to}
+                        onClick={(event) => interceptarClick(event, item.to)}
+                      >
                         <item.icon />
                         <span>{item.label}</span>
                       </NavLink>

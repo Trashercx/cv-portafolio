@@ -1,7 +1,34 @@
 import { create } from 'zustand'
+import type { ModoTema } from '@/lib/tema-oscuro'
 
 /** Nombres de los plugins propios del rail de Puck (Fase 7, UC-07/UC-08). */
 export type PluginEditor = 'tema' | 'fondo'
+
+/** Clave de `localStorage` del modo de la vista previa (Fase 7, UC-08). */
+export const CLAVE_MODO_VISTA_PREVIA = 'editor-modo-vista-previa'
+
+/** `null` = seguir el modo (claro/oscuro) del propio panel de administración. */
+export type ModoVistaPrevia = ModoTema | null
+
+function leerModoVistaPreviaGuardado(): ModoVistaPrevia {
+  if (typeof window === 'undefined') return null
+  try {
+    const guardado = window.localStorage.getItem(CLAVE_MODO_VISTA_PREVIA)
+    return guardado === 'claro' || guardado === 'oscuro' ? guardado : null
+  } catch {
+    // `localStorage` puede lanzar (modo privado, cuota): se sigue al panel.
+    return null
+  }
+}
+
+function guardarModoVistaPrevia(modo: ModoVistaPrevia) {
+  try {
+    if (modo === null) window.localStorage.removeItem(CLAVE_MODO_VISTA_PREVIA)
+    else window.localStorage.setItem(CLAVE_MODO_VISTA_PREVIA, modo)
+  } catch {
+    // Sin persistencia: el override sigue valiendo durante la sesión.
+  }
+}
 
 type EditorPanelState = {
   /**
@@ -15,9 +42,22 @@ type EditorPanelState = {
    */
   pluginActivo: string | null
   setPluginActivo: (plugin: string | null) => void
+  /**
+   * Modo de la vista previa (Fase 7, UC-08): `'claro'`/`'oscuro'` fuerza el
+   * modo SOLO del lienzo (`PuckRoot`) y de `DialogVistaPrevia`; `null` sigue
+   * el modo del panel (`ThemeProvider`). Persistido en `localStorage`
+   * (`editor-modo-vista-previa`). El chrome del admin nunca cambia.
+   */
+  modoVistaPrevia: ModoVistaPrevia
+  setModoVistaPrevia: (modo: ModoVistaPrevia) => void
 }
 
 export const useEditorPanelStore = create<EditorPanelState>((set) => ({
   pluginActivo: null,
   setPluginActivo: (pluginActivo) => set({ pluginActivo }),
+  modoVistaPrevia: leerModoVistaPreviaGuardado(),
+  setModoVistaPrevia: (modoVistaPrevia) => {
+    guardarModoVistaPrevia(modoVistaPrevia)
+    set({ modoVistaPrevia })
+  },
 }))

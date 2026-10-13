@@ -1,5 +1,10 @@
 import '@puckeditor/core/puck.css'
-import { Puck, type Data, type Overrides } from '@puckeditor/core'
+import {
+  Puck,
+  type Data,
+  type Overrides,
+  type PuckAction,
+} from '@puckeditor/core'
 import { createContext, useContext, useEffect, type ReactNode } from 'react'
 import { puckConfig, type PuckSeccionesComponents } from '@/lib/puck-config'
 import { useEditorPanelStore } from '@/store/editor-panel-store'
@@ -23,7 +28,27 @@ type LienzoPuckProps = {
    * `overrides.headerActions` del header nativo de Puck.
    */
   toolbar: ReactNode
+  /**
+   * Se invoca con cada acción de Puck que MODIFICA datos (insertar, mover,
+   * editar props, duplicar, eliminar, reordenar): alimenta el indicador de
+   * cambios sin guardar de `EditorSeccionesPage` (Fase 7, UC-08). Las
+   * acciones de UI (`setUi`: plugin, viewport, selección) y la carga inicial
+   * (`set`) no cuentan.
+   */
+  onCambio?: () => void
 }
+
+/** Acciones de Puck que cambian `data` (ver `PuckAction` en el `.d.ts` del paquete). */
+const ACCIONES_QUE_EDITAN: ReadonlySet<PuckAction['type']> = new Set([
+  'insert',
+  'move',
+  'reorder',
+  'replace',
+  'replaceRoot',
+  'remove',
+  'duplicate',
+  'setData',
+])
 
 /**
  * El toolbar viaja por contexto y no como closure de `overrides.headerActions`
@@ -89,6 +114,7 @@ export function LienzoPuck({
   editorKey,
   onChange,
   toolbar,
+  onCambio,
 }: LienzoPuckProps) {
   // Se lee en render (no con hook reactivo): solo importa el valor al montar
   // `<Puck>` (`?panel=` o plugin previo antes de un remount por guardado).
@@ -111,6 +137,9 @@ export function LienzoPuck({
           height="100%"
           iframe={{ enabled: true, waitForStyles: true, syncHostStyles: true }}
           onChange={onChange}
+          onAction={(action) => {
+            if (ACCIONES_QUE_EDITAN.has(action.type)) onCambio?.()
+          }}
         />
       </div>
     </ContextoToolbar.Provider>

@@ -14,6 +14,7 @@ type PropsPuckCapturadas = {
   height?: string
   viewports?: unknown
   ui?: { plugin?: { current: string | null } }
+  onAction?: (action: { type: string }) => void
 }
 
 const propsPuck: { actual: PropsPuckCapturadas } = { actual: {} }
@@ -56,7 +57,7 @@ vi.mock('./PanelFondoEditor', () => ({
   PanelFondoEditor: () => <div>Panel de fondo</div>,
 }))
 
-function renderLienzo(toolbar: ReactNode = null) {
+function renderLienzo(toolbar: ReactNode = null, onCambio?: () => void) {
   return render(
     <LienzoPuck
       data={{ content: [], root: {} }}
@@ -64,6 +65,7 @@ function renderLienzo(toolbar: ReactNode = null) {
       editorKey={0}
       onChange={() => {}}
       toolbar={toolbar}
+      onCambio={onCambio}
     />,
   )
 }
@@ -117,6 +119,22 @@ describe('LienzoPuck (layout nativo con rail de plugins)', () => {
     useEditorPanelStore.setState({ pluginActivo: 'fondo' })
     renderLienzo()
     expect(propsPuck.actual.ui?.plugin?.current).toBe('fondo')
+  })
+
+  it('onCambio se invoca solo con acciones de Puck que editan datos', () => {
+    const onCambio = vi.fn()
+    renderLienzo(null, onCambio)
+    const onAction = propsPuck.actual.onAction
+
+    for (const tipo of ['setUi', 'set', 'registerZone', 'unregisterZone']) {
+      onAction?.({ type: tipo })
+    }
+    expect(onCambio).not.toHaveBeenCalled()
+
+    for (const tipo of ['insert', 'move', 'reorder', 'replace', 'replaceRoot', 'remove', 'duplicate', 'setData']) {
+      onAction?.({ type: tipo })
+    }
+    expect(onCambio).toHaveBeenCalledTimes(8)
   })
 
   it('recuerda en el store el plugin activo del rail para sobrevivir al remount tras guardar', () => {

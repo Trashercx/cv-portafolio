@@ -16,6 +16,7 @@ import type { VersionSitio } from '@/features/publicacion/types'
 import { temaComoVariablesCss } from '@/lib/tema-css'
 import type { ModoTema } from '@/lib/tema-oscuro'
 import { cn } from '@/lib/utils'
+import { useEditorPanelStore } from '@/store/editor-panel-store'
 
 type DialogVistaPreviaProps = {
   open: boolean
@@ -72,7 +73,11 @@ export function DialogVistaPrevia({
 }: DialogVistaPreviaProps) {
   const preview = usePreviewVersion()
   const { theme } = useTheme()
-  const modo: ModoTema = theme === 'dark' ? 'oscuro' : 'claro'
+  const modoDelPanel: ModoTema = theme === 'dark' ? 'oscuro' : 'claro'
+  // Fase 7 (UC-08): mismo override que el lienzo (`PuckRoot`): el toggle
+  // "Vista previa en oscuro" del editor, o el modo del panel si es `null`.
+  const modoVistaPrevia = useEditorPanelStore((state) => state.modoVistaPrevia)
+  const modo: ModoTema = modoVistaPrevia ?? modoDelPanel
   // Nodo DOM del `<div>` interior temado (mismo criterio que `PublicHomePage`
   // — `useState`, no `useRef`, porque necesitamos re-render cuando el nodo
   // real se monta), pasado como `container` a `ProveedorDetallePublico` para
@@ -126,6 +131,7 @@ export function DialogVistaPrevia({
             className={cn(
               'rounded-md border shadow-sm',
               modo === 'oscuro' && 'dark',
+              modo === 'claro' && 'forzar-claro',
             )}
           >
             {preview.isPending && !previewVersion ? (

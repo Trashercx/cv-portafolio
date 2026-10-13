@@ -14,9 +14,39 @@ type EditorSeccionesState = {
    */
   content: EditorContent
   setContent: (content: EditorContent) => void
+  /**
+   * Hay ediciones en el lienzo que todavía no se guardaron (Fase 7, UC-08):
+   * lo enciende cualquier acción que modifica datos en Puck
+   * (`LienzoPuck` → `onCambio`) y lo apaga un guardado exitoso o salir del
+   * editor. Alimenta el punto del botón "Guardar cambios", `beforeunload` y
+   * la confirmación al navegar fuera (`GuardiaNavegacionEditor`).
+   */
+  hayCambiosSinGuardar: boolean
+  setHayCambiosSinGuardar: (hay: boolean) => void
+  /**
+   * Destino de una navegación interna interceptada mientras hay cambios sin
+   * guardar (sidebar o paleta de comandos); `null` si no hay ninguna
+   * pendiente de confirmar. El router es `BrowserRouter` (no data router),
+   * donde `useBlocker` no está disponible.
+   */
+  destinoPendiente: string | null
+  setDestinoPendiente: (destino: string | null) => void
+  /**
+   * Acción "Guardar cambios" registrada por `EditorSeccionesPage` mientras
+   * está montada: permite que el atajo `Ctrl/Cmd+S` capturado DENTRO del
+   * iframe del lienzo (`PuckRoot`) dispare el mismo guardado que el botón.
+   */
+  accionGuardar: (() => void) | null
+  setAccionGuardar: (accion: (() => void) | null) => void
 }
 
 export const useEditorSeccionesStore = create<EditorSeccionesState>((set) => ({
   content: [],
   setContent: (content) => set({ content }),
+  hayCambiosSinGuardar: false,
+  setHayCambiosSinGuardar: (hayCambiosSinGuardar) => set({ hayCambiosSinGuardar }),
+  destinoPendiente: null,
+  setDestinoPendiente: (destinoPendiente) => set({ destinoPendiente }),
+  accionGuardar: null,
+  setAccionGuardar: (accionGuardar) => set({ accionGuardar }),
 }))

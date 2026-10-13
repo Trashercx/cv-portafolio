@@ -1,4 +1,4 @@
-import { useRef, type MouseEvent, type ReactNode } from 'react'
+import { useEffect, useRef, type MouseEvent, type ReactNode } from 'react'
 import type { PuckContext } from '@puckeditor/core'
 import { FondoAnimado } from '@/components/publico/FondoAnimado'
 import { ProveedorModoRenderizado } from '@/components/publico/contexto-renderizado'
@@ -6,6 +6,8 @@ import { useTheme } from '@/components/theme/ThemeProvider'
 import { temaComoVariablesCss } from '@/lib/tema-css'
 import type { ModoTema } from '@/lib/tema-oscuro'
 import { cn } from '@/lib/utils'
+import { useEditorPanelStore } from '@/store/editor-panel-store'
+import { useEditorSeccionesStore } from '@/store/editor-secciones-store'
 import { leerMetadata } from './useDatosEditor'
 
 /**
@@ -66,7 +68,50 @@ export function PuckRoot({ children, puck }: PuckRootProps) {
   const { datos } = leerMetadata(puck)
   const { theme } = useTheme()
   const wrapperRef = useRef<HTMLDivElement>(null)
-  const modo: ModoTema = theme === 'dark' ? 'oscuro' : 'claro'
+  const modoDelPanel: ModoTema = theme === 'dark' ? 'oscuro' : 'claro'
+  // Fase 7 (UC-08): el toggle "Vista previa en oscuro" del header del editor
+  // fuerza el modo SOLO de este lienzo; `null` sigue al panel.
+  const modoVistaPrevia = useEditorPanelStore((state) => state.modoVistaPrevia)
+  const modo: ModoTema = modoVistaPrevia ?? modoDelPanel
+
+  // Fase 7 (UC-08): el `<html>` del iframe recibe la clase `dark` del panel
+  // (`CopyHostStyles` de Puck sincroniza atributos), lo que mantendría
+  // oscuros los tokens de shadcn aunque el override pida claro. Dentro del
+  // iframe, este efecto hace de `modo` la única fuente de verdad de esa
+  // clase y la re-impone si Puck la vuelve a copiar. Solo actúa en un
+  // documento distinto al del panel: sin iframe tocaría el `<html>` del
+  // propio admin.
+  useEffect(() => {
+    const doc = wrapperRef.current?.ownerDocument
+    if (!doc || doc === document) return
+    const html = doc.documentElement
+    const aplicar = () => {
+      if (html.classList.contains('dark') !== (modo === 'oscuro')) {
+        html.classList.toggle('dark', modo === 'oscuro')
+      }
+    }
+    aplicar()
+    const observador = new MutationObserver(aplicar)
+    observador.observe(html, { attributes: true, attributeFilter: ['class'] })
+    return () => observador.disconnect()
+  }, [modo])
+
+  // Fase 7 (UC-08): `Ctrl/Cmd+S` con el foco DENTRO del iframe. Los eventos de
+  // teclado del iframe no burbujean al documento del panel, así que se
+  // escucha en el `ownerDocument` de este nodo (el del iframe) y se delega en
+  // la acción registrada por `EditorSeccionesPage`.
+  useEffect(() => {
+    const doc = wrapperRef.current?.ownerDocument
+    if (!doc) return
+    const alPresionar = (event: KeyboardEvent) => {
+      if (event.key.toLowerCase() === 's' && (event.ctrlKey || event.metaKey)) {
+        event.preventDefault()
+        useEditorSeccionesStore.getState().accionGuardar?.()
+      }
+    }
+    doc.addEventListener('keydown', alPresionar)
+    return () => doc.removeEventListener('keydown', alPresionar)
+  }, [])
 
   const handleClickCapture = (event: MouseEvent<HTMLDivElement>) => {
     if ((event.target as HTMLElement).closest?.('a')) {

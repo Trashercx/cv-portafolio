@@ -1,9 +1,16 @@
 @import 'tailwindcss';
 @import '@fontsource-variable/manrope';
 
-@custom-variant dark (&:is(.dark *));
+/*
+ * Fase 7 (UC-08): `.forzar-claro` marca un subárbol que debe verse en claro
+ * aunque el panel esté en oscuro (toggle "Vista previa en oscuro" apagado con
+ * el panel oscuro, ver `DialogVistaPrevia`): reaplica los tokens claros de
+ * `:root` y desactiva las variantes `dark:` dentro de él.
+ */
+@custom-variant dark (&:is(.dark *):not(:is(.forzar-claro *)));
 
-:root {
+:root,
+.forzar-claro {
   --radius: 0.625rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);

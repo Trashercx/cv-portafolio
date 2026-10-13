@@ -9,6 +9,7 @@ import type { SnapshotSitio } from '@/features/publico/types'
 import type { VersionSitio } from '@/features/publicacion/types'
 import { ThemeProvider } from '@/components/theme/ThemeProvider'
 import { useEditorPanelStore } from '@/store/editor-panel-store'
+import { fireEvent } from '@testing-library/react'
 import { useEditorSeccionesStore } from '@/store/editor-secciones-store'
 import { EditorSeccionesPage } from './EditorSeccionesPage'
 
@@ -58,12 +59,16 @@ function renderEditor(entrada = '/admin/editor') {
  */
 /** Plugin activo que simula el store de Puck: arranca en `ui.plugin.current` (como el `<Puck>` real). */
 const pluginPuck = { actual: 'blocks' }
+/** `onAction` que `LienzoPuck` le pasa a Puck: permite simular ediciones del admin. */
+const puckProps: { onAction?: (action: { type: string }) => void } = {}
 
 vi.mock('@puckeditor/core', () => {
   const PuckStub = (props: {
     overrides?: { headerActions?: ComponentType<{ children?: ReactNode }> }
     ui?: { plugin?: { current: string | null } }
+    onAction?: (action: { type: string }) => void
   }) => {
+    puckProps.onAction = props.onAction
     pluginPuck.actual = props.ui?.plugin?.current ?? 'blocks'
     const HeaderActions = props.overrides?.headerActions
     return HeaderActions ? <HeaderActions>{null}</HeaderActions> : null
@@ -319,7 +324,13 @@ vi.mock('@/features/publicacion/usePublicacion', () => ({
 describe('EditorSeccionesPage (UC-07, UC-10, UC-11)', () => {
   beforeEach(() => {
     useEditorSeccionesStore.setState({ content: [] })
-    useEditorPanelStore.setState({ pluginActivo: null })
+    useEditorPanelStore.setState({ pluginActivo: null, modoVistaPrevia: null })
+    window.localStorage.clear()
+    useEditorSeccionesStore.setState({
+      hayCambiosSinGuardar: false,
+      destinoPendiente: null,
+      accionGuardar: null,
+    })
     seccionesMock.data = [SECCION_HERO, SECCION_CONTACTO]
     crearMutateAsyncMock.mockResolvedValue({ id: 'seccion-c' })
     actualizarMutateAsyncMock.mockResolvedValue(undefined)
@@ -889,5 +900,103 @@ describe('EditorSeccionesPage (UC-07, UC-10, UC-11)', () => {
       name: /deshacer última publicación/i,
     })
     expect(botonesRevertir).toHaveLength(1)
+  })
+
+  describe('modo de la vista previa y cambios sin guardar (Fase 7, UC-08)', () => {
+    it('el Switch "Vista previa en oscuro" cambia solo el override (no el tema del panel) y "Seguir al panel" lo limpia', async () => {
+      const user = userEvent.setup()
+      renderEditor()
+
+      const interruptor = await screen.findByRole('switch', {
+        name: 'Vista previa en oscuro',
+      })
+      expect(interruptor).not.toBeChecked()
+      expect(
+        screen.queryByRole('button', { name: 'Seguir al panel' }),
+      ).not.toBeInTheDocument()
+
+      await user.click(interruptor)
+      expect(useEditorPanelStore.getState().modoVistaPrevia).toBe('oscuro')
+      expect(window.localStorage.getItem('panel-admin-theme')).toBe('light')
+      expect(interruptor).toBeChecked()
+
+      await user.click(screen.getByRole('button', { name: 'Seguir al panel' }))
+      expect(useEditorPanelStore.getState().modoVistaPrevia).toBeNull()
+      expect(
+        screen.queryByRole('button', { name: 'Seguir al panel' }),
+      ).not.toBeInTheDocument()
+    })
+
+    it('una acción que edita datos enciende el punto de "Guardar cambios"; las de UI no; guardar lo apaga', async () => {
+      const user = userEvent.setup()
+      renderEditor()
+      await screen.findByRole('button', { name: 'Guardar cambios' })
+      expect(screen.queryByTestId('indicador-sin-guardar')).not.toBeInTheDocument()
+
+      act(() => puckProps.onAction?.({ type: 'setUi' }))
+      act(() => puckProps.onAction?.({ type: 'set' }))
+      expect(useEditorSeccionesStore.getState().hayCambiosSinGuardar).toBe(false)
+
+      act(() => puckProps.onAction?.({ type: 'replace' }))
+      expect(screen.getByTestId('indicador-sin-guardar')).toBeInTheDocument()
+
+      await user.click(screen.getByRole('button', { name: 'Guardar cambios' }))
+      await waitFor(() =>
+        expect(useEditorSeccionesStore.getState().hayCambiosSinGuardar).toBe(false),
+      )
+      expect(screen.queryByTestId('indicador-sin-guardar')).not.toBeInTheDocument()
+    })
+
+    it('beforeunload solo se cancela cuando hay cambios sin guardar', async () => {
+      renderEditor()
+      await screen.findByRole('button', { name: 'Guardar cambios' })
+
+      const sinCambios = new Event('beforeunload', { cancelable: true })
+      window.dispatchEvent(sinCambios)
+      expect(sinCambios.defaultPrevented).toBe(false)
+
+      act(() => puckProps.onAction?.({ type: 'insert' }))
+      const conCambios = new Event('beforeunload', { cancelable: true })
+      window.dispatchEvent(conCambios)
+      expect(conCambios.defaultPrevented).toBe(true)
+    })
+
+    it('Ctrl+S guarda (preventDefault) y la acción registrada en el store hace lo mismo', async () => {
+      renderEditor()
+      await waitFor(() =>
+        expect(useEditorSeccionesStore.getState().content).toHaveLength(2),
+      )
+
+      const atajo = new KeyboardEvent('keydown', {
+        key: 's',
+        ctrlKey: true,
+        bubbles: true,
+        cancelable: true,
+      })
+      act(() => {
+        document.dispatchEvent(atajo)
+      })
+      expect(atajo.defaultPrevented).toBe(true)
+      await waitFor(() => expect(reordenarMutateAsyncMock).toHaveBeenCalledTimes(1))
+
+      fireEvent.keyDown(document, { key: 'S', metaKey: true })
+      await waitFor(() => expect(reordenarMutateAsyncMock).toHaveBeenCalledTimes(2))
+
+      await act(async () => {
+        useEditorSeccionesStore.getState().accionGuardar?.()
+      })
+      await waitFor(() => expect(reordenarMutateAsyncMock).toHaveBeenCalledTimes(3))
+    })
+
+    it('al desmontar el editor limpia el flag de cambios sin guardar y la acción de guardado', async () => {
+      const { unmount } = renderEditor()
+      await screen.findByRole('button', { name: 'Guardar cambios' })
+      act(() => puckProps.onAction?.({ type: 'remove' }))
+      expect(useEditorSeccionesStore.getState().hayCambiosSinGuardar).toBe(true)
+
+      unmount()
+      expect(useEditorSeccionesStore.getState().hayCambiosSinGuardar).toBe(false)
+      expect(useEditorSeccionesStore.getState().accionGuardar).toBeNull()
+    })
   })
 })
