@@ -34,6 +34,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      # La acción consulta su propio workflow run (telemetría y post-proceso
+      # del SARIF); sin esto falla con "Resource not accessible by integration".
+      actions: read
     steps:
       - uses: actions/checkout@v4
 
