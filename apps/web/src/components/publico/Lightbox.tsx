@@ -75,6 +75,7 @@ export function Lightbox({ fotos, indiceInicial, open, onOpenChange }: LightboxP
           <img
             src={foto.media?.url}
             alt={foto.titulo || foto.media?.alt_text || ''}
+            decoding="async"
             className="max-h-full max-w-full object-contain"
           />
           {total > 1 ? (

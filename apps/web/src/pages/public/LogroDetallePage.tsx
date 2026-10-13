@@ -1,7 +1,9 @@
 import { Link, useParams } from 'react-router-dom'
 import { DetalleLogroContenido } from '@/components/publico/detalle/DetalleLogroContenido'
+import { MetadatosPagina } from '@/components/publico/MetadatosPagina'
 import { useSitio } from '@/features/publico/usePublico'
 import { ApiError } from '@/lib/api-client'
+import { recortarDescripcion } from '@/lib/seo'
 
 /**
  * UC-13 (Ver detalle de un logro), acceso directo por URL (`/logro/:id`).
@@ -45,6 +47,12 @@ export function LogroDetallePage() {
 
   return (
     <div className="mx-auto grid max-w-3xl gap-6 p-6">
+      {/* Fase 6 (UC-13): SEO del detalle. */}
+      <MetadatosPagina
+        titulo={logro.titulo}
+        descripcion={recortarDescripcion(logro.descripcion)}
+        tipo="article"
+      />
       <Link to="/" className="text-sm underline underline-offset-4">
         ← Volver al inicio
       </Link>

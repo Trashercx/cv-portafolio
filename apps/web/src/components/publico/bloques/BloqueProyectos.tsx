@@ -63,6 +63,8 @@ export function BloqueProyectos({
                 <img
                   src={proyecto.imagenes[0].media.url}
                   alt={proyecto.imagenes[0].media.alt_text ?? proyecto.titulo}
+                  loading="lazy"
+                  decoding="async"
                   className="aspect-video rounded-md object-cover"
                 />
               ) : null}

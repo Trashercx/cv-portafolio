@@ -187,4 +187,46 @@ describe('PublicHomePage (UC-12)', () => {
     expect(raiz).not.toBeNull()
     expect(raiz).not.toHaveClass('dark')
   })
+
+  it('envuelve el contenido en <main id="contenido"> con skip link, y deja el footer fuera (Fase 6)', () => {
+    useSitioMock.mockReturnValue({
+      data: SNAPSHOT,
+      isLoading: false,
+      error: null,
+    })
+
+    renderHome()
+
+    const main = screen.getByRole('main')
+    expect(main).toHaveAttribute('id', 'contenido')
+    expect(main).toContainElement(screen.getByText('Hola, soy Ada'))
+    expect(main).not.toContainElement(screen.getByRole('contentinfo'))
+    expect(
+      screen.getByRole('link', { name: /saltar al contenido/i }),
+    ).toHaveAttribute('href', '#contenido')
+  })
+
+  it('publica metadatos SEO y JSON-LD Person con los datos del perfil (Fase 6, UC-12)', () => {
+    useSitioMock.mockReturnValue({
+      data: {
+        ...SNAPSHOT,
+        redes_sociales: [{ url: 'https://github.com/ada' }],
+      },
+      isLoading: false,
+      error: null,
+    })
+
+    const { container } = renderHome()
+
+    expect(document.title).toBe('Ada Lovelace — Ingeniera de software')
+    expect(
+      document.head.querySelector('meta[name="description"]'),
+    ).toHaveAttribute('content', 'Bio de prueba.')
+
+    const script = container.querySelector('script[type="application/ld+json"]')
+    const datos = JSON.parse(script?.textContent ?? '{}')
+    expect(datos['@type']).toBe('Person')
+    expect(datos.name).toBe('Ada Lovelace')
+    expect(datos.sameAs).toEqual(['https://github.com/ada'])
+  })
 })
