@@ -5,13 +5,11 @@ import {
   LayoutGrid,
   LogOut,
   Moon,
-  Palette,
   Share2,
   Sparkles,
   Trophy,
   User,
   Wand2,
-  Waves,
   type LucideIcon,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
@@ -30,7 +28,12 @@ import { useComandosActivos } from '@/features/paleta-comandos/contexto-paleta'
 
 type RutaAdmin = { to: string; label: string; icon: LucideIcon }
 
-/** Mismas 10 rutas admin que `AppSidebar` (Fase 3.5) — ver su comentario de cabecera para el detalle por grupo. */
+/**
+ * Mismas rutas admin que `AppSidebar` (Fase 3.5) — ver su comentario de
+ * cabecera para el detalle por grupo. Fase 5 (panel unificado): "Tema" y
+ * "Fondo del sitio" ya no son rutas propias (se fusionaron como pestañas del
+ * panel lateral de "Editor visual"), así que se sacaron de esta lista.
+ */
 const RUTAS_ADMIN: RutaAdmin[] = [
   { to: '/admin/perfil', label: 'Perfil', icon: User },
   { to: '/admin/proyectos', label: 'Proyectos', icon: LayoutGrid },
@@ -39,8 +42,6 @@ const RUTAS_ADMIN: RutaAdmin[] = [
   { to: '/admin/skills', label: 'Skills', icon: Sparkles },
   { to: '/admin/redes', label: 'Redes sociales', icon: Share2 },
   { to: '/admin/editor', label: 'Editor visual', icon: Wand2 },
-  { to: '/admin/tema', label: 'Tema', icon: Palette },
-  { to: '/admin/fondo', label: 'Fondo del sitio', icon: Waves },
   { to: '/admin/media', label: 'Biblioteca de medios', icon: Image },
 ]
 

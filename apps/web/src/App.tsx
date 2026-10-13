@@ -12,8 +12,6 @@ import { PerfilPage } from '@/pages/admin/PerfilPage'
 import { ProyectosListPage } from '@/pages/admin/ProyectosListPage'
 import { RedesListPage } from '@/pages/admin/RedesListPage'
 import { SkillsListPage } from '@/pages/admin/SkillsListPage'
-import { FondoSitioPage } from '@/pages/admin/FondoSitioPage'
-import { TemaPage } from '@/pages/admin/TemaPage'
 import { CertificacionDetallePage } from '@/pages/public/CertificacionDetallePage'
 import { LogroDetallePage } from '@/pages/public/LogroDetallePage'
 import { ProyectoDetallePage } from '@/pages/public/ProyectoDetallePage'
@@ -66,8 +64,25 @@ function App() {
             <Route path="skills" element={<SkillsListPage />} />
 
             <Route path="editor" element={<EditorSeccionesPage />} />
-            <Route path="tema" element={<TemaPage />} />
-            <Route path="fondo" element={<FondoSitioPage />} />
+            {/*
+              Fase 5 (panel unificado): `TemaPage`/`FondoSitioPage` (UC-08,
+              UC-15) se fusionaron como pestañas del panel lateral de
+              "Editor visual" (`PanelTemaEditor`/`PanelFondoEditor`, ver
+              `EditorSeccionesPage`) — ya no son páginas independientes, así
+              que estas rutas redirigen en vez de eliminarse por completo,
+              para no romper enlaces/marcadores que el admin pueda tener
+              guardados. El query param `panel` hace que el panel lateral
+              arranque en esa pestaña en vez de "Bloque" (ver el `useEffect`
+              correspondiente en `EditorSeccionesPage`).
+            */}
+            <Route
+              path="tema"
+              element={<Navigate to="/admin/editor?panel=tema" replace />}
+            />
+            <Route
+              path="fondo"
+              element={<Navigate to="/admin/editor?panel=fondo" replace />}
+            />
             <Route path="media" element={<MediaLibraryPage />} />
             {/*
               UC-10/UC-11 (Publicación) se fusionaron dentro de "Editor
