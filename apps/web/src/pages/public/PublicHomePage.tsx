@@ -16,6 +16,7 @@ import { ApiError } from '@/lib/api-client'
 import { recortarDescripcion } from '@/lib/seo'
 import type { HeroConfiguracion } from '@/features/secciones/types'
 import { useFuenteTema } from '@/features/tema/useFuenteTema'
+import { navegacionReemplazaToggle } from '@/lib/navegacion'
 import { temaComoVariablesCss } from '@/lib/tema-css'
 import { cn } from '@/lib/utils'
 
@@ -132,9 +133,12 @@ export function PublicHomePage() {
           </ContenidoPrincipal>
         </ProveedorDetallePublico>
         <Footer perfil={snapshot.perfil} />
-        <div className="fixed bottom-4 right-4 z-50">
-          <ToggleModoTema className="shadow-lg" />
-        </div>
+        {/* Fase 7 (7.3): si la navegación ya trae su propio toggle, el de la esquina sobra. */}
+        {navegacionReemplazaToggle(snapshot.secciones) ? null : (
+          <div className="fixed bottom-4 right-4 z-50">
+            <ToggleModoTema className="shadow-lg" />
+          </div>
+        )}
       </div>
     </div>
   )
