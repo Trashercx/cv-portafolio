@@ -68,6 +68,8 @@ export function BloqueGaleria({ titulo, config, alineacionTitulo }: BloqueGaleri
               <img
                 src={foto.media?.url}
                 alt={foto.titulo || foto.media?.alt_text || ''}
+                loading="lazy"
+                decoding="async"
                 className="aspect-square w-full object-cover transition-transform hover:scale-105"
               />
             </TarjetaClicable>
@@ -169,6 +171,8 @@ function CarouselGaleria({ fotos, onAbrirFoto }: CarouselGaleriaProps) {
               <img
                 src={foto.media?.url}
                 alt={foto.titulo || foto.media?.alt_text || ''}
+                loading="lazy"
+                decoding="async"
                 className="aspect-video w-full object-cover"
               />
             </TarjetaClicable>

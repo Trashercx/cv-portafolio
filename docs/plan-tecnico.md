@@ -369,6 +369,61 @@ Disparada por QA manual del usuario sobre la Fase 5. Sin backend, sin migracione
 
 Pruebas: tests del hook y del aviso actualizados (contador y cierre automático); `ToggleModoTema.test.tsx` nuevo; suite completa verde (258 tests).
 
+### Fase 6 — Fundamentos de producción (transversal; refuerza UC-01, UC-12, UC-13)
+
+Primera fase del roadmap de profesionalización (`docs/plan-portafolio.md` §7). No agrega entidades ni casos de uso: convierte el proyecto en una aplicación operable en producción y deja la base (health checks, logs, CI con e2e, CSP) sobre la que se construyen las fases 7–10. Tres agentes en worktrees paralelos (API, web, infraestructura/repo); criticidad **crítica** por tocar auth y varios módulos a la vez.
+
+**API (`backend-nestjs`)**
+- `helmet` con `crossOriginResourcePolicy: cross-origin` (el fallback local `/uploads` se sirve desde otro origen que el frontend); `compression`.
+- Rate limiting con `@nestjs/throttler` como `APP_GUARD`: límite global por IP y límite estricto en `POST /auth/login` (UC-01). Configurable por `THROTTLE_TTL_MS` / `THROTTLE_LIMIT`; `TRUST_PROXY=true` para respetar `X-Forwarded-For` detrás de Traefik/Dokploy. En los e2e el guard queda desactivado salvo en el spec que prueba el 429.
+- Health checks con `@nestjs/terminus`: `GET /health` (liveness, sin DB) y `GET /health/ready` (readiness, `SELECT 1` vía Prisma). Sin guard; excluidos del log.
+- `enableShutdownHooks()` + `PrismaService.onModuleDestroy` → `$disconnect()` para apagado ordenado en redeploys.
+- Logs estructurados con `nestjs-pino`: JSON en producción, `pino-pretty` en desarrollo, nivel por `LOG_LEVEL`, `x-request-id` reutilizado o generado y devuelto, `redact` de cookies/authorization.
+- `POST /auth/logout` (UC-01): sin guard (sirve aunque el token ya haya expirado), 204, borra `access_token` con exactamente las mismas opciones con las que se emite (función compartida, no duplicada).
+- `Cache-Control: no-cache` explícito en las rutas JSON públicas (UC-12/13/14): revalidación por ETag, el visitante ve la publicación nueva al instante y ahorra transferencia con 304.
+
+**Web (`frontend-react`)**
+- Code splitting con `React.lazy` + `Suspense` para el panel admin (el editor arrastra Puck) y las páginas públicas de detalle; la home pública y el login siguen eager por LCP.
+- Página 404 pública con el tema del sitio (antes `path="*"` redirigía a `/`).
+- Accesibilidad: skip link "Saltar al contenido" → `<main id="contenido">` en el sitio público; foco al `<main>` al cambiar de ruta.
+- SEO por página con los `<title>`/`<meta>`/`<link>` nativos de React 19 (`MetadatosPagina`): descripción, canónica, Open Graph y Twitter card en home y detalles; JSON-LD `Person` con `sameAs` de las redes en la home. `index.html` con descripción y `theme-color` por modo; `public/robots.txt` bloquea `/admin`. Limitación conocida y aceptada: los bots que no ejecutan JS no ven estos metadatos hasta la Fase 7 (inyección en servidor, UC-34).
+- Imágenes: `loading="lazy"` + `decoding="async"` fuera del primer pliegue; `fetchPriority="high"` en la imagen del hero.
+- Cierre de sesión real (`useCerrarSesion`): `POST /auth/logout` y, pase lo que pase con la red, limpia el store, vacía la caché de TanStack Query y navega al login. Lo usan el botón "Cerrar sesión", "Cancelar" del aviso de expiración y el cierre automático al llegar a 0.
+
+**Infraestructura y repo (`general-purpose`)**
+- Dockerfiles: la API corre como usuario no root (`USER node`, `COPY --chown`); `HEALTHCHECK` en API y web (nginx sigue con la imagen oficial, master como root en :80; `nginx-unprivileged` queda anotado como opcional); `docker-compose.prod.yml` con healthchecks y `depends_on: condition: service_healthy`.
+- nginx: gzip, cabeceras de seguridad (HSTS, nosniff, SAMEORIGIN, Referrer-Policy, Permissions-Policy) y **CSP** real con `API_ORIGIN` / `MEDIA_ORIGIN` resueltos en runtime mediante las plantillas `envsubst` de la imagen oficial, con defaults seguros si faltan.
+- Repo: `.gitattributes` (`eol=lf`, fin del ruido CRLF en Windows), `.editorconfig`, `.nvmrc` + `engines`, `README.md` raíz, Dependabot (npm agrupado + GitHub Actions), CodeQL, y CI con servicio Postgres 16 para correr migraciones, seed y **e2e** en cada PR, `concurrency` para cancelar runs obsoletos y `permissions` mínimos.
+
+Pruebas: unit + e2e nuevos (health, logout, 429 del login, Cache-Control), tests de 404, skip link, metadatos y JSON-LD, `useCerrarSesion`; suites completas verdes en ambas apps y CI del PR en verde.
+
+### Roadmap propuesto — Fases 7 a 10 (pendientes de aprobación)
+
+Detalle y justificación en `docs/plan-portafolio.md` §7; aquí solo el desglose técnico orientativo por fase y subagente.
+
+**Fase 7 — Visibilidad (UC-27, UC-34)**
+- `backend-nestjs`: módulo `seo` que sirve el `index.html` del build con `<title>`, `<meta>`, Open Graph y JSON-LD inyectados por ruta pública desde el snapshot publicado (sin SSR); `GET /sitemap.xml` y `GET /robots.txt` generados; nginx enruta las rutas públicas "documento" al API y el resto de assets directo.
+- `db-schema` + `backend-nestjs`: `MEDIA_VARIANTE`; al subir una imagen, sharp genera variantes WebP/AVIF en anchos fijos (640/1024/1600) y el snapshot las expone; `frontend-react`: `<picture>`/`srcset` en todos los bloques.
+- CI: Lighthouse CI (`treosh/lighthouse-ci-action`) contra un build estático con presupuestos (rendimiento ≥ 90 móvil, a11y ≥ 95).
+- Umami autoalojado en `docker-compose.prod.yml` (sin cookies, sin banner); script en el sitio público solo si `VITE_UMAMI_URL` existe; eventos `descargar_cv` y `clic_red`; en el API un proxy `GET /admin/metricas` a la API de Umami con token de servidor; tarjetas en el dashboard del panel.
+
+**Fase 8 — Contenido que vende (UC-19, UC-20, UC-23, UC-24, UC-32)**
+- Migrar `@measured/puck` 0.20 → `@puckeditor/core` 0.21 (sin breaking changes declarados; opt-out del plugin rail con `legacySideBarPlugin` si se prefiere mantener el panel unificado actual) y usar el campo `richtext` (Tiptap) para casos de estudio: materializa la decisión "Tiptap" del plan.
+- `db-schema`: `EXPERIENCIA_LABORAL`, `EXPERIENCIA_TECNOLOGIA`, `FORMACION`, `CASO_ESTUDIO`, `CASO_ESTUDIO_METRICA`, `TESTIMONIO`, `AHORA_ITEM`, columnas de disponibilidad en `PERFIL`.
+- `backend-nestjs`: módulos CRUD + validación del JSON de ProseMirror (lista blanca de nodos/marcas, sin HTML crudo) + inclusión en el snapshot.
+- `frontend-react`: bloques `trayectoria`, `testimonios`, `ahora`, distintivo de disponibilidad en `hero`; página `/proyecto/:slug` del caso de estudio con tabla de contenidos; pantallas CRUD en el panel.
+
+**Fase 9 — Conversación (UC-21, UC-22, UC-29, UC-30, UC-31)**
+- `db-schema`: `MENSAJE_CONTACTO`, `NOTA`, `ETIQUETA`, `NOTA_ETIQUETA`, `PERFIL.cv_generado_media_id`.
+- `backend-nestjs`: `POST /contacto` público con honeypot, tiempo mínimo de llenado, verificación de Turnstile (`TURNSTILE_SECRET`, opcional), `@Throttle` estricto, envío de email por Resend o SMTP (`MAIL_*`, opcional); `admin/mensajes`; `admin/notas` + `GET /notas`, `/notas/:slug`, `/notas.xml` (RSS); generación del CV con `@react-pdf/renderer` al publicar, guardado como `MEDIA` en S3; export JSON Resume en `GET /cv.json`.
+- `frontend-react`: bloque `contacto` con formulario real (reemplaza el aviso actual de `mostrar_formulario`), bandeja de mensajes, editor de notas con `richtext`, páginas `/notas`, selector de plantilla del CV.
+
+**Fase 10 — Panel de nivel producto (UC-25, UC-26, UC-28, UC-33)**
+- `db-schema`: `CREDENCIAL_PASSKEY`, `EVENTO_AUDITORIA`, `TRADUCCION`, `VERSION_SITIO.programada_para`, `USUARIO_ADMIN.sesiones_invalidadas_desde`.
+- `backend-nestjs`: diff de snapshots por entidad (`GET /admin/versiones/:a/diff/:b`), `@nestjs/schedule` para publicar versiones programadas, passkeys con `@simplewebauthn/server` (rpID = dominio de producción, fijo desde el inicio), cambio de contraseña, invalidación global de sesiones (claim `iat` < `sesiones_invalidadas_desde`), auditoría vía interceptor; i18n: `Accept-Language`/`?lang=` y snapshot bilingüe.
+- `frontend-react`: vista de diff, programación en el panel de publicación, pantalla "Seguridad de la cuenta", editor de traducciones con indicador de faltantes, selector de idioma público.
+- Transversal: `@sentry/node` + `@sentry/react` apuntando a GlitchTip autoalojado (`SENTRY_DSN`, opcional); Playwright e2e (login, publicar, ver sitio) + regresión visual con capturas generadas en CI; umbrales de cobertura en Jest/Vitest.
+
 ## 3. Índice UC → tareas → subagente → sprint
 
 `code-reviewer` y `release-manager` aplican a **toda** fila antes de cerrar la tarea o hacer commit — no se repiten en cada celda.
@@ -391,6 +446,13 @@ Pruebas: tests del hook y del aviso actualizados (contador y cierre automático)
 | UC-14 | `GET /redes` y `GET /cv` públicos, componente de redes + descarga de CV | backend-nestjs → frontend-react | 4 |
 | UC-15 | Módulo `fondo-sitio`, índice único parcial (SQL manual), transacción de activación exclusiva, página de configuración en UI | db-schema → backend-nestjs → frontend-react | 8 |
 | UC-16 | Módulo `skills`, endpoints CRUD, bloque `skills` en Puck (marquesina), pantalla CRUD | db-schema → backend-nestjs → frontend-react | 8 |
+| UC-17 | DTO `columnas` con bloques anidados (`@EsListaDeBloques`), Slots API de Puck, resolver de media recursivo | backend-nestjs → frontend-react | Fase 3.3 |
+| UC-18 | DTO `galeria`, bloque con carousel/grid y lightbox | backend-nestjs → frontend-react | Fase 4.5 |
+| Fase 6 | helmet, throttler, terminus, pino, logout, Cache-Control; lazy routes, 404, skip link, metadatos SEO/JSON-LD; Docker sin root + healthchecks, CSP en nginx, CI con e2e, CodeQL, Dependabot | backend-nestjs ∥ frontend-react ∥ general-purpose (worktrees) | 6 |
+| UC-27, UC-34 | Inyección de metadatos en servidor, sitemap, `MEDIA_VARIANTE` + srcset, Lighthouse CI, Umami + panel de métricas | db-schema → backend-nestjs → frontend-react | 7 (propuesta) |
+| UC-19, UC-20, UC-23, UC-24, UC-32 | Puck 0.21 + `richtext`, experiencia/formación, casos de estudio, testimonios, disponibilidad/ahora | db-schema → backend-nestjs → frontend-react | 8 (propuesta) |
+| UC-21, UC-22, UC-29, UC-30, UC-31 | Contacto con Turnstile/honeypot/email, notas técnicas + RSS, CV PDF generado + JSON Resume | db-schema → backend-nestjs → frontend-react | 9 (propuesta) |
+| UC-25, UC-26, UC-28, UC-33 | Diff y programación de versiones, passkeys/auditoría/sesiones, i18n ES/EN, GlitchTip, Playwright | db-schema → backend-nestjs → frontend-react | 10 (propuesta) |
 
 ## 4. Reglas consolidadas (checklist de referencia rápida)
 

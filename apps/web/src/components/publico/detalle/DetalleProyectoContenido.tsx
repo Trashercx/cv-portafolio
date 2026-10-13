@@ -49,6 +49,8 @@ export function DetalleProyectoContenido({ proyecto }: DetalleProyectoContenidoP
               key={imagen.media_id}
               src={imagen.media.url}
               alt={imagen.media.alt_text ?? proyecto.titulo}
+              loading="lazy"
+              decoding="async"
               className="rounded-lg object-cover"
             />
           ))}

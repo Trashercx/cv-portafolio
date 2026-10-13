@@ -4,13 +4,35 @@ import 'dotenv/config';
 
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import * as compression from 'compression';
 import * as cookieParser from 'cookie-parser';
 import * as express from 'express';
+import helmet from 'helmet';
+import { Logger } from 'nestjs-pino';
 import { join } from 'path';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // Fase 6: bufferLogs retiene los logs de arranque hasta que pino esté listo.
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    bufferLogs: true,
+  });
+  app.useLogger(app.get(Logger));
+
+  // Fase 6: en producción la API corre detrás de Traefik/Dokploy; solo con
+  // TRUST_PROXY=true se confía en X-Forwarded-For (IP real para el rate limit).
+  if (process.env.TRUST_PROXY === 'true') {
+    app.set('trust proxy', 1);
+  }
+
+  // Fase 6: cabeceras de seguridad. `cross-origin` en CORP para que /uploads
+  // (fallback local de media) siga cargando desde el origen del frontend.
+  app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+  app.use(compression());
+
+  // Fase 6: cierre ordenado (SIGTERM de Docker) -> PrismaService.$disconnect().
+  app.enableShutdownHooks();
 
   app.use(cookieParser());
 

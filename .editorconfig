@@ -1,0 +1,21 @@
+# Fase 6 — Fundamentos de producción.
+# Convenciones de formato compartidas entre editores (VS Code, WebStorm, etc.
+# las leen con o sin extensión). Coinciden con .gitattributes (LF) y con el
+# estilo de prettier/oxlint ya usado en ambos workspaces.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_style = space
+indent_size = 2
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# En Markdown dos espacios al final de línea son un salto de línea
+# intencional: no recortarlos.
+[*.md]
+trim_trailing_whitespace = false
+
+[*.{bat,cmd}]
+end_of_line = crlf

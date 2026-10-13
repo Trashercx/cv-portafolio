@@ -1,6 +1,10 @@
 {
   "name": "cv-portafolio",
   "private": true,
+  "engines": {
+    "node": ">=20.19 <23",
+    "npm": ">=10"
+  },
   "workspaces": [
     "apps/*"
   ],

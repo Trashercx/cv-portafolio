@@ -34,6 +34,8 @@ export function BloqueSobreMi({
       <img
         src={perfil.imagen_perfil.url}
         alt={perfil.imagen_perfil.alt_text ?? perfil.nombre_completo}
+        loading="lazy"
+        decoding="async"
         className={cn('size-32 object-cover', claseForma)}
       />
     ) : null

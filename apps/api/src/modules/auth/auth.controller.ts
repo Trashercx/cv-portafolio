@@ -8,10 +8,15 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../../common/authenticated-request';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
+import {
+  NOMBRE_COOKIE_ACCESO,
+  opcionesBaseCookieAcceso,
+} from './cookie-acceso';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { parseDurationToMs } from './parse-duration';
 
@@ -33,6 +38,14 @@ interface SesionResponseBody {
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  // Fase 6: límite estricto contra fuerza bruta (además del bloqueo de cuenta
+  // de UC-01). Se resuelve por request para poder sobreescribirlo por env.
+  @Throttle({
+    default: {
+      limit: () => Number(process.env.THROTTLE_LOGIN_LIMIT ?? 5),
+      ttl: () => Number(process.env.THROTTLE_LOGIN_TTL_MS ?? 60_000),
+    },
+  })
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(
@@ -73,15 +86,20 @@ export class AuthController {
     return { ...admin, expiresAt: expiresAt.toISOString() };
   }
 
+  /**
+   * Fase 6 (UC-01): cierra la sesión borrando la cookie httpOnly. Sin guard a
+   * propósito: debe funcionar aunque el token ya haya expirado.
+   */
+  @Post('logout')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  logout(@Res({ passthrough: true }) res: Response): void {
+    res.clearCookie(NOMBRE_COOKIE_ACCESO, opcionesBaseCookieAcceso());
+  }
+
   private setCookieAcceso(res: Response, accessToken: string): void {
-    res.cookie('access_token', accessToken, {
-      httpOnly: true,
-      sameSite: 'lax',
-      // secure: true es obligatorio en producción (HTTPS); en desarrollo local
-      // (http://localhost) se deja en false para que la cookie se guarde igual.
-      secure: process.env.NODE_ENV === 'production',
+    res.cookie(NOMBRE_COOKIE_ACCESO, accessToken, {
+      ...opcionesBaseCookieAcceso(),
       maxAge: parseDurationToMs(process.env.JWT_EXPIRES_IN),
-      path: '/',
     });
   }
 }

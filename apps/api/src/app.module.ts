@@ -1,4 +1,9 @@
+import { randomUUID } from 'crypto';
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { LoggerModule } from 'nestjs-pino';
+import { HealthModule } from './modules/health/health.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './modules/auth/auth.module';
@@ -19,6 +24,54 @@ import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
   imports: [
+    // Fase 6: logging estructurado. JSON en producción, pino-pretty en
+    // desarrollo, silencioso en tests. Redacta cookies y credenciales.
+    LoggerModule.forRoot({
+      pinoHttp: {
+        level:
+          process.env.NODE_ENV === 'test'
+            ? 'silent'
+            : (process.env.LOG_LEVEL ?? 'info'),
+        transport:
+          process.env.NODE_ENV === 'production' ||
+          process.env.NODE_ENV === 'test'
+            ? undefined
+            : { target: 'pino-pretty', options: { singleLine: true } },
+        genReqId: (req, res) => {
+          const entrante = req.headers['x-request-id'];
+          // Solo se reutiliza un id entrante corto y de caracteres seguros: evita
+          // inflar los logs o falsear correlaciones desde el cliente (revisión Fase 6).
+          const id =
+            typeof entrante === 'string' &&
+            /^[A-Za-z0-9._-]{1,64}$/.test(entrante)
+              ? entrante
+              : randomUUID();
+          res.setHeader('x-request-id', id);
+          return id;
+        },
+        redact: [
+          'req.headers.cookie',
+          'req.headers.authorization',
+          'res.headers["set-cookie"]',
+        ],
+        autoLogging: {
+          ignore: (req) => (req.url ?? '').startsWith('/health'),
+        },
+      },
+    }),
+    // Fase 6: rate limiting global por IP; /auth/login lleva un límite más
+    // estricto con @Throttle. Sobreescribible con THROTTLE_TTL_MS / THROTTLE_LIMIT.
+    // forRootAsync: lee el entorno al compilar el módulo (no al importar el
+    // archivo), para que los e2e puedan ajustar los límites.
+    ThrottlerModule.forRootAsync({
+      useFactory: () => [
+        {
+          ttl: Number(process.env.THROTTLE_TTL_MS ?? 60_000),
+          limit: Number(process.env.THROTTLE_LIMIT ?? 120),
+        },
+      ],
+    }),
+    HealthModule,
     PrismaModule,
     AuthModule,
     MediaModule,
@@ -36,6 +89,6 @@ import { PrismaModule } from './prisma/prisma.module';
     PublicoModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}

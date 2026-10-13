@@ -109,25 +109,54 @@ RUN apk add --no-cache postgresql16-client
 # npm workspaces no siempre puede hoistear todo a /repo/node_modules (por
 # ejemplo, @nestjs/mapped-types queda anidado en apps/api/node_modules por
 # un conflicto de versiones/peers) — hay que copiar ambos árboles.
-COPY --from=prod-deps /repo/node_modules ./node_modules
-COPY --from=prod-deps /repo/apps/api/node_modules ./node_modules
-COPY --from=build /repo/apps/api/dist ./dist
+COPY --chown=node:node --from=prod-deps /repo/node_modules ./node_modules
+COPY --chown=node:node --from=prod-deps /repo/apps/api/node_modules ./node_modules
+COPY --chown=node:node --from=build /repo/apps/api/dist ./dist
 
 # Necesarios en runtime para `prisma migrate deploy` (no para la app en sí):
 # el schema, las migraciones ya commiteadas y la config de conexión.
-COPY apps/api/prisma ./prisma
-COPY apps/api/prisma7.config.ts ./prisma7.config.ts
+COPY --chown=node:node apps/api/prisma ./prisma
+COPY --chown=node:node apps/api/prisma7.config.ts ./prisma7.config.ts
 
 # Script de backup a S3 (standalone, ver comentarios dentro del propio
 # archivo) — se incluye para poder invocarlo con `docker exec` desde un
 # cron externo al contenedor.
-COPY apps/api/scripts ./scripts
+COPY --chown=node:node apps/api/scripts ./scripts
 
-COPY apps/api/docker-entrypoint.sh ./docker-entrypoint.sh
+COPY --chown=node:node apps/api/docker-entrypoint.sh ./docker-entrypoint.sh
 RUN chmod +x ./docker-entrypoint.sh ./scripts/backup-db.sh
+
+# Fase 6 — usuario no root. La imagen node:alpine ya trae el usuario `node`
+# (uid 1000). Todo /app es suyo (los COPY de arriba llevan --chown; un
+# `chown -R` posterior duplicaría los ~480 MB de node_modules en una capa
+# nueva y doblaría el tamaño de la imagen) para que:
+#   - `npx prisma migrate deploy` (docker-entrypoint.sh) pueda seguir
+#     leyendo prisma/ y prisma7.config.ts y escribir su caché bajo
+#     /home/node (home del usuario, ya escribible);
+#   - `uploads/` exista y sea escribible por si el fallback
+#     LocalMediaStorageService (sin credenciales de AWS) llega a usarse en
+#     un contenedor: main.ts lo sirve desde `process.cwd()/uploads`. En
+#     producción con S3 queda vacío e inofensivo;
+#   - `scripts/backup-db.sh` escriba su dump temporal en /tmp (ya
+#     world-writable) y nunca necesite root.
+# Un proceso comprometido dentro del contenedor no puede así instalar
+# paquetes, tocar /etc ni escalar fuera de /app.
+RUN mkdir -p /app/uploads && chown node:node /app /app/uploads
+USER node
 
 # Puerto real que escucha Nest (apps/api/src/main.ts: `process.env.PORT ??
 # 3000`). Configurable por variable de entorno PORT en runtime.
 EXPOSE 3000
+
+# Fase 6 — liveness check del propio contenedor (Docker/Dokploy/Coolify lo
+# marcan `unhealthy` y lo reinician/retienen el tráfico). `GET /health` no
+# toca la base de datos; la readiness con DB es `GET /health/ready` y la
+# consulta el reverse proxy/plataforma, no este HEALTHCHECK, para que una
+# caída transitoria de Postgres no provoque reinicios en cascada de la API.
+# `wget` es el de busybox incluido en alpine (no hace falta curl).
+# start-period cubre el `prisma migrate deploy` del entrypoint antes de que
+# Nest empiece a escuchar.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD wget -qO- "http://127.0.0.1:${PORT:-3000}/health" || exit 1
 
 ENTRYPOINT ["./docker-entrypoint.sh"]

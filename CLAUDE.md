@@ -13,14 +13,15 @@ Sitio de portafolio/CV personal con panel de administración privado. Monorepo c
 - Autenticación: `@nestjs/passport` + `passport-jwt`, administrador único, sin endpoint de registro. El JWT viaja **solo** en la cookie httpOnly `access_token`, nunca en el header `Authorization` ni en el cuerpo de la respuesta; el frontend nunca lo lee ni lo guarda.
 - Multimedia: AWS S3 (`@aws-sdk/client-s3`) con sharp para miniaturas, detrás de la interfaz `MediaStorageService` (token `MEDIA_STORAGE_SERVICE`). `S3MediaStorageService` es el provider real; `LocalMediaStorageService` se conserva solo como fallback de desarrollo sin credenciales y como stub en tests e2e (vía `overrideProvider`). CloudFront es opcional.
 - UI: Tailwind CSS v4 + shadcn/ui (estilo `new-york`, íconos lucide). Alias `@/` → `apps/web/src`.
-- Estado/formularios: TanStack Query para datos de servidor; Zustand **solo** para estado de edición en curso (`store/editor-secciones-store.ts`, `editor-panel-store.ts`, `auth-store.ts` en memoria); React Hook Form + Zod; Tiptap para texto enriquecido (**decidido, todavía NO implementado**: los campos largos como la biografía siguen siendo `<Textarea>` plano).
+- Estado/formularios: TanStack Query para datos de servidor; Zustand **solo** para estado de edición en curso (`store/editor-secciones-store.ts`, `editor-panel-store.ts`, `auth-store.ts` en memoria); React Hook Form + Zod; Tiptap para texto enriquecido (**decidido, todavía NO implementado**: los campos largos como la biografía siguen siendo `<Textarea>` plano; el camino previsto es migrar a Puck 0.21 `@puckeditor/core` y usar su campo `richtext`, que ya es Tiptap; ver roadmap).
 - Hosting: VPS propio con Docker + Dokploy o Coolify. Imágenes publicadas a GHCR desde GitHub Actions en cada push a `main`. Ver `docs/despliegue.md`.
 
 ## Dónde está el detalle
 
 - `docs/plan-portafolio.md`: stack justificado, los casos de uso (UC-01 a UC-18) con criterios de aceptación, el diagrama ER (bloque mermaid) normalizado a 3FN y la estrategia de ramas/criticidad. **Única fuente de verdad** para UC, campos y entidades. No inventes campos, entidades, endpoints ni tipos de bloque que no estén ahí; si hace falta algo nuevo, agrégalo primero a ese documento y luego codéalo.
-- `docs/plan-tecnico.md`: estructura del monorepo, tareas por sprint/fase (ya se completaron Sprint 0–8 y Fases 3.x/4.x; el historial de "rondas" de correcciones post-Fase 4.6 también está ahí), la checklist consolidada de reglas (§4) y el índice UC → tarea → subagente. Revísalo antes de arrancar cualquier tarea.
-- `docs/despliegue.md`: variables de producción, Dokploy/Coolify, backups y smoke test.
+- `docs/plan-tecnico.md`: estructura del monorepo, tareas por sprint/fase (ya se completaron Sprint 0–8, Fases 3.x/4.x, Fase 5 (panel unificado) y Fase 6 (fundamentos de producción); el historial de "rondas" de correcciones también está ahí, y al final de §2 el desglose propuesto de las Fases 7–10), la checklist consolidada de reglas (§4) y el índice UC → tarea → subagente. Revísalo antes de arrancar cualquier tarea.
+- `docs/plan-portafolio.md` §7: **roadmap de profesionalización** (Fases 7–10, UC-19 a UC-34 propuestos, pendientes de aprobación por fase). No los implementes sin que el usuario apruebe la fase.
+- `docs/despliegue.md`: variables de producción (incluidas las de la Fase 6: `TRUST_PROXY`, `LOG_LEVEL`, `THROTTLE_*`, `API_ORIGIN`/`MEDIA_ORIGIN` de la CSP), Dokploy/Coolify, health checks, backups y smoke test.
 - `docs/design/`: mockups HTML de referencia de las pantallas del panel.
 
 ## Comandos
@@ -59,7 +60,9 @@ npx vitest run -t "nombre"        # por nombre
 
 Los tests e2e del API levantan `AppModule` real (`test/utils/test-app.ts`): necesitan la base de datos con migraciones y seed, corren con `maxWorkers: 1`, y `agenteAutenticado()` hace login real y reenvía la cookie. Para rutas públicas usar `request(app.getHttpServer())` sin agente.
 
-Husky corre `commitlint` (Conventional Commits) y `lint-staged` (lint por workspace) en cada commit. CI (`.github/workflows/ci.yml`) corre lint + build + test de ambas apps en cada PR a `main`; en push a `main` además construye y publica las imágenes Docker. El contexto de build de ambos Dockerfiles es la **raíz** del repo.
+El frontend se sirve con nginx desde una plantilla (`apps/web/nginx/default.conf.template` + `cabeceras-seguridad.conf`): la CSP toma `API_ORIGIN`/`MEDIA_ORIGIN` en runtime vía `envsubst` (defaults `https:` en `docker-entrypoint.d/10-defaults.envsh`). Si agregas un origen externo (fuente, script, iframe), hay que tocar la CSP, no solo el código. `.gitattributes` fuerza LF: en Windows, `git status` ya no debe mostrar ruido de finales de línea.
+
+Husky corre `commitlint` (Conventional Commits) y `lint-staged` (lint por workspace) en cada commit. CI (`.github/workflows/ci.yml`) corre lint + build + test de ambas apps en cada PR a `main`, y para el API además migraciones + seed + **e2e** contra un servicio Postgres 16 (variables dummy en el workflow); CodeQL y Dependabot corren aparte. En push a `main` además construye y publica las imágenes Docker. El contexto de build de ambos Dockerfiles es la **raíz** del repo.
 
 ## Arquitectura (lo que no se ve leyendo un solo archivo)
 
@@ -70,7 +73,8 @@ El sitio público **nunca lee las tablas de contenido en vivo**. `VersionesSitio
 ### Rutas y guards del API
 
 - Rutas admin: `@UseGuards(JwtAuthGuard)` a nivel de clase y prefijo `admin/*` (`admin/proyectos`, `admin/secciones`, `admin/media`, `admin/versiones`, `admin/temas`, ...). Varias se llaman `*-admin.controller.ts`.
-- `AuthController` (`/auth/login`, `/auth/refresh`) no lleva guard de clase; `refresh` protege su propia ruta. UC-01 bloquea la cuenta tras 3 intentos fallidos (`intentos_fallidos`/`bloqueado_hasta`).
+- `AuthController` (`/auth/login`, `/auth/refresh`, `/auth/logout`) no lleva guard de clase; `refresh` protege su propia ruta y `logout` no (debe funcionar con token vencido; borra la cookie con las opciones compartidas de `cookie-acceso.ts`). UC-01 bloquea la cuenta tras 3 intentos fallidos (`intentos_fallidos`/`bloqueado_hasta`) y además `@Throttle` limita el login por IP (`THROTTLE_LOGIN_*`).
+- Fase 6: `ThrottlerGuard` global (`APP_GUARD`), `helmet`, `compression`, `nestjs-pino` (JSON en producción, `x-request-id`, `silent` en tests), `GET /health` y `/health/ready` (Terminus, sin guard) y `enableShutdownHooks()`. Los e2e usan `crearAppDePrueba()` de `test/utils/test-app.ts`, que desactiva en la práctica el throttler; `throttle.e2e-spec.ts` lo prueba aparte.
 - Rutas públicas (UC-12 a UC-14) sin guard alguno.
 - `ValidationPipe` global con `whitelist + forbidNonWhitelisted + transform`: ningún campo fuera del DTO entra en ningún endpoint. `test-app.ts` reproduce el mismo pipeline.
 

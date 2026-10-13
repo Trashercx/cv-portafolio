@@ -17,6 +17,11 @@ import { AppModule } from '../../src/app.module';
 export async function crearAppDePrueba(
   configurar?: (builder: TestingModuleBuilder) => TestingModuleBuilder,
 ): Promise<INestApplication> {
+  // Fase 6: rate limiting prácticamente desactivado en e2e (sin esto, los
+  // muchos logins de los tests dispararían 429). `throttle.e2e-spec.ts` lo
+  // ajusta a propósito. Los logs ya salen en silencio con NODE_ENV=test.
+  process.env.THROTTLE_LIMIT ??= '100000';
+  process.env.THROTTLE_LOGIN_LIMIT ??= '100000';
   let builder = Test.createTestingModule({ imports: [AppModule] });
   if (configurar) {
     builder = configurar(builder);

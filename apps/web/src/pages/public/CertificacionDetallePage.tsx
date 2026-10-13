@@ -1,5 +1,6 @@
 import { Link, useParams } from 'react-router-dom'
 import { DetalleCertificacionContenido } from '@/components/publico/detalle/DetalleCertificacionContenido'
+import { MetadatosPagina } from '@/components/publico/MetadatosPagina'
 import { useCertificacionPublica } from '@/features/publico/usePublico'
 import { ApiError } from '@/lib/api-client'
 
@@ -48,6 +49,15 @@ export function CertificacionDetallePage() {
 
   return (
     <div className="mx-auto grid max-w-2xl gap-6 p-6">
+      {/* Fase 6 (UC-13): SEO del detalle. */}
+      <MetadatosPagina
+        titulo={`${certificacion.nombre} — ${certificacion.institucion}`}
+        descripcion={`Certificación «${certificacion.nombre}» emitida por ${certificacion.institucion}.`}
+        imagen={
+          certificacion.logo?.tipo === 'imagen' ? certificacion.logo.url : null
+        }
+        tipo="article"
+      />
       <Link to="/" className="text-sm underline underline-offset-4">
         ← Volver al inicio
       </Link>

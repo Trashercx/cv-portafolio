@@ -1,6 +1,7 @@
 import {
   Controller,
   Get,
+  Header,
   NotFoundException,
   Param,
   ParseUUIDPipe,
@@ -27,7 +28,10 @@ export class PublicoController {
   constructor(private readonly versionesSitioService: VersionesSitioService) {}
 
   /** `GET /sitio` (UC-12): snapshot completo de la última versión publicada. */
+  // Fase 6: `no-cache` fuerza revalidar con el ETag de Express (304 si no
+  // cambió): la publicación nueva se ve al instante sin retransmitir el JSON.
   @Get('sitio')
+  @Header('Cache-Control', 'no-cache')
   async obtenerSitio() {
     const snapshot = await this.obtenerSnapshotPublicadoOFallar();
     return snapshot;
@@ -35,6 +39,7 @@ export class PublicoController {
 
   /** `GET /proyectos/:id` (UC-13): detalle contra el snapshot publicado. */
   @Get('proyectos/:id')
+  @Header('Cache-Control', 'no-cache')
   async obtenerProyecto(@Param('id', ParseUUIDPipe) id: string) {
     const snapshot = await this.obtenerSnapshotPublicadoOFallar();
     const proyecto = snapshot.proyectos?.find((p) => p.id === id);
@@ -50,6 +55,7 @@ export class PublicoController {
 
   /** `GET /certificaciones/:id` (UC-13): detalle contra el snapshot publicado. */
   @Get('certificaciones/:id')
+  @Header('Cache-Control', 'no-cache')
   async obtenerCertificacion(@Param('id', ParseUUIDPipe) id: string) {
     const snapshot = await this.obtenerSnapshotPublicadoOFallar();
     const certificacion = snapshot.certificaciones?.find((c) => c.id === id);
@@ -65,6 +71,7 @@ export class PublicoController {
 
   /** `GET /redes` (UC-14): enlaces de redes del snapshot publicado. */
   @Get('redes')
+  @Header('Cache-Control', 'no-cache')
   async obtenerRedes() {
     const snapshot = await this.obtenerSnapshotPublicadoOFallar();
     return snapshot.redes_sociales ?? [];

@@ -1,0 +1,72 @@
+# Fase 6 — Fundamentos de producción: análisis estático de seguridad con
+# CodeQL (el lenguaje javascript-typescript cubre apps/api y apps/web).
+#
+# Corre en cada PR y push a main, y además una vez por semana para detectar
+# vulnerabilidades nuevas del catálogo de consultas aunque el código no
+# haya cambiado.
+#
+# El repositorio es privado y sin GitHub Advanced Security, así que Code
+# Scanning (la pestaña Security > Code scanning) no está disponible: el
+# análisis corre igual, el SARIF se guarda como artifact y el job falla si
+# hay alertas. Si el repo pasa a público o a GHAS, basta con quitar
+# `upload: never` y el paso de evaluación para volver a la subida nativa.
+name: CodeQL
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  schedule:
+    # Lunes 06:00 UTC (01:00 en Lima).
+    - cron: "0 6 * * 1"
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analizar (javascript-typescript)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # La acción consulta su propio workflow run (telemetría y post-proceso
+      # del SARIF); sin esto falla con "Resource not accessible by integration".
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+          # security-extended añade consultas de menor precisión pero útiles
+          # para una app con panel de admin y subida de archivos.
+          queries: security-extended
+
+      # JavaScript/TypeScript no requiere compilar: CodeQL extrae el código
+      # fuente directamente (sin paso de autobuild).
+      - uses: github/codeql-action/analyze@v3
+        with:
+          category: /language:javascript-typescript
+          upload: never
+          output: codeql-resultados
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: codeql-sarif
+          path: codeql-resultados
+          retention-days: 30
+
+      - name: Evaluar alertas del SARIF
+        run: |
+          sarif=$(ls codeql-resultados/*.sarif 2>/dev/null | head -n 1)
+          test -n "$sarif" || { echo "No se generó ningún SARIF en codeql-resultados/"; ls -la codeql-resultados || true; exit 1; }
+          total=$(jq '[.runs[].results[]] | length' "$sarif")
+          echo "Alertas de CodeQL: $total"
+          jq -r '.runs[].results[] | [(.level // "warning"), .ruleId, (.locations[0].physicalLocation.artifactLocation.uri + ":" + (.locations[0].physicalLocation.region.startLine | tostring)), .message.text] | @tsv' "$sarif"
+          test "$total" -eq 0

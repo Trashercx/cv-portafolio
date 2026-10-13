@@ -1,6 +1,7 @@
 import { LogOut } from 'lucide-react'
-import { useEffect, useState } from 'react'
-import { Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Suspense, useEffect, useState } from 'react'
+import { Outlet, useLocation } from 'react-router-dom'
+import { CargandoPagina } from '@/components/CargandoPagina'
 import { AppSidebar } from '@/components/layout/AppSidebar'
 import { ThemeProvider } from '@/components/theme/ThemeProvider'
 import { ThemeToggle } from '@/components/theme/ThemeToggle'
@@ -11,6 +12,7 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar'
 import { AvisoSesionExpirando } from '@/features/auth/AvisoSesionExpirando'
+import { useCerrarSesion } from '@/features/auth/useCerrarSesion'
 import { PaletaComandos } from '@/features/paleta-comandos/PaletaComandos'
 import { ProveedorPaletaComandos } from '@/features/paleta-comandos/contexto-paleta'
 import { cn } from '@/lib/utils'
@@ -28,17 +30,19 @@ import { useAuthStore } from '@/store/auth-store'
  * trabajo. `/admin/publicacion` sigue existiendo como redirect en `App.tsx`
  * por compatibilidad con enlaces ya guardados.
  *
- * "Cerrar sesión" en Sprint 2 solo limpia el auth store (en memoria) y
- * redirige a `/admin/login` — no hay endpoint de logout real en el backend
- * todavía (la sesión sigue siendo válida server-side hasta que expire la
- * cookie). Pendiente: agregar `POST /auth/logout` que invalide la cookie
- * del lado del servidor antes de producción.
+ * "Cerrar sesión" (Fase 6, UC-01) llama a `POST /auth/logout` vía
+ * `useCerrarSesion`: el API borra la cookie httpOnly y, pase lo que pase con
+ * la red, el hook limpia el auth store + la caché de TanStack Query y
+ * redirige a `/admin/login`.
+ *
+ * Fase 6 (code splitting): las páginas del panel son `React.lazy`; el
+ * `Suspense` interno deja el layout (sidebar/top bar) visible mientras carga
+ * el chunk de la página.
  */
 export function AdminLayout() {
-  const navigate = useNavigate()
   const location = useLocation()
   const admin = useAuthStore((state) => state.admin)
-  const clearAdmin = useAuthStore((state) => state.clearAdmin)
+  const cerrarSesion = useCerrarSesion()
 
   // El editor visual (UC-07, fusionado con UC-10/UC-11 en Sprint 7) necesita
   // todo el ancho disponible para el lienzo de Puck: el `max-w-5xl` que el
@@ -63,8 +67,7 @@ export function AdminLayout() {
   }, [esRutaDeAnchoCompleto])
 
   const handleLogout = () => {
-    clearAdmin()
-    navigate('/admin/login', { replace: true })
+    cerrarSesion.mutate()
   }
 
   return (
@@ -85,7 +88,12 @@ export function AdminLayout() {
                     {admin.nombre}
                   </span>
                 ) : null}
-                <Button variant="outline" size="sm" onClick={handleLogout}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleLogout}
+                  disabled={cerrarSesion.isPending}
+                >
                   <LogOut />
                   Cerrar sesión
                 </Button>
@@ -97,7 +105,9 @@ export function AdminLayout() {
                 esRutaDeAnchoCompleto ? 'w-full' : 'mx-auto w-full max-w-5xl',
               )}
             >
-              <Outlet />
+              <Suspense fallback={<CargandoPagina className="min-h-[50svh]" />}>
+                <Outlet />
+              </Suspense>
             </main>
           </SidebarInset>
         </SidebarProvider>
