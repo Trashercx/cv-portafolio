@@ -31,4 +31,13 @@ export class SkillsConfiguracionDto extends BloqueConfiguracionBaseDto {
   @IsOptional()
   @IsBoolean()
   pausar_al_pasar: boolean = true;
+
+  // Fase 7 (7.2, UC-07/UC-16): opcionales con default.
+  @IsOptional()
+  @IsIn(['marquesina', 'cuadricula', 'nube'])
+  disposicion: 'marquesina' | 'cuadricula' | 'nube' = 'marquesina';
+
+  @IsOptional()
+  @IsIn(['simple', 'vidrio', 'contorno'])
+  estilo_chip: 'simple' | 'vidrio' | 'contorno' = 'simple';
 }

@@ -1,4 +1,10 @@
-import { IsBoolean, IsIn, IsOptional } from 'class-validator';
+import {
+  IsBoolean,
+  IsIn,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 import { BloqueConfiguracionBaseDto } from './bloque-configuracion-base.dto';
 
 /**
@@ -15,4 +21,14 @@ export class ContactoConfiguracionDto extends BloqueConfiguracionBaseDto {
   @IsOptional()
   @IsIn(['iconos', 'botones'])
   estilo_redes: 'iconos' | 'botones' = 'iconos';
+
+  // Fase 7 (7.2, UC-07): opcionales.
+  @IsOptional()
+  @IsIn(['simple', 'tarjeta_destacada'])
+  estilo: 'simple' | 'tarjeta_destacada' = 'simple';
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  texto_llamada?: string;
 }

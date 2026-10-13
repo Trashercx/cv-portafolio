@@ -24,4 +24,9 @@ export class CertificacionesConfiguracionDto extends BloqueConfiguracionBaseDto 
   @IsOptional()
   @IsBoolean()
   mostrar_fecha: boolean = true;
+
+  // Fase 7 (7.2, UC-07).
+  @IsOptional()
+  @IsIn(['ninguno', 'elevar', 'inclinar'])
+  efecto_hover: 'ninguno' | 'elevar' | 'inclinar' = 'elevar';
 }

@@ -16,4 +16,9 @@ export class LogrosConfiguracionDto extends BloqueConfiguracionBaseDto {
   @IsOptional()
   @IsIn(['tarjetas', 'linea_tiempo'])
   estilo_lista: 'tarjetas' | 'linea_tiempo' = 'tarjetas';
+
+  // Fase 7 (7.2, UC-07).
+  @IsOptional()
+  @IsIn(['ninguno', 'elevar', 'inclinar'])
+  efecto_hover: 'ninguno' | 'elevar' | 'inclinar' = 'elevar';
 }

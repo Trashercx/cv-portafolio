@@ -1,7 +1,10 @@
 import { IsIn, IsNotEmpty, IsString } from 'class-validator';
 
 /**
- * Catálogo cerrado de `fuente_principal` (Fase 3.4): los 4 tokens nuevos que
+ * Catálogo cerrado de `fuente_principal` (Fase 3.4; ampliado en Fase 7, 7.2,
+ * UC-08 con `inter`, `space_grotesk`, `sora`, `dm_sans`, `playfair_display` y
+ * `jetbrains_mono`; `'inter'` en minúscula es el token nuevo y `'Inter'` el
+ * legado): los 4 tokens nuevos que
  * el Select del frontend ofrece de ahora en adelante
  * (`'manrope'|'sans_sistema'|'serif_sistema'|'mono_sistema'`, cada uno
  * mapeado a un stack de fuentes que sí resuelve visualmente), MÁS los 4
@@ -17,6 +20,12 @@ import { IsIn, IsNotEmpty, IsString } from 'class-validator';
  */
 const FUENTES_PRINCIPALES = [
   'manrope',
+  'inter',
+  'space_grotesk',
+  'sora',
+  'dm_sans',
+  'playfair_display',
+  'jetbrains_mono',
   'sans_sistema',
   'serif_sistema',
   'mono_sistema',

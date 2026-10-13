@@ -1,4 +1,16 @@
-import { IsBoolean, IsIn, IsOptional, IsString, IsUUID } from 'class-validator';
+import {
+  ArrayMaxSize,
+  IsArray,
+  IsBoolean,
+  IsIn,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
+import { EsEnlaceValido } from '../../../../common/validators/es-enlace-valido.decorator';
 import { BloqueConfiguracionBaseDto } from './bloque-configuracion-base.dto';
 
 /**
@@ -69,4 +81,44 @@ export class HeroConfiguracionDto extends BloqueConfiguracionBaseDto {
   @IsOptional()
   @IsIn(['normal', 'grande'])
   tamano_titulo: 'normal' | 'grande' = 'normal';
+
+  // Fase 7 (7.2, UC-07): todos opcionales con default; ninguna fila vieja los
+  // tiene.
+  @IsOptional()
+  @IsIn(['centrado', 'dividido', 'editorial'])
+  disposicion: 'centrado' | 'dividido' | 'editorial' = 'centrado';
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(6)
+  @IsString({ each: true })
+  @IsNotEmpty({ each: true })
+  @MinLength(1, { each: true })
+  @MaxLength(60, { each: true })
+  titulos_rotativos?: string[];
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  texto_boton_secundario?: string;
+
+  @IsOptional()
+  @EsEnlaceValido()
+  enlace_boton_secundario?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  mostrar_redes: boolean = false;
+
+  @IsOptional()
+  @IsBoolean()
+  mostrar_indicador_scroll: boolean = false;
+
+  @IsOptional()
+  @IsIn(['ninguno', 'degradado', 'resaltado'])
+  efecto_titulo: 'ninguno' | 'degradado' | 'resaltado' = 'ninguno';
+
+  @IsOptional()
+  @IsIn(['ninguna', 'manchas', 'cuadricula', 'puntos'])
+  decoracion_fondo: 'ninguna' | 'manchas' | 'cuadricula' | 'puntos' = 'ninguna';
 }

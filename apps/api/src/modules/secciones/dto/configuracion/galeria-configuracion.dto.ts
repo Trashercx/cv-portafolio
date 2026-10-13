@@ -51,4 +51,9 @@ export class GaleriaConfiguracionDto extends BloqueConfiguracionBaseDto {
   @IsOptional()
   @IsIn([2, 3, 4])
   columnas_grid: 2 | 3 | 4 = 3;
+
+  // Fase 7 (7.2, UC-18).
+  @IsOptional()
+  @IsIn(['ninguno', 'zoom', 'elevar'])
+  efecto_hover: 'ninguno' | 'zoom' | 'elevar' = 'zoom';
 }

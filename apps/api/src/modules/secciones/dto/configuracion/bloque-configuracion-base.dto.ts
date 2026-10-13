@@ -1,10 +1,11 @@
 import { IsBoolean, IsIn, IsOptional } from 'class-validator';
 
 /**
- * Campos de personalización compartidos por los 9 tipos de bloque del
+ * Campos de personalización compartidos por los 10 tipos de bloque del
  * editor visual (Fase 3.4, UC-07). Cada DTO de `configuracion` por
  * `tipo_seccion` (`hero-configuracion.dto.ts`, etc.) EXTIENDE esta clase
- * (herencia normal de TypeScript) en vez de repetir estos 5 campos, así
+ * (herencia normal de TypeScript) en vez de repetir estos campos (los 5 de Fase 3.4 más `animacion_entrada` y
+ * `separador_forma` de la Fase 7, 7.2), así
  * `whitelist`/`forbidNonWhitelisted` (`obtenerErroresConfiguracion`) los
  * sigue aceptando sin declararlos de nuevo en cada subclase.
  *
@@ -32,10 +33,32 @@ export class BloqueConfiguracionBaseDto {
   alineacion_texto: 'izquierda' | 'centro' = 'izquierda';
 
   @IsOptional()
-  @IsIn(['ninguno', 'sutil', 'tarjeta'])
-  fondo_bloque: 'ninguno' | 'sutil' | 'tarjeta' = 'ninguno';
+  @IsIn(['ninguno', 'sutil', 'tarjeta', 'degradado', 'vidrio'])
+  fondo_bloque: 'ninguno' | 'sutil' | 'tarjeta' | 'degradado' | 'vidrio' =
+    'ninguno';
 
   @IsOptional()
   @IsBoolean()
   separador_inferior: boolean = true;
+
+  /** Fase 7 (7.2, UC-07): animación de entrada al hacer scroll. */
+  @IsOptional()
+  @IsIn([
+    'ninguna',
+    'aparecer',
+    'deslizar_arriba',
+    'deslizar_lateral',
+    'escalar',
+  ])
+  animacion_entrada:
+    | 'ninguna'
+    | 'aparecer'
+    | 'deslizar_arriba'
+    | 'deslizar_lateral'
+    | 'escalar' = 'aparecer';
+
+  /** Fase 7 (7.2, UC-07): forma del separador inferior entre bloques. */
+  @IsOptional()
+  @IsIn(['ninguno', 'onda', 'diagonal', 'curva'])
+  separador_forma: 'ninguno' | 'onda' | 'diagonal' | 'curva' = 'ninguno';
 }
