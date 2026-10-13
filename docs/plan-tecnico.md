@@ -341,6 +341,34 @@ Disparada por QA manual del usuario sobre el PR anterior. Sin backend, sin migra
 
 Pruebas: `tema-css.test.ts` extendido (`color: 'var(--foreground)'`); `Footer.test.tsx` actualizado; suite completa verde en `apps/web` (233 tests).
 
+### Sexta ronda post-Fase 4.6 — fondos animados faltantes en el admin y variante "vidrio" en certificaciones
+
+Disparada por QA manual del usuario (PR #36). Sin backend, sin migraciones.
+
+- **Tipos de fondo animado faltantes en el admin (UC-15)**: el formulario de Fondo del sitio no ofrecía todos los tipos que `FondoAnimado.tsx` ya sabía renderizar; se completó la lista.
+- **Variante visual "vidrio" en las tarjetas de Certificaciones (UC-04)**: nueva opción de estilo para las tarjetas, con desenfoque de fondo también en el overlay de los diálogos.
+
+### Fase 5 — Panel unificado del editor (UC-07, UC-08, UC-15)
+
+Rama `fix/sexta-ronda-panel-unificado-editor`. Sin backend, sin migraciones.
+
+- **`/admin/editor` absorbe Tema y Fondo del sitio**: `TemaPage.tsx` y `FondoSitioPage.tsx` desaparecen como páginas; sus formularios/listas viven ahora como pestañas ("Bloque", "Tema", "Fondo") de un panel lateral derecho del editor (`features/editor/PanelLateralEditor.tsx` con `PanelBloqueSeleccionado`, `PanelTemaEditor`, `PanelFondoEditor`). Las rutas `/admin/tema` y `/admin/fondo` se conservan como redirects a `/admin/editor?panel=tema|fondo` para no romper marcadores; el query param `panel` abre esa pestaña al entrar.
+- **Composición manual de Puck**: `LienzoPuck.tsx` reemplaza el layout por defecto de `<Puck>` pasando `children` (barra de acciones propia, deshacer/rehacer vía `usePuck`, `ViewportSwitcher` propio, drawer de bloques + outline a la izquierda, panel lateral a la derecha). `usePuckEditor.ts` crea una sola vez `createUsePuck()` tipado contra `puckConfig`.
+- **Estado**: `store/editor-panel-store.ts` (Zustand) guarda solo la pestaña activa, estado de edición en curso; temas y fondos siguen en TanStack Query.
+- Sidebar y paleta de comandos ya no enlazan a las páginas eliminadas.
+
+Pruebas: cada componente nuevo de `features/editor/` tiene su test; `EditorSeccionesPage.test.tsx` y `AppSidebar.test.tsx` actualizados; suite completa verde (253 tests).
+
+### Séptima ronda — aviso de sesión con cuenta regresiva, modo oscuro del chrome de Puck y etiqueta del toggle público
+
+Disparada por QA manual del usuario sobre la Fase 5. Sin backend, sin migraciones.
+
+- **Aviso de expiración de sesión (UC-01)**: aparecía a 30 s sin contador y, al vencer el token, el diálogo quedaba abierto hasta que una petición devolviera 401. Ahora `useSesionExpirando` avisa a **60 s**, `AvisoSesionExpirando` muestra la cuenta regresiva `m:ss`, ofrece "Cancelar" (cierra sesión) y "Seguir conectado" (`POST /auth/refresh`), y al llegar a 0 cierra la sesión sola y navega a `/admin/login?sesion=expirada`. `useRefrescarSesion` ignora una respuesta que llegue después de ese cierre.
+- **Chrome de Puck en modo oscuro (UC-07)**: Puck no trae modo oscuro y define su paleta en variables `--puck-color-*` sobre `:root`, por lo que el drawer, el outline, los campos y el marco del preview seguían blancos con el panel en modo oscuro. `index.css` invierte esa escala bajo `html.dark` (más específico que `:root`, porque `puck.css` se inyecta después). `PuckRoot.tsx` pasa a `min-h-svh` para que el fondo del tema cubra todo el iframe.
+- **Etiqueta sobre el toggle día/noche del sitio público (UC-12)**: `ToggleModoTema.tsx` reemplaza el `title` nativo por una etiqueta propia encima del botón (hover/foco) que hereda `--color-fondo`/`--color-texto`; no se usa el `Tooltip` de shadcn porque portalea fuera del contenedor con la clase `dark` y las variables del tema.
+
+Pruebas: tests del hook y del aviso actualizados (contador y cierre automático); `ToggleModoTema.test.tsx` nuevo; suite completa verde (258 tests).
+
 ## 3. Índice UC → tareas → subagente → sprint
 
 `code-reviewer` y `release-manager` aplican a **toda** fila antes de cerrar la tarea o hacer commit — no se repiten en cada celda.
