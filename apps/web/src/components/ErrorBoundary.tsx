@@ -16,6 +16,20 @@ type ErrorBoundaryProps = {
 
 type ErrorBoundaryState = {
   error: Error | null
+  /** Cuántas veces se pulsó "Reintentar" y el error volvió a aparecer (post-Fase 6, UC-07). */
+  reintentos: number
+}
+
+/**
+ * Detecta fallos de carga de chunks diferidos (post-Fase 6, UC-07): despliegue
+ * que reemplazó los assets, red caída o CSS que Vite no pudo precargar.
+ */
+export function esErrorDeChunk(error: Error): boolean {
+  return (
+    error.name === 'ChunkLoadError' ||
+    error.message.startsWith('Unable to preload CSS') ||
+    error.message.startsWith('Failed to fetch dynamically imported module')
+  )
 }
 
 /**
@@ -36,9 +50,9 @@ export class ErrorBoundary extends Component<
   ErrorBoundaryProps,
   ErrorBoundaryState
 > {
-  state: ErrorBoundaryState = { error: null }
+  state: ErrorBoundaryState = { error: null, reintentos: 0 }
 
-  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+  static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
     return { error }
   }
 
@@ -48,13 +62,30 @@ export class ErrorBoundary extends Component<
   }
 
   reintentar = () => {
-    this.setState({ error: null })
+    this.setState((previo) => ({
+      error: null,
+      reintentos: previo.reintentos + 1,
+    }))
   }
 
   render() {
     if (this.state.error) {
       if (this.props.fallback) {
         return this.props.fallback(this.reintentar)
+      }
+      if (esErrorDeChunk(this.state.error)) {
+        return (
+          <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 p-6 text-center">
+            <div>
+              <h2 className="text-lg font-semibold">Algo salió mal</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                No se pudo cargar esta pantalla. Puede ser un despliegue en
+                curso o un problema de red.
+              </p>
+            </div>
+            <Button onClick={() => window.location.reload()}>Reintentar</Button>
+          </div>
+        )
       }
       return (
         <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 p-6 text-center">
@@ -64,7 +95,20 @@ export class ErrorBoundary extends Component<
               Ocurrió un error inesperado. Podés intentar recargar la página.
             </p>
           </div>
-          <Button onClick={() => window.location.reload()}>Recargar</Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={this.reintentar}>Reintentar</Button>
+            <Button
+              variant="outline"
+              onClick={() => window.location.reload()}
+            >
+              Recargar
+            </Button>
+          </div>
+          {this.state.reintentos > 0 && (
+            <a href="/" className="text-sm underline">
+              Volver al inicio
+            </a>
+          )}
         </div>
       )
     }

@@ -73,3 +73,46 @@ describe('ErrorBoundary', () => {
     consoleError.mockRestore()
   })
 })
+
+describe('ErrorBoundary: reintento y chunks (post-Fase 6, UC-07)', () => {
+  it('error de chunk: mensaje específico y Reintentar recarga la página', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const reload = vi.fn()
+    vi.stubGlobal('location', { ...window.location, reload })
+    const user = userEvent.setup()
+
+    function ExplotaChunk(): never {
+      throw new Error('Failed to fetch dynamically imported module: /a.js')
+    }
+    render(
+      <ErrorBoundary>
+        <ExplotaChunk />
+      </ErrorBoundary>,
+    )
+
+    expect(screen.getByText(/No se pudo cargar esta pantalla/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Reintentar' }))
+    expect(reload).toHaveBeenCalledTimes(1)
+
+    vi.unstubAllGlobals()
+    consoleError.mockRestore()
+  })
+
+  it('error genérico: Reintentar reinicia el boundary y, si persiste, aparece Volver al inicio', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const user = userEvent.setup()
+
+    render(
+      <ErrorBoundary>
+        <Explota />
+      </ErrorBoundary>,
+    )
+
+    expect(screen.queryByText('Volver al inicio')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Reintentar' }))
+    expect(screen.getByText('Algo salió mal')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Volver al inicio' })).toHaveAttribute('href', '/')
+
+    consoleError.mockRestore()
+  })
+})

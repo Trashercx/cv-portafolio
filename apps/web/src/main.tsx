@@ -5,6 +5,10 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App.tsx'
 import './index.css'
 import { queryClient } from './lib/query-client'
+import { registrarRecargaChunks } from './lib/recarga-chunks'
+
+// Recarga única ante chunks diferidos fallidos (post-Fase 6, UC-07).
+registrarRecargaChunks()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
