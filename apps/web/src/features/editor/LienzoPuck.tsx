@@ -90,8 +90,34 @@ function AccionesCabecera() {
   )
 }
 
+/**
+ * `overrides.fields` (Fase 7, UC-07): sin bloque seleccionado Puck mostraría
+ * los campos de la raíz de la página (un `title` que no se guarda en ningún
+ * lado, porque el sitio no tiene título de página editable). En su lugar se
+ * muestra la misma guía que tenía `PanelBloqueSeleccionado`. Con un bloque
+ * seleccionado se renderizan sus campos tal cual.
+ */
+function CamposBloque({
+  children,
+  itemSelector,
+}: {
+  children: ReactNode
+  itemSelector?: unknown
+}) {
+  if (!itemSelector) {
+    return (
+      <p className="p-4 text-sm text-muted-foreground">
+        Selecciona un bloque en el lienzo, o arrastra uno nuevo desde
+        &quot;Bloques&quot;.
+      </p>
+    )
+  }
+  return <>{children}</>
+}
+
 const OVERRIDES_EDITOR: Partial<Overrides<typeof puckConfig>> = {
   headerActions: AccionesCabecera,
+  fields: CamposBloque,
 }
 
 /**

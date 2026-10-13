@@ -8,7 +8,10 @@ import { PUCK_VIEWPORTS } from './puck-viewports'
 
 type PropsPuckCapturadas = {
   plugins?: Array<{ name?: string; label?: string; render?: () => ReactNode }>
-  overrides?: { headerActions?: ComponentType<{ children?: ReactNode }> }
+  overrides?: {
+    headerActions?: ComponentType<{ children?: ReactNode }>
+    fields?: ComponentType<{ children?: ReactNode; itemSelector?: unknown }>
+  }
   dictionary?: Record<string, string>
   headerTitle?: string
   height?: string
@@ -119,6 +122,30 @@ describe('LienzoPuck (layout nativo con rail de plugins)', () => {
     useEditorPanelStore.setState({ pluginActivo: 'fondo' })
     renderLienzo()
     expect(propsPuck.actual.ui?.plugin?.current).toBe('fondo')
+  })
+
+  it('sin bloque seleccionado el panel de campos muestra la guía en vez de los campos de la raíz; con bloque, sus campos', () => {
+    renderLienzo()
+    const Campos = propsPuck.actual.overrides?.fields as ComponentType<{
+      children?: ReactNode
+      itemSelector?: unknown
+    }>
+
+    const sin = render(
+      <Campos itemSelector={null}>
+        <div>Campos de la raíz</div>
+      </Campos>,
+    )
+    expect(screen.getByText(/selecciona un bloque en el lienzo/i)).toBeInTheDocument()
+    expect(screen.queryByText('Campos de la raíz')).not.toBeInTheDocument()
+    sin.unmount()
+
+    render(
+      <Campos itemSelector={{ index: 0, zone: 'root:default-zone' }}>
+        <div>Campos del bloque</div>
+      </Campos>,
+    )
+    expect(screen.getByText('Campos del bloque')).toBeInTheDocument()
   })
 
   it('onCambio se invoca solo con acciones de Puck que editan datos', () => {

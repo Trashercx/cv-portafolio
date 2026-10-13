@@ -4,6 +4,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { TemaFormDialog } from './TemaFormDialog'
 import type { Tema } from './types'
 
+// El diálogo re-renderiza dos vistas previas y el contraste en cada pulsación:
+// con la máquina cargada (suite completa en paralelo) 5 s se quedan cortos.
+vi.setConfig({ testTimeout: 20000 })
+
 const crearMutateMock = vi.fn()
 const actualizarMutateMock = vi.fn()
 const idActualizadoMock = vi.fn()
@@ -66,7 +70,7 @@ describe('TemaFormDialog (creación)', () => {
   })
 
   it('no llama a la mutación cuando falta el nombre', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<TemaFormDialog />)
 
     await user.click(screen.getByRole('button', { name: /nuevo tema/i }))
@@ -79,7 +83,7 @@ describe('TemaFormDialog (creación)', () => {
   })
 
   it('llama a la mutación con el payload correcto (colores por defecto + modo elegido)', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<TemaFormDialog />)
 
     await user.click(screen.getByRole('button', { name: /nuevo tema/i }))
@@ -107,7 +111,7 @@ describe('TemaFormDialog (creación)', () => {
   })
 
   it('precarga el formulario al elegir una plantilla predefinida (editable antes de guardar)', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<TemaFormDialog />)
 
     await user.click(screen.getByRole('button', { name: /nuevo tema/i }))
@@ -137,7 +141,7 @@ describe('TemaFormDialog (creación)', () => {
   })
 
   it('el selector ofrece las 10 fuentes del catálogo (no las legadas), pide su descarga al abrirse y permite elegir una', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<TemaFormDialog />)
 
     await user.click(screen.getByRole('button', { name: /nuevo tema/i }))
@@ -179,7 +183,7 @@ describe('TemaFormDialog (creación)', () => {
   })
 
   it('el campo hex acompaña al selector de color: editarlo cambia el valor enviado y acepta escribir sin #', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<TemaFormDialog />)
 
     await user.click(screen.getByRole('button', { name: /nuevo tema/i }))
@@ -204,7 +208,7 @@ describe('TemaFormDialog (creación)', () => {
   })
 
   it('un hex incompleto no se envía: muestra "Color inválido"', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<TemaFormDialog />)
 
     await user.click(screen.getByRole('button', { name: /nuevo tema/i }))
@@ -219,7 +223,7 @@ describe('TemaFormDialog (creación)', () => {
   })
 
   it('muestra la vista previa en vivo en claro y oscuro, que reacciona al color editado', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<TemaFormDialog />)
 
     await user.click(screen.getByRole('button', { name: /nuevo tema/i }))
@@ -240,7 +244,7 @@ describe('TemaFormDialog (creación)', () => {
   })
 
   it('muestra el contraste con insignia AAA y NO avisa cuando la paleta es buena', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<TemaFormDialog />)
 
     await user.click(screen.getByRole('button', { name: /nuevo tema/i }))
@@ -251,7 +255,7 @@ describe('TemaFormDialog (creación)', () => {
   })
 
   it('con contraste menor a 4.5:1 muestra un aviso visible pero NO bloquea el guardado', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<TemaFormDialog />)
 
     await user.click(screen.getByRole('button', { name: /nuevo tema/i }))
@@ -274,7 +278,7 @@ describe('TemaFormDialog (creación)', () => {
   })
 
   it('pide confirmación al intentar cerrar (Esc) con cambios sin guardar, en vez de cerrar de inmediato', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<TemaFormDialog />)
 
     await user.click(screen.getByRole('button', { name: /nuevo tema/i }))
@@ -293,7 +297,7 @@ describe('TemaFormDialog (creación)', () => {
   })
 
   it('"Cancelar" en la confirmación mantiene el modal abierto con los cambios', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<TemaFormDialog />)
 
     await user.click(screen.getByRole('button', { name: /nuevo tema/i }))
@@ -314,7 +318,7 @@ describe('TemaFormDialog (creación)', () => {
   })
 
   it('"Descartar" en la confirmación cierra el modal y resetea el formulario a los valores por defecto al reabrir', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<TemaFormDialog />)
 
     await user.click(screen.getByRole('button', { name: /nuevo tema/i }))
@@ -348,7 +352,7 @@ describe('TemaFormDialog (edición, Fase 7)', () => {
   })
 
   it('con `tema` el disparador es "Editar" y el formulario se abre precargado con sus valores', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<TemaFormDialog tema={TEMA_EXISTENTE} />)
 
     expect(
@@ -370,7 +374,7 @@ describe('TemaFormDialog (edición, Fase 7)', () => {
   })
 
   it('guarda con la mutación de actualización del tema correcto (PATCH) y NO con la de creación', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<TemaFormDialog tema={TEMA_EXISTENTE} />)
 
     await user.click(screen.getByRole('button', { name: /^editar$/i }))
@@ -397,7 +401,7 @@ describe('TemaFormDialog (edición, Fase 7)', () => {
   })
 
   it('un tema con fuente legada (Poppins) se abre con su equivalente del catálogo (DM Sans)', async () => {
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(
       <TemaFormDialog tema={{ ...TEMA_EXISTENTE, fuente_principal: 'Poppins' }} />,
     )
@@ -411,7 +415,7 @@ describe('TemaFormDialog (edición, Fase 7)', () => {
 
   it('muestra el error del servidor al fallar la actualización', async () => {
     actualizarState.error = new Error('boom')
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
     render(<TemaFormDialog tema={TEMA_EXISTENTE} />)
 
     await user.click(screen.getByRole('button', { name: /^editar$/i }))
