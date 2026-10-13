@@ -22,7 +22,7 @@ import { EnvoltorioSeccion } from './EnvoltorioSeccion'
 describe('EnvoltorioSeccion (Fase 3.4)', () => {
   it('sin ninguna prop de configuración usa el default genérico (aspecto que ya tenían proyectos/certificaciones/skills)', () => {
     render(
-      <EnvoltorioSeccion visible id="seccion-1">
+      <EnvoltorioSeccion visible id="1">
         <p>Contenido</p>
       </EnvoltorioSeccion>,
     )
@@ -39,7 +39,7 @@ describe('EnvoltorioSeccion (Fase 3.4)', () => {
     render(
       <EnvoltorioSeccion
         visible
-        id="seccion-2"
+        id="2"
         espaciado_vertical="amplio"
         ancho_contenido="completo"
         fondo_bloque="tarjeta"
@@ -57,7 +57,7 @@ describe('EnvoltorioSeccion (Fase 3.4)', () => {
 
   it('separador_inferior=false quita el borde inferior', () => {
     render(
-      <EnvoltorioSeccion visible id="seccion-3" separador_inferior={false}>
+      <EnvoltorioSeccion visible id="3" separador_inferior={false}>
         <p>Contenido</p>
       </EnvoltorioSeccion>,
     )
@@ -68,7 +68,7 @@ describe('EnvoltorioSeccion (Fase 3.4)', () => {
 
   it('una sección oculta (visible=false) sigue mostrando el aviso "Oculta" y queda atenuada', () => {
     render(
-      <EnvoltorioSeccion visible={false} id="seccion-4">
+      <EnvoltorioSeccion visible={false} id="4">
         <p>Contenido</p>
       </EnvoltorioSeccion>,
     )

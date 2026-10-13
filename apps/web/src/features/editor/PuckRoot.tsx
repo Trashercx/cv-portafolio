@@ -2,6 +2,7 @@ import { useEffect, useRef, type MouseEvent, type ReactNode } from 'react'
 import type { PuckContext } from '@puckeditor/core'
 import { FondoAnimado } from '@/components/publico/FondoAnimado'
 import { ProveedorModoRenderizado } from '@/components/publico/contexto-renderizado'
+import { ProveedorMotion } from '@/components/publico/ProveedorMotion'
 import { useTheme } from '@/components/theme/ThemeProvider'
 import { temaComoVariablesCss } from '@/lib/tema-css'
 import type { ModoTema } from '@/lib/tema-oscuro'
@@ -133,7 +134,8 @@ export function PuckRoot({ children, puck }: PuckRootProps) {
       {datos.fondo ? <FondoAnimado fondo={datos.fondo} /> : null}
       <div className="relative z-10">
         <ProveedorModoRenderizado modo="editor">
-          {children}
+          {/* Fase 7 (7.3): `motion` para el hover `inclinar`; las animaciones de entrada están apagadas en modo editor. */}
+          <ProveedorMotion>{children}</ProveedorMotion>
         </ProveedorModoRenderizado>
       </div>
     </div>
