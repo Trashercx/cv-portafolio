@@ -61,7 +61,7 @@ export function PuckRoot({ children, puck }: PuckRootProps) {
     <div
       ref={wrapperRef}
       style={datos.tema ? temaComoVariablesCss(datos.tema, modo) : undefined}
-      className={cn('relative min-h-full', modo === 'oscuro' && 'dark')}
+      className={cn('relative min-h-svh', modo === 'oscuro' && 'dark')}
       onClickCapture={handleClickCapture}
     >
       {datos.fondo ? <FondoAnimado fondo={datos.fondo} /> : null}
