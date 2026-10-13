@@ -371,7 +371,7 @@ Pruebas: tests del hook y del aviso actualizados (contador y cierre automático)
 
 ### Fase 6 — Fundamentos de producción (transversal; refuerza UC-01, UC-12, UC-13)
 
-Primera fase del roadmap de profesionalización (`docs/plan-portafolio.md` §7). No agrega entidades ni casos de uso: convierte el proyecto en una aplicación operable en producción y deja la base (health checks, logs, CI con e2e, CSP) sobre la que se construyen las fases 7–10. Tres agentes en worktrees paralelos (API, web, infraestructura/repo); criticidad **crítica** por tocar auth y varios módulos a la vez.
+Primera fase del roadmap de profesionalización (`docs/plan-portafolio.md` §7). No agrega entidades ni casos de uso: convierte el proyecto en una aplicación operable en producción y deja la base (health checks, logs, CI con e2e, CSP) sobre la que se construyen las fases 7–11. Tres agentes en worktrees paralelos (API, web, infraestructura/repo); criticidad **crítica** por tocar auth y varios módulos a la vez.
 
 **API (`backend-nestjs`)**
 - `helmet` con `crossOriginResourcePolicy: cross-origin` (el fallback local `/uploads` se sirve desde otro origen que el frontend); `compression`.
@@ -386,7 +386,7 @@ Primera fase del roadmap de profesionalización (`docs/plan-portafolio.md` §7).
 - Code splitting con `React.lazy` + `Suspense` para el panel admin (el editor arrastra Puck) y las páginas públicas de detalle; la home pública y el login siguen eager por LCP.
 - Página 404 pública con el tema del sitio (antes `path="*"` redirigía a `/`).
 - Accesibilidad: skip link "Saltar al contenido" → `<main id="contenido">` en el sitio público; foco al `<main>` al cambiar de ruta.
-- SEO por página con los `<title>`/`<meta>`/`<link>` nativos de React 19 (`MetadatosPagina`): descripción, canónica, Open Graph y Twitter card en home y detalles; JSON-LD `Person` con `sameAs` de las redes en la home. `index.html` con descripción y `theme-color` por modo; `public/robots.txt` bloquea `/admin`. Limitación conocida y aceptada: los bots que no ejecutan JS no ven estos metadatos hasta la Fase 7 (inyección en servidor, UC-34).
+- SEO por página con los `<title>`/`<meta>`/`<link>` nativos de React 19 (`MetadatosPagina`): descripción, canónica, Open Graph y Twitter card en home y detalles; JSON-LD `Person` con `sameAs` de las redes en la home. `index.html` con descripción y `theme-color` por modo; `public/robots.txt` bloquea `/admin`. Limitación conocida y aceptada: los bots que no ejecutan JS no ven estos metadatos hasta la Fase 8 (inyección en servidor, UC-34).
 - Imágenes: `loading="lazy"` + `decoding="async"` fuera del primer pliegue; `fetchPriority="high"` en la imagen del hero.
 - Cierre de sesión real (`useCerrarSesion`): `POST /auth/logout` y, pase lo que pase con la red, limpia el store, vacía la caché de TanStack Query y navega al login. Lo usan el botón "Cerrar sesión", "Cancelar" del aviso de expiración y el cierre automático al llegar a 0.
 
@@ -397,28 +397,71 @@ Primera fase del roadmap de profesionalización (`docs/plan-portafolio.md` §7).
 
 Pruebas: unit + e2e nuevos (health, logout, 429 del login, Cache-Control), tests de 404, skip link, metadatos y JSON-LD, `useCerrarSesion`; suites completas verdes en ambas apps y CI del PR en verde.
 
-### Roadmap propuesto — Fases 7 a 10 (pendientes de aprobación)
+### Fase 7 — Frontend espectacular y editor usable (UC-07 ext., UC-08 ext., UC-12 ext.)
+
+Priorizada por el usuario el 2026-10-13 por delante del resto del roadmap ("la siguiente fase se basa en el frontend: responsive, scrollbars en el editor visual, usabilidad, más opciones para que la página principal sea sumamente atractiva, mejor elección de temas con un toggle que solo cambie la previsualización de Puck, y aprovechar Puck al máximo"). Sin migraciones: todo cambio de datos vive en `SECCION.configuracion` (JSONB) y en el catálogo cerrado de `Tema.fuente_principal`. Tres entregas: 7.1 editor, 7.2 contrato de bloques en el API, 7.3 bloques y sitio público. Este apartado es el **contrato** entre API y web: los nombres y valores de abajo son exactos.
+
+**7.1 Editor (`frontend-react`)**
+
+- Migración `@measured/puck` 0.20 → `@puckeditor/core` 0.23 (sin cambios rompientes declarados; renombre de paquete e imports; CSS ahora bajo demanda, el `import` de `puck.css` es opcional). El chrome oscuro de Puck deja de invertir `--puck-color-grey-*` en `index.css` y pasa a los **tokens de tema** de 0.22 (`--puck-color-interactive`, superficies, bordes…) bajo `html.dark`.
+- Layout nativo de Puck con **plugin rail** (0.21): plugins core `blocks` (Bloques), `outline` (Esquema) y `fields` (Campos) más dos plugins propios, `tema` y `fondo`, que montan `PanelTemaEditor` y `PanelFondoEditor`. Se elimina el layout manual de columnas fijas (`w-64`/`w-80`) de `LienzoPuck`; en móvil el rail va abajo (comportamiento nativo). Las acciones del toolbar (estado borrador/publicado, vista previa, historial, publicar, guardar) pasan a `overrides.headerActions`; el selector de viewport es el nativo de Puck (viewports 360/768/1280 + ancho completo). El outline arrastrable y la línea de inserción de 0.23 quedan activos. `?panel=tema|fondo` abre el plugin correspondiente.
+- **Diccionario** (0.23): toda la UI de Puck en español (`dictionary`).
+- **Alto y scroll**: el editor ocupa `100dvh` menos el header del admin y el banner de borrador (ya no desborda); cada panel (rail, plugin, campos, lienzo) hace scroll por separado con una scrollbar fina y temada (`scrollbar-width: thin` + `scrollbar-color` con tokens shadcn, utilidad `.scrollbar-fina` en `index.css`, aplicada también a los paneles de Puck y al iframe del lienzo).
+- **Modo de la vista previa**: `editor-panel-store` guarda `modoVistaPrevia: 'claro' | 'oscuro' | null` (persistido en `localStorage` `editor-modo-vista-previa`; `null` = seguir el modo del panel). Un `Switch` "Vista previa en oscuro" en el header del editor cambia **solo** el lienzo (`PuckRoot`) y `DialogVistaPrevia`; el chrome del admin sigue su `ThemeProvider`. Botón "Seguir al panel" para volver a `null`.
+- **Cambios sin guardar**: punto indicador en "Guardar cambios", `beforeunload` y confirmación (`useConfirmarDescarte`) al navegar fuera del editor con cambios; atajo `Ctrl/Cmd+S` = guardar.
+- **Elección de tema (UC-08)**: `TemaFormDialog` permite **editar** un tema existente (no solo crear); color pickers con campo hex visible; **vista previa en vivo** dentro del diálogo (mini hero + tarjeta + botón + texto) en claro y oscuro a la vez; **indicador de contraste** WCAG (ratio texto/fondo y primario/fondo, AA ≥ 4.5 texto normal, aviso si no cumple); 12 plantillas predefinidas (las 6 actuales + "Grafito", "Lavanda", "Menta", "Ámbar", "Carbón", "Cielo"); catálogo de fuentes ampliado (ver 7.2) con muestra tipográfica en el selector. Las fuentes variables se cargan bajo demanda (`import()` del paquete `@fontsource-variable/*` según `fuente_principal`, en panel y sitio público) para no inflar el bundle.
+- Admin responsive: listas (`ProyectosListPage`, etc.) y formularios usables a 360 px (tablas con scroll horizontal o tarjetas), header del admin compacto; el editor usable desde tablet.
+
+**7.2 Contrato de bloques (`backend-nestjs`, DTOs en `modules/secciones/dto/configuracion/` + `tema/dto`)**
+
+Campos **nuevos** (todos opcionales en el DTO con default, para que las configuraciones ya guardadas sigan validando):
+
+- Base (`bloque-configuracion-base.dto.ts`, todos los bloques): `animacion_entrada: 'ninguna' | 'aparecer' | 'deslizar_arriba' | 'deslizar_lateral' | 'escalar'` (default `'aparecer'`); `separador_forma: 'ninguno' | 'onda' | 'diagonal' | 'curva'` (default `'ninguno'`); `fondo_bloque` amplía su enum con `'degradado'` y `'vidrio'`.
+- `hero`: `disposicion: 'centrado' | 'dividido' | 'editorial'` (default `'centrado'`); `titulos_rotativos?: string[]` (0–6 ítems, cada uno 1–60 caracteres); `texto_boton_secundario?: string` (≤ 40) y `enlace_boton_secundario?: string` (URL o ruta); `mostrar_redes: boolean` (default `false`); `mostrar_indicador_scroll: boolean` (default `false`); `efecto_titulo: 'ninguno' | 'degradado' | 'resaltado'` (default `'ninguno'`); `decoracion_fondo: 'ninguna' | 'manchas' | 'cuadricula' | 'puntos'` (default `'ninguna'`).
+- `sobre-mi`: `estadisticas?: { etiqueta: string (1–30); valor: string (1–12) }[]` (0–4 ítems); `estilo_foto: 'simple' | 'marco_degradado' | 'flotante'` (default `'simple'`).
+- `proyectos`: `disposicion: 'tarjetas' | 'bento' | 'lista'` (default `'tarjetas'`); `estilo_tarjeta` amplía con `'vidrio'`; `efecto_hover: 'ninguno' | 'elevar' | 'inclinar'` (default `'elevar'`); `mostrar_tecnologias: boolean` (default `true`).
+- `certificaciones` y `logros`: `efecto_hover: 'ninguno' | 'elevar' | 'inclinar'` (default `'elevar'`).
+- `skills`: `disposicion: 'marquesina' | 'cuadricula' | 'nube'` (default `'marquesina'`); `estilo_chip: 'simple' | 'vidrio' | 'contorno'` (default `'simple'`).
+- `contacto`: `estilo: 'simple' | 'tarjeta_destacada'` (default `'simple'`); `texto_llamada?: string` (≤ 120).
+- `galeria`: `efecto_hover: 'ninguno' | 'zoom' | 'elevar'` (default `'zoom'`).
+- **Nuevo tipo `navegacion`** (barra de navegación del sitio; entra en `TIPOS_SECCION` y `CONFIGURACION_DTO_POR_TIPO`; **no** se admite dentro de `columnas`, igual que `hero`): `estilo: 'flotante' | 'barra'` (default `'flotante'`); `fijo: boolean` (default `true`); `mostrar_nombre: boolean` (default `true`); `mostrar_cv: boolean` (default `true`); `mostrar_toggle_modo: boolean` (default `true`); `mostrar_progreso_scroll: boolean` (default `false`). Los enlaces no se configuran: se generan con las secciones visibles con título (excepto `hero` y `navegacion`), ancla `#seccion-{id}`.
+- `Tema.fuente_principal` (`create-tema.dto.ts`): el catálogo cerrado pasa a `manrope | inter | space_grotesk | sora | dm_sans | playfair_display | jetbrains_mono | sans_sistema | serif_sistema | mono_sistema` (más los 4 legados que ya se aceptan).
+- Specs de DTO para cada enum nuevo, para `navegacion` (incluido el rechazo dentro de `columnas`) y para el catálogo de fuentes; `snapshot.types.ts` no cambia de forma (la configuración es passthrough).
+
+**7.3 Bloques y sitio público (`frontend-react`, tras 7.1 y 7.2)**
+
+- `motion` (`motion/react`, con `LazyMotion` + `domAnimation` para mantener el bundle pequeño) para `animacion_entrada` (reveal al entrar en viewport, una sola vez, escalonado en listas), contadores de `estadisticas`, títulos rotativos del hero e interacciones hover (`elevar`, `inclinar` 3D sutil). Siempre respeta `prefers-reduced-motion` (sin movimiento, solo opacidad) y nunca anima dentro del lienzo de Puck mientras se arrastra (`modoRenderizado === 'editor'` → animaciones de entrada desactivadas, hover sí).
+- Bloques: implementar cada campo de 7.2 en su componente de `components/publico/bloques/`, en `features/secciones/types.ts`, en `lib/puck-config.tsx` (campos agrupados con etiquetas en español y `resolveFields` para ocultar lo que no aplica, p. ej. `columnas_grid` o `texto_llamada`) y en `DespachoBloqueSeccion`/`RenderizadorSecciones`. Las clases Tailwind de cada variante en tablas literales compartidas (regla de Fase 3.x).
+- `BloqueNavegacion`: flotante (píldora centrada arriba, vidrio) o barra; en el sitio público `position: fixed` con scroll suave a las anclas y resaltado de la sección activa (`IntersectionObserver`); en el lienzo del editor se renderiza `sticky` dentro del iframe para poder seleccionarla. Si está presente y `mostrar_toggle_modo`, `ToggleModoTema` fijo de la esquina se oculta. `mostrar_progreso_scroll` pinta una barra de progreso de lectura con `--color-primario`.
+- `EnvoltorioSeccion`: `id="seccion-{id}"` y `scroll-margin-top`, `separador_forma` como SVG al pie, fondos `degradado`/`vidrio`.
+- `FondoAnimado` respeta `prefers-reduced-motion` (se congela en el primer frame).
+- Sitio público responsive revisado en 360/768/1280 con los viewports del editor; sin scroll horizontal.
+- Tests: por cada variante nueva un test de render (tabla de clases), tests de `BloqueNavegacion` (enlaces generados, activo, toggle), tests del store del modo de vista previa, de `TemaFormDialog` (edición, contraste), y actualización de los tests del editor que cambien por el rail.
+
+Pruebas y cierre: suites verdes en ambas apps, `code-reviewer` y `release-manager`; PR a `main` con aprobación del usuario (criticidad crítica: multi-módulo).
+
+### Roadmap propuesto — Fases 8 a 11 (pendientes de aprobación)
 
 Detalle y justificación en `docs/plan-portafolio.md` §7; aquí solo el desglose técnico orientativo por fase y subagente.
 
-**Fase 7 — Visibilidad (UC-27, UC-34)**
+**Fase 8 — Visibilidad (UC-27, UC-34)**
 - `backend-nestjs`: módulo `seo` que sirve el `index.html` del build con `<title>`, `<meta>`, Open Graph y JSON-LD inyectados por ruta pública desde el snapshot publicado (sin SSR); `GET /sitemap.xml` y `GET /robots.txt` generados; nginx enruta las rutas públicas "documento" al API y el resto de assets directo.
 - `db-schema` + `backend-nestjs`: `MEDIA_VARIANTE`; al subir una imagen, sharp genera variantes WebP/AVIF en anchos fijos (640/1024/1600) y el snapshot las expone; `frontend-react`: `<picture>`/`srcset` en todos los bloques.
 - CI: Lighthouse CI (`treosh/lighthouse-ci-action`) contra un build estático con presupuestos (rendimiento ≥ 90 móvil, a11y ≥ 95).
 - Umami autoalojado en `docker-compose.prod.yml` (sin cookies, sin banner); script en el sitio público solo si `VITE_UMAMI_URL` existe; eventos `descargar_cv` y `clic_red`; en el API un proxy `GET /admin/metricas` a la API de Umami con token de servidor; tarjetas en el dashboard del panel.
 
-**Fase 8 — Contenido que vende (UC-19, UC-20, UC-23, UC-24, UC-32)**
+**Fase 9 — Contenido que vende (UC-19, UC-20, UC-23, UC-24, UC-32)**
 - Migrar `@measured/puck` 0.20 → `@puckeditor/core` 0.21 (sin breaking changes declarados; opt-out del plugin rail con `legacySideBarPlugin` si se prefiere mantener el panel unificado actual) y usar el campo `richtext` (Tiptap) para casos de estudio: materializa la decisión "Tiptap" del plan.
 - `db-schema`: `EXPERIENCIA_LABORAL`, `EXPERIENCIA_TECNOLOGIA`, `FORMACION`, `CASO_ESTUDIO`, `CASO_ESTUDIO_METRICA`, `TESTIMONIO`, `AHORA_ITEM`, columnas de disponibilidad en `PERFIL`.
 - `backend-nestjs`: módulos CRUD + validación del JSON de ProseMirror (lista blanca de nodos/marcas, sin HTML crudo) + inclusión en el snapshot.
 - `frontend-react`: bloques `trayectoria`, `testimonios`, `ahora`, distintivo de disponibilidad en `hero`; página `/proyecto/:slug` del caso de estudio con tabla de contenidos; pantallas CRUD en el panel.
 
-**Fase 9 — Conversación (UC-21, UC-22, UC-29, UC-30, UC-31)**
+**Fase 10 — Conversación (UC-21, UC-22, UC-29, UC-30, UC-31)**
 - `db-schema`: `MENSAJE_CONTACTO`, `NOTA`, `ETIQUETA`, `NOTA_ETIQUETA`, `PERFIL.cv_generado_media_id`.
 - `backend-nestjs`: `POST /contacto` público con honeypot, tiempo mínimo de llenado, verificación de Turnstile (`TURNSTILE_SECRET`, opcional), `@Throttle` estricto, envío de email por Resend o SMTP (`MAIL_*`, opcional); `admin/mensajes`; `admin/notas` + `GET /notas`, `/notas/:slug`, `/notas.xml` (RSS); generación del CV con `@react-pdf/renderer` al publicar, guardado como `MEDIA` en S3; export JSON Resume en `GET /cv.json`.
 - `frontend-react`: bloque `contacto` con formulario real (reemplaza el aviso actual de `mostrar_formulario`), bandeja de mensajes, editor de notas con `richtext`, páginas `/notas`, selector de plantilla del CV.
 
-**Fase 10 — Panel de nivel producto (UC-25, UC-26, UC-28, UC-33)**
+**Fase 11 — Panel de nivel producto (UC-25, UC-26, UC-28, UC-33)**
 - `db-schema`: `CREDENCIAL_PASSKEY`, `EVENTO_AUDITORIA`, `TRADUCCION`, `VERSION_SITIO.programada_para`, `USUARIO_ADMIN.sesiones_invalidadas_desde`.
 - `backend-nestjs`: diff de snapshots por entidad (`GET /admin/versiones/:a/diff/:b`), `@nestjs/schedule` para publicar versiones programadas, passkeys con `@simplewebauthn/server` (rpID = dominio de producción, fijo desde el inicio), cambio de contraseña, invalidación global de sesiones (claim `iat` < `sesiones_invalidadas_desde`), auditoría vía interceptor; i18n: `Accept-Language`/`?lang=` y snapshot bilingüe.
 - `frontend-react`: vista de diff, programación en el panel de publicación, pantalla "Seguridad de la cuenta", editor de traducciones con indicador de faltantes, selector de idioma público.
@@ -449,10 +492,11 @@ Detalle y justificación en `docs/plan-portafolio.md` §7; aquí solo el desglos
 | UC-17 | DTO `columnas` con bloques anidados (`@EsListaDeBloques`), Slots API de Puck, resolver de media recursivo | backend-nestjs → frontend-react | Fase 3.3 |
 | UC-18 | DTO `galeria`, bloque con carousel/grid y lightbox | backend-nestjs → frontend-react | Fase 4.5 |
 | Fase 6 | helmet, throttler, terminus, pino, logout, Cache-Control; lazy routes, 404, skip link, metadatos SEO/JSON-LD; Docker sin root + healthchecks, CSP en nginx, CI con e2e, CodeQL, Dependabot | backend-nestjs ∥ frontend-react ∥ general-purpose (worktrees) | 6 |
-| UC-27, UC-34 | Inyección de metadatos en servidor, sitemap, `MEDIA_VARIANTE` + srcset, Lighthouse CI, Umami + panel de métricas | db-schema → backend-nestjs → frontend-react | 7 (propuesta) |
-| UC-19, UC-20, UC-23, UC-24, UC-32 | Puck 0.21 + `richtext`, experiencia/formación, casos de estudio, testimonios, disponibilidad/ahora | db-schema → backend-nestjs → frontend-react | 8 (propuesta) |
-| UC-21, UC-22, UC-29, UC-30, UC-31 | Contacto con Turnstile/honeypot/email, notas técnicas + RSS, CV PDF generado + JSON Resume | db-schema → backend-nestjs → frontend-react | 9 (propuesta) |
-| UC-25, UC-26, UC-28, UC-33 | Diff y programación de versiones, passkeys/auditoría/sesiones, i18n ES/EN, GlitchTip, Playwright | db-schema → backend-nestjs → frontend-react | 10 (propuesta) |
+| UC-07, UC-08, UC-12 (ext.) | Migración a `@puckeditor/core` 0.23 (rail, diccionario, tokens), scrollbars y `100dvh`, toggle de modo de vista previa, edición de temas con contraste y fuentes bajo demanda; DTOs de la Fase 7 (animación, separadores, hero, estadísticas, variantes, `navegacion`, fuentes); bloques con `motion`, `BloqueNavegacion`, responsive | frontend-react ∥ backend-nestjs → frontend-react | 7 |
+| UC-27, UC-34 | Inyección de metadatos en servidor, sitemap, `MEDIA_VARIANTE` + srcset, Lighthouse CI, Umami + panel de métricas | db-schema → backend-nestjs → frontend-react | 8 (propuesta) |
+| UC-19, UC-20, UC-23, UC-24, UC-32 | Puck 0.21 + `richtext`, experiencia/formación, casos de estudio, testimonios, disponibilidad/ahora | db-schema → backend-nestjs → frontend-react | 9 (propuesta) |
+| UC-21, UC-22, UC-29, UC-30, UC-31 | Contacto con Turnstile/honeypot/email, notas técnicas + RSS, CV PDF generado + JSON Resume | db-schema → backend-nestjs → frontend-react | 10 (propuesta) |
+| UC-25, UC-26, UC-28, UC-33 | Diff y programación de versiones, passkeys/auditoría/sesiones, i18n ES/EN, GlitchTip, Playwright | db-schema → backend-nestjs → frontend-react | 11 (propuesta) |
 
 ## 4. Reglas consolidadas (checklist de referencia rápida)
 

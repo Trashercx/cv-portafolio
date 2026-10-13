@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 Disallow: /admin
 
-# Sitemap: se añade en Fase 7
+# Sitemap: se añade en Fase 8

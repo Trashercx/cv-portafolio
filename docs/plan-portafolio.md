@@ -123,6 +123,17 @@ Dos actores: el **Administrador** (tú, usuario único autenticado) y el **Visit
 | UC-13 | Ver detalle de un proyecto, certificación o logro | identificador del elemento | Cada proyecto/certificación/logro es accesible individualmente con toda su información e imágenes, desde un modal al hacer click en la home o desde un link directo compartible (`/proyecto/:id`, `/certificacion/:id`, `/logro/:id`). |
 | UC-14 | Acceder a redes y descargar el CV | enlaces de redes, archivo de CV | Los enlaces y la descarga del CV funcionan sin requerir autenticación. |
 
+### Extensiones de UC-07, UC-08 y UC-12 — Fase 7, frontend espectacular y editor usable (2026-10-13)
+
+Aprobada por el usuario como siguiente fase, por delante del resto del roadmap (§7). No agrega entidades: amplía `SECCION.configuracion` (JSONB), el catálogo de `TEMA.fuente_principal` y la experiencia del editor. Contrato exacto de campos en `docs/plan-tecnico.md`, Fase 7.
+
+| UC | Extensión | Criterio de aceptación |
+|---|---|---|
+| UC-07 | Editor sobre Puck 0.23 con rail de plugins (Bloques, Esquema, Campos, Tema, Fondo), interfaz en español, outline arrastrable, scrollbars finas por panel, alto sin desborde, aviso de cambios sin guardar y `Ctrl+S`; usable en tablet y con el rail abajo en móvil | A 768 px el editor permite seleccionar, editar y guardar un bloque sin scroll horizontal; cada panel hace scroll por separado; cerrar la pestaña con cambios pendientes pide confirmación. |
+| UC-07 | Nuevo bloque `navegacion` (barra flotante o fija) con enlaces generados desde las secciones visibles con título, enlace al CV, toggle de modo y barra de progreso opcional | En el sitio publicado la barra lleva a cada sección con scroll suave y resalta la activa; en el lienzo del editor se puede seleccionar y configurar; no puede anidarse en columnas. |
+| UC-08 | Toggle "Vista previa en oscuro" que cambia solo el lienzo de Puck y la vista previa, sin tocar el modo del panel; edición de temas existentes; vista previa en vivo claro/oscuro dentro del formulario; indicador de contraste WCAG; 12 plantillas; catálogo de 7 fuentes variables cargadas bajo demanda | Con el panel en modo claro, activar el toggle muestra el lienzo en oscuro con la paleta derivada y el panel sigue claro (y viceversa); un tema con contraste texto/fondo < 4.5:1 muestra aviso antes de guardar; cambiar la fuente se ve en el lienzo sin recargar. |
+| UC-12 | Opciones visuales nuevas en los bloques: animación de entrada y separadores por bloque, fondos degradado/vidrio; hero con disposición (centrado/dividido/editorial), títulos rotativos, segundo botón, redes, indicador de scroll, efecto de título y decoración de fondo; estadísticas con contador en "Sobre mí"; proyectos en tarjetas/bento/lista con hover elevar/inclinar; skills en marquesina/cuadrícula/nube; contacto destacado; galería con zoom | Cada opción se ve igual en el lienzo, en la vista previa y en el sitio publicado; las animaciones se desactivan con `prefers-reduced-motion`; el sitio no tiene scroll horizontal a 360 px. |
+
 ### Casos de uso propuestos — roadmap de profesionalización (2026-10-13, pendientes de aprobación)
 
 Los UC-19 a UC-34 nacen de la propuesta de la Sección 7 (roadmap). Se listan aquí para que el índice de casos de uso siga siendo la única fuente de verdad, pero **ninguno está aprobado ni implementado**: cada fase del roadmap se aprueba por separado y recién entonces se agregan sus entidades al diagrama ER (vía `db-schema`) y se codifica. La Fase 6 (fundamentos de producción) no agrega casos de uso: refuerza UC-01 (cierre de sesión real, límite de intentos por IP) y UC-12/13 (metadatos SEO, accesibilidad, rendimiento).
@@ -403,21 +414,22 @@ Los "siguientes pasos" originales de esta sección (repositorio, Husky, catálog
 | Fase | Nombre | Objetivo | UC | Criticidad |
 |---|---|---|---|---|
 | 6 | Fundamentos de producción | Seguridad HTTP, rate limiting, health checks, logs, logout real, SEO/a11y/rendimiento básicos, Docker endurecido, CI con e2e + CodeQL + Dependabot, higiene del repo | refuerza UC-01, UC-12, UC-13 | crítica (auth + multi-módulo): PR con revisión y visto bueno |
-| 7 | Visibilidad | Metadatos inyectados en servidor, `sitemap.xml`, imágenes responsive (variantes WebP/AVIF generadas con sharp), presupuestos de Lighthouse en CI, analítica Umami y panel de métricas | UC-27, UC-34 | moderada |
-| 8 | Contenido que vende | Experiencia y formación, casos de estudio con texto enriquecido (migración a Puck 0.21 + `richtext`), testimonios, disponibilidad y "ahora" | UC-19, UC-20, UC-23, UC-24, UC-32 | crítica (esquema) |
-| 9 | Conversación | Formulario de contacto con bandeja y email, notas técnicas con RSS, CV en PDF generado desde los datos | UC-21, UC-22, UC-29, UC-30, UC-31 | crítica (esquema, endpoint público con escritura) |
-| 10 | Panel de nivel producto | Diff de versiones y publicación programada, seguridad de la cuenta (passkeys, cambio de contraseña, sesiones, auditoría), i18n ES/EN, observabilidad (GlitchTip), Playwright e2e y regresión visual | UC-25, UC-26, UC-28, UC-33 | crítica (auth, esquema) |
+| 7 | Frontend espectacular y editor usable | Puck 0.23 con rail de plugins e interfaz en español, scrollbars y alto correcto, toggle de modo solo para la vista previa, edición de temas con contraste y fuentes bajo demanda, bloque `navegacion`, animaciones y variantes visuales en todos los bloques, responsive | UC-07, UC-08, UC-12 (ext.) | crítica (multi-módulo): PR con revisión y visto bueno |
+| 8 | Visibilidad | Metadatos inyectados en servidor, `sitemap.xml`, imágenes responsive (variantes WebP/AVIF generadas con sharp), presupuestos de Lighthouse en CI, analítica Umami y panel de métricas | UC-27, UC-34 | moderada |
+| 9 | Contenido que vende | Experiencia y formación, casos de estudio con texto enriquecido (migración a Puck 0.21 + `richtext`), testimonios, disponibilidad y "ahora" | UC-19, UC-20, UC-23, UC-24, UC-32 | crítica (esquema) |
+| 10 | Conversación | Formulario de contacto con bandeja y email, notas técnicas con RSS, CV en PDF generado desde los datos | UC-21, UC-22, UC-29, UC-30, UC-31 | crítica (esquema, endpoint público con escritura) |
+| 11 | Panel de nivel producto | Diff de versiones y publicación programada, seguridad de la cuenta (passkeys, cambio de contraseña, sesiones, auditoría), i18n ES/EN, observabilidad (GlitchTip), Playwright e2e y regresión visual | UC-25, UC-26, UC-28, UC-33 | crítica (auth, esquema) |
 
-Cada fase se aprueba con su propio resumen de `release-manager`; el orden puede cambiar según prioridad del usuario (por ejemplo, adelantar la Fase 8 si el objetivo inmediato es buscar empleo).
+Cada fase se aprueba con su propio resumen de `release-manager`; el orden puede cambiar según prioridad del usuario (por ejemplo, adelantar la Fase 9 si el objetivo inmediato es buscar empleo).
 
 ### 7.3 Cambios de modelo de datos que implicará (solo cuando se apruebe cada fase)
 
 Se mantienen las reglas de la Sección 4 (3FN, nombres en español snake_case, JSONB solo donde la forma es variable por diseño). Entidades y columnas previstas, para que el diagrama ER se amplíe de forma coherente:
 
-- **Fase 7**: `MEDIA_VARIANTE` (media_id, formato `webp|avif|jpeg`, ancho, url, bytes) para las variantes responsive; evita un JSON de variantes en `MEDIA`.
-- **Fase 8**: `EXPERIENCIA_LABORAL`, `EXPERIENCIA_TECNOLOGIA` (reutiliza el catálogo `TECNOLOGIA`), `FORMACION`, `CASO_ESTUDIO` (1:1 con `PROYECTO`, `slug` único, secciones de texto enriquecido como JSONB de ProseMirror: forma variable por diseño), `CASO_ESTUDIO_METRICA`, `TESTIMONIO`, `AHORA_ITEM`; en `PERFIL`: `estado_disponibilidad`, `mensaje_disponibilidad`, `disponibilidad_actualizada_en`.
-- **Fase 9**: `MENSAJE_CONTACTO` (sin IP completa: solo hash/enmascarada), `NOTA`, `ETIQUETA`, `NOTA_ETIQUETA`; en `PERFIL`: `cv_generado_media_id` (el PDF generado se guarda como `MEDIA` para reutilizar S3 y el snapshot).
-- **Fase 10**: `CREDENCIAL_PASSKEY`, `EVENTO_AUDITORIA`, `TRADUCCION` (entidad, entidad_id, campo, idioma, valor; única por los cuatro primeros), en `VERSION_SITIO`: `programada_para`, `publicada_por_programacion`; en `USUARIO_ADMIN`: `sesiones_invalidadas_desde` para "cerrar todas las sesiones" sin tabla de sesiones.
+- **Fase 8**: `MEDIA_VARIANTE` (media_id, formato `webp|avif|jpeg`, ancho, url, bytes) para las variantes responsive; evita un JSON de variantes en `MEDIA`.
+- **Fase 9**: `EXPERIENCIA_LABORAL`, `EXPERIENCIA_TECNOLOGIA` (reutiliza el catálogo `TECNOLOGIA`), `FORMACION`, `CASO_ESTUDIO` (1:1 con `PROYECTO`, `slug` único, secciones de texto enriquecido como JSONB de ProseMirror: forma variable por diseño), `CASO_ESTUDIO_METRICA`, `TESTIMONIO`, `AHORA_ITEM`; en `PERFIL`: `estado_disponibilidad`, `mensaje_disponibilidad`, `disponibilidad_actualizada_en`.
+- **Fase 10**: `MENSAJE_CONTACTO` (sin IP completa: solo hash/enmascarada), `NOTA`, `ETIQUETA`, `NOTA_ETIQUETA`; en `PERFIL`: `cv_generado_media_id` (el PDF generado se guarda como `MEDIA` para reutilizar S3 y el snapshot).
+- **Fase 11**: `CREDENCIAL_PASSKEY`, `EVENTO_AUDITORIA`, `TRADUCCION` (entidad, entidad_id, campo, idioma, valor; única por los cuatro primeros), en `VERSION_SITIO`: `programada_para`, `publicada_por_programacion`; en `USUARIO_ADMIN`: `sesiones_invalidadas_desde` para "cerrar todas las sesiones" sin tabla de sesiones.
 
 ### 7.4 Principios que no cambian
 

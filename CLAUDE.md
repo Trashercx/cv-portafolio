@@ -19,8 +19,8 @@ Sitio de portafolio/CV personal con panel de administración privado. Monorepo c
 ## Dónde está el detalle
 
 - `docs/plan-portafolio.md`: stack justificado, los casos de uso (UC-01 a UC-18) con criterios de aceptación, el diagrama ER (bloque mermaid) normalizado a 3FN y la estrategia de ramas/criticidad. **Única fuente de verdad** para UC, campos y entidades. No inventes campos, entidades, endpoints ni tipos de bloque que no estén ahí; si hace falta algo nuevo, agrégalo primero a ese documento y luego codéalo.
-- `docs/plan-tecnico.md`: estructura del monorepo, tareas por sprint/fase (ya se completaron Sprint 0–8, Fases 3.x/4.x, Fase 5 (panel unificado) y Fase 6 (fundamentos de producción); el historial de "rondas" de correcciones también está ahí, y al final de §2 el desglose propuesto de las Fases 7–10), la checklist consolidada de reglas (§4) y el índice UC → tarea → subagente. Revísalo antes de arrancar cualquier tarea.
-- `docs/plan-portafolio.md` §7: **roadmap de profesionalización** (Fases 7–10, UC-19 a UC-34 propuestos, pendientes de aprobación por fase). No los implementes sin que el usuario apruebe la fase.
+- `docs/plan-tecnico.md`: estructura del monorepo, tareas por sprint/fase (ya se completaron Sprint 0–8, Fases 3.x/4.x, Fase 5 (panel unificado) y Fase 6 (fundamentos de producción); el historial de "rondas" de correcciones también está ahí, y al final de §2 la Fase 7 en curso y el desglose propuesto de las Fases 8–11), la checklist consolidada de reglas (§4) y el índice UC → tarea → subagente. Revísalo antes de arrancar cualquier tarea.
+- `docs/plan-portafolio.md` §7: **roadmap de profesionalización** (Fase 7 aprobada y en curso; Fases 8–11 y UC-19 a UC-34 propuestos, pendientes de aprobación por fase). No los implementes sin que el usuario apruebe la fase.
 - `docs/despliegue.md`: variables de producción (incluidas las de la Fase 6: `TRUST_PROXY`, `LOG_LEVEL`, `THROTTLE_*`, `API_ORIGIN`/`MEDIA_ORIGIN` de la CSP), Dokploy/Coolify, health checks, backups y smoke test.
 - `docs/design/`: mockups HTML de referencia de las pantallas del panel.
 
