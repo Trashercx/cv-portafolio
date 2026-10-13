@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '@/lib/api-client'
 import { useAuthStore } from '@/store/auth-store'
@@ -50,6 +50,23 @@ describe('LoginPage', () => {
     vi.clearAllMocks()
     useLoginState.isPending = false
     useLoginState.error = null
+  })
+
+  it('con la sesión ya rehidratada redirige a /admin en vez de mostrar el formulario (octava ronda, UC-01)', () => {
+    useAuthStore
+      .getState()
+      .setAdmin({ email: 'a@b.com', nombre: 'Admin', expiresAt: '2099-01-01T00:00:00.000Z' })
+    render(
+      <MemoryRouter initialEntries={['/admin/login']}>
+        <Routes>
+          <Route path="/admin/login" element={<LoginPage />} />
+          <Route path="/admin" element={<p>Panel</p>} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByText('Panel')).toBeInTheDocument()
+    expect(screen.queryByLabelText(/email/i)).not.toBeInTheDocument()
   })
 
   it('no llama a la API cuando el email es inválido', async () => {
