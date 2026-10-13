@@ -24,6 +24,7 @@ const useCertificacionPublicaMock = vi.fn()
 
 vi.mock('@/features/publico/usePublico', () => ({
   useCertificacionPublica: (id?: string) => useCertificacionPublicaMock(id),
+  useSitio: () => ({ data: undefined }),
 }))
 
 function renderConId(id: string) {

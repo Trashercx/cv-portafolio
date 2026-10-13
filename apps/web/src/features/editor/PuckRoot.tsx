@@ -105,7 +105,10 @@ export function PuckRoot({ children, puck }: PuckRootProps) {
   // la acción registrada por `EditorSeccionesPage`.
   useEffect(() => {
     const doc = wrapperRef.current?.ownerDocument
-    if (!doc) return
+    // Sin iframe (tests, `iframe.enabled=false`) el documento es el del panel,
+    // que ya tiene el listener de `EditorSeccionesPage`: registrarlo aquí
+    // dispararía el guardado dos veces (Fase 7, UC-07).
+    if (!doc || doc === document) return
     const alPresionar = (event: KeyboardEvent) => {
       if (event.key.toLowerCase() === 's' && (event.ctrlKey || event.metaKey)) {
         event.preventDefault()

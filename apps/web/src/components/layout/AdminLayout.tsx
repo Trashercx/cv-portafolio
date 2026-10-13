@@ -12,7 +12,10 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar'
 import { AvisoSesionExpirando } from '@/features/auth/AvisoSesionExpirando'
-import { GuardiaNavegacionEditor } from '@/features/editor/navegacion-protegida'
+import {
+  GuardiaNavegacionEditor,
+  solicitarCerrarSesion,
+} from '@/features/editor/navegacion-protegida'
 import { useCerrarSesion } from '@/features/auth/useCerrarSesion'
 import { PaletaComandos } from '@/features/paleta-comandos/PaletaComandos'
 import { ProveedorPaletaComandos } from '@/features/paleta-comandos/contexto-paleta'
@@ -68,7 +71,8 @@ export function AdminLayout() {
   }, [esRutaDeAnchoCompleto])
 
   const handleLogout = () => {
-    cerrarSesion.mutate()
+    // Fase 7 (UC-07): con cambios sin guardar pide confirmación antes de salir.
+    solicitarCerrarSesion(() => cerrarSesion.mutate())
   }
 
   return (
@@ -76,7 +80,9 @@ export function AdminLayout() {
       <ProveedorPaletaComandos>
         <PaletaComandos />
         <AvisoSesionExpirando />
-        <GuardiaNavegacionEditor />
+        <GuardiaNavegacionEditor
+          alConfirmarCerrarSesion={() => cerrarSesion.mutate()}
+        />
         <SidebarProvider open={sidebarAbierta} onOpenChange={setSidebarAbierta}>
           <AppSidebar />
           <SidebarInset>

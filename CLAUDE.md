@@ -8,7 +8,7 @@ Sitio de portafolio/CV personal con panel de administración privado. Monorepo c
 
 ## Decisiones ya tomadas (no las vuelvas a proponer como abiertas)
 
-- Editor de plantillas: visual, arrastrar y soltar, con Puck (`@measured/puck`).
+- Editor de plantillas: visual, arrastrar y soltar, con Puck (`@puckeditor/core` 0.23, migrado en la Fase 7).
 - ORM: Prisma 7 con driver adapter `@prisma/adapter-pg`. La URL de conexión vive en `apps/api/prisma7.config.ts`, no en `schema.prisma`. El cliente se genera en `apps/api/generated/prisma` (ignorado por git, lo regenera el `postinstall`).
 - Autenticación: `@nestjs/passport` + `passport-jwt`, administrador único, sin endpoint de registro. El JWT viaja **solo** en la cookie httpOnly `access_token`, nunca en el header `Authorization` ni en el cuerpo de la respuesta; el frontend nunca lo lee ni lo guarda.
 - Multimedia: AWS S3 (`@aws-sdk/client-s3`) con sharp para miniaturas, detrás de la interfaz `MediaStorageService` (token `MEDIA_STORAGE_SERVICE`). `S3MediaStorageService` es el provider real; `LocalMediaStorageService` se conserva solo como fallback de desarrollo sin credenciales y como stub en tests e2e (vía `overrideProvider`). CloudFront es opcional.

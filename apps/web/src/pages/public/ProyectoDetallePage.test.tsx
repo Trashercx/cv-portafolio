@@ -25,6 +25,7 @@ const useProyectoPublicoMock = vi.fn()
 
 vi.mock('@/features/publico/usePublico', () => ({
   useProyectoPublico: (id?: string) => useProyectoPublicoMock(id),
+  useSitio: () => ({ data: undefined }),
 }))
 
 function renderConId(id: string) {

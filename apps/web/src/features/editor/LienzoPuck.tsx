@@ -4,6 +4,7 @@ import {
   type Data,
   type Overrides,
   type PuckAction,
+  type UiState,
 } from '@puckeditor/core'
 import { createContext, useContext, useEffect, type ReactNode } from 'react'
 import { puckConfig, type PuckSeccionesComponents } from '@/lib/puck-config'
@@ -71,6 +72,16 @@ function SincronizadorPlugin() {
   useEffect(() => {
     if (plugin) setPluginActivo(plugin)
   }, [plugin, setPluginActivo])
+
+  // Viewport actual (Fase 7, UC-07): mismo motivo que el plugin.
+  const ancho = usePuckEditor((state) => state.appState.ui.viewports?.current?.width)
+  const alto = usePuckEditor((state) => state.appState.ui.viewports?.current?.height)
+  const setViewportActual = useEditorPanelStore((state) => state.setViewportActual)
+  useEffect(() => {
+    if (typeof ancho === 'number') {
+      setViewportActual({ width: ancho, height: alto ?? 'auto' })
+    }
+  }, [ancho, alto, setViewportActual])
   return null
 }
 
@@ -144,7 +155,15 @@ export function LienzoPuck({
 }: LienzoPuckProps) {
   // Se lee en render (no con hook reactivo): solo importa el valor al montar
   // `<Puck>` (`?panel=` o plugin previo antes de un remount por guardado).
-  const pluginInicial = useEditorPanelStore.getState().pluginActivo
+  const { pluginActivo: pluginInicial, viewportActual } =
+    useEditorPanelStore.getState()
+  const uiInicial: Partial<UiState> = {
+    ...PUCK_UI_INICIAL,
+    plugin: { current: pluginInicial },
+    ...(viewportActual && PUCK_UI_INICIAL.viewports
+      ? { viewports: { ...PUCK_UI_INICIAL.viewports, current: viewportActual } }
+      : {}),
+  }
 
   return (
     <ContextoToolbar.Provider value={toolbar}>
@@ -155,7 +174,7 @@ export function LienzoPuck({
           data={data}
           metadata={metadata}
           viewports={PUCK_VIEWPORTS}
-          ui={{ ...PUCK_UI_INICIAL, plugin: { current: pluginInicial } }}
+          ui={uiInicial}
           plugins={PLUGINS_EDITOR}
           overrides={OVERRIDES_EDITOR}
           dictionary={PUCK_DICCIONARIO}

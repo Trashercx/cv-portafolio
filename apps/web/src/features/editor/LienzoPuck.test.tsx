@@ -16,7 +16,10 @@ type PropsPuckCapturadas = {
   headerTitle?: string
   height?: string
   viewports?: unknown
-  ui?: { plugin?: { current: string | null } }
+  ui?: {
+    plugin?: { current: string | null }
+    viewports?: { current: { width: number | string; height: number | string } }
+  }
   onAction?: (action: { type: string }) => void
 }
 
@@ -47,10 +50,20 @@ vi.mock('@puckeditor/core', () => ({
 
 const pluginActivoMock: { actual: string } = { actual: 'blocks' }
 
+const viewportMock: { actual: { width: number; height: number | 'auto' } | undefined } = {
+  actual: { width: 1280, height: 'auto' },
+}
+
 vi.mock('./usePuckEditor', () => ({
-  usePuckEditor: (
-    selector: (state: { appState: { ui: { plugin: { current: string } } } }) => unknown,
-  ) => selector({ appState: { ui: { plugin: { current: pluginActivoMock.actual } } } }),
+  usePuckEditor: (selector: (state: unknown) => unknown) =>
+    selector({
+      appState: {
+        ui: {
+          plugin: { current: pluginActivoMock.actual },
+          viewports: { current: viewportMock.actual },
+        },
+      },
+    }),
 }))
 
 vi.mock('./PanelTemaEditor', () => ({
@@ -77,7 +90,8 @@ describe('LienzoPuck (layout nativo con rail de plugins)', () => {
   beforeEach(() => {
     propsPuck.actual = {}
     pluginActivoMock.actual = 'blocks'
-    useEditorPanelStore.setState({ pluginActivo: null })
+    viewportMock.actual = { width: 1280, height: 'auto' }
+    useEditorPanelStore.setState({ pluginActivo: null, viewportActual: null })
   })
 
   afterEach(() => {
@@ -168,5 +182,24 @@ describe('LienzoPuck (layout nativo con rail de plugins)', () => {
     pluginActivoMock.actual = 'tema'
     renderLienzo()
     expect(useEditorPanelStore.getState().pluginActivo).toBe('tema')
+  })
+
+  it('recuerda el viewport actual y lo restaura en el ui inicial al remontar <Puck>', () => {
+    viewportMock.actual = { width: 360, height: 'auto' }
+    const { unmount } = renderLienzo()
+    expect(useEditorPanelStore.getState().viewportActual).toEqual({
+      width: 360,
+      height: 'auto',
+    })
+    unmount()
+
+    renderLienzo()
+    expect(propsPuck.actual.ui?.viewports?.current).toEqual({ width: 360, height: 'auto' })
+  })
+
+  it('sin viewport recordado arranca en escritorio (1280)', () => {
+    viewportMock.actual = undefined
+    renderLienzo()
+    expect(propsPuck.actual.ui?.viewports?.current).toEqual({ width: 1280, height: 'auto' })
   })
 })

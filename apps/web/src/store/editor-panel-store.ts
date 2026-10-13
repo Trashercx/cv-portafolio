@@ -30,6 +30,9 @@ function guardarModoVistaPrevia(modo: ModoVistaPrevia) {
   }
 }
 
+/** Subconjunto serializable de `ui.viewports.current` de Puck. */
+export type ViewportActual = { width: number; height: number | 'auto' }
+
 type EditorPanelState = {
   /**
    * Plugin activo del rail de Puck (`ui.plugin.current`: `blocks`,
@@ -43,6 +46,16 @@ type EditorPanelState = {
   pluginActivo: string | null
   setPluginActivo: (plugin: string | null) => void
   /**
+   * Viewport actual del lienzo (`ui.viewports.current`), recordado para el
+   * remount de `<Puck>` tras guardar (Fase 7, UC-07). Solo en memoria, no en
+   * `localStorage`: es preferencia de la sesión de edición en curso. La
+   * selección (`ui.itemSelector`) NO se conserva: es un índice y, tras
+   * guardar, las secciones nuevas cambian de id y el orden puede variar, así
+   * que restaurarla podría apuntar a otro bloque.
+   */
+  viewportActual: ViewportActual | null
+  setViewportActual: (viewport: ViewportActual | null) => void
+  /**
    * Modo de la vista previa (Fase 7, UC-08): `'claro'`/`'oscuro'` fuerza el
    * modo SOLO del lienzo (`PuckRoot`) y de `DialogVistaPrevia`; `null` sigue
    * el modo del panel (`ThemeProvider`). Persistido en `localStorage`
@@ -55,6 +68,8 @@ type EditorPanelState = {
 export const useEditorPanelStore = create<EditorPanelState>((set) => ({
   pluginActivo: null,
   setPluginActivo: (pluginActivo) => set({ pluginActivo }),
+  viewportActual: null,
+  setViewportActual: (viewportActual) => set({ viewportActual }),
   modoVistaPrevia: leerModoVistaPreviaGuardado(),
   setModoVistaPrevia: (modoVistaPrevia) => {
     guardarModoVistaPrevia(modoVistaPrevia)

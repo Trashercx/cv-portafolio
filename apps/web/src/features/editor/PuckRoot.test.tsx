@@ -94,10 +94,19 @@ describe('PuckRoot — modo de la vista previa (Fase 7, UC-08)', () => {
     expect(estilo?.textContent).toContain('scrollbar-width: thin')
   })
 
-  it('Ctrl+S dentro del documento del lienzo dispara la acción de guardado registrada y cancela el atajo del navegador', () => {
+  it('Ctrl+S dentro del documento del iframe dispara la acción de guardado una sola vez y cancela el atajo del navegador', () => {
     let llamadas = 0
     useEditorSeccionesStore.setState({ accionGuardar: () => (llamadas += 1) })
-    renderRoot('light')
+    // Documento distinto al del panel, como el del iframe de Puck.
+    const docIframe = document.implementation.createHTMLDocument('lienzo')
+    render(
+      <ThemeProvider>
+        <PuckRoot puck={puck}>
+          <p>Contenido del lienzo</p>
+        </PuckRoot>
+      </ThemeProvider>,
+      { container: docIframe.body.appendChild(docIframe.createElement('div')) },
+    )
 
     const evento = new KeyboardEvent('keydown', {
       key: 's',
@@ -105,9 +114,21 @@ describe('PuckRoot — modo de la vista previa (Fase 7, UC-08)', () => {
       bubbles: true,
       cancelable: true,
     })
-    document.dispatchEvent(evento)
+    docIframe.dispatchEvent(evento)
 
     expect(llamadas).toBe(1)
     expect(evento.defaultPrevented).toBe(true)
+  })
+
+  it('sin iframe (mismo documento que el panel) no registra el atajo: lo maneja EditorSeccionesPage', () => {
+    let llamadas = 0
+    useEditorSeccionesStore.setState({ accionGuardar: () => (llamadas += 1) })
+    renderRoot('light')
+
+    document.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 's', ctrlKey: true, bubbles: true, cancelable: true }),
+    )
+
+    expect(llamadas).toBe(0)
   })
 })
