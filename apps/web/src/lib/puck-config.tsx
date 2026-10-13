@@ -1,4 +1,6 @@
+import { FieldLabel } from '@puckeditor/core'
 import type { Config, CustomField, Slot } from '@puckeditor/core'
+import { Image as ImageIcon, List as ListIcon } from 'lucide-react'
 import { EnvoltorioSeccion } from '@/components/publico/EnvoltorioSeccion'
 import {
   BloqueCertificaciones,
@@ -275,8 +277,16 @@ function propsEnvoltorio(
 const selectorMediaField: CustomField<string | undefined> = {
   type: 'custom',
   label: 'Imagen (biblioteca de medios)',
-  render: ({ value, onChange }) => (
-    <SelectorMedia value={value} onChange={onChange} />
+  // Octava ronda (UC-07): Puck solo pinta la etiqueta de los campos nativos;
+  // en los `custom` el render debe envolverse en `FieldLabel`.
+  render: ({ field, name, value, onChange, readOnly }) => (
+    <FieldLabel
+      label={field.label ?? name}
+      icon={<ImageIcon className="size-4" />}
+      readOnly={readOnly}
+    >
+      <SelectorMedia value={value} onChange={onChange} />
+    </FieldLabel>
   ),
 }
 
@@ -291,8 +301,14 @@ const selectorMediaField: CustomField<string | undefined> = {
 const selectorMediaRequeridoField: CustomField<string> = {
   type: 'custom',
   label: 'Imagen (biblioteca de medios)',
-  render: ({ value, onChange }) => (
-    <SelectorMedia value={value} onChange={(nuevoValor) => onChange(nuevoValor ?? '')} />
+  render: ({ field, name, value, onChange, readOnly }) => (
+    <FieldLabel
+      label={field.label ?? name}
+      icon={<ImageIcon className="size-4" />}
+      readOnly={readOnly}
+    >
+      <SelectorMedia value={value} onChange={(nuevoValor) => onChange(nuevoValor ?? '')} />
+    </FieldLabel>
   ),
 }
 
@@ -326,7 +342,16 @@ function SelectorMedia({
 const listaTextosField: CustomField<string[] | undefined> = {
   type: 'custom',
   label: `Títulos rotativos (máx. ${TITULOS_ROTATIVOS_MAX})`,
-  render: ({ value, onChange }) => <ListaTextos value={value ?? []} onChange={onChange} />,
+  // Octava ronda (UC-07): etiqueta visible vía `FieldLabel` (ver arriba).
+  render: ({ field, name, value, onChange, readOnly }) => (
+    <FieldLabel
+      label={field.label ?? name}
+      icon={<ListIcon className="size-4" />}
+      readOnly={readOnly}
+    >
+      <ListaTextos value={value ?? []} onChange={onChange} />
+    </FieldLabel>
+  ),
 }
 
 /**
