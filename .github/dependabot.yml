@@ -1,0 +1,49 @@
+# Fase 6 — Fundamentos de producción: actualizaciones automáticas de
+# dependencias.
+#
+# El monorepo usa npm workspaces con UN solo package-lock.json en la raíz, por
+# eso basta un único ecosistema `npm` apuntando a "/" (Dependabot resuelve los
+# package.json de apps/api y apps/web a través de ese lockfile). Las
+# actualizaciones minor/patch se agrupan en un solo PR semanal para no
+# inundar la cola de revisión; las major quedan en PRs individuales porque
+# suelen exigir cambios de código (React, NestJS, Prisma, Puck...).
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "08:00"
+      timezone: America/Lima
+    open-pull-requests-limit: 5
+    labels:
+      - dependencias
+    commit-message:
+      prefix: chore(deps)
+    groups:
+      # Un solo PR con todas las minor/patch (producción y desarrollo).
+      dependencias-menores:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+
+  # Acciones de GitHub usadas en .github/workflows (checkout, setup-node,
+  # docker/*, codeql...).
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "08:00"
+      timezone: America/Lima
+    labels:
+      - dependencias
+    commit-message:
+      prefix: chore(deps)
+    groups:
+      acciones-github:
+        patterns:
+          - "*"
