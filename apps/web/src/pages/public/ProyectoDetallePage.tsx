@@ -1,7 +1,8 @@
 import { Link, useParams } from 'react-router-dom'
 import { DetalleProyectoContenido } from '@/components/publico/detalle/DetalleProyectoContenido'
 import { MetadatosPagina } from '@/components/publico/MetadatosPagina'
-import { useProyectoPublico } from '@/features/publico/usePublico'
+import { useProyectoPublico, useSitio } from '@/features/publico/usePublico'
+import { useFuenteTema } from '@/features/tema/useFuenteTema'
 import { ApiError } from '@/lib/api-client'
 import { recortarDescripcion } from '@/lib/seo'
 
@@ -20,6 +21,9 @@ import { recortarDescripcion } from '@/lib/seo'
 export function ProyectoDetallePage() {
   const { id } = useParams<{ id: string }>()
   const { data: proyecto, isLoading, error } = useProyectoPublico(id)
+  // Fase 7 (UC-08): fuente del tema (snapshot ya en caché desde la home).
+  const { data: sitio } = useSitio()
+  useFuenteTema(sitio?.tema?.fuente_principal)
 
   if (isLoading) {
     return (

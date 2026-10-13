@@ -15,7 +15,9 @@ import { usePreviewVersion } from '@/features/publicacion/usePublicacion'
 import type { VersionSitio } from '@/features/publicacion/types'
 import { temaComoVariablesCss } from '@/lib/tema-css'
 import type { ModoTema } from '@/lib/tema-oscuro'
+import { useFuenteTema } from '@/features/tema/useFuenteTema'
 import { cn } from '@/lib/utils'
+import { useEditorPanelStore } from '@/store/editor-panel-store'
 
 type DialogVistaPreviaProps = {
   open: boolean
@@ -44,7 +46,7 @@ type DialogVistaPreviaProps = {
  * `LienzoPuck` (hasta Fase 5, dentro de `overrides.headerActions` de
  * `<Puck>` — una función/objeto literal nuevo en cada render de
  * `EditorSeccionesPage` que Puck remontaba como subárbol en cada cambio de
- * esa referencia, confirmado en `node_modules/@measured/puck/dist/index.js`:
+ * esa referencia, confirmado en `node_modules/@puckeditor/core/dist/index.js`:
  * `headerActions` se usaba como tipo de componente JSX). Como la
  * invalidación de `VERSIONES_QUERY_KEY` que dispara
  * `usePreviewVersion.onSuccess` (ver `usePublicacion.ts`) re-renderiza
@@ -72,7 +74,12 @@ export function DialogVistaPrevia({
 }: DialogVistaPreviaProps) {
   const preview = usePreviewVersion()
   const { theme } = useTheme()
-  const modo: ModoTema = theme === 'dark' ? 'oscuro' : 'claro'
+  const modoDelPanel: ModoTema = theme === 'dark' ? 'oscuro' : 'claro'
+  // Fase 7 (UC-08): mismo override que el lienzo (`PuckRoot`): el toggle
+  // "Vista previa en oscuro" del editor, o el modo del panel si es `null`.
+  const modoVistaPrevia = useEditorPanelStore((state) => state.modoVistaPrevia)
+  const modo: ModoTema = modoVistaPrevia ?? modoDelPanel
+  useFuenteTema(previewVersion?.snapshot.tema?.fuente_principal)
   // Nodo DOM del `<div>` interior temado (mismo criterio que `PublicHomePage`
   // — `useState`, no `useRef`, porque necesitamos re-render cuando el nodo
   // real se monta), pasado como `container` a `ProveedorDetallePublico` para
@@ -93,9 +100,9 @@ export function DialogVistaPrevia({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="outline">Vista previa</Button>
+        <Button variant="outline" size="sm">Vista previa</Button>
       </DialogTrigger>
-      <DialogContent className="flex h-[90vh] flex-col sm:max-w-[95vw]">
+      <DialogContent className="flex h-[90dvh] flex-col sm:max-w-[95vw]">
         <DialogHeader>
           <DialogTitle>Vista previa</DialogTitle>
           <DialogDescription>
@@ -115,7 +122,7 @@ export function DialogVistaPrevia({
           artboard independiente (`shadow-sm`), no full-bleed contra el
           modal.
         */}
-        <div className="flex-1 overflow-y-auto rounded-lg border bg-muted p-3">
+        <div className="flex-1 overflow-y-auto scrollbar-fina rounded-lg border bg-muted p-3">
           <div
             ref={setNodoTemado}
             style={
@@ -126,6 +133,7 @@ export function DialogVistaPrevia({
             className={cn(
               'rounded-md border shadow-sm',
               modo === 'oscuro' && 'dark',
+              modo === 'claro' && 'forzar-claro',
             )}
           >
             {preview.isPending && !previewVersion ? (

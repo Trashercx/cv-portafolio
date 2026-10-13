@@ -15,6 +15,8 @@ import { useModoTema } from '@/hooks/useModoTema'
 import { ApiError } from '@/lib/api-client'
 import { recortarDescripcion } from '@/lib/seo'
 import type { HeroConfiguracion } from '@/features/secciones/types'
+import { useFuenteTema } from '@/features/tema/useFuenteTema'
+import { navegacionReemplazaToggle } from '@/lib/navegacion'
 import { temaComoVariablesCss } from '@/lib/tema-css'
 import { cn } from '@/lib/utils'
 
@@ -46,6 +48,8 @@ import { cn } from '@/lib/utils'
 export function PublicHomePage() {
   const { data: snapshot, isLoading, error } = useSitio()
   const { modo } = useModoTema()
+  // Fase 7 (UC-08): descarga bajo demanda la fuente variable del tema publicado.
+  useFuenteTema(snapshot?.tema?.fuente_principal)
   // Nodo DOM del `<div>` raíz temado, expuesto como estado reactivo (no
   // `useRef`, cuyo `.current` no dispara re-render) para que
   // `ProveedorDetallePublico` pueda pasarlo como `container` del modal de
@@ -129,9 +133,12 @@ export function PublicHomePage() {
           </ContenidoPrincipal>
         </ProveedorDetallePublico>
         <Footer perfil={snapshot.perfil} />
-        <div className="fixed bottom-4 right-4 z-50">
-          <ToggleModoTema className="shadow-lg" />
-        </div>
+        {/* Fase 7 (7.3): si la navegación ya trae su propio toggle, el de la esquina sobra. */}
+        {navegacionReemplazaToggle(snapshot.secciones) ? null : (
+          <div className="fixed bottom-4 right-4 z-50">
+            <ToggleModoTema className="shadow-lg" />
+          </div>
+        )}
       </div>
     </div>
   )

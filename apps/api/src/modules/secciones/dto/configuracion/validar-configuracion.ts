@@ -1,5 +1,5 @@
 import { plainToInstance } from 'class-transformer';
-import { validate } from 'class-validator';
+import { validate, ValidationError } from 'class-validator';
 import {
   CONFIGURACION_DTO_POR_TIPO,
   TIPOS_SECCION,
@@ -49,5 +49,19 @@ export async function obtenerErroresConfiguracion(
     forbidNonWhitelisted: true,
   });
 
-  return errores.flatMap((error) => Object.values(error.constraints ?? {}));
+  return aplanarErrores(errores);
+}
+
+/**
+ * Aplana los errores de `class-validator` incluyendo los de objetos anidados
+ * (`error.children`, p. ej. `estadisticas[0].valor`, Fase 7, UC-07). Sin esto
+ * los errores de un `@ValidateNested` quedaban silenciados porque solo tienen
+ * `children`, no `constraints`.
+ */
+function aplanarErrores(errores: ValidationError[], prefijo = ''): string[] {
+  return errores.flatMap((error) => {
+    const ruta = prefijo ? `${prefijo}.${error.property}` : error.property;
+    const propios = Object.values(error.constraints ?? {});
+    return [...propios, ...aplanarErrores(error.children ?? [], ruta)];
+  });
 }

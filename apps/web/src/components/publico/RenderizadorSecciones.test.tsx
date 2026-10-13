@@ -89,7 +89,7 @@ describe('RenderizadorSecciones — ancho_contenido por defecto cuando falta en 
     ['contacto', 'max-w-2xl'],
     ['proyectos', 'max-w-5xl'],
   ] as const)('%s sin ancho_contenido guardado usa %s (aspecto previo a esta fase)', (tipo, claseEsperada) => {
-    renderSnapshot([seccion(`seccion-${tipo}`, tipo)])
+    renderSnapshot([seccion(tipo, tipo)])
 
     const section = document.getElementById(`seccion-${tipo}`) as HTMLElement
     const divInterno = section.querySelector(':scope > div')

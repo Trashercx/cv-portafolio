@@ -29,7 +29,7 @@ const VELOCIDAD_LABEL: Record<FondoSitio['configuracion']['velocidad'], string> 
 }
 
 /**
- * Pestaña "Fondo" del panel lateral del editor unificado (Fase 5): mismo
+ * Plugin "Fondo" del rail de Puck en el editor unificado (Fase 5, plugin desde Fase 7): mismo
  * listado/creación/activación exclusiva/borrado que la extinta
  * `FondoSitioPage` (UC-15) — se reusan tal cual `useFondosSitio`/
  * `useActivarFondoSitio`/`useEliminarFondoSitio` y `FondoSitioFormDialog`,

@@ -84,8 +84,8 @@ export function ProyectosListPage() {
             <TableRow>
               <TableHead className="w-20">Orden</TableHead>
               <TableHead>Título</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead>Destacado</TableHead>
+              <TableHead className="hidden md:table-cell">Estado</TableHead>
+              <TableHead className="hidden md:table-cell">Destacado</TableHead>
               <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
@@ -102,8 +102,8 @@ export function ProyectosListPage() {
                   />
                 </TableCell>
                 <TableCell>{proyecto.titulo}</TableCell>
-                <TableCell>{proyecto.estado}</TableCell>
-                <TableCell>
+                <TableCell className="hidden md:table-cell">{proyecto.estado}</TableCell>
+                <TableCell className="hidden md:table-cell">
                   {proyecto.destacado ? <Badge>Destacado</Badge> : null}
                 </TableCell>
                 <TableCell className="flex justify-end gap-2">

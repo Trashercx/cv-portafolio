@@ -263,4 +263,76 @@ describe('Secciones (e2e, UC-07)', () => {
       configuracionEditadaSinCamposNuevos,
     );
   });
+
+  it('POST /admin/secciones crea una sección navegacion con defaults y rechaza campos desconocidos (Fase 7, 7.2)', async () => {
+    await agent
+      .post('/admin/secciones')
+      .send({
+        tipo_seccion: 'navegacion',
+        titulo_visible: 'Menú',
+        orden: 9710,
+        configuracion: { enlaces: [] },
+      })
+      .expect(400);
+
+    const respuesta = await agent
+      .post('/admin/secciones')
+      .send({
+        tipo_seccion: 'navegacion',
+        titulo_visible: 'Menú e2e',
+        orden: 9711,
+        configuracion: { estilo: 'barra', mostrar_progreso_scroll: true },
+      })
+      .expect(201);
+    idsCreados.push(respuesta.body.id);
+
+    expect(respuesta.body.tipo_seccion).toBe('navegacion');
+    expect(respuesta.body.configuracion).toMatchObject({
+      estilo: 'barra',
+      mostrar_progreso_scroll: true,
+    });
+  });
+
+  it('POST /admin/secciones acepta un hero con los campos nuevos de la Fase 7 y rechaza titulos_rotativos con 7 ítems', async () => {
+    const configuracion = {
+      titulo: 'Hola',
+      subtitulo: 'Mundo',
+      disposicion: 'dividido',
+      titulos_rotativos: ['Desarrollador', 'Diseñador'],
+      texto_boton_secundario: 'Ver CV',
+      enlace_boton_secundario: '/cv',
+      mostrar_redes: true,
+      efecto_titulo: 'degradado',
+      decoracion_fondo: 'manchas',
+      animacion_entrada: 'escalar',
+      separador_forma: 'onda',
+      fondo_bloque: 'vidrio',
+    };
+
+    await agent
+      .post('/admin/secciones')
+      .send({
+        tipo_seccion: 'hero',
+        titulo_visible: 'Hero 7 inválido',
+        orden: 9712,
+        configuracion: {
+          ...configuracion,
+          titulos_rotativos: ['1', '2', '3', '4', '5', '6', '7'],
+        },
+      })
+      .expect(400);
+
+    const respuesta = await agent
+      .post('/admin/secciones')
+      .send({
+        tipo_seccion: 'hero',
+        titulo_visible: 'Hero 7 e2e',
+        orden: 9713,
+        configuracion,
+      })
+      .expect(201);
+    idsCreados.push(respuesta.body.id);
+
+    expect(respuesta.body.configuracion).toMatchObject(configuracion);
+  });
 });

@@ -1,14 +1,19 @@
-import '@measured/puck/puck.css'
-import { Puck, type Data } from '@measured/puck'
-import { Redo2, Undo2 } from 'lucide-react'
-import type { ReactNode } from 'react'
-import { Button } from '@/components/ui/button'
+import '@puckeditor/core/puck.css'
+import {
+  Puck,
+  type Data,
+  type Overrides,
+  type PuckAction,
+  type UiState,
+} from '@puckeditor/core'
+import { createContext, useContext, useEffect, type ReactNode } from 'react'
 import { puckConfig, type PuckSeccionesComponents } from '@/lib/puck-config'
+import { useEditorPanelStore } from '@/store/editor-panel-store'
 import type { MetadataEditor } from './useDatosEditor'
-import { PanelLateralEditor } from './PanelLateralEditor'
+import { PUCK_DICCIONARIO } from './puck-diccionario'
 import { PUCK_UI_INICIAL, PUCK_VIEWPORTS } from './puck-viewports'
+import { PLUGINS_EDITOR } from './plugins-editor'
 import { usePuckEditor } from './usePuckEditor'
-import { ViewportSwitcher } from './ViewportSwitcher'
 
 type EditorData = Data<PuckSeccionesComponents>
 
@@ -18,61 +23,127 @@ type LienzoPuckProps = {
   /** Fuerza el remount de `<Puck>` (misma `key` que ya usaba `EditorSeccionesPage`). */
   editorKey: number
   onChange: (data: EditorData) => void
-  /** Barra de acciones propia (Borrador/Publicado, Vista previa, Historial, Publicar, Guardar) — ver `EditorSeccionesPage`. */
+  /**
+   * Acciones del toolbar (Borrador/Publicado, Vista previa, Historial,
+   * Publicar, Guardar) — ver `EditorSeccionesPage`. Se montan en
+   * `overrides.headerActions` del header nativo de Puck.
+   */
   toolbar: ReactNode
+  /**
+   * Se invoca con cada acción de Puck que MODIFICA datos (insertar, mover,
+   * editar props, duplicar, eliminar, reordenar): alimenta el indicador de
+   * cambios sin guardar de `EditorSeccionesPage` (Fase 7, UC-08). Las
+   * acciones de UI (`setUi`: plugin, viewport, selección) y la carga inicial
+   * (`set`) no cuentan.
+   */
+  onCambio?: () => void
+}
+
+/** Acciones de Puck que cambian `data` (ver `PuckAction` en el `.d.ts` del paquete). */
+const ACCIONES_QUE_EDITAN: ReadonlySet<PuckAction['type']> = new Set([
+  'insert',
+  'move',
+  'reorder',
+  'replace',
+  'replaceRoot',
+  'remove',
+  'duplicate',
+  'setData',
+])
+
+/**
+ * El toolbar viaja por contexto y no como closure de `overrides.headerActions`
+ * (Fase 7, UC-07): Puck usa ese override como COMPONENTE, así que una
+ * función nueva en cada render remontaría todo el subárbol (el bug original
+ * de `DialogVistaPrevia`, ver su comentario de cabecera). `AccionesCabecera`
+ * es una constante de módulo (identidad estable) que solo lee el contexto.
+ */
+const ContextoToolbar = createContext<ReactNode>(null)
+
+/**
+ * Registra en `useEditorPanelStore` el plugin activo del rail de Puck para
+ * recordarlo cuando `<Puck>` se remonta tras guardar (`editorKey`). Vive
+ * dentro del header porque es lo único fuera de `children` que siempre está
+ * montado dentro del contexto de Puck.
+ */
+function SincronizadorPlugin() {
+  const plugin = usePuckEditor((state) => state.appState.ui.plugin?.current)
+  const setPluginActivo = useEditorPanelStore((state) => state.setPluginActivo)
+  useEffect(() => {
+    if (plugin) setPluginActivo(plugin)
+  }, [plugin, setPluginActivo])
+
+  // Viewport actual (Fase 7, UC-07): mismo motivo que el plugin.
+  const ancho = usePuckEditor((state) => state.appState.ui.viewports?.current?.width)
+  const alto = usePuckEditor((state) => state.appState.ui.viewports?.current?.height)
+  const setViewportActual = useEditorPanelStore((state) => state.setViewportActual)
+  useEffect(() => {
+    if (typeof ancho === 'number') {
+      setViewportActual({ width: ancho, height: alto ?? 'auto' })
+    }
+  }, [ancho, alto, setViewportActual])
+  return null
 }
 
 /**
- * Deshacer/rehacer (Fase 5): antes vivían en el `MenuBar` del header nativo
- * de Puck, que se pierde por completo al reemplazar `children` (ver
- * `node_modules/@measured/puck/dist/index.d.ts` — `children` reemplaza TODO
- * el layout por defecto). `usePuck(s => s.history)` expone el mismo
- * `back`/`forward`/`hasPast`/`hasFuture` que usaba ese `MenuBar`.
+ * `overrides.headerActions` (Fase 7, UC-07): reemplaza los `children` por
+ * defecto de Puck (su botón "Publicar", que aquí sería ambiguo con el
+ * "Publicar" real de UC-11) por el toolbar propio, que ya incluye "Guardar
+ * cambios". Deshacer/rehacer los pinta el `MenuBar` nativo.
  */
-function ControlesHistorial() {
-  const history = usePuckEditor((state) => state.history)
-
+function AccionesCabecera() {
+  const toolbar = useContext(ContextoToolbar)
   return (
-    <div className="flex items-center gap-1">
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        aria-label="Deshacer"
-        disabled={!history.hasPast}
-        onClick={history.back}
-      >
-        <Undo2 className="size-4" />
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        aria-label="Rehacer"
-        disabled={!history.hasFuture}
-        onClick={history.forward}
-      >
-        <Redo2 className="size-4" />
-      </Button>
-    </div>
+    <>
+      <SincronizadorPlugin />
+      {toolbar}
+    </>
   )
 }
 
 /**
- * Lienzo del editor unificado (Fase 5, panel unificado): reemplaza el
- * `<Puck ... overrides={{ headerActions }}>` de antes por una composición
- * manual vía `children` (confirmado leyendo
- * `node_modules/@measured/puck/dist/index.d.ts`: si se pasan `children`,
- * reemplazan TODO el layout por defecto de Puck — header, sidebar izquierdo,
- * canvas, sidebar derecho — por lo que se componga acá). El portal
- * `#puck-portal-root` (overlays de drag-and-drop) y los hotkeys (Ctrl+Z,
- * etc., que corren en `PuckLayout`, no dentro de `children`) siguen
- * funcionando igual.
+ * `overrides.fields` (Fase 7, UC-07): sin bloque seleccionado Puck mostraría
+ * los campos de la raíz de la página (un `title` que no se guarda en ningún
+ * lado, porque el sitio no tiene título de página editable). En su lugar se
+ * muestra la misma guía que tenía `PanelBloqueSeleccionado`. Con un bloque
+ * seleccionado se renderizan sus campos tal cual.
+ */
+function CamposBloque({
+  children,
+  itemSelector,
+}: {
+  children: ReactNode
+  itemSelector?: unknown
+}) {
+  if (!itemSelector) {
+    return (
+      <p className="p-4 text-sm text-muted-foreground">
+        Selecciona un bloque en el lienzo, o arrastra uno nuevo desde
+        &quot;Bloques&quot;.
+      </p>
+    )
+  }
+  return <>{children}</>
+}
+
+const OVERRIDES_EDITOR: Partial<Overrides<typeof puckConfig>> = {
+  headerActions: AccionesCabecera,
+  fields: CamposBloque,
+}
+
+/**
+ * Lienzo del editor unificado con el layout NATIVO de Puck 0.23 (Fase 7,
+ * UC-07/UC-08): rail de plugins (Bloques, Esquema, Campos + Tema y Fondo
+ * propios, ver `plugins-editor.tsx`), selector de viewport nativo, header con
+ * deshacer/rehacer y outline arrastrable. Sustituye el layout manual de
+ * Fase 5 (`Puck.Components`/`Puck.Outline`/`Puck.Preview` en columnas fijas)
+ * y a `PanelLateralEditor`/`PanelBloqueSeleccionado`/`ViewportSwitcher`: el
+ * plugin `fields` ya muestra el label del bloque seleccionado (breadcrumbs).
+ * En móvil el rail pasa abajo, comportamiento nativo de Puck.
  *
- * `toolbar` viaja como prop (JSX ya armado por `EditorSeccionesPage`, no una
- * función/componente nuevo en cada render) en vez de `overrides.headerActions`
- * — evita el remount de ese subárbol que antes forzaba levantar el estado de
- * `DialogVistaPrevia` al padre (ver su comentario de cabecera).
+ * `height="100%"`: el contenedor de `EditorSeccionesPage` ya descuenta el
+ * header del admin y el banner de borrador, así que Puck rellena ese alto
+ * en vez de su `100dvh` por defecto.
  */
 export function LienzoPuck({
   data,
@@ -80,39 +151,42 @@ export function LienzoPuck({
   editorKey,
   onChange,
   toolbar,
+  onCambio,
 }: LienzoPuckProps) {
+  // Se lee en render (no con hook reactivo): solo importa el valor al montar
+  // `<Puck>` (`?panel=` o plugin previo antes de un remount por guardado).
+  const { pluginActivo: pluginInicial, viewportActual } =
+    useEditorPanelStore.getState()
+  const uiInicial: Partial<UiState> = {
+    ...PUCK_UI_INICIAL,
+    plugin: { current: pluginInicial },
+    ...(viewportActual && PUCK_UI_INICIAL.viewports
+      ? { viewports: { ...PUCK_UI_INICIAL.viewports, current: viewportActual } }
+      : {}),
+  }
+
   return (
-    <Puck
-      key={editorKey}
-      config={puckConfig}
-      data={data}
-      metadata={metadata}
-      viewports={PUCK_VIEWPORTS}
-      ui={PUCK_UI_INICIAL}
-      iframe={{ enabled: true, waitForStyles: true }}
-      onChange={onChange}
-    >
-      <div className="flex h-full flex-col">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b p-2">
-          <div className="flex flex-wrap items-center gap-2">{toolbar}</div>
-          <div className="flex items-center gap-2">
-            <ControlesHistorial />
-            <ViewportSwitcher />
-          </div>
-        </div>
-        <div className="flex flex-1 overflow-hidden">
-          <div className="grid w-64 shrink-0 gap-2 overflow-y-auto border-r p-2">
-            <Puck.Components />
-            <Puck.Outline />
-          </div>
-          <div className="flex-1 overflow-auto bg-muted/30">
-            <Puck.Preview />
-          </div>
-          <div className="w-80 shrink-0 overflow-y-auto border-l">
-            <PanelLateralEditor />
-          </div>
-        </div>
+    <ContextoToolbar.Provider value={toolbar}>
+      <div className="h-full scrollbar-fina">
+        <Puck
+          key={editorKey}
+          config={puckConfig}
+          data={data}
+          metadata={metadata}
+          viewports={PUCK_VIEWPORTS}
+          ui={uiInicial}
+          plugins={PLUGINS_EDITOR}
+          overrides={OVERRIDES_EDITOR}
+          dictionary={PUCK_DICCIONARIO}
+          headerTitle="Editor visual"
+          height="100%"
+          iframe={{ enabled: true, waitForStyles: true, syncHostStyles: true }}
+          onChange={onChange}
+          onAction={(action) => {
+            if (ACCIONES_QUE_EDITAN.has(action.type)) onCambio?.()
+          }}
+        />
       </div>
-    </Puck>
+    </ContextoToolbar.Provider>
   )
 }

@@ -8,7 +8,8 @@ import type { Media } from '@/features/media/types'
  * originales (UC-07) más `skills` (UC-07 + UC-16, Fase 2) más `columnas`
  * (UC-17, Fase 3.3 del rediseño del editor — layouts multi-columna con la
  * Slots API de Puck) más `galeria` (UC-18, Fase 4.5 — galería de fotos con
- * carousel/grid y lightbox).
+ * carousel/grid y lightbox) más `navegacion` (Fase 7, 7.2/7.3 — barra de
+ * navegación del sitio con enlaces generados desde las secciones).
  */
 export const TIPOS_SECCION = [
   'hero',
@@ -20,6 +21,7 @@ export const TIPOS_SECCION = [
   'skills',
   'columnas',
   'galeria',
+  'navegacion',
 ] as const
 
 export type TipoSeccion = (typeof TIPOS_SECCION)[number]
@@ -35,6 +37,7 @@ export const TIPO_SECCION_LABEL: Record<TipoSeccion, string> = {
   skills: 'Skills',
   columnas: 'Columnas',
   galeria: 'Galería',
+  navegacion: 'Navegación',
 }
 
 /**
@@ -46,12 +49,23 @@ export const TIPO_SECCION_LABEL: Record<TipoSeccion, string> = {
  * (UC-18, Fase 4.5) cae automáticamente acá: una galería de fotos puede
  * vivir dentro de una columna igual que cualquier otro bloque de contenido.
  */
-export type TipoSeccionAnidable = Exclude<TipoSeccion, 'hero' | 'columnas'>
+export type TipoSeccionAnidable = Exclude<TipoSeccion, 'hero' | 'columnas' | 'navegacion'>
 
 export type EspaciadoVerticalBloque = 'compacto' | 'normal' | 'amplio'
 export type AnchoContenidoBloque = 'estrecho' | 'normal' | 'amplio' | 'completo'
 export type AlineacionTextoBloque = 'izquierda' | 'centro'
-export type FondoBloqueBloque = 'ninguno' | 'sutil' | 'tarjeta'
+export type FondoBloqueBloque = 'ninguno' | 'sutil' | 'tarjeta' | 'degradado' | 'vidrio'
+/** Fase 7 (7.2, UC-07): animación de entrada al hacer scroll. */
+export type AnimacionEntradaBloque =
+  | 'ninguna'
+  | 'aparecer'
+  | 'deslizar_arriba'
+  | 'deslizar_lateral'
+  | 'escalar'
+/** Fase 7 (7.2, UC-07): forma del separador inferior entre bloques. */
+export type SeparadorFormaBloque = 'ninguno' | 'onda' | 'diagonal' | 'curva'
+/** Fase 7 (7.2): efecto de hover de las tarjetas de proyectos/certificaciones/logros. */
+export type EfectoHoverTarjeta = 'ninguno' | 'elevar' | 'inclinar'
 
 /**
  * Fase 3.4 (personalización visual por bloque): campos compartidos por los 9
@@ -75,6 +89,10 @@ export type BloqueConfiguracionBase = {
   fondo_bloque?: FondoBloqueBloque
   /** @default true */
   separador_inferior?: boolean
+  /** Fase 7 (7.2). @default 'aparecer' */
+  animacion_entrada?: AnimacionEntradaBloque
+  /** Fase 7 (7.2). @default 'ninguno' */
+  separador_forma?: SeparadorFormaBloque
 }
 
 export type HeroConfiguracion = BloqueConfiguracionBase & {
@@ -109,6 +127,22 @@ export type HeroConfiguracion = BloqueConfiguracionBase & {
   overlay_fondo?: 'ninguno' | 'oscuro' | 'claro'
   /** @default 'normal' */
   tamano_titulo?: 'normal' | 'grande'
+  /** Fase 7 (7.2). @default 'centrado' */
+  disposicion?: 'centrado' | 'dividido' | 'editorial'
+  /** Fase 7 (7.2): 0-6 títulos (1-60 caracteres) que rotan bajo el título. */
+  titulos_rotativos?: string[]
+  /** Fase 7 (7.2): máx. 40 caracteres. */
+  texto_boton_secundario?: string
+  /** Fase 7 (7.2): URL o ruta del segundo botón. */
+  enlace_boton_secundario?: string
+  /** Fase 7 (7.2). @default false */
+  mostrar_redes?: boolean
+  /** Fase 7 (7.2). @default false */
+  mostrar_indicador_scroll?: boolean
+  /** Fase 7 (7.2). @default 'ninguno' */
+  efecto_titulo?: 'ninguno' | 'degradado' | 'resaltado'
+  /** Fase 7 (7.2). @default 'ninguna' */
+  decoracion_fondo?: 'ninguna' | 'manchas' | 'cuadricula' | 'puntos'
 }
 
 export type SobreMiConfiguracion = BloqueConfiguracionBase & {
@@ -117,7 +151,14 @@ export type SobreMiConfiguracion = BloqueConfiguracionBase & {
   posicion_foto?: 'izquierda' | 'derecha'
   /** @default 'circular' */
   forma_foto?: 'circular' | 'cuadrada'
+  /** Fase 7 (7.2): 0-4 estadísticas (etiqueta 1-30, valor 1-12 caracteres). */
+  estadisticas?: Estadistica[]
+  /** Fase 7 (7.2). @default 'simple' */
+  estilo_foto?: 'simple' | 'marco_degradado' | 'flotante'
 }
+
+/** Una estadística del bloque `sobre-mi` (Fase 7, 7.2). `valor` puede llevar sufijo (`+`, `%`). */
+export type Estadistica = { etiqueta: string; valor: string }
 
 /** `configuracion` para `tipo_seccion = 'skills'` (UC-07 + UC-16). Espeja `SkillsConfiguracionDto`. */
 export type SkillsConfiguracion = BloqueConfiguracionBase & {
@@ -133,6 +174,10 @@ export type SkillsConfiguracion = BloqueConfiguracionBase & {
   mostrar_nombres?: boolean
   /** @default true */
   pausar_al_pasar?: boolean
+  /** Fase 7 (7.2). @default 'marquesina' */
+  disposicion?: 'marquesina' | 'cuadricula' | 'nube'
+  /** Fase 7 (7.2). @default 'simple' */
+  estilo_chip?: 'simple' | 'vidrio' | 'contorno'
 }
 
 export type ProyectosConfiguracion = BloqueConfiguracionBase & {
@@ -141,9 +186,15 @@ export type ProyectosConfiguracion = BloqueConfiguracionBase & {
   /** @default 3 */
   columnas?: 2 | 3
   /** @default 'simple' */
-  estilo_tarjeta?: 'simple' | 'con_sombra'
+  estilo_tarjeta?: 'simple' | 'con_sombra' | 'vidrio'
   /** @default true */
   mostrar_descripcion?: boolean
+  /** Fase 7 (7.2). @default 'tarjetas' */
+  disposicion?: 'tarjetas' | 'bento' | 'lista'
+  /** Fase 7 (7.2). @default 'elevar' */
+  efecto_hover?: EfectoHoverTarjeta
+  /** Fase 7 (7.2). @default true */
+  mostrar_tecnologias?: boolean
 }
 
 export type CertificacionesConfiguracion = BloqueConfiguracionBase & {
@@ -154,18 +205,26 @@ export type CertificacionesConfiguracion = BloqueConfiguracionBase & {
   estilo_tarjeta?: 'simple' | 'con_sombra' | 'vidrio'
   /** @default true */
   mostrar_fecha?: boolean
+  /** Fase 7 (7.2). @default 'elevar' */
+  efecto_hover?: EfectoHoverTarjeta
 }
 
 export type LogrosConfiguracion = BloqueConfiguracionBase & {
   categoria_filtro?: string
   /** @default 'tarjetas' */
   estilo_lista?: 'tarjetas' | 'linea_tiempo'
+  /** Fase 7 (7.2). @default 'elevar' */
+  efecto_hover?: EfectoHoverTarjeta
 }
 
 export type ContactoConfiguracion = BloqueConfiguracionBase & {
   mostrar_formulario: boolean
   /** @default 'iconos' */
   estilo_redes?: 'iconos' | 'botones'
+  /** Fase 7 (7.2). @default 'simple' */
+  estilo?: 'simple' | 'tarjeta_destacada'
+  /** Fase 7 (7.2): máx. 120 caracteres; titular de `tarjeta_destacada`. */
+  texto_llamada?: string
 }
 
 export type DistribucionColumnas = '1-1' | '1-2' | '2-1' | '1-1-1'
@@ -222,6 +281,29 @@ export type GaleriaConfiguracion = BloqueConfiguracionBase & {
   disposicion?: 'carousel' | 'grid'
   /** @default 3 — solo aplica si `disposicion === 'grid'`. */
   columnas_grid?: 2 | 3 | 4
+  /** Fase 7 (7.2). @default 'zoom' */
+  efecto_hover?: 'ninguno' | 'zoom' | 'elevar'
+}
+
+/**
+ * `configuracion` para `tipo_seccion = 'navegacion'` (Fase 7, 7.2/7.3). Espeja
+ * `NavegacionConfiguracionDto`. Los enlaces no se configuran: se generan con las
+ * secciones visibles con título (excepto `hero` y `navegacion`), ancla
+ * `#seccion-{id}`. Nunca se admite dentro de `columnas` (igual que `hero`).
+ */
+export type NavegacionConfiguracion = BloqueConfiguracionBase & {
+  /** @default 'flotante' */
+  estilo?: 'flotante' | 'barra'
+  /** @default true */
+  fijo?: boolean
+  /** @default true */
+  mostrar_nombre?: boolean
+  /** @default true */
+  mostrar_cv?: boolean
+  /** @default true */
+  mostrar_toggle_modo?: boolean
+  /** @default false */
+  mostrar_progreso_scroll?: boolean
 }
 
 export type ConfiguracionPorTipo = {
@@ -234,6 +316,7 @@ export type ConfiguracionPorTipo = {
   skills: SkillsConfiguracion
   columnas: ColumnasConfiguracion
   galeria: GaleriaConfiguracion
+  navegacion: NavegacionConfiguracion
 }
 
 /** Forma exacta de `Seccion` devuelta por `GET /admin/secciones`. */

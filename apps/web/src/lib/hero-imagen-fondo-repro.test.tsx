@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { puckConfig } from './puck-config'
 import type { MetadataEditor } from '@/features/editor/useDatosEditor'
-import type { CustomField } from '@measured/puck'
+import type { CustomField } from '@puckeditor/core'
 import type { Media } from '@/features/media/types'
 
 const MEDIA_FONDO: Media = {

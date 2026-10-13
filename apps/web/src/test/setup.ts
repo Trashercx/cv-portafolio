@@ -11,6 +11,22 @@ if (typeof window !== 'undefined') {
       disconnect() {}
     }
   }
+  // `motion` (`whileInView`/`useInView`) y `BloqueNavegacion` usan
+  // `IntersectionObserver`, que jsdom no trae (Fase 7, 7.3). Stub inerte: los
+  // tests que necesitan disparar entradas lo reemplazan con su propio mock.
+  if (!window.IntersectionObserver) {
+    window.IntersectionObserver = class IntersectionObserver {
+      readonly root = null
+      readonly rootMargin = ''
+      readonly thresholds = []
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+      takeRecords() {
+        return []
+      }
+    } as unknown as typeof window.IntersectionObserver
+  }
   if (!window.HTMLElement.prototype.hasPointerCapture) {
     window.HTMLElement.prototype.hasPointerCapture = () => false
   }

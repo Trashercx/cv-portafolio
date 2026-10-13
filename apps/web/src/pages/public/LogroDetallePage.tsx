@@ -2,6 +2,7 @@ import { Link, useParams } from 'react-router-dom'
 import { DetalleLogroContenido } from '@/components/publico/detalle/DetalleLogroContenido'
 import { MetadatosPagina } from '@/components/publico/MetadatosPagina'
 import { useSitio } from '@/features/publico/usePublico'
+import { useFuenteTema } from '@/features/tema/useFuenteTema'
 import { ApiError } from '@/lib/api-client'
 import { recortarDescripcion } from '@/lib/seo'
 
@@ -17,6 +18,8 @@ import { recortarDescripcion } from '@/lib/seo'
 export function LogroDetallePage() {
   const { id } = useParams<{ id: string }>()
   const { data: snapshot, isLoading, error } = useSitio()
+  // Fase 7 (UC-08): fuente del tema bajo demanda.
+  useFuenteTema(snapshot?.tema?.fuente_principal)
 
   if (isLoading) {
     return (

@@ -1,7 +1,8 @@
 import { Link, useParams } from 'react-router-dom'
 import { DetalleCertificacionContenido } from '@/components/publico/detalle/DetalleCertificacionContenido'
 import { MetadatosPagina } from '@/components/publico/MetadatosPagina'
-import { useCertificacionPublica } from '@/features/publico/usePublico'
+import { useCertificacionPublica, useSitio } from '@/features/publico/usePublico'
+import { useFuenteTema } from '@/features/tema/useFuenteTema'
 import { ApiError } from '@/lib/api-client'
 
 /**
@@ -18,6 +19,9 @@ import { ApiError } from '@/lib/api-client'
 export function CertificacionDetallePage() {
   const { id } = useParams<{ id: string }>()
   const { data: certificacion, isLoading, error } = useCertificacionPublica(id)
+  // Fase 7 (UC-08): fuente del tema (snapshot ya en caché desde la home).
+  const { data: sitio } = useSitio()
+  useFuenteTema(sitio?.tema?.fuente_principal)
 
   if (isLoading) {
     return (

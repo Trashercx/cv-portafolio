@@ -44,6 +44,10 @@ type EnlaceBloqueProps = {
   className?: string
   style?: React.CSSProperties
   'aria-label'?: string
+  /** Fase 7 (navegación): `aria-current` del enlace de la sección activa. */
+  'aria-current'?: 'location' | 'page' | 'true'
+  /** Fase 7 (navegación): se ignora en modo `'editor'`, donde el enlace es inerte. */
+  onClick?: () => void
   children: ReactNode
 }
 
@@ -62,6 +66,7 @@ export function EnlaceBloque({
   target,
   rel,
   children,
+  onClick,
   ...resto
 }: EnlaceBloqueProps) {
   const modo = useModoRenderizado()
@@ -76,14 +81,14 @@ export function EnlaceBloque({
 
   if (to) {
     return (
-      <Link to={to} {...resto}>
+      <Link to={to} onClick={onClick} {...resto}>
         {children}
       </Link>
     )
   }
 
   return (
-    <a href={href} target={target} rel={rel} {...resto}>
+    <a href={href} target={target} rel={rel} onClick={onClick} {...resto}>
       {children}
     </a>
   )

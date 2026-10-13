@@ -3,6 +3,7 @@ import { IconoSkill } from '@/features/skills/iconos-skill'
 import type { Skill } from '@/features/skills/types'
 import type { SkillsConfiguracion } from '@/features/secciones/types'
 import { cn } from '@/lib/utils'
+import { ItemAnimado } from '../ItemAnimado'
 
 type BloqueSkillsProps = {
   titulo: string
@@ -56,7 +57,69 @@ function ItemPista({ skill, tamanoIcono, mostrarNombre }: ItemPistaProps) {
   )
 }
 
-/** Bloque `skills`, compartido entre el sitio público y el lienzo del editor de Puck (Fase 3.1, extendido Fase 3.4). */
+type DisposicionEstatica = Exclude<NonNullable<SkillsConfiguracion['disposicion']>, 'marquesina'>
+
+/** Contenedor de la lista por disposición (Fase 7, 7.3): cuadrícula responsive o nube centrada. */
+const DISPOSICION_LISTA_CLASE: Record<DisposicionEstatica, string> = {
+  cuadricula: 'grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6',
+  nube: 'flex flex-wrap items-center justify-center gap-3',
+}
+
+/** `estilo_chip` (Fase 7, 7.3): fondo suave, vidrio translúcido o solo contorno con el color primario. */
+const ESTILO_CHIP_CLASE: Record<NonNullable<SkillsConfiguracion['estilo_chip']>, string> = {
+  simple: 'bg-muted',
+  vidrio: 'border border-border/50 bg-card/60 backdrop-blur-sm',
+  contorno: 'border-2 border-[var(--color-primario)]/60 bg-transparent',
+}
+
+/** Nube: tres tamaños de chip repartidos por posición (determinista, sin azar entre renders). */
+const NUBE_TAMANO_CLASE: string[] = ['px-3 py-1.5 text-sm', 'px-4 py-2 text-base', 'px-5 py-2.5 text-lg']
+
+/** Icono de la nube acorde al tamaño del chip. */
+const NUBE_ICONO_TAMANO: Array<'sm' | 'md' | 'lg'> = ['sm', 'sm', 'md']
+
+type ChipSkillProps = {
+  skill: Skill
+  disposicion: DisposicionEstatica
+  estiloChip: NonNullable<SkillsConfiguracion['estilo_chip']>
+  tamanoIcono: NonNullable<SkillsConfiguracion['tamano_icono']>
+  mostrarNombre: boolean
+  indice: number
+}
+
+function ChipSkill({
+  skill,
+  disposicion,
+  estiloChip,
+  tamanoIcono,
+  mostrarNombre,
+  indice,
+}: ChipSkillProps) {
+  const esNube = disposicion === 'nube'
+  const variante = indice % NUBE_TAMANO_CLASE.length
+
+  return (
+    <div
+      data-chip-skill={estiloChip}
+      className={cn(
+        'h-full rounded-xl',
+        ESTILO_CHIP_CLASE[estiloChip],
+        esNube
+          ? cn('inline-flex items-center gap-2 rounded-full', NUBE_TAMANO_CLASE[variante])
+          : 'flex flex-col items-center gap-2 p-3 text-center',
+      )}
+    >
+      <IconoSkill icono={skill.icono} tamano={esNube ? NUBE_ICONO_TAMANO[variante] : tamanoIcono} />
+      {mostrarNombre || esNube ? (
+        <span className={cn('truncate', esNube ? undefined : 'text-xs text-muted-foreground')}>
+          {skill.nombre}
+        </span>
+      ) : null}
+    </div>
+  )
+}
+
+/** Bloque `skills`, compartido entre el sitio público y el lienzo del editor de Puck (Fase 3.1, extendido Fase 3.4 y Fase 7). */
 export function BloqueSkills({ titulo, config, skills, alineacionTitulo }: BloqueSkillsProps) {
   const visibles = [...skills]
     .filter((skill) => skill.visible)
@@ -74,6 +137,37 @@ export function BloqueSkills({ titulo, config, skills, alineacionTitulo }: Bloqu
       <div className="grid gap-6">
         <h2 className={cn('text-2xl font-semibold', alineacionTitulo)}>{titulo}</h2>
         <p className="text-center text-muted-foreground">Todavía no hay skills cargados.</p>
+      </div>
+    )
+  }
+
+  // Fase 7 (7.3, UC-12): cuadrícula y nube son listas estáticas de chips.
+  const disposicion = config.disposicion ?? 'marquesina'
+  if (disposicion !== 'marquesina') {
+    const estiloChip = config.estilo_chip ?? 'simple'
+    return (
+      <div className="grid gap-6">
+        <h2 className={cn('text-2xl font-semibold', alineacionTitulo)}>{titulo}</h2>
+        <ul
+          data-disposicion={disposicion}
+          className={DISPOSICION_LISTA_CLASE[disposicion]}
+          aria-label="Skills"
+        >
+          {visibles.map((skill, indice) => (
+            <li key={skill.id} className={disposicion === 'cuadricula' ? 'min-w-0' : undefined}>
+              <ItemAnimado indice={indice} className="h-full">
+                <ChipSkill
+                  skill={skill}
+                  disposicion={disposicion}
+                  estiloChip={estiloChip}
+                  tamanoIcono={tamanoIcono}
+                  mostrarNombre={mostrarNombres}
+                  indice={indice}
+                />
+              </ItemAnimado>
+            </li>
+          ))}
+        </ul>
       </div>
     )
   }

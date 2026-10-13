@@ -66,12 +66,12 @@ async function validarBloque(
   const { tipo_seccion, titulo_visible, visible, configuracion } = item;
 
   // Un bloque hijo nunca puede ser 'hero' (la portada ocupa todo el ancho
-  // por diseño) ni 'columnas' (evita anidamiento sin límite). Tipado como
+  // por diseño), 'navegacion' (barra global del sitio, Fase 7, 7.2) ni 'columnas' (evita anidamiento sin límite). Tipado como
   // `readonly string[]` (en vez de dejar que TS infiera la unión angosta de
   // literales) para poder comparar contra `tipo_seccion` (un `string`
   // llegado del payload) sin castear en el sentido contrario.
   const tiposPermitidosEnColumna: readonly string[] = TIPOS_SECCION.filter(
-    (tipo) => tipo !== 'hero' && tipo !== 'columnas',
+    (tipo) => tipo !== 'hero' && tipo !== 'columnas' && tipo !== 'navegacion',
   );
 
   if (
@@ -109,8 +109,8 @@ async function validarBloque(
  * - Ser un objeto plano con EXACTAMENTE las claves `tipo_seccion`/
  *   `titulo_visible`/`visible`/`configuracion` (rechaza `id`/`_seccionId`/
  *   cualquier otra clave).
- * - Tener un `tipo_seccion` de `TIPOS_SECCION` distinto de `'hero'` y de
- *   `'columnas'` (restricción de anidamiento de un solo nivel).
+ * - Tener un `tipo_seccion` de `TIPOS_SECCION` distinto de `'hero'`,
+ *   `'navegacion'` y de `'columnas'` (restricción de anidamiento de un solo nivel).
  * - Tener `titulo_visible` un string no vacío y `visible` un booleano.
  * - Tener `configuracion` válida contra el DTO que le corresponde a ese
  *   `tipo_seccion` (`obtenerErroresConfiguracion`, la misma validación que

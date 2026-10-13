@@ -5,6 +5,12 @@ import { cn } from '@/lib/utils'
 type ToggleModoTemaProps = {
   /** Clases adicionales, mergeadas con `cn()` sobre las que ya trae el botón. */
   className?: string
+  /**
+   * Fase 7 (7.3): la etiqueta se abre hacia abajo (y alineada a la derecha) en
+   * vez de hacia arriba, para el toggle dentro de la barra de navegación
+   * superior, donde hacia arriba se saldría de la pantalla.
+   */
+  etiquetaAbajo?: boolean
 }
 
 /**
@@ -33,7 +39,7 @@ type ToggleModoTemaProps = {
  * etiqueta vive dentro del mismo árbol y hereda `--color-fondo`/`--color-texto`.
  * Es `aria-hidden`: el `aria-label` del botón ya cubre la accesibilidad.
  */
-export function ToggleModoTema({ className }: ToggleModoTemaProps = {}) {
+export function ToggleModoTema({ className, etiquetaAbajo = false }: ToggleModoTemaProps = {}) {
   const { modo, setModo } = useModoTema()
   const esOscuro = modo === 'oscuro'
 
@@ -47,7 +53,10 @@ export function ToggleModoTema({ className }: ToggleModoTemaProps = {}) {
           backgroundColor: 'var(--color-fondo)',
           color: 'var(--color-texto)',
         }}
-        className="pointer-events-none absolute bottom-full right-0 mb-2 whitespace-nowrap rounded-md border px-2.5 py-1 text-xs opacity-0 shadow-md transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
+        className={cn(
+          'pointer-events-none absolute right-0 whitespace-nowrap rounded-md border px-2.5 py-1 text-xs opacity-0 shadow-md transition-opacity group-focus-within:opacity-100 group-hover:opacity-100',
+          etiquetaAbajo ? 'top-full mt-2' : 'bottom-full mb-2',
+        )}
       >
         {etiqueta}
       </span>

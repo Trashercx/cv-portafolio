@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { MetadatosPagina } from '@/components/publico/MetadatosPagina'
 import { useSitio } from '@/features/publico/usePublico'
+import { useFuenteTema } from '@/features/tema/useFuenteTema'
 import { useModoTema } from '@/hooks/useModoTema'
 import { temaComoVariablesCss } from '@/lib/tema-css'
 import { cn } from '@/lib/utils'
@@ -15,6 +16,7 @@ import { cn } from '@/lib/utils'
 export function NoEncontradoPage() {
   const { data: snapshot } = useSitio()
   const { modo } = useModoTema()
+  useFuenteTema(snapshot?.tema?.fuente_principal)
 
   return (
     <div

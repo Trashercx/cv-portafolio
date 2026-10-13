@@ -17,8 +17,19 @@ const base = {
 };
 
 describe('CreateTemaDto (Fase 3.4, UC-08): catálogo cerrado de fuente_principal', () => {
-  it.each(['manrope', 'sans_sistema', 'serif_sistema', 'mono_sistema'])(
-    'acepta el token nuevo "%s"',
+  it.each([
+    'manrope',
+    'inter',
+    'space_grotesk',
+    'sora',
+    'dm_sans',
+    'playfair_display',
+    'jetbrains_mono',
+    'sans_sistema',
+    'serif_sistema',
+    'mono_sistema',
+  ])(
+    'acepta el token del catálogo "%s" (ampliado en Fase 7, 7.2)',
     async (fuente_principal) => {
       const errores = await validarTema({ ...base, fuente_principal });
 
@@ -41,10 +52,31 @@ describe('CreateTemaDto (Fase 3.4, UC-08): catálogo cerrado de fuente_principal
     },
   );
 
-  it('rechaza un valor de fuente_principal fuera del catálogo cerrado de 8', async () => {
+  it('rechaza un valor de fuente_principal fuera del catálogo cerrado (10 tokens + 4 legados)', async () => {
     const errores = await validarTema({
       ...base,
       fuente_principal: 'Comic Sans MS',
+    });
+
+    expect(errores.length).toBeGreaterThan(0);
+  });
+});
+
+describe('CreateTemaDto (Fase 7, 7.2, UC-08): fuentes fuera del catálogo', () => {
+  it.each(['Roboto', 'MANROPE', 'comic_sans', ''])(
+    'rechaza "%s"',
+    async (fuente_principal) => {
+      const errores = await validarTema({ ...base, fuente_principal });
+
+      expect(errores.length).toBeGreaterThan(0);
+    },
+  );
+
+  it('rechaza un campo desconocido (whitelist)', async () => {
+    const errores = await validarTema({
+      ...base,
+      fuente_principal: 'sora',
+      inventado: true,
     });
 
     expect(errores.length).toBeGreaterThan(0);
