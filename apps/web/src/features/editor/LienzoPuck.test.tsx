@@ -19,7 +19,7 @@ const historyMock: { hasPast: boolean; hasFuture: boolean } = {
  * `LienzoPuck`) y `usePuckEditor` (para poder controlar `history` sin
  * depender de un store real de Puck).
  */
-vi.mock('@measured/puck', () => ({
+vi.mock('@puckeditor/core', () => ({
   Puck: Object.assign(
     (props: { children?: ReactNode }) => <>{props.children}</>,
     {

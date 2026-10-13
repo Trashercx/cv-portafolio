@@ -1,5 +1,5 @@
-import '@measured/puck/puck.css'
-import { Puck, type Data } from '@measured/puck'
+import '@puckeditor/core/puck.css'
+import { Puck, type Data } from '@puckeditor/core'
 import { Redo2, Undo2 } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
@@ -25,7 +25,7 @@ type LienzoPuckProps = {
 /**
  * Deshacer/rehacer (Fase 5): antes vivían en el `MenuBar` del header nativo
  * de Puck, que se pierde por completo al reemplazar `children` (ver
- * `node_modules/@measured/puck/dist/index.d.ts` — `children` reemplaza TODO
+ * `node_modules/@puckeditor/core/dist/index.d.ts` — `children` reemplaza TODO
  * el layout por defecto). `usePuck(s => s.history)` expone el mismo
  * `back`/`forward`/`hasPast`/`hasFuture` que usaba ese `MenuBar`.
  */
@@ -62,7 +62,7 @@ function ControlesHistorial() {
  * Lienzo del editor unificado (Fase 5, panel unificado): reemplaza el
  * `<Puck ... overrides={{ headerActions }}>` de antes por una composición
  * manual vía `children` (confirmado leyendo
- * `node_modules/@measured/puck/dist/index.d.ts`: si se pasan `children`,
+ * `node_modules/@puckeditor/core/dist/index.d.ts`: si se pasan `children`,
  * reemplazan TODO el layout por defecto de Puck — header, sidebar izquierdo,
  * canvas, sidebar derecho — por lo que se componga acá). El portal
  * `#puck-portal-root` (overlays de drag-and-drop) y los hotkeys (Ctrl+Z,

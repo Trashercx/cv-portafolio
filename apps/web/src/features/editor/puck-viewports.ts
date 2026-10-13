@@ -1,4 +1,4 @@
-import type { UiState, Viewports } from '@measured/puck'
+import type { UiState, Viewports } from '@puckeditor/core'
 
 /**
  * Opciones del selector de viewport propio (`ViewportSwitcher`), con el

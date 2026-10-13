@@ -1,5 +1,5 @@
 import { useRef, type MouseEvent, type ReactNode } from 'react'
-import type { PuckContext } from '@measured/puck'
+import type { PuckContext } from '@puckeditor/core'
 import { FondoAnimado } from '@/components/publico/FondoAnimado'
 import { ProveedorModoRenderizado } from '@/components/publico/contexto-renderizado'
 import { useTheme } from '@/components/theme/ThemeProvider'

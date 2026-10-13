@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Content } from '@measured/puck'
+import type { Content } from '@puckeditor/core'
 import type { PuckSeccionesComponents } from '@/lib/puck-config'
 
 type EditorContent = Content<PuckSeccionesComponents>

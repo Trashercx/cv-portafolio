@@ -1,4 +1,4 @@
-import { type Data } from '@measured/puck'
+import { type Data } from '@puckeditor/core'
 import { Info } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'

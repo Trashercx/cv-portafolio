@@ -19,7 +19,7 @@ vi.mock('./usePuckEditor', () => ({
 // cubre el placeholder y el título del bloque seleccionado (ver
 // `LienzoPuck.test.tsx`/`EditorSeccionesPage.test.tsx` para la decisión de
 // no montar un `<Puck>` real en jsdom).
-vi.mock('@measured/puck', () => ({
+vi.mock('@puckeditor/core', () => ({
   Puck: Object.assign(() => null, { Fields: () => <div>Campos del bloque</div> }),
 }))
 

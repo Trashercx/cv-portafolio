@@ -64,7 +64,7 @@ function renderEditor() {
  * rendericen sin lanzar, sin ejercitar contra Puck real (fuera del alcance
  * de esta suite, que solo cubre la barra de acciones).
  */
-vi.mock('@measured/puck', () => {
+vi.mock('@puckeditor/core', () => {
   const PuckStub = Object.assign(
     (props: { children?: ReactNode }) => <>{props.children}</>,
     {

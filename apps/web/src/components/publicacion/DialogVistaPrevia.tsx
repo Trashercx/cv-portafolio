@@ -44,7 +44,7 @@ type DialogVistaPreviaProps = {
  * `LienzoPuck` (hasta Fase 5, dentro de `overrides.headerActions` de
  * `<Puck>` — una función/objeto literal nuevo en cada render de
  * `EditorSeccionesPage` que Puck remontaba como subárbol en cada cambio de
- * esa referencia, confirmado en `node_modules/@measured/puck/dist/index.js`:
+ * esa referencia, confirmado en `node_modules/@puckeditor/core/dist/index.js`:
  * `headerActions` se usaba como tipo de componente JSX). Como la
  * invalidación de `VERSIONES_QUERY_KEY` que dispara
  * `usePreviewVersion.onSuccess` (ver `usePublicacion.ts`) re-renderiza

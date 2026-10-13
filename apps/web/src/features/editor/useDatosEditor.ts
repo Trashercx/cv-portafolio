@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import type { PuckContext } from '@measured/puck'
+import type { PuckContext } from '@puckeditor/core'
 import { useCertificaciones } from '@/features/certificaciones/useCertificaciones'
 import { useFondosSitio } from '@/features/fondo-sitio/useFondosSitio'
 import { useMediaList } from '@/features/media/useMediaLibrary'

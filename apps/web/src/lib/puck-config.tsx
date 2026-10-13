@@ -1,4 +1,4 @@
-import type { Config, CustomField, Slot } from '@measured/puck'
+import type { Config, CustomField, Slot } from '@puckeditor/core'
 import { EnvoltorioSeccion } from '@/components/publico/EnvoltorioSeccion'
 import {
   BloqueCertificaciones,

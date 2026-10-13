@@ -27,7 +27,7 @@ const OPCIONES_VIEWPORT = PUCK_VIEWPORTS.map((viewport) => ({
 /**
  * Selector de viewport propio (Fase 5, panel unificado): reemplaza el
  * `ViewportControls` nativo de Puck, que no se exporta desde el paquete (ver
- * `node_modules/@measured/puck/dist/index.d.ts`) y por lo tanto no se puede
+ * `node_modules/@puckeditor/core/dist/index.d.ts`) y por lo tanto no se puede
  * reconstruir con el layout compuesto a mano de `LienzoPuck`. A diferencia
  * del original, esta versión no incluye el slider de zoom — solo los 3
  * botones de tamaño (`PUCK_VIEWPORTS`).

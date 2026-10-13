@@ -1,4 +1,4 @@
-import { Puck } from '@measured/puck'
+import { Puck } from '@puckeditor/core'
 import { puckConfig } from '@/lib/puck-config'
 import { usePuckEditor } from './usePuckEditor'
 

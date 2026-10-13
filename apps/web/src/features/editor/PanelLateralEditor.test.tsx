@@ -11,7 +11,7 @@ type SelectedItemFalso = { type: string; props: { id: string } } | null
  * Store de zustand propio (no el real de Puck) para poder disparar
  * transiciones de selección de forma controlada, igual que haría el store
  * interno real que expone `usePuck`/`usePuckEditor` — se mockea el módulo
- * entero (`./usePuckEditor`), no `@measured/puck`, porque esta suite no
+ * entero (`./usePuckEditor`), no `@puckeditor/core`, porque esta suite no
  * necesita ejercitar nada del lienzo real, solo la lógica de pestañas.
  */
 const usePuckStoreFalso = create<{ selectedItem: SelectedItemFalso }>(() => ({
