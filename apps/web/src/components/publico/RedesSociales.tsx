@@ -22,47 +22,69 @@ type RedesSocialesProps = {
    * pensada para llamar más la atención sobre cada red.
    */
   estilo?: 'iconos' | 'botones'
+  /**
+   * Fase 7 (7.3, hero `mostrar_redes`): solo el ícono en un botón circular
+   * (el nombre queda como `aria-label`), sin botón de CV.
+   */
+  compacto?: boolean
+  /** Alineación de la fila de redes. @default 'centro' */
+  alineacion?: 'centro' | 'inicio'
 }
 
 /**
  * Enlaces de redes sociales + descarga del CV (UC-14). Compartido entre la
- * sección "contacto" del sitio público y la vista previa del panel.
+ * sección "contacto" del sitio público, el hero (Fase 7) y la vista previa
+ * del panel.
  */
-export function RedesSociales({ redes, cvMedia, estilo = 'iconos' }: RedesSocialesProps) {
+export function RedesSociales({
+  redes,
+  cvMedia,
+  estilo = 'iconos',
+  compacto = false,
+  alineacion = 'centro',
+}: RedesSocialesProps) {
   const ordenadas = [...redes].sort((a, b) => a.orden - b.orden)
   const esBotones = estilo === 'botones'
 
   return (
     <div className="grid gap-4">
       {ordenadas.length > 0 ? (
-        <ul className="flex flex-wrap justify-center gap-3">
+        <ul
+          className={cn(
+            'flex flex-wrap gap-3',
+            alineacion === 'centro' ? 'justify-center' : 'justify-start',
+          )}
+        >
           {ordenadas.map((red) => (
             <li key={red.id}>
               <EnlaceBloque
                 href={red.url}
                 target="_blank"
                 rel="noreferrer"
+                aria-label={compacto ? red.plataforma.nombre : undefined}
                 style={
-                  esBotones
+                  esBotones && !compacto
                     ? { backgroundColor: 'var(--color-primario)', color: 'var(--color-texto)' }
                     : undefined
                 }
                 className={cn(
                   'inline-flex items-center gap-2 rounded-md text-sm font-medium transition-colors',
-                  esBotones
-                    ? 'px-4 py-2.5 hover:opacity-90'
-                    : 'border px-3 py-2 hover:bg-accent',
+                  compacto
+                    ? 'size-10 justify-center rounded-full border hover:bg-accent'
+                    : esBotones
+                      ? 'px-4 py-2.5 hover:opacity-90'
+                      : 'border px-3 py-2 hover:bg-accent',
                 )}
               >
                 <PlataformaIcono iconoDefecto={red.plataforma.icono_defecto} />
-                {red.plataforma.nombre}
+                {compacto ? null : red.plataforma.nombre}
               </EnlaceBloque>
             </li>
           ))}
         </ul>
       ) : null}
 
-      {cvMedia ? (
+      {cvMedia && !compacto ? (
         <EnlaceBloque
           href={`${API_BASE_URL}/cv`}
           style={{ backgroundColor: 'var(--color-primario)' }}
