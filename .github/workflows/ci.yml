@@ -6,23 +6,97 @@ on:
   push:
     branches: [main]
 
+# Fase 6: si llegan varios pushes seguidos al mismo PR (o a main), se cancela
+# el run anterior todavía en curso para no gastar minutos en resultados que
+# ya nadie va a mirar. En main NO se cancela (cancel-in-progress=false) para
+# que un build-and-push a medias nunca quede interrumpido por el siguiente
+# commit: cada push a main publica su propia imagen completa.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Fase 6: permisos mínimos por defecto para todo el workflow; los jobs que
+# publican a GHCR piden `packages: write` de forma explícita más abajo.
+permissions:
+  contents: read
+
 jobs:
   api:
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: apps/api
+    # Fase 6: Postgres real para los tests e2e (test/*.e2e-spec.ts levantan
+    # AppModule completo contra la base de datos — ver
+    # apps/api/test/utils/test-app.ts). El servicio expone 5432 en el runner,
+    # por eso DATABASE_URL apunta a localhost:5432 (no al 5433 de desarrollo
+    # local de docker-compose.yml). Credenciales dummy, exclusivas de CI.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: cv_ci
+          POSTGRES_PASSWORD: cv_ci
+          POSTGRES_DB: cv_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U cv_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # Mismas variables que apps/api/.env.example declara. Ninguna es real:
+      # JWT_SECRET y ADMIN_PASSWORD_SEED solo viven en este runner efímero.
+      # prisma7.config.ts, prisma/seed.ts y los e2e (dotenv/config) leen
+      # process.env primero, y no existe ningún .env en CI que los pise.
+      NODE_ENV: test
+      PORT: "3000"
+      DATABASE_URL: postgresql://cv_ci:cv_ci@localhost:5432/cv_ci?schema=public
+      FRONTEND_ORIGIN: http://localhost:5173
+      JWT_SECRET: secreto-exclusivo-de-ci-no-usar-en-produccion-0123456789
+      JWT_EXPIRES_IN: 15m
+      ADMIN_EMAIL: admin-ci@example.com
+      ADMIN_PASSWORD_SEED: Contrasena-de-CI-123
+      # Media: los e2e sustituyen S3MediaStorageService por el stub local
+      # (overrideProvider en media.e2e-spec.ts y sitio-publico.e2e-spec.ts);
+      # estos valores solo evitan que el provider real se construya vacío.
+      AWS_ACCESS_KEY_ID: ci-dummy
+      AWS_SECRET_ACCESS_KEY: ci-dummy
+      AWS_REGION: us-east-1
+      S3_BUCKET_NAME: bucket-ci-dummy
+      CLOUDFRONT_DOMAIN: ""
+      PUBLIC_BASE_URL: http://localhost:3000
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version-file: .nvmrc
           cache: npm
       - run: npm ci
         working-directory: .
       - run: npm run lint
       - run: npm run build
-      - run: npm test
+      # Unit tests con cobertura (jest --coverage); el reporte se sube como
+      # artifact para consultarlo desde el run sin instalar nada.
+      - run: npm run test:cov
+      # Migraciones + seed (admin único y catálogos) contra el Postgres del
+      # servicio, exactamente como lo haría el docker-entrypoint.sh en
+      # producción, y luego los e2e reales (maxWorkers: 1, ver
+      # test/jest-e2e.json).
+      - name: Migraciones de Prisma (migrate deploy)
+        run: npx prisma migrate deploy
+      - name: Seed (admin único + catálogos)
+        run: npx prisma db seed
+      - name: Tests e2e
+        run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: cobertura-api
+          path: apps/api/coverage
+          retention-days: 7
+          if-no-files-found: ignore
 
   web:
     runs-on: ubuntu-latest
@@ -33,7 +107,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version-file: .nvmrc
           cache: npm
       - run: npm ci
         working-directory: .
