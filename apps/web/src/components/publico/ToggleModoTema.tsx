@@ -25,30 +25,48 @@ type ToggleModoTemaProps = {
  * ahí sin acoplar este componente a un layout fijo, y el fondo sólido inline
  * (`--color-fondo`) evita que se lea transparente sobre el contenido al
  * flotar.
+ *
+ * Séptima ronda: el `title` nativo tardaba y se veía poco, así que se
+ * reemplazó por una etiqueta propia sobre el botón (visible en hover/foco).
+ * No se usa el `Tooltip` de shadcn porque portalea a `<body>`, fuera del
+ * contenedor raíz que lleva la clase `dark` y las variables CSS del tema; la
+ * etiqueta vive dentro del mismo árbol y hereda `--color-fondo`/`--color-texto`.
+ * Es `aria-hidden`: el `aria-label` del botón ya cubre la accesibilidad.
  */
 export function ToggleModoTema({ className }: ToggleModoTemaProps = {}) {
   const { modo, setModo } = useModoTema()
   const esOscuro = modo === 'oscuro'
 
+  const etiqueta = esOscuro ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'
+
   return (
-    <button
-      type="button"
-      onClick={() => setModo(esOscuro ? 'claro' : 'oscuro')}
-      aria-label={
-        esOscuro ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'
-      }
-      title={esOscuro ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
-      style={{ backgroundColor: 'var(--color-fondo)' }}
-      className={cn(
-        'inline-flex size-9 items-center justify-center rounded-full border text-current transition-colors hover:bg-[var(--color-primario)]/10',
-        className,
-      )}
-    >
-      {esOscuro ? (
-        <Moon className="size-4" aria-hidden="true" />
-      ) : (
-        <Sun className="size-4" aria-hidden="true" />
-      )}
-    </button>
+    <div className="group relative inline-flex">
+      <span
+        aria-hidden="true"
+        style={{
+          backgroundColor: 'var(--color-fondo)',
+          color: 'var(--color-texto)',
+        }}
+        className="pointer-events-none absolute bottom-full right-0 mb-2 whitespace-nowrap rounded-md border px-2.5 py-1 text-xs opacity-0 shadow-md transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
+      >
+        {etiqueta}
+      </span>
+      <button
+        type="button"
+        onClick={() => setModo(esOscuro ? 'claro' : 'oscuro')}
+        aria-label={etiqueta}
+        style={{ backgroundColor: 'var(--color-fondo)' }}
+        className={cn(
+          'inline-flex size-9 items-center justify-center rounded-full border text-current transition-colors hover:bg-[var(--color-primario)]/10',
+          className,
+        )}
+      >
+        {esOscuro ? (
+          <Moon className="size-4" aria-hidden="true" />
+        ) : (
+          <Sun className="size-4" aria-hidden="true" />
+        )}
+      </button>
+    </div>
   )
 }
