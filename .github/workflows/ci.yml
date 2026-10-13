@@ -12,7 +12,9 @@ on:
 # que un build-and-push a medias nunca quede interrumpido por el siguiente
 # commit: cada push a main publica su propia imagen completa.
 concurrency:
-  group: ci-${{ github.ref }}
+  # En push a main el grupo es por SHA: así ningún push intermedio pierde su
+  # imagen `:sha`; en PRs es por ref para cancelar runs obsoletos.
+  group: ci-${{ github.event_name == 'push' && github.sha || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 # Fase 6: permisos mínimos por defecto para todo el workflow; los jobs que
@@ -46,7 +48,7 @@ jobs:
           --health-timeout 5s
           --health-retries 10
     env:
-      # Mismas variables que apps/api/.env.example declara. Ninguna es real:
+      # Mismas variables que el .env.example de la raíz declara. Ninguna es real:
       # JWT_SECRET y ADMIN_PASSWORD_SEED solo viven en este runner efímero.
       # prisma7.config.ts, prisma/seed.ts y los e2e (dotenv/config) leen
       # process.env primero, y no existe ningún .env en CI que los pise.

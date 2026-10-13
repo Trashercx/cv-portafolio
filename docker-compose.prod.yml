@@ -61,8 +61,12 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-info}
       THROTTLE_TTL_MS: ${THROTTLE_TTL_MS:-60000}
       THROTTLE_LIMIT: ${THROTTLE_LIMIT:-120}
+      THROTTLE_LOGIN_LIMIT: ${THROTTLE_LOGIN_LIMIT:-5}
+      THROTTLE_LOGIN_TTL_MS: ${THROTTLE_LOGIN_TTL_MS:-60000}
+    # Solo loopback: con TRUST_PROXY=true la API confía en X-Forwarded-For, así
+    # que nadie debe poder llegar al puerto sin pasar por Traefik (revisión Fase 6).
     ports:
-      - "${API_PUBLIC_PORT:-3000}:3000"
+      - "127.0.0.1:${API_PUBLIC_PORT:-3000}:3000"
     # Fase 6 — liveness desde Compose (además del HEALTHCHECK de la imagen,
     # que Dokploy/Coolify ya respetan). `GET /health` no toca la base de
     # datos; `start_period` cubre el `prisma migrate deploy` del entrypoint.
