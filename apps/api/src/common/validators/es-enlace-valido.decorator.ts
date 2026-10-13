@@ -2,10 +2,11 @@ import { ValidationOptions, registerDecorator } from 'class-validator';
 
 /**
  * URL absoluta http(s) o ruta relativa interna que empiece por `/` o `#`
- * (Fase 7, 7.2, UC-07). Rechaza `//host` (protocolo relativo), `javascript:`
- * y cualquier otro esquema.
+ * (Fase 7, 7.2, UC-07). Rechaza `//host` (protocolo relativo), `/\host` (los
+ * navegadores lo normalizan a `//host`: redirección abierta, hallazgo de la
+ * revisión de la Fase 7), `javascript:` y cualquier otro esquema.
  */
-const PATRON_ENLACE = /^(https?:\/\/[^\s/]\S*|\/(?!\/)\S*|#\S*)$/i;
+const PATRON_ENLACE = /^(https?:\/\/[^\s/]\S*|\/(?![\/\\])\S*|#\S*)$/i;
 
 export function esEnlaceValido(valor: unknown): boolean {
   return typeof valor === 'string' && PATRON_ENLACE.test(valor);
