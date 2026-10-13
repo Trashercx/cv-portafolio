@@ -39,8 +39,11 @@ import { PrismaModule } from './prisma/prisma.module';
             : { target: 'pino-pretty', options: { singleLine: true } },
         genReqId: (req, res) => {
           const entrante = req.headers['x-request-id'];
+          // Solo se reutiliza un id entrante corto y de caracteres seguros: evita
+          // inflar los logs o falsear correlaciones desde el cliente (revisión Fase 6).
           const id =
-            typeof entrante === 'string' && entrante.length > 0
+            typeof entrante === 'string' &&
+            /^[A-Za-z0-9._-]{1,64}$/.test(entrante)
               ? entrante
               : randomUUID();
           res.setHeader('x-request-id', id);
