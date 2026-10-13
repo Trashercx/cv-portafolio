@@ -74,6 +74,33 @@
   --sidebar-ring: oklch(0.74 0.15 265);
 }
 
+/*
+ * Séptima ronda (UC-07): Puck no trae modo oscuro propio. Su paleta vive en
+ * variables `--puck-color-*` sobre `:root` (`@measured/puck/puck.css`), y su
+ * UI (drawer de componentes, outline, campos, marco del preview) pinta
+ * fondos con `white`/`grey-11`/`grey-12` y textos con `grey-01..05`/`black`.
+ * Aquí se invierte la escala cuando el panel está en modo oscuro (`html.dark`,
+ * puesto por `ThemeProvider`). El selector `html.dark` tiene más
+ * especificidad que `:root`: necesario porque `puck.css` se inyecta DESPUÉS
+ * de este archivo y en un empate ganaría la paleta clara.
+ */
+html.dark {
+  --puck-color-grey-01: #fafafa;
+  --puck-color-grey-02: #f5f5f5;
+  --puck-color-grey-03: #efefef;
+  --puck-color-grey-04: #dcdcdc;
+  --puck-color-grey-05: #c3c3c3;
+  --puck-color-grey-06: #ababab;
+  --puck-color-grey-07: #949494;
+  --puck-color-grey-08: #767676;
+  --puck-color-grey-09: #5a5a5a;
+  --puck-color-grey-10: #404040;
+  --puck-color-grey-11: #292929;
+  --puck-color-grey-12: #181818;
+  --puck-color-white: #181818;
+  --puck-color-black: #ffffff;
+}
+
 @theme inline {
   --font-heading: 'Manrope Variable', 'Inter', ui-sans-serif, system-ui,
     sans-serif;

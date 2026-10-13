@@ -40,16 +40,20 @@ type DialogVistaPreviaProps = {
  *
  * `open`/`previewVersion` son props CONTROLADAS por `EditorSeccionesPage`
  * (Fase 4.1, punto 2), no estado interno: este componente se monta dentro
- * de `overrides.headerActions` de `<Puck>`, una función/objeto literal nuevo
- * en cada render de `EditorSeccionesPage` — Puck remonta ese subárbol cada
- * vez que cambia esa referencia (confirmado en
- * `node_modules/@measured/puck/dist/index.js`: `headerActions` se usa como
- * tipo de componente JSX). Como la invalidación de `VERSIONES_QUERY_KEY` que
- * dispara `usePreviewVersion.onSuccess` (ver `usePublicacion.ts`) re-renderiza
+ * del `toolbar` que arma `EditorSeccionesPage` y que viaja como prop a
+ * `LienzoPuck` (hasta Fase 5, dentro de `overrides.headerActions` de
+ * `<Puck>` — una función/objeto literal nuevo en cada render de
+ * `EditorSeccionesPage` que Puck remontaba como subárbol en cada cambio de
+ * esa referencia, confirmado en `node_modules/@measured/puck/dist/index.js`:
+ * `headerActions` se usaba como tipo de componente JSX). Como la
+ * invalidación de `VERSIONES_QUERY_KEY` que dispara
+ * `usePreviewVersion.onSuccess` (ver `usePublicacion.ts`) re-renderiza
  * `EditorSeccionesPage` (misma query que alimenta el badge Borrador/
  * Publicado), un `useState` local acá se reseteaba a `open=false` en cada
  * apertura — el síntoma reportado de "la vista previa se cierra sola".
- * Levantar el estado al padre (que nunca se remonta) resuelve la causa raíz.
+ * Levantar el estado al padre (que nunca se remonta) resuelve la causa raíz,
+ * y se mantiene así aunque Fase 5 ya no remonte ese subárbol en cada render
+ * (es una invariante barata de conservar).
  *
  * Modo oscuro (Fase 4.6, corregido): mismo tratamiento que `PuckRoot` (el
  * otro "lienzo" que previsualiza el sitio dentro del panel) — refleja el

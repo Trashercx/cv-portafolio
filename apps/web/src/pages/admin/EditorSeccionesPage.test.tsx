@@ -43,31 +43,65 @@ function renderEditor() {
  * `EditorSeccionesPage` inyectando directamente un `content` simulado en
  * el store de Zustand que alimenta el botón "Guardar cambios".
  *
- * Desde Fase 3.1 la barra de acciones propia (Borrador/Publicado, Vista
- * previa, Historial de versiones, Publicar, Guardar cambios) vive dentro del
- * header nativo de Puck vía `overrides.headerActions` en vez de un `<div>`
- * separado encima del lienzo — el stub debe seguir invocándola para que
- * estos elementos sigan siendo consultables por rol/nombre en los tests de
- * abajo, igual que antes de la migración.
+ * Desde Fase 5 (panel unificado) `LienzoPuck` reconstruye TODO el layout de
+ * Puck a mano vía `children` (`overrides.headerActions` ya no existe): el
+ * stub de `Puck` de acá simplemente renderiza `props.children` tal cual —
+ * la barra de acciones (`toolbar`, Borrador/Publicado, Vista previa,
+ * Historial de versiones, Publicar, Guardar cambios) viaja como un elemento
+ * JSX ya armado (no una función/componente nuevo en cada render, a
+ * diferencia de la vieja `overrides.headerActions`), así que sigue siendo
+ * consultable por rol/nombre en los tests de abajo sin necesitar ningún
+ * trato especial.
  *
- * `headerActions` se usa acá como REFERENCIA DE COMPONENTE (`<HeaderActions />`),
- * no como una llamada directa (`headerActions()`): así reproduce el mismo
- * comportamiento del `Puck` real (confirmado leyendo
- * `node_modules/@measured/puck/dist/index.js`, donde `CustomHeaderActions`
- * también se usa como tipo de componente JSX) — una función/objeto literal
- * nuevo en cada render de `EditorSeccionesPage` (la prop `overrides` se
- * declara inline) hace que React remonte todo ese subárbol. Es justo lo que
- * necesita el test de "Vista previa no se cierra sola" más abajo (Fase 4.1,
- * punto 2) para poder detectar una regresión si el estado de
- * `DialogVistaPrevia` volviera a vivir dentro de ese subárbol en vez de en
- * `EditorSeccionesPage`.
+ * `createUsePuck` también se mockea acá (no solo `Puck`): `usePuckEditor`
+ * (`@/features/editor/usePuckEditor`) lo llama a nivel de módulo
+ * (`createUsePuck<typeof puckConfig>()`), y ese módulo se importa
+ * transitivamente desde `LienzoPuck`/`PanelLateralEditor`/
+ * `PanelBloqueSeleccionado`/`ViewportSwitcher` — sin este mock, `Puck` (el
+ * hook real) fallaría con "usePuck must be used inside <Puck>." al no haber
+ * un `<Puck>` real montado. El estado falso que devuelve (`selectedItem:
+ * null`, historial sin pasado/futuro) alcanza para que esos componentes se
+ * rendericen sin lanzar, sin ejercitar contra Puck real (fuera del alcance
+ * de esta suite, que solo cubre la barra de acciones).
  */
-vi.mock('@measured/puck', () => ({
-  Puck: (props: { overrides?: { headerActions?: () => ReactNode } }) => {
-    const HeaderActions = props.overrides?.headerActions
-    return HeaderActions ? <HeaderActions /> : null
-  },
-}))
+vi.mock('@measured/puck', () => {
+  const PuckStub = Object.assign(
+    (props: { children?: ReactNode }) => <>{props.children}</>,
+    {
+      Components: () => null,
+      Fields: () => null,
+      Outline: () => null,
+      Preview: () => null,
+    },
+  )
+  return {
+    Puck: PuckStub,
+    createUsePuck:
+      () =>
+      <T,>(selector?: (state: unknown) => T) => {
+        const estadoFalso = {
+          dispatch: vi.fn(),
+          selectedItem: null,
+          appState: {
+            ui: {
+              viewports: {
+                current: { width: 1280, height: 'auto' },
+                controlsVisible: true,
+                options: [],
+              },
+            },
+          },
+          history: {
+            back: vi.fn(),
+            forward: vi.fn(),
+            hasPast: false,
+            hasFuture: false,
+          },
+        }
+        return selector ? selector(estadoFalso) : (estadoFalso as unknown as T)
+      },
+  }
+})
 
 const SECCION_HERO: Seccion = {
   id: 'seccion-a',
@@ -751,7 +785,7 @@ describe('EditorSeccionesPage (UC-07, UC-10, UC-11)', () => {
     ).toBeInTheDocument()
   })
 
-  it('"Vista previa" no se cierra sola cuando el resto de la página se re-renderiza y remonta el subárbol de headerActions (Fase 4.1, punto 2: regresión del bug reportado)', async () => {
+  it('"Vista previa" no se cierra sola cuando el resto de la página se re-renderiza (Fase 4.1, punto 2: regresión del bug reportado; sigue vigente tras Fase 5, panel unificado)', async () => {
     const user = userEvent.setup()
     const { rerender } = renderEditor()
 
@@ -761,15 +795,19 @@ describe('EditorSeccionesPage (UC-07, UC-10, UC-11)', () => {
       screen.getByRole('heading', { name: 'Vista previa' }),
     ).toBeInTheDocument()
 
-    // Cualquier cambio de estado en `EditorSeccionesPage` re-crea el objeto
-    // `overrides` (declarado inline en el JSX de `<Puck>`), lo que el mock
-    // de `Puck` de este archivo remonta como un subárbol nuevo (mismo
-    // comportamiento que el `Puck` real, ver el comentario de cabecera de
-    // ese mock) — antes del fix, esto reseteaba el `useState` local de
-    // `DialogVistaPrevia` a `open=false`. Se fuerza ese re-render con
-    // `rerender` (en vez de interactuar con otro botón de la barra, que
-    // Radix marca `aria-hidden` mientras el diálogo de Vista previa está
-    // abierto) para aislar específicamente el efecto del remount.
+    // Antes del fix original (Fase 4.1), `overrides.headerActions` era una
+    // función nueva en cada render de `EditorSeccionesPage`, y Puck la usaba
+    // como tipo de componente JSX — cualquier re-render remontaba ese
+    // subárbol, reseteando el `useState` local de `DialogVistaPrevia` a
+    // `open=false`. Desde Fase 5 `overrides.headerActions` ya no existe (la
+    // barra viaja como prop `toolbar`, un elemento ya instanciado, a
+    // `LienzoPuck`), pero el estado de `DialogVistaPrevia` sigue levantado
+    // en `EditorSeccionesPage` como salvaguarda barata: este test verifica
+    // que la regresión original no vuelva, sea cual sea el mecanismo. Se
+    // fuerza el re-render con `rerender` (en vez de interactuar con otro
+    // botón de la barra, que Radix marca `aria-hidden` mientras el diálogo
+    // de Vista previa está abierto) para aislar el efecto de un re-render
+    // cualquiera de la página.
     rerender(
       <ThemeProvider>
         <MemoryRouter>

@@ -14,6 +14,12 @@ function renderSidebar(initialPath: string) {
   )
 }
 
+/**
+ * Fase 5 (panel unificado): "Tema" y "Fondo del sitio" ya no son ítems
+ * propios de la sidebar — se fusionaron como pestañas del panel lateral de
+ * "Editor visual" (ver `PanelTemaEditor`/`PanelFondoEditor`), así que el
+ * grupo "Diseño" quedó con un solo ítem.
+ */
 const ITEMS_ESPERADOS = [
   'Perfil',
   'Proyectos',
@@ -22,13 +28,11 @@ const ITEMS_ESPERADOS = [
   'Skills',
   'Redes sociales',
   'Editor visual',
-  'Tema',
-  'Fondo del sitio',
   'Biblioteca de medios',
 ]
 
 describe('AppSidebar', () => {
-  it('muestra las 10 entradas de navegación agrupadas en 3 secciones', () => {
+  it('muestra las 8 entradas de navegación agrupadas en 3 secciones', () => {
     renderSidebar('/admin/perfil')
 
     for (const label of ITEMS_ESPERADOS) {
@@ -38,6 +42,15 @@ describe('AppSidebar', () => {
     expect(screen.getByText('Contenido')).toBeInTheDocument()
     expect(screen.getByText('Diseño')).toBeInTheDocument()
     expect(screen.getByText('Recursos')).toBeInTheDocument()
+  })
+
+  it('no muestra "Tema" ni "Fondo del sitio" como ítems propios (fusionados en el panel lateral del editor)', () => {
+    renderSidebar('/admin/perfil')
+
+    expect(screen.queryByRole('link', { name: 'Tema' })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('link', { name: 'Fondo del sitio' }),
+    ).not.toBeInTheDocument()
   })
 
   it('el link "Ver sitio público" abre en una pestaña nueva', () => {
@@ -50,9 +63,9 @@ describe('AppSidebar', () => {
   })
 
   it('marca activo el ítem cuya ruta coincide exactamente', () => {
-    renderSidebar('/admin/tema')
+    renderSidebar('/admin/editor')
 
-    expect(screen.getByRole('link', { name: 'Tema' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Editor visual' })).toHaveAttribute(
       'data-active',
       'true',
     )
@@ -68,9 +81,9 @@ describe('AppSidebar', () => {
   })
 
   it('NO marca activo un ítem cuando la ruta actual solo comparte prefijo de texto (caso que fallaría con startsWith puro)', () => {
-    renderSidebar('/admin/tema-avanzado')
+    renderSidebar('/admin/editor-avanzado')
 
-    expect(screen.getByRole('link', { name: 'Tema' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Editor visual' })).toHaveAttribute(
       'data-active',
       'false',
     )

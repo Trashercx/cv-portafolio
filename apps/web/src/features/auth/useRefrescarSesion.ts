@@ -27,6 +27,11 @@ export function useRefrescarSesion() {
         method: 'POST',
       }),
     onSuccess: (admin) => {
+      // Séptima ronda: si el cierre automático de `AvisoSesionExpirando` ya
+      // limpió el store mientras este refresh estaba en vuelo, se ignora la
+      // respuesta — si no, el store quedaría "autenticado" estando ya en
+      // `/admin/login`.
+      if (useAuthStore.getState().admin === null) return
       useAuthStore.getState().setAdmin(admin)
     },
     meta: {

@@ -37,8 +37,9 @@ const MAPA_FUENTE_PRINCIPAL: Record<string, string> = {
 
 /**
  * Variables CSS del tema (UC-08/UC-12), sin colores hardcodeados en ningún
- * componente. Reutilizada por `TemaPage` (vista previa en el panel) y por el
- * sitio público (`PublicHomePage`), aplicadas sobre el contenedor raíz de
+ * componente. Reutilizada por `PanelTemaEditor` (pestaña "Tema" del panel
+ * lateral del editor, antes la extinta `TemaPage`; vista previa en el panel)
+ * y por el sitio público (`PublicHomePage`), aplicadas sobre el contenedor raíz de
  * cada uno — el tema de la vista previa del panel puede ser distinto al del
  * snapshot publicado si el admin todavía no publicó un cambio de tema.
  *

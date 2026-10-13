@@ -3,13 +3,11 @@ import {
   ExternalLink,
   Image,
   LayoutGrid,
-  Palette,
   Share2,
   Sparkles,
   Trophy,
   User,
   Wand2,
-  Waves,
   type LucideIcon,
 } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
@@ -28,13 +26,18 @@ import {
 type NavItem = { to: string; label: string; icon: LucideIcon }
 
 /**
- * Los mismos 10 ítems de siempre (UC-02 a UC-09, más "Skills" UC-16 y "Fondo
- * del sitio" UC-15), ahora agrupados en 3 secciones (Fase 3.5) para que la
- * sidebar sea escaneable de un vistazo: "Contenido" (las 6 entidades de
- * negocio que edita el admin), "Diseño" (todo lo que afecta la apariencia
- * del sitio publicado) y "Recursos" (la biblioteca de medios, transversal a
- * las anteriores). Ni las rutas ni las etiquetas cambiaron — solo la
- * estructura visual.
+ * Los mismos ítems de siempre (UC-02 a UC-09, más "Skills" UC-16), agrupados
+ * en 3 secciones (Fase 3.5) para que la sidebar sea escaneable de un
+ * vistazo: "Contenido" (las 6 entidades de negocio que edita el admin),
+ * "Diseño" (todo lo que afecta la apariencia del sitio publicado) y
+ * "Recursos" (la biblioteca de medios, transversal a las anteriores).
+ *
+ * Fase 5 (panel unificado): "Tema" (UC-08) y "Fondo del sitio" (UC-15) ya no
+ * son páginas propias — se fusionaron como pestañas del panel lateral de
+ * "Editor visual" (ver `PanelTemaEditor`/`PanelFondoEditor` en
+ * `EditorSeccionesPage`) — así que el grupo "Diseño" queda con un solo
+ * ítem. Las rutas `/admin/tema`/`/admin/fondo` siguen existiendo en
+ * `App.tsx` como redirects, para no romper enlaces guardados.
  */
 const GRUPOS_NAV: Array<{ label: string; items: NavItem[] }> = [
   {
@@ -54,11 +57,7 @@ const GRUPOS_NAV: Array<{ label: string; items: NavItem[] }> = [
   },
   {
     label: 'Diseño',
-    items: [
-      { to: '/admin/editor', label: 'Editor visual', icon: Wand2 },
-      { to: '/admin/tema', label: 'Tema', icon: Palette },
-      { to: '/admin/fondo', label: 'Fondo del sitio', icon: Waves },
-    ],
+    items: [{ to: '/admin/editor', label: 'Editor visual', icon: Wand2 }],
   },
   {
     label: 'Recursos',

@@ -25,8 +25,9 @@ function duracion(tipo: string, velocidad: string): string {
 
 /**
  * Fondo animado del sitio público (UC-15), compartido entre `PublicHomePage`
- * y la vista previa de `FondoSitioPage` para que ambos se vean exactamente
- * igual. Se posiciona `absolute inset-0` detrás del contenido (`z-index: 0`,
+ * y la vista previa de `PanelFondoEditor` (pestaña "Fondo" del panel lateral
+ * del editor, antes la extinta `FondoSitioPage`) para que ambos se vean
+ * exactamente igual. Se posiciona `absolute inset-0` detrás del contenido (`z-index: 0`,
  * `pointer-events: none`): el padre debe ser `position: relative` (o
  * equivalente) y el contenido real debe ir en un hermano con `z-index`
  * mayor, como ya hace `PublicHomePage`.

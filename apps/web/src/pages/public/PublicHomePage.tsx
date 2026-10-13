@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils'
  * UC-12 (Ver el sitio publicado): trae `GET /sitio` (siempre el snapshot de
  * la última versión publicada, nunca contenido en vivo/borrador) y pinta sus
  * secciones visibles, en orden, con el tema del snapshot aplicado como
- * variables CSS (mismo patrón que `TemaPage`, ver `temaComoVariablesCss`).
+ * variables CSS (mismo patrón que `PanelTemaEditor`, ver `temaComoVariablesCss`).
  *
  * Modo oscuro (Fase 4.6): `useModoTema()` resuelve `prefers-color-scheme`
  * del sistema salvo que el visitante haya elegido un override manual (botón
