@@ -19,6 +19,14 @@ type NavegacionEnLienzoProps = {
  * altas, bajas, reordenamientos y cambios de título/visibilidad antes de
  * guardar. Las secciones guardadas usan su `_seccionId` (la misma ancla que
  * ponen `EnvoltorioSeccion` y el sitio público) y las nuevas el `id` de Puck.
+ *
+ * Limitación conocida (Fase 7, UC-12): Puck envuelve cada componente en un
+ * `div` del mismo alto que su contenido, y `position: sticky` solo se mueve
+ * dentro de su contenedor, así que en el lienzo la barra es una muestra EN
+ * FLUJO (conserva la clase `sticky` por coherencia con la vista previa, pero
+ * no se pega al hacer scroll). El comportamiento fijo real solo se aprecia en
+ * la vista previa y en el sitio publicado. La atenuación de una sección oculta
+ * se aplica sobre el propio `nav` (prop `atenuado`), sin `div` envolvente.
  */
 export function NavegacionEnLienzo({ config, visible, perfil }: NavegacionEnLienzoProps) {
   const content = useEditorSeccionesStore((state) => state.content)
@@ -44,8 +52,6 @@ export function NavegacionEnLienzo({ config, visible, perfil }: NavegacionEnLien
   )
 
   return (
-    <div className={visible ? undefined : 'opacity-40'}>
-      <BloqueNavegacion config={config} enlaces={enlaces} perfil={perfil} />
-    </div>
+    <BloqueNavegacion config={config} enlaces={enlaces} perfil={perfil} atenuado={!visible} />
   )
 }

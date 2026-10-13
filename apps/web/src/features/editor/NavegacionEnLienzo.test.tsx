@@ -2,7 +2,7 @@ import { act, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { ProveedorModoRenderizado } from '@/components/publico/contexto-renderizado'
-import { sanearSlots } from '@/pages/admin/EditorSeccionesPage'
+import { sanearConfiguracion, sanearSlots } from '@/pages/admin/EditorSeccionesPage'
 import { useEditorSeccionesStore } from '@/store/editor-secciones-store'
 import { NavegacionEnLienzo } from './NavegacionEnLienzo'
 
@@ -69,8 +69,10 @@ describe('NavegacionEnLienzo', () => {
 
   it('es sticky (seleccionable) y se atenúa cuando está oculta', () => {
     const { container } = renderLienzo(false)
-    expect(screen.getByRole('navigation')).toHaveClass('sticky', 'top-0')
-    expect(container.firstElementChild).toHaveClass('opacity-40')
+    const nav = screen.getByRole('navigation')
+    expect(nav).toHaveClass('sticky', 'top-0', 'opacity-40')
+    // Sin `div` envolvente: el `nav` es el propio nodo raíz (si no, el sticky no se pega).
+    expect(container.firstElementChild).toBe(nav)
   })
 })
 
@@ -96,5 +98,16 @@ describe('sanearSlots — campos base de la Fase 7', () => {
       animacion_entrada: 'escalar',
       separador_forma: 'onda',
     })
+  })
+})
+
+describe('sanearConfiguracion — hero (Fase 7)', () => {
+  it('quita titulos_rotativos vacíos o con espacios antes del PATCH', () => {
+    const resultado = sanearConfiguracion('hero', {
+      titulo: 'Hola',
+      titulos_rotativos: ['Dev', '', '   ', 'Diseño'],
+    })
+    expect(resultado.titulos_rotativos).toEqual(['Dev', 'Diseño'])
+    expect(resultado.titulo).toBe('Hola')
   })
 })

@@ -82,14 +82,14 @@ export function RenderizadorSecciones({
         {pintadas.map((seccion, indice) => {
           if (seccion.tipo_seccion === 'navegacion') {
             return (
-              <div key={seccion.id} className={seccion.visible ? undefined : 'opacity-40'}>
-                <BloqueNavegacion
-                  config={seccion.configuracion as NavegacionConfiguracion}
-                  enlaces={enlaces}
-                  perfil={snapshot.perfil}
-                  enFlujo={!soloVisibles}
-                />
-              </div>
+              <BloqueNavegacion
+                key={seccion.id}
+                config={seccion.configuracion as NavegacionConfiguracion}
+                enlaces={enlaces}
+                perfil={snapshot.perfil}
+                enFlujo={!soloVisibles}
+                atenuado={!seccion.visible}
+              />
             )
           }
 

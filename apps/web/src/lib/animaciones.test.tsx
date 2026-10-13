@@ -5,6 +5,8 @@ import { ProveedorModoRenderizado } from '@/components/publico/contexto-renderiz
 import { simularMovimientoReducido } from '@/test/movimiento'
 import {
   VARIANTES_ENTRADA,
+  VIEWPORT_ENTRADA,
+  VIEWPORT_ITEM,
   escalonado,
   useAnimacionesActivas,
   usePrefiereMovimientoReducido,
@@ -67,5 +69,16 @@ describe('VARIANTES_ENTRADA y escalonado (Fase 7)', () => {
     expect(escalonado(0)).toBe(0)
     expect(escalonado(2)).toBeCloseTo(0.16)
     expect(escalonado(50)).toBe(escalonado(8))
+  })
+})
+
+describe('VIEWPORT_ENTRADA (Fase 7, UC-12)', () => {
+  it('no exige un ratio alto: una sección más alta que el viewport debe revelarse', () => {
+    const { amount } = VIEWPORT_ENTRADA
+    expect(amount === 'some' || (typeof amount === 'number' && amount <= 0.1)).toBe(true)
+  })
+
+  it('los ítems pequeños sí pueden usar un umbral mayor', () => {
+    expect(VIEWPORT_ITEM.amount).toBeGreaterThan(0.1)
   })
 })

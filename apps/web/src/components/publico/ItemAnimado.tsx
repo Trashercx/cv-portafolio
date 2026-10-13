@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { m } from 'motion/react'
 import {
   VARIANTES_ENTRADA,
-  VIEWPORT_ENTRADA,
+  VIEWPORT_ITEM,
   escalonado,
   useAnimacionesActivas,
 } from '@/lib/animaciones'
@@ -29,7 +29,7 @@ export function ItemAnimado({ indice, className, children }: ItemAnimadoProps) {
     <m.div
       initial={variante.initial}
       whileInView={variante.whileInView}
-      viewport={VIEWPORT_ENTRADA}
+      viewport={VIEWPORT_ITEM}
       transition={{ ...variante.transition, delay: escalonado(indice) }}
       className={className}
     >

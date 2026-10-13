@@ -1,10 +1,11 @@
-import { useEffect, useState, type CSSProperties } from 'react'
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react'
 import { AnimatePresence, m } from 'motion/react'
 import { ChevronDown } from 'lucide-react'
 import type { PerfilPublico } from '@/features/publico/types'
 import type { RedSocial } from '@/features/redes-sociales/types'
 import type { HeroConfiguracion } from '@/features/secciones/types'
 import { useAnimacionesActivas } from '@/lib/animaciones'
+import { resolverEnlaceSeguro } from '@/lib/enlaces'
 import { cn } from '@/lib/utils'
 import { EnlaceBloque, useModoRenderizado } from '../contexto-renderizado'
 import { RedesSociales } from '../RedesSociales'
@@ -128,13 +129,40 @@ const PATRON_CLASE =
 const INTERVALO_TITULOS_MS = 2800
 
 /**
- * Enlace de un botón del hero: ruta interna (`/x`) con react-router, ancla
- * (`#x`) en la misma pestaña y cualquier otra URL en pestaña nueva.
+ * Botón del hero (Fase 7, UC-12): ruta interna (`/x`) con react-router, ancla
+ * (`#x`) y `mailto:` en la misma pestaña, `http(s)` en pestaña nueva. Un
+ * enlace no válido (`javascript:`, esquema desconocido; ver
+ * `resolverEnlaceSeguro`) no genera `href`: el botón se muestra deshabilitado.
  */
-function propsEnlace(url: string) {
-  if (url.startsWith('/')) return { to: url }
-  if (url.startsWith('#')) return { href: url }
-  return { href: url, target: '_blank', rel: 'noreferrer' }
+function BotonEnlace({
+  url,
+  className,
+  style,
+  children,
+}: {
+  url: string | undefined
+  className: string
+  style: CSSProperties
+  children: ReactNode
+}) {
+  const enlace = resolverEnlaceSeguro(url)
+  if (!enlace) {
+    return (
+      <span
+        role="link"
+        aria-disabled="true"
+        style={style}
+        className={cn(className, 'cursor-not-allowed opacity-50')}
+      >
+        {children}
+      </span>
+    )
+  }
+  return (
+    <EnlaceBloque {...enlace} style={style} className={className}>
+      {children}
+    </EnlaceBloque>
+  )
 }
 
 /** Título con `efecto_titulo` (degradado por CSS, resaltado = marcador en la última palabra). */
@@ -377,8 +405,8 @@ export function BloqueHero({
       {textoBoton || textoBotonSecundario ? (
         <div className={BOTONES_DISPOSICION_CLASE[disposicion]}>
           {textoBoton ? (
-            <EnlaceBloque
-              {...propsEnlace(config.enlace_boton as string)}
+            <BotonEnlace
+              url={config.enlace_boton}
               style={{
                 backgroundColor: 'var(--color-primario)',
                 color: 'var(--color-texto)',
@@ -386,11 +414,11 @@ export function BloqueHero({
               className="rounded-md px-6 py-2.5 text-center text-sm font-medium"
             >
               {config.texto_boton}
-            </EnlaceBloque>
+            </BotonEnlace>
           ) : null}
           {textoBotonSecundario ? (
-            <EnlaceBloque
-              {...propsEnlace(config.enlace_boton_secundario as string)}
+            <BotonEnlace
+              url={config.enlace_boton_secundario}
               style={{
                 borderColor: 'var(--color-primario)',
                 color: 'var(--color-texto)',
@@ -398,7 +426,7 @@ export function BloqueHero({
               className="rounded-md border-2 bg-transparent px-6 py-2.5 text-center text-sm font-medium transition-colors hover:bg-[var(--color-primario)]/10"
             >
               {config.texto_boton_secundario}
-            </EnlaceBloque>
+            </BotonEnlace>
           ) : null}
         </div>
       ) : null}

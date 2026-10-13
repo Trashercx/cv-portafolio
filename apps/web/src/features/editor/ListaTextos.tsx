@@ -15,11 +15,17 @@ type ListaTextosProps = {
  * (Fase 7, 7.2). El campo nativo `array` de Puck solo admite ítems-objeto, y
  * el contrato del API es un `string[]` plano, así que `puck-config.tsx` lo
  * monta como `custom` con este componente: una fila `<input>` por ítem con
- * botón de quitar, y "Agregar título" hasta `TITULOS_ROTATIVOS_MAX`. Al salir
- * de un input vacío se elimina esa fila, para no persistir cadenas vacías que
- * el DTO rechazaría con 400.
+ * botón de quitar, y "Agregar título" hasta `TITULOS_ROTATIVOS_MAX`. Al emitir
+ * se descartan las cadenas vacías, para no persistir lo que el DTO rechazaría
+ * con 400.
  */
 export function ListaTextos({ value, onChange }: ListaTextosProps) {
+  // Fase 7, UC-12: nunca se emite una cadena vacía/solo espacios al `content`
+  // (el DTO la rechazaría con 400). Mientras se escribe, una fila vacía se
+  // quita del valor emitido pero el usuario sigue viendo su input local.
+  const emitir = (siguiente: string[]) =>
+    onChange(siguiente.filter((texto) => texto.trim() !== ''))
+
   return (
     <div className="grid gap-2">
       {value.map((texto, indice) => (
@@ -31,11 +37,8 @@ export function ListaTextos({ value, onChange }: ListaTextosProps) {
             aria-label={`Título rotativo ${indice + 1}`}
             className="min-w-0 flex-1 rounded-md border border-input bg-transparent px-2 py-1.5 text-sm"
             onChange={(event) =>
-              onChange(value.map((actual, i) => (i === indice ? event.target.value : actual)))
+              emitir(value.map((actual, i) => (i === indice ? event.target.value : actual)))
             }
-            onBlur={() => {
-              if (texto.trim() === '') onChange(value.filter((_, i) => i !== indice))
-            }}
           />
           <button
             type="button"

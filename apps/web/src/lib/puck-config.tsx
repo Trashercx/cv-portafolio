@@ -879,7 +879,9 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
         // Disposición y variantes
         estilo: {
           type: 'select',
-          label: 'Estilo del bloque',
+          // "Tarjeta destacada" fuerza las redes sociales en botones
+          // (ignora `estilo_redes`).
+          label: 'Estilo del bloque (Tarjeta destacada fuerza redes en botones)',
           options: [
             { label: 'Simple', value: 'simple' },
             { label: 'Tarjeta destacada', value: 'tarjeta_destacada' },
@@ -1067,7 +1069,8 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
         // Efectos
         efecto_hover: {
           type: 'select',
-          label: 'Efecto al pasar el cursor',
+          // "Zoom" es el comportamiento por defecto, también en el carrusel.
+          label: 'Efecto al pasar el cursor (Zoom por defecto, también en carrusel)',
           options: [
             { label: 'Zoom', value: 'zoom' },
             { label: 'Elevar', value: 'elevar' },

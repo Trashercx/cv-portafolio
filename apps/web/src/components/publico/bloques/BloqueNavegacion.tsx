@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { m, useScroll, useSpring } from 'motion/react'
 import { Download, Menu, X } from 'lucide-react'
 import type { PerfilPublico } from '@/features/publico/types'
@@ -27,6 +27,8 @@ type BloqueNavegacionProps = {
    * lienzo del editor.
    */
   enFlujo?: boolean
+  /** Sección oculta (`visible=false`): la barra se ve atenuada (sin `div` envolvente que anule el sticky). */
+  atenuado?: boolean
 }
 
 type Estilo = NonNullable<NavegacionConfiguracion['estilo']>
@@ -34,7 +36,8 @@ type Estilo = NonNullable<NavegacionConfiguracion['estilo']>
 /**
  * Fase 7 (7.3, UC-12): clases por modo de posición. `fixed` solo en el sitio
  * público; el lienzo del editor y la vista previa usan `sticky top-0` para
- * que la barra siga siendo seleccionable y no escape de su contenedor.
+ * que la barra siga siendo seleccionable y no escape de su contenedor. En el
+ * lienzo de Puck el `sticky` no llega a pegarse (ver `NavegacionEnLienzo`).
  */
 const POSICION_CLASE = {
   fixed: 'fixed inset-x-0 top-0 z-40',
@@ -158,7 +161,13 @@ function BarraProgreso({ estatica }: { estatica: boolean }) {
  * fondo ni animación de entrada (un ancestro con `transform` rompería el
  * `fixed`).
  */
-export function BloqueNavegacion({ config, enlaces, perfil, enFlujo = false }: BloqueNavegacionProps) {
+export function BloqueNavegacion({
+  config,
+  enlaces,
+  perfil,
+  enFlujo = false,
+  atenuado = false,
+}: BloqueNavegacionProps) {
   const modo = useModoRenderizado()
   const esEditor = modo === 'editor'
   const estilo: Estilo = config.estilo ?? 'flotante'
@@ -168,12 +177,34 @@ export function BloqueNavegacion({ config, enlaces, perfil, enFlujo = false }: B
   const mostrarToggle = config.mostrar_toggle_modo ?? true
   const mostrarProgreso = config.mostrar_progreso_scroll ?? false
   const [abierto, setAbierto] = useState(false)
+  const navRef = useRef<HTMLElement>(null)
+  const botonMenuRef = useRef<HTMLButtonElement>(null)
   const publico = !esEditor && !enFlujo
   const activo = useSeccionActiva(
     enlaces.map((enlace) => enlace.id),
     publico,
   )
   useScrollSuave(publico)
+
+  // Menú compacto accesible (Fase 7, UC-12): Escape cierra y devuelve el foco
+  // al botón; un clic (o toque) fuera de la barra también lo cierra.
+  useEffect(() => {
+    if (!abierto) return
+    const alTeclear = (evento: KeyboardEvent) => {
+      if (evento.key !== 'Escape') return
+      setAbierto(false)
+      botonMenuRef.current?.focus()
+    }
+    const alPulsar = (evento: PointerEvent) => {
+      if (navRef.current && !navRef.current.contains(evento.target as Node)) setAbierto(false)
+    }
+    document.addEventListener('keydown', alTeclear)
+    document.addEventListener('pointerdown', alPulsar)
+    return () => {
+      document.removeEventListener('keydown', alTeclear)
+      document.removeEventListener('pointerdown', alPulsar)
+    }
+  }, [abierto])
 
   // Lienzo: siempre sticky (seleccionable); vista previa: sticky si es fijo.
   const posicion = esEditor ? 'sticky' : !fijo ? 'relativa' : enFlujo ? 'sticky' : 'fixed'
@@ -201,10 +232,15 @@ export function BloqueNavegacion({ config, enlaces, perfil, enFlujo = false }: B
     <>
       {mostrarProgreso ? <BarraProgreso estatica={!publico} /> : null}
       <nav
+        ref={navRef}
         aria-label="Navegación principal"
         data-estilo-navegacion={estilo}
         data-posicion={posicion}
-        className={cn(POSICION_CLASE[posicion], CONTENEDOR_ESTILO_CLASE[estilo])}
+        className={cn(
+          POSICION_CLASE[posicion],
+          CONTENEDOR_ESTILO_CLASE[estilo],
+          atenuado && 'opacity-40',
+        )}
       >
         <div className={cn('flex h-12 items-center gap-2', INTERIOR_ESTILO_CLASE[estilo])}>
           {mostrarNombre && perfil ? (
@@ -239,6 +275,7 @@ export function BloqueNavegacion({ config, enlaces, perfil, enFlujo = false }: B
             ) : null}
             {enlaces.length > 0 ? (
               <button
+                ref={botonMenuRef}
                 type="button"
                 aria-expanded={abierto}
                 aria-controls={idMenuMovil}

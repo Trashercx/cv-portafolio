@@ -279,4 +279,38 @@ describe('BloqueNavegacion — menú compacto (Fase 7)', () => {
     await user.click(within(panel).getByRole('link', { name: 'Proyectos' }))
     expect(document.getElementById('menu-navegacion-movil')).not.toBeInTheDocument()
   })
+
+  it('Escape cierra el menú y devuelve el foco al botón', async () => {
+    const user = userEvent.setup()
+    renderNav()
+    await user.click(screen.getByRole('button', { name: 'Abrir menú' }))
+    const panel = document.getElementById('menu-navegacion-movil') as HTMLElement
+    within(panel).getByRole('link', { name: 'Proyectos' }).focus()
+
+    await user.keyboard('{Escape}')
+    expect(document.getElementById('menu-navegacion-movil')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Abrir menú' })).toHaveFocus()
+  })
+
+  it('un clic fuera de la barra cierra el menú; dentro de ella no', async () => {
+    const user = userEvent.setup()
+    renderNav()
+    await user.click(screen.getByRole('button', { name: 'Abrir menú' }))
+    await user.click(screen.getByRole('navigation'))
+    expect(document.getElementById('menu-navegacion-movil')).toBeInTheDocument()
+
+    await user.click(document.body)
+    expect(document.getElementById('menu-navegacion-movil')).not.toBeInTheDocument()
+  })
+
+  it('atenuado se aplica sobre el propio nav', () => {
+    render(
+      <MemoryRouter>
+        <ProveedorModoRenderizado modo="publico">
+          <BloqueNavegacion config={{}} enlaces={ENLACES} perfil={null} atenuado />
+        </ProveedorModoRenderizado>
+      </MemoryRouter>,
+    )
+    expect(screen.getByRole('navigation')).toHaveClass('opacity-40')
+  })
 })

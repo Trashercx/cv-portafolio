@@ -208,6 +208,30 @@ function separarProps(props: EditorContentItem['props']) {
  * anidó se elimina igual que cualquier sección borrada) — no hace falta
  * tocar esa lógica de crear/eliminar.
  */
+/**
+ * Último saneo antes del PATCH/POST (Fase 7, UC-12): `columnas` pasa por
+ * `sanearSlots` y el `hero` descarta `titulos_rotativos` vacíos o con solo
+ * espacios (el DTO los rechazaría con 400).
+ */
+export function sanearConfiguracion(
+  tipo: TipoSeccion,
+  configuracion: Record<string, unknown>,
+): Record<string, unknown> {
+  if (tipo === 'columnas') return sanearSlots(configuracion) as unknown as Record<string, unknown>
+  if (tipo === 'hero') {
+    const hero = configuracion as { titulos_rotativos?: unknown }
+    if (Array.isArray(hero.titulos_rotativos)) {
+      return {
+        ...hero,
+        titulos_rotativos: hero.titulos_rotativos.filter(
+          (titulo) => typeof titulo === 'string' && titulo.trim() !== '',
+        ),
+      }
+    }
+  }
+  return configuracion
+}
+
 export function sanearSlots(configuracion: Record<string, unknown>): ColumnasConfiguracion {
   const {
     espaciado_vertical,
@@ -459,10 +483,7 @@ export function EditorSeccionesPage() {
         // de Puck mientras se edita (ver `PuckSeccionesComponents`) — hay que
         // sanearlos a `BloqueColumnaHijo[]` antes de mandarlos al backend, la
         // única forma que acepta `Seccion.configuracion` (UC-17).
-        const configuracion =
-          tipo === 'columnas'
-            ? sanearSlots(configuracionCruda as Record<string, unknown>)
-            : configuracionCruda
+        const configuracion = sanearConfiguracion(tipo, configuracionCruda)
 
         if (!_seccionId) {
           const creada = await crearSeccion.mutateAsync({
@@ -544,10 +565,7 @@ export function EditorSeccionesPage() {
             configuracion: configuracionCruda,
           } = separarProps(item.props)
           const tipo = item.type as TipoSeccion
-          const configuracion =
-            tipo === 'columnas'
-              ? sanearSlots(configuracionCruda as Record<string, unknown>)
-              : configuracionCruda
+          const configuracion = sanearConfiguracion(tipo, configuracionCruda)
           return {
             id: _seccionId as string,
             tipo_seccion: tipo,

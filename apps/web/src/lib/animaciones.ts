@@ -42,8 +42,21 @@ export const VARIANTES_ENTRADA: Record<
   },
 }
 
-/** Opciones de `viewport` de `whileInView`: se revela una sola vez al ver el 20 % del elemento. */
-export const VIEWPORT_ENTRADA = { once: true, amount: 0.2 } as const
+/**
+ * `viewport` de `whileInView` para SECCIONES completas (Fase 7, UC-12): basta
+ * con que asome cualquier píxel (`'some'`), con un margen inferior del 10 %.
+ * Un ratio fijo (p. ej. 0.2) exige ver ese porcentaje del elemento: una
+ * sección más alta que 5 viewports (galería o proyectos en 1 columna a 360 px)
+ * nunca lo alcanzaría y quedaría en `opacity: 0` para siempre.
+ */
+export const VIEWPORT_ENTRADA = {
+  once: true,
+  amount: 'some',
+  margin: '0px 0px -10% 0px',
+} as const
+
+/** `viewport` para ítems pequeños (tarjetas, chips): se revelan al verse el 20 %. */
+export const VIEWPORT_ITEM = { once: true, amount: 0.2 } as const
 
 /** Retraso (s) de cada ítem de una lista para el efecto escalonado; tope para listas largas. */
 export function escalonado(indice: number, paso = 0.08): number {
