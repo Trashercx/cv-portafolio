@@ -558,6 +558,80 @@ describe('EditorSeccionesPage (UC-07, UC-10, UC-11)', () => {
     )
   })
 
+  // Octava ronda (UC-07): "Guardar cambios" envía solo lo que cambió.
+  describe('guardar solo lo que cambió (octava ronda, UC-07)', () => {
+    const hayPatch = () =>
+      actualizarConfiguracionMutateAsyncMock.mock.calls.length +
+      actualizarMutateAsyncMock.mock.calls.length +
+      actualizarVisibilidadMutateAsyncMock.mock.calls.length +
+      reordenarMutateAsyncMock.mock.calls.length
+
+    it('cargar y guardar sin tocar nada no envía ninguna petición PATCH', async () => {
+      const user = userEvent.setup()
+      renderEditor()
+      await waitFor(() =>
+        expect(useEditorSeccionesStore.getState().content).toHaveLength(2),
+      )
+
+      await user.click(screen.getByRole('button', { name: /guardar cambios/i }))
+      await waitFor(() => expect(toast.success).toHaveBeenCalledTimes(1))
+
+      expect(hayPatch()).toBe(0)
+      expect(crearMutateAsyncMock).not.toHaveBeenCalled()
+      expect(eliminarMutateAsyncMock).not.toHaveBeenCalled()
+    })
+
+    it('cambiar un campo de una sección envía un único PATCH de configuración', async () => {
+      const user = userEvent.setup()
+      renderEditor()
+      await waitFor(() =>
+        expect(useEditorSeccionesStore.getState().content).toHaveLength(2),
+      )
+      const [hero, contacto] = useEditorSeccionesStore.getState().content
+      act(() => {
+        useEditorSeccionesStore.getState().setContent([
+          { ...hero, props: { ...hero.props, subtitulo: 'Nuevo' } },
+          contacto,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ] as any)
+      })
+
+      await user.click(screen.getByRole('button', { name: /guardar cambios/i }))
+      await waitFor(() => expect(toast.success).toHaveBeenCalledTimes(1))
+
+      expect(actualizarConfiguracionMutateAsyncMock).toHaveBeenCalledTimes(1)
+      expect(actualizarConfiguracionMutateAsyncMock).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'seccion-a' }),
+      )
+      expect(hayPatch()).toBe(1)
+    })
+
+    it('reordenar envía solo `reordenar`, sin PATCH de configuración', async () => {
+      const user = userEvent.setup()
+      renderEditor()
+      await waitFor(() =>
+        expect(useEditorSeccionesStore.getState().content).toHaveLength(2),
+      )
+      const [hero, contacto] = useEditorSeccionesStore.getState().content
+      act(() => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        useEditorSeccionesStore.getState().setContent([contacto, hero] as any)
+      })
+
+      await user.click(screen.getByRole('button', { name: /guardar cambios/i }))
+      await waitFor(() => expect(toast.success).toHaveBeenCalledTimes(1))
+
+      expect(reordenarMutateAsyncMock).toHaveBeenCalledTimes(1)
+      expect(reordenarMutateAsyncMock).toHaveBeenCalledWith([
+        { id: 'seccion-b', orden: 0 },
+        { id: 'seccion-a', orden: 1 },
+      ])
+      expect(actualizarConfiguracionMutateAsyncMock).not.toHaveBeenCalled()
+      expect(actualizarMutateAsyncMock).not.toHaveBeenCalled()
+      expect(actualizarVisibilidadMutateAsyncMock).not.toHaveBeenCalled()
+    })
+  })
+
   it('un segundo "Guardar cambios" inmediatamente después del primero no reintenta crear/eliminar lo ya persistido (condición de carrera con el cache de la query)', async () => {
     const user = userEvent.setup()
     renderEditor()
@@ -614,9 +688,10 @@ describe('EditorSeccionesPage (UC-07, UC-10, UC-11)', () => {
     // antemano, no solo a la de este test.
     await user.click(screen.getByRole('button', { name: /guardar cambios/i }))
 
-    await waitFor(() =>
-      expect(reordenarMutateAsyncMock).toHaveBeenCalledTimes(2),
-    )
+    // Octava ronda (UC-07): el segundo guardado ya no cambia nada, así que no
+    // envía `reordenar` (solo el primero lo hizo).
+    await waitFor(() => expect(toast.success).toHaveBeenCalledTimes(2))
+    expect(reordenarMutateAsyncMock).toHaveBeenCalledTimes(1)
 
     // "Contacto" (seccion-b) y la creación de "Logros" solo debieron
     // ocurrir una vez, en el primer guardado — no deben repetirse ni
@@ -977,15 +1052,18 @@ describe('EditorSeccionesPage (UC-07, UC-10, UC-11)', () => {
         document.dispatchEvent(atajo)
       })
       expect(atajo.defaultPrevented).toBe(true)
-      await waitFor(() => expect(reordenarMutateAsyncMock).toHaveBeenCalledTimes(1))
+      // Octava ronda (UC-07): sin cambios no hay `reordenar`; cada guardado
+      // exitoso se detecta por su toast.
+      await waitFor(() => expect(toast.success).toHaveBeenCalledTimes(1))
 
       fireEvent.keyDown(document, { key: 'S', metaKey: true })
-      await waitFor(() => expect(reordenarMutateAsyncMock).toHaveBeenCalledTimes(2))
+      await waitFor(() => expect(toast.success).toHaveBeenCalledTimes(2))
 
       await act(async () => {
         useEditorSeccionesStore.getState().accionGuardar?.()
       })
-      await waitFor(() => expect(reordenarMutateAsyncMock).toHaveBeenCalledTimes(3))
+      await waitFor(() => expect(toast.success).toHaveBeenCalledTimes(3))
+      expect(reordenarMutateAsyncMock).not.toHaveBeenCalled()
     })
 
     it('al desmontar el editor limpia el flag de cambios sin guardar y la acción de guardado', async () => {

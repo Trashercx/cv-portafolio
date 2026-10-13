@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react'
 import type { Tema } from '@/features/tema/types'
 import { familiaCssDeFuente } from '@/features/tema/fuentes'
-import { derivarPaletaOscura, type ModoTema } from './tema-oscuro'
+import { paletaEfectiva, type ModoTema } from './tema-oscuro'
 import { derivarSuperficiesShadcn } from './tema-superficies'
 
 /**
@@ -17,7 +17,10 @@ export type TemaColores = Pick<
   | 'color_fondo'
   | 'color_texto'
   | 'fuente_principal'
->
+> & {
+  /** Modo base del tema (octava ronda, UC-08); ausente = 'claro'. */
+  modo?: ModoTema
+}
 
 /**
  * Variables CSS del tema (UC-08/UC-12), sin colores hardcodeados en ningún
@@ -27,16 +30,17 @@ export type TemaColores = Pick<
  * cada uno — el tema de la vista previa del panel puede ser distinto al del
  * snapshot publicado si el admin todavía no publicó un cambio de tema.
  *
- * `modo` (Fase 4.6) es opt-in con default `'claro'`: cuando es `'oscuro'`,
- * los 4 colores se reemplazan por la paleta derivada de
- * `derivarPaletaOscura` antes de mapearlos a variables CSS.
+ * `modo` es el modo del visitante (default: `tema.modo`, o 'claro'). Desde
+ * la octava ronda (UC-08) `Tema.modo` es el modo base: los colores se usan
+ * tal cual si coincide con el del visitante y se invierten
+ * (`derivarPaletaInversa`) solo si difiere.
  * `fuente_principal` no se ve afectada por el modo.
  */
 export function temaComoVariablesCss(
   tema: TemaColores,
-  modo: ModoTema = 'claro',
+  modo: ModoTema = tema.modo ?? 'claro',
 ): CSSProperties {
-  const colores = modo === 'oscuro' ? derivarPaletaOscura(tema) : tema
+  const colores = paletaEfectiva(tema, modo)
   const superficies = derivarSuperficiesShadcn(tema, modo)
   return {
     '--color-primario': colores.color_primario,
