@@ -50,7 +50,7 @@ export function FondoAnimado({ fondo }: FondoAnimadoProps) {
     <div
       aria-hidden="true"
       style={{ opacity: configuracion.opacidad }}
-      className="pointer-events-none absolute inset-0 z-0 overflow-hidden"
+      className="fondo-animado pointer-events-none absolute inset-0 z-0 overflow-hidden"
     >
       {tipo === 'degradado_animado' ? (
         <div

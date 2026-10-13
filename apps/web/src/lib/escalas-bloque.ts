@@ -3,6 +3,7 @@ import type {
   AnchoContenidoBloque,
   EspaciadoVerticalBloque,
   FondoBloqueBloque,
+  SeparadorFormaBloque,
 } from '@/features/secciones/types'
 
 /**
@@ -45,7 +46,28 @@ export const FONDO_BLOQUE_CLASE: Record<FondoBloqueBloque, string> = {
   ninguno: '',
   sutil: 'bg-muted/30',
   tarjeta: 'bg-card border rounded-xl',
+  // Fase 7 (7.2/7.3, UC-12): degradado suave primario -> secundario al 12 %
+  // sobre el fondo del tema, y vidrio (tarjeta translúcida con desenfoque).
+  degradado:
+    'bg-linear-to-br from-[var(--color-primario)]/12 to-[var(--color-secundario)]/12',
+  vidrio: 'bg-card/60 backdrop-blur border border-border/50 rounded-2xl',
 }
+
+/**
+ * Fase 7 (7.3, UC-12): `separador_forma`. Trazo (viewBox `0 0 1200 40`,
+ * `preserveAspectRatio="none"`) de la banda decorativa al pie de la sección.
+ * `ninguno` no tiene trazo. Decisión de color: se rellena con
+ * `--color-primario` al 15 % (`SEPARADOR_RELLENO_CLASE`) en vez de con el
+ * fondo del bloque siguiente, porque así es visible con cualquier
+ * `fondo_bloque` (también sin fondo) y no depende de conocer al vecino.
+ */
+export const SEPARADOR_FORMA_TRAZO: Record<Exclude<SeparadorFormaBloque, 'ninguno'>, string> = {
+  onda: 'M0 22 C200 44 400 0 600 22 S1000 44 1200 22 L1200 40 L0 40 Z',
+  diagonal: 'M0 40 L1200 4 L1200 40 Z',
+  curva: 'M0 40 C300 0 900 0 1200 40 Z',
+}
+
+export const SEPARADOR_RELLENO_CLASE = 'fill-[var(--color-primario)]/15'
 
 /**
  * UC-18 (Fase 4.5, bloque `galeria`): clases Tailwind literales para

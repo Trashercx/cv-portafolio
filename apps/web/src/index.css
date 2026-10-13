@@ -395,3 +395,63 @@ div[class*='_MenuBar-inner_'] {
     grid-template-columns: auto auto minmax(0, 1fr);
   }
 }
+
+/*
+ * Fase 7 (7.3, UC-12): animaciones CSS de los bloques nuevos y soporte de
+ * `prefers-reduced-motion`. Las que no pasan por `motion` (blobs del hero,
+ * levitación de la foto, scroll suave de la navegación) viven aquí para poder
+ * apagarse con una media query.
+ */
+@layer utilities {
+  @keyframes blob-flotar {
+    from {
+      transform: translate(0, 0) scale(1);
+    }
+    to {
+      transform: translate(6%, 8%) scale(1.12);
+    }
+  }
+
+  @keyframes levitar {
+    from {
+      transform: translateY(0);
+    }
+    to {
+      transform: translateY(-8px);
+    }
+  }
+
+  .hero-blob {
+    animation: blob-flotar 16s ease-in-out infinite alternate;
+  }
+
+  .foto-flotante {
+    animation: levitar 3.2s ease-in-out infinite alternate;
+  }
+
+  /* Scroll suave a las anclas: lo activa `BloqueNavegacion` en el `<html>` público. */
+  html.scroll-suave {
+    scroll-behavior: smooth;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-blob,
+  .foto-flotante {
+    animation: none;
+  }
+
+  html.scroll-suave {
+    scroll-behavior: auto;
+  }
+
+  /*
+   * `FondoAnimado` fija su `animation` en `style` inline: se congela en el
+   * primer frame (pausa a delay 0) en vez de quitarla, para conservar la
+   * composición estática del fondo elegido.
+   */
+  .fondo-animado,
+  .fondo-animado * {
+    animation-play-state: paused !important;
+  }
+}

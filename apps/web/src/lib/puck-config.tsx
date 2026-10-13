@@ -10,6 +10,8 @@ import {
   BloqueSkills,
   BloqueSobreMi,
 } from '@/components/publico/bloques'
+import { ListaTextos, TITULOS_ROTATIVOS_MAX } from '@/features/editor/ListaTextos'
+import { NavegacionEnLienzo } from '@/features/editor/NavegacionEnLienzo'
 import { leerMetadata } from '@/features/editor/useDatosEditor'
 import { PuckRoot } from '@/features/editor/PuckRoot'
 import { useMediaList } from '@/features/media/useMediaLibrary'
@@ -26,6 +28,7 @@ import type {
   GaleriaFoto,
   HeroConfiguracion,
   LogrosConfiguracion,
+  NavegacionConfiguracion,
   ProyectosConfiguracion,
   SkillsConfiguracion,
   SobreMiConfiguracion,
@@ -36,9 +39,12 @@ import type {
  * Tipos de bloque que se pueden soltar dentro de una columna (UC-17), en el
  * mismo orden/valores que `allow` de cada slot más abajo — mismo criterio
  * reforzado en el DTO del backend (`docs/plan-portafolio.md` §4): nunca
- * `'hero'` (la portada ocupa todo el ancho por diseño) ni `'columnas'`
- * (evita anidamiento sin límite). `'galeria'` (UC-18, Fase 4.5) se suma acá
- * igual que cualquier otro bloque de contenido.
+ * `'hero'` (la portada ocupa todo el ancho por diseño), `'columnas'` (evita
+ * anidamiento sin límite) ni `'navegacion'` (Fase 7: la barra de navegación
+ * es del sitio, no de una columna; igual que `hero`, el DTO la rechaza).
+ * `'galeria'` (UC-18, Fase 4.5) se suma acá igual que cualquier otro bloque
+ * de contenido. Está tipado como `TipoSeccionAnidable`, que ya excluye esos
+ * tres: agregar `'navegacion'` aquí no compilaría.
  */
 const BLOQUES_ANIDABLES: TipoSeccionAnidable[] = [
   'sobre-mi',
@@ -106,15 +112,40 @@ const TITULO_VISIBLE_FIELD = {
   label: 'Título visible (menú/sección)',
 } as const
 
+/** Radio Sí/No (valores booleanos) con la etiqueta dada. */
+const campoSiNo = (label: string) =>
+  ({
+    type: 'radio',
+    label,
+    options: [
+      { label: 'Sí', value: true },
+      { label: 'No', value: false },
+    ],
+  }) as const
+
+/** Opciones de `efecto_hover` de proyectos/certificaciones/logros (Fase 7, 7.2). */
+const CAMPO_EFECTO_HOVER_TARJETA = {
+  type: 'select',
+  label: 'Efecto al pasar el cursor',
+  options: [
+    { label: 'Ninguno', value: 'ninguno' },
+    { label: 'Elevar', value: 'elevar' },
+    { label: 'Inclinar (3D sutil)', value: 'inclinar' },
+  ],
+} as const
+
 /**
- * Fase 3.4 (personalización visual por bloque): los 5 campos de
- * `BloqueConfiguracionBase`, compartidos por los 8 tipos de bloque — se
- * definen una sola vez acá y se hace spread en el `fields` de cada
- * componente, en vez de repetir las mismas 5 definiciones 8 veces. Los
- * valores (`'compacto'|'normal'|'amplio'`, etc.) son exactamente los mismos
- * tokens que `apps/web/src/lib/escalas-bloque.ts` traduce a clases Tailwind
- * literales — este archivo nunca construye una clase, solo persiste el
- * token elegido.
+ * Fase 3.4 (personalización visual por bloque) + Fase 7 (7.2): los campos de
+ * `BloqueConfiguracionBase`, compartidos por los tipos de bloque con
+ * contenido — se definen una sola vez acá y se hace spread en el `fields` de
+ * cada componente, siempre AL FINAL (orden de la Fase 7: contenido →
+ * disposición/variantes → efectos → personalización base). Puck 0.23 no tiene
+ * separadores de sección sin cambiar la forma de los datos (`object`
+ * anidaría las props), así que la agrupación visual es el orden de las
+ * claves. Los valores son exactamente los tokens que
+ * `apps/web/src/lib/escalas-bloque.ts` y `lib/animaciones.ts` traducen a
+ * clases/animaciones literales — este archivo nunca construye una clase,
+ * solo persiste el token elegido.
  */
 const CAMPOS_BASE_BLOQUE = {
   espaciado_vertical: {
@@ -151,6 +182,8 @@ const CAMPOS_BASE_BLOQUE = {
       { label: 'Ninguno', value: 'ninguno' },
       { label: 'Sutil', value: 'sutil' },
       { label: 'Tarjeta', value: 'tarjeta' },
+      { label: 'Degradado', value: 'degradado' },
+      { label: 'Vidrio', value: 'vidrio' },
     ],
   },
   separador_inferior: {
@@ -161,15 +194,67 @@ const CAMPOS_BASE_BLOQUE = {
       { label: 'No', value: false },
     ],
   },
+  separador_forma: {
+    type: 'select',
+    label: 'Forma del separador',
+    options: [
+      { label: 'Ninguna', value: 'ninguno' },
+      { label: 'Onda', value: 'onda' },
+      { label: 'Diagonal', value: 'diagonal' },
+      { label: 'Curva', value: 'curva' },
+    ],
+  },
+  animacion_entrada: {
+    type: 'select',
+    label: 'Animación de entrada',
+    options: [
+      { label: 'Ninguna', value: 'ninguna' },
+      { label: 'Aparecer', value: 'aparecer' },
+      { label: 'Deslizar hacia arriba', value: 'deslizar_arriba' },
+      { label: 'Deslizar desde el lado', value: 'deslizar_lateral' },
+      { label: 'Escalar', value: 'escalar' },
+    ],
+  },
 } as const
 
-/** `defaultProps` de los 5 campos base, iguales para los 8 tipos de bloque (ver comentario de `CAMPOS_BASE_BLOQUE`). */
+/** `defaultProps` de los campos base, iguales para todos los tipos de bloque (ver comentario de `CAMPOS_BASE_BLOQUE`). Coinciden con los defaults del API. */
 const DEFAULT_PROPS_BASE_BLOQUE: Required<BloqueConfiguracionBase> = {
   espaciado_vertical: 'normal',
   ancho_contenido: 'normal',
   alineacion_texto: 'izquierda',
   fondo_bloque: 'ninguno',
   separador_inferior: true,
+  animacion_entrada: 'aparecer',
+  separador_forma: 'ninguno',
+}
+
+/**
+ * Quita campos del sidebar (`resolveFields`, Fase 7): mejora de UX para no
+ * mostrar opciones que no aplican a la variante elegida. No es la fuente de
+ * verdad de qué se renderiza (eso lo decide cada `Bloque*.tsx`): un valor ya
+ * guardado de un campo oculto se conserva.
+ */
+function sinCampos<F extends object>(fields: F, nombres: string[]): F {
+  return Object.fromEntries(
+    Object.entries(fields).filter(([nombre]) => !nombres.includes(nombre)),
+  ) as F
+}
+
+/** Props del `EnvoltorioSeccion` comunes a todos los bloques con contenido. */
+function propsEnvoltorio(
+  props: ConInternos<BloqueConfiguracionBase> & { id: string },
+): Omit<React.ComponentProps<typeof EnvoltorioSeccion>, 'children'> {
+  return {
+    // Fase 7 (7.3): ancla `#seccion-{id}`; sin fila guardada aún, el `id` de Puck.
+    id: props._seccionId ?? props.id,
+    visible: props._visible,
+    espaciado_vertical: props.espaciado_vertical,
+    ancho_contenido: props.ancho_contenido,
+    fondo_bloque: props.fondo_bloque,
+    separador_inferior: props.separador_inferior,
+    animacion_entrada: props.animacion_entrada,
+    separador_forma: props.separador_forma,
+  }
 }
 
 /**
@@ -238,6 +323,12 @@ function SelectorMedia({
   )
 }
 
+const listaTextosField: CustomField<string[] | undefined> = {
+  type: 'custom',
+  label: `Títulos rotativos (máx. ${TITULOS_ROTATIVOS_MAX})`,
+  render: ({ value, onChange }) => <ListaTextos value={value ?? []} onChange={onChange} />,
+}
+
 /**
  * Props por componente de Puck, exportado para que `EditorSeccionesPage`
  * tipe su `Data`/`Content` exactamente contra esta config (un solo lugar de
@@ -252,6 +343,7 @@ export type PuckSeccionesComponents = {
   contacto: ConInternos<ContactoConfiguracion>
   skills: ConInternos<SkillsConfiguracion>
   galeria: ConInternos<GaleriaConfiguracion>
+  navegacion: ConInternos<NavegacionConfiguracion>
   /**
    * A diferencia de los demás bloques, `columna_1/2/3` NO reutilizan
    * `ColumnasConfiguracion` tal cual (ahí son `BloqueColumnaHijo[]`, la forma
@@ -275,15 +367,16 @@ export type PuckSeccionesComponents = {
 
 /**
  * Config de Puck (UC-07, rediseñada en Fase 3.1; personalización visual por
- * bloque agregada en Fase 3.4): un componente por `tipo_seccion`, con
- * `fields` que reflejan exactamente el DTO de `configuracion` de cada tipo
- * (ver `apps/api/src/modules/secciones/dto/configuracion/`) — los 5 campos
- * compartidos de `CAMPOS_BASE_BLOQUE` más los propios de cada tipo. Cada
- * `render` compone el mismo bloque real que usa el sitio público (`bloques/`,
- * vía `EnvoltorioSeccion` para el espaciado/ancho/fondo/separador) en vez de
- * un placeholder esquemático: el lienzo de Puck es así un WYSIWYG genuino.
- * Los datos de contenido (perfil, proyectos, certificaciones, etc.) no
- * viajan como prop de cada bloque de Puck — se leen de `puck.metadata.datos`
+ * bloque agregada en Fase 3.4; opciones de la Fase 7): un componente por
+ * `tipo_seccion`, con `fields` que reflejan exactamente el DTO de
+ * `configuracion` de cada tipo (ver `apps/api/src/modules/secciones/dto/configuracion/`)
+ * — los campos propios de cada tipo (contenido → disposición/variantes →
+ * efectos) más los de `CAMPOS_BASE_BLOQUE`. Cada `render` compone el mismo
+ * bloque real que usa el sitio público (`bloques/`, vía `EnvoltorioSeccion`
+ * para el espaciado/ancho/fondo/separador/animación) en vez de un
+ * placeholder esquemático: el lienzo de Puck es así un WYSIWYG genuino. Los
+ * datos de contenido (perfil, proyectos, certificaciones, etc.) no viajan
+ * como prop de cada bloque de Puck — se leen de `puck.metadata.datos`
  * (`DatosEditor`, ver `useDatosEditor`), inyectado una sola vez por
  * `EditorSeccionesPage` vía la prop `metadata` de `<Puck>`.
  */
@@ -291,7 +384,7 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
   categories: {
     diseno: {
       title: 'Diseño',
-      components: ['hero', 'columnas'],
+      components: ['hero', 'columnas', 'navegacion'],
     },
     contenido: {
       title: 'Contenido',
@@ -315,12 +408,18 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
       defaultProps: {
         titulo: 'Tu nombre',
         subtitulo: 'Tu título profesional',
+        titulos_rotativos: [],
         mostrar_foto_perfil: true,
         posicion_foto: 'centrada',
         estilo_foto: 'con_marco',
         altura: 'normal',
         overlay_fondo: 'ninguno',
         tamano_titulo: 'normal',
+        disposicion: 'centrado',
+        mostrar_redes: false,
+        mostrar_indicador_scroll: false,
+        efecto_titulo: 'ninguno',
+        decoracion_fondo: 'ninguna',
         ...DEFAULT_PROPS_BASE_BLOQUE,
         // El hero siempre fue a sangre completa y con el título centrado —
         // los defaults compartidos ('normal'/'izquierda') romperían ese
@@ -333,19 +432,49 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
         _tituloVisible: 'Portada',
       },
       fields: {
+        // Contenido
         titulo: { type: 'text', label: 'Título' },
         subtitulo: { type: 'textarea', label: 'Subtítulo' },
+        titulos_rotativos: listaTextosField,
         imagen_fondo_media_id: selectorMediaField,
         texto_boton: { type: 'text', label: 'Texto del botón (opcional)' },
         enlace_boton: { type: 'text', label: 'Enlace del botón (opcional)' },
-        mostrar_foto_perfil: {
-          type: 'radio',
-          label: 'Mostrar foto de perfil',
+        texto_boton_secundario: {
+          type: 'text',
+          label: 'Texto del segundo botón (opcional)',
+        },
+        enlace_boton_secundario: {
+          type: 'text',
+          label: 'Enlace del segundo botón (URL o ruta)',
+        },
+        // Disposición y variantes
+        disposicion: {
+          type: 'select',
+          label: 'Disposición',
           options: [
-            { label: 'Sí', value: true },
-            { label: 'No', value: false },
+            { label: 'Centrado', value: 'centrado' },
+            { label: 'Dividido (texto + foto)', value: 'dividido' },
+            { label: 'Editorial (título enorme)', value: 'editorial' },
           ],
         },
+        altura: {
+          type: 'select',
+          label: 'Altura',
+          options: [
+            { label: 'Normal', value: 'normal' },
+            { label: 'Grande', value: 'grande' },
+            { label: 'Pantalla completa', value: 'pantalla_completa' },
+          ],
+        },
+        tamano_titulo: {
+          type: 'select',
+          label: 'Tamaño del título',
+          options: [
+            { label: 'Normal', value: 'normal' },
+            { label: 'Grande', value: 'grande' },
+          ],
+        },
+        mostrar_foto_perfil: campoSiNo('Mostrar foto de perfil'),
         posicion_foto: {
           type: 'select',
           label: 'Posición de la foto',
@@ -364,13 +493,26 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
             { label: 'Sin fondo', value: 'sin_fondo' },
           ],
         },
-        altura: {
+        mostrar_redes: campoSiNo('Mostrar redes sociales'),
+        mostrar_indicador_scroll: campoSiNo('Mostrar indicador de scroll'),
+        // Efectos
+        efecto_titulo: {
           type: 'select',
-          label: 'Altura',
+          label: 'Efecto del título',
           options: [
-            { label: 'Normal', value: 'normal' },
-            { label: 'Grande', value: 'grande' },
-            { label: 'Pantalla completa', value: 'pantalla_completa' },
+            { label: 'Ninguno', value: 'ninguno' },
+            { label: 'Degradado', value: 'degradado' },
+            { label: 'Resaltado (última palabra)', value: 'resaltado' },
+          ],
+        },
+        decoracion_fondo: {
+          type: 'select',
+          label: 'Decoración de fondo',
+          options: [
+            { label: 'Ninguna', value: 'ninguna' },
+            { label: 'Manchas difuminadas', value: 'manchas' },
+            { label: 'Cuadrícula', value: 'cuadricula' },
+            { label: 'Puntos', value: 'puntos' },
           ],
         },
         overlay_fondo: {
@@ -382,73 +524,44 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
             { label: 'Claro', value: 'claro' },
           ],
         },
-        tamano_titulo: {
-          type: 'select',
-          label: 'Tamaño del título',
-          options: [
-            { label: 'Normal', value: 'normal' },
-            { label: 'Grande', value: 'grande' },
-          ],
-        },
+        // Personalización base
         ...CAMPOS_BASE_BLOQUE,
         _visible: VISIBLE_FIELD,
         _tituloVisible: TITULO_VISIBLE_FIELD,
       },
-      render: ({
-        titulo,
-        subtitulo,
-        imagen_fondo_media_id,
-        texto_boton,
-        enlace_boton,
-        mostrar_foto_perfil,
-        posicion_foto,
-        estilo_foto,
-        altura,
-        overlay_fondo,
-        tamano_titulo,
-        espaciado_vertical,
-        ancho_contenido,
-        alineacion_texto,
-        fondo_bloque,
-        separador_inferior,
-        _visible,
-        puck,
-      }) => {
+      // Fase 7: oculta lo que no aplica. Los enlaces solo tienen sentido con
+      // su texto, y la posición/estilo de la foto solo si se muestra la foto.
+      // Los valores ya guardados de un campo oculto se conservan.
+      resolveFields: (data, { fields }) => {
+        const ocultos: string[] = []
+        if (!data.props.texto_boton) ocultos.push('enlace_boton')
+        if (!data.props.texto_boton_secundario) ocultos.push('enlace_boton_secundario')
+        if (!data.props.mostrar_foto_perfil) ocultos.push('posicion_foto', 'estilo_foto')
+        return sinCampos(fields, ocultos)
+      },
+      render: ({ puck, id: _id, _seccionId, _visible, _tituloVisible, ...config }) => {
         const { datos } = leerMetadata(puck)
-        const config: HeroConfiguracion = {
-          titulo,
-          subtitulo,
-          imagen_fondo_media_id,
-          imagen_fondo: imagen_fondo_media_id
-            ? datos.mediaPorId[imagen_fondo_media_id]
-            : undefined,
-          texto_boton,
-          enlace_boton,
-          mostrar_foto_perfil,
-          posicion_foto,
-          estilo_foto,
-          altura,
-          overlay_fondo,
-          tamano_titulo,
-        }
         return (
           <EnvoltorioSeccion
-            visible={_visible}
-            espaciado_vertical={espaciado_vertical}
+            {...propsEnvoltorio({ ...config, id: _id, _seccionId, _visible, _tituloVisible })}
             // Fallback propio del hero ('completo'/'centro'), no el genérico
             // de `escalas-bloque.ts` ('normal'/'izquierda'): una `Seccion`
             // hero guardada antes de esta fase no tiene estos campos en su
             // `configuracion`, y el hero siempre fue a sangre completa con
             // el título centrado — usar el default compartido rompería ese
             // aspecto en cualquier hero ya publicado.
-            ancho_contenido={ancho_contenido ?? 'completo'}
-            fondo_bloque={fondo_bloque}
-            separador_inferior={separador_inferior}
+            ancho_contenido={config.ancho_contenido ?? 'completo'}
           >
             <BloqueHero
-              config={config}
+              config={{
+                ...config,
+                imagen_fondo: config.imagen_fondo_media_id
+                  ? datos.mediaPorId[config.imagen_fondo_media_id]
+                  : undefined,
+              }}
               perfil={datos.perfil}
-              alineacionTitulo={ALINEACION_TEXTO_CLASE[alineacion_texto ?? 'centro']}
+              redesSociales={datos.redes_sociales}
+              alineacionTitulo={ALINEACION_TEXTO_CLASE[config.alineacion_texto ?? 'centro']}
             />
           </EnvoltorioSeccion>
         )
@@ -460,6 +573,8 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
         mostrar_foto: true,
         posicion_foto: 'izquierda',
         forma_foto: 'circular',
+        estilo_foto: 'simple',
+        estadisticas: [],
         ...DEFAULT_PROPS_BASE_BLOQUE,
         // Antes de esta fase este bloque era `max-w-3xl` (más angosto que
         // el default compartido `max-w-5xl`) — no hay token exacto para
@@ -472,14 +587,20 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
         _tituloVisible: 'Sobre mí',
       },
       fields: {
-        mostrar_foto: {
-          type: 'radio',
-          label: 'Mostrar foto de perfil',
-          options: [
-            { label: 'Sí', value: true },
-            { label: 'No', value: false },
-          ],
+        // Contenido
+        estadisticas: {
+          type: 'array',
+          label: 'Estadísticas (máx. 4)',
+          max: 4,
+          defaultItemProps: { etiqueta: 'Años de experiencia', valor: '5+' },
+          getItemSummary: (item) => `${item.valor} · ${item.etiqueta}`,
+          arrayFields: {
+            etiqueta: { type: 'text', label: 'Etiqueta (máx. 30)' },
+            valor: { type: 'text', label: 'Valor (máx. 12, ej. 15+ o 98%)' },
+          },
         },
+        // Disposición y variantes
+        mostrar_foto: campoSiNo('Mostrar foto de perfil'),
         posicion_foto: {
           type: 'select',
           label: 'Posición de la foto',
@@ -496,39 +617,38 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
             { label: 'Cuadrada', value: 'cuadrada' },
           ],
         },
+        // Efectos
+        estilo_foto: {
+          type: 'select',
+          label: 'Estilo de la foto',
+          options: [
+            { label: 'Simple', value: 'simple' },
+            { label: 'Marco con degradado', value: 'marco_degradado' },
+            { label: 'Flotante (sombra y levitación)', value: 'flotante' },
+          ],
+        },
         ...CAMPOS_BASE_BLOQUE,
         _visible: VISIBLE_FIELD,
         _tituloVisible: TITULO_VISIBLE_FIELD,
       },
-      render: ({
-        mostrar_foto,
-        posicion_foto,
-        forma_foto,
-        espaciado_vertical,
-        ancho_contenido,
-        alineacion_texto,
-        fondo_bloque,
-        separador_inferior,
-        _visible,
-        _tituloVisible,
-        puck,
-      }) => {
+      resolveFields: (data, { fields }) =>
+        data.props.mostrar_foto
+          ? fields
+          : sinCampos(fields, ['posicion_foto', 'forma_foto', 'estilo_foto']),
+      render: ({ puck, id: _id, _seccionId, _visible, _tituloVisible, ...config }) => {
         const { datos } = leerMetadata(puck)
         return (
           <EnvoltorioSeccion
-            visible={_visible}
-            espaciado_vertical={espaciado_vertical}
+            {...propsEnvoltorio({ ...config, id: _id, _seccionId, _visible, _tituloVisible })}
             // Fallback propio ('estrecho'), no el genérico ('normal'): ver
             // el comentario del `defaultProps` de este mismo bloque.
-            ancho_contenido={ancho_contenido ?? 'estrecho'}
-            fondo_bloque={fondo_bloque}
-            separador_inferior={separador_inferior}
+            ancho_contenido={config.ancho_contenido ?? 'estrecho'}
           >
             <BloqueSobreMi
               titulo={_tituloVisible}
-              config={{ mostrar_foto, posicion_foto, forma_foto }}
+              config={config}
               perfil={datos.perfil}
-              alineacionTitulo={ALINEACION_TEXTO_CLASE[alineacion_texto ?? 'izquierda']}
+              alineacionTitulo={ALINEACION_TEXTO_CLASE[config.alineacion_texto ?? 'izquierda']}
             />
           </EnvoltorioSeccion>
         )
@@ -542,110 +662,31 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
         columnas: 3,
         estilo_tarjeta: 'simple',
         mostrar_descripcion: true,
+        disposicion: 'tarjetas',
+        efecto_hover: 'elevar',
+        mostrar_tecnologias: true,
         ...DEFAULT_PROPS_BASE_BLOQUE,
         _visible: true,
         _tituloVisible: 'Proyectos',
       },
       fields: {
+        // Contenido
         cantidad_a_mostrar: {
           type: 'number',
           label: 'Cantidad a mostrar',
           min: 1,
         },
-        solo_destacados: {
-          type: 'radio',
-          label: 'Solo destacados',
-          options: [
-            { label: 'Sí', value: true },
-            { label: 'No', value: false },
-          ],
-        },
-        columnas: {
+        solo_destacados: campoSiNo('Solo destacados'),
+        mostrar_descripcion: campoSiNo('Mostrar descripción'),
+        mostrar_tecnologias: campoSiNo('Mostrar tecnologías'),
+        // Disposición y variantes
+        disposicion: {
           type: 'select',
-          label: 'Columnas',
+          label: 'Disposición',
           options: [
-            { label: '2', value: 2 },
-            { label: '3', value: 3 },
-          ],
-        },
-        estilo_tarjeta: {
-          type: 'select',
-          label: 'Estilo de tarjeta',
-          options: [
-            { label: 'Simple', value: 'simple' },
-            { label: 'Con sombra', value: 'con_sombra' },
-          ],
-        },
-        mostrar_descripcion: {
-          type: 'radio',
-          label: 'Mostrar descripción',
-          options: [
-            { label: 'Sí', value: true },
-            { label: 'No', value: false },
-          ],
-        },
-        ...CAMPOS_BASE_BLOQUE,
-        _visible: VISIBLE_FIELD,
-        _tituloVisible: TITULO_VISIBLE_FIELD,
-      },
-      render: ({
-        cantidad_a_mostrar,
-        solo_destacados,
-        columnas,
-        estilo_tarjeta,
-        mostrar_descripcion,
-        espaciado_vertical,
-        ancho_contenido,
-        alineacion_texto,
-        fondo_bloque,
-        separador_inferior,
-        _visible,
-        _tituloVisible,
-        puck,
-      }) => {
-        const { datos } = leerMetadata(puck)
-        return (
-          <EnvoltorioSeccion
-            visible={_visible}
-            espaciado_vertical={espaciado_vertical}
-            ancho_contenido={ancho_contenido}
-            fondo_bloque={fondo_bloque}
-            separador_inferior={separador_inferior}
-          >
-            <BloqueProyectos
-              titulo={_tituloVisible}
-              config={{
-                cantidad_a_mostrar,
-                solo_destacados,
-                columnas,
-                estilo_tarjeta,
-                mostrar_descripcion,
-              }}
-              proyectos={datos.proyectos}
-              alineacionTitulo={ALINEACION_TEXTO_CLASE[alineacion_texto ?? 'izquierda']}
-            />
-          </EnvoltorioSeccion>
-        )
-      },
-    },
-    certificaciones: {
-      label: 'Certificaciones',
-      defaultProps: {
-        orden: 'fecha',
-        columnas: 3,
-        estilo_tarjeta: 'simple',
-        mostrar_fecha: true,
-        ...DEFAULT_PROPS_BASE_BLOQUE,
-        _visible: true,
-        _tituloVisible: 'Certificaciones',
-      },
-      fields: {
-        orden: {
-          type: 'select',
-          label: 'Orden',
-          options: [
-            { label: 'Por fecha', value: 'fecha' },
-            { label: 'Manual', value: 'manual' },
+            { label: 'Tarjetas', value: 'tarjetas' },
+            { label: 'Bento (uno destacado grande)', value: 'bento' },
+            { label: 'Lista', value: 'lista' },
           ],
         },
         columnas: {
@@ -665,46 +706,90 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
             { label: 'Vidrio', value: 'vidrio' },
           ],
         },
-        mostrar_fecha: {
-          type: 'radio',
-          label: 'Mostrar fecha',
-          options: [
-            { label: 'Sí', value: true },
-            { label: 'No', value: false },
-          ],
-        },
+        // Efectos
+        efecto_hover: CAMPO_EFECTO_HOVER_TARJETA,
         ...CAMPOS_BASE_BLOQUE,
         _visible: VISIBLE_FIELD,
         _tituloVisible: TITULO_VISIBLE_FIELD,
       },
-      render: ({
-        orden,
-        columnas,
-        estilo_tarjeta,
-        mostrar_fecha,
-        espaciado_vertical,
-        ancho_contenido,
-        alineacion_texto,
-        fondo_bloque,
-        separador_inferior,
-        _visible,
-        _tituloVisible,
-        puck,
-      }) => {
+      // `columnas` solo aplica a la disposición `tarjetas` (bento y lista
+      // tienen su propia rejilla).
+      resolveFields: (data, { fields }) =>
+        (data.props.disposicion ?? 'tarjetas') === 'tarjetas' ? fields : sinCampos(fields, ['columnas']),
+      render: ({ puck, id: _id, _seccionId, _visible, _tituloVisible, ...config }) => {
         const { datos } = leerMetadata(puck)
         return (
           <EnvoltorioSeccion
-            visible={_visible}
-            espaciado_vertical={espaciado_vertical}
-            ancho_contenido={ancho_contenido}
-            fondo_bloque={fondo_bloque}
-            separador_inferior={separador_inferior}
+            {...propsEnvoltorio({ ...config, id: _id, _seccionId, _visible, _tituloVisible })}
+          >
+            <BloqueProyectos
+              titulo={_tituloVisible}
+              config={config}
+              proyectos={datos.proyectos}
+              alineacionTitulo={ALINEACION_TEXTO_CLASE[config.alineacion_texto ?? 'izquierda']}
+            />
+          </EnvoltorioSeccion>
+        )
+      },
+    },
+    certificaciones: {
+      label: 'Certificaciones',
+      defaultProps: {
+        orden: 'fecha',
+        columnas: 3,
+        estilo_tarjeta: 'simple',
+        mostrar_fecha: true,
+        efecto_hover: 'elevar',
+        ...DEFAULT_PROPS_BASE_BLOQUE,
+        _visible: true,
+        _tituloVisible: 'Certificaciones',
+      },
+      fields: {
+        // Contenido
+        orden: {
+          type: 'select',
+          label: 'Orden',
+          options: [
+            { label: 'Por fecha', value: 'fecha' },
+            { label: 'Manual', value: 'manual' },
+          ],
+        },
+        mostrar_fecha: campoSiNo('Mostrar fecha'),
+        // Disposición y variantes
+        columnas: {
+          type: 'select',
+          label: 'Columnas',
+          options: [
+            { label: '2', value: 2 },
+            { label: '3', value: 3 },
+          ],
+        },
+        estilo_tarjeta: {
+          type: 'select',
+          label: 'Estilo de tarjeta',
+          options: [
+            { label: 'Simple', value: 'simple' },
+            { label: 'Con sombra', value: 'con_sombra' },
+            { label: 'Vidrio', value: 'vidrio' },
+          ],
+        },
+        // Efectos
+        efecto_hover: CAMPO_EFECTO_HOVER_TARJETA,
+        ...CAMPOS_BASE_BLOQUE,
+        _visible: VISIBLE_FIELD,
+        _tituloVisible: TITULO_VISIBLE_FIELD,
+      },
+      render: ({ puck, id: _id, _seccionId, _visible, _tituloVisible, ...config }) => {
+        const { datos } = leerMetadata(puck)
+        return (
+          <EnvoltorioSeccion
+            {...propsEnvoltorio({ ...config, id: _id, _seccionId, _visible, _tituloVisible })}
           >
             <BloqueCertificaciones
               titulo={_tituloVisible}
-              config={{ orden, columnas, estilo_tarjeta, mostrar_fecha }}
+              config={config}
               certificaciones={datos.certificaciones}
-              alineacionTitulo={ALINEACION_TEXTO_CLASE[alineacion_texto ?? 'izquierda']}
+              alineacionTitulo={ALINEACION_TEXTO_CLASE[config.alineacion_texto ?? 'izquierda']}
             />
           </EnvoltorioSeccion>
         )
@@ -714,6 +799,7 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
       label: 'Logros',
       defaultProps: {
         estilo_lista: 'tarjetas',
+        efecto_hover: 'elevar',
         ...DEFAULT_PROPS_BASE_BLOQUE,
         // Mismo caso que `sobre-mi`: era `max-w-3xl`, sin token exacto en
         // la escala de 4 valores — se aproxima con 'estrecho' (`max-w-2xl`)
@@ -724,7 +810,9 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
         _tituloVisible: 'Logros',
       },
       fields: {
+        // Contenido
         categoria_filtro: { type: 'text', label: 'Filtrar por categoría (opcional)' },
+        // Disposición y variantes
         estilo_lista: {
           type: 'select',
           label: 'Estilo de lista',
@@ -733,36 +821,27 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
             { label: 'Línea de tiempo', value: 'linea_tiempo' },
           ],
         },
+        // Efectos
+        efecto_hover: CAMPO_EFECTO_HOVER_TARJETA,
         ...CAMPOS_BASE_BLOQUE,
         _visible: VISIBLE_FIELD,
         _tituloVisible: TITULO_VISIBLE_FIELD,
       },
-      render: ({
-        categoria_filtro,
-        estilo_lista,
-        espaciado_vertical,
-        ancho_contenido,
-        alineacion_texto,
-        fondo_bloque,
-        separador_inferior,
-        _visible,
-        _tituloVisible,
-        puck,
-      }) => {
+      // La línea de tiempo no tiene tarjetas: el efecto hover solo aplica a `tarjetas`.
+      resolveFields: (data, { fields }) =>
+        data.props.estilo_lista === 'linea_tiempo' ? sinCampos(fields, ['efecto_hover']) : fields,
+      render: ({ puck, id: _id, _seccionId, _visible, _tituloVisible, ...config }) => {
         const { datos } = leerMetadata(puck)
         return (
           <EnvoltorioSeccion
-            visible={_visible}
-            espaciado_vertical={espaciado_vertical}
-            ancho_contenido={ancho_contenido ?? 'estrecho'}
-            fondo_bloque={fondo_bloque}
-            separador_inferior={separador_inferior}
+            {...propsEnvoltorio({ ...config, id: _id, _seccionId, _visible, _tituloVisible })}
+            ancho_contenido={config.ancho_contenido ?? 'estrecho'}
           >
             <BloqueLogros
               titulo={_tituloVisible}
-              config={{ categoria_filtro, estilo_lista }}
+              config={config}
               logros={datos.logros}
-              alineacionTitulo={ALINEACION_TEXTO_CLASE[alineacion_texto ?? 'izquierda']}
+              alineacionTitulo={ALINEACION_TEXTO_CLASE[config.alineacion_texto ?? 'izquierda']}
             />
           </EnvoltorioSeccion>
         )
@@ -773,6 +852,7 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
       defaultProps: {
         mostrar_formulario: false,
         estilo_redes: 'iconos',
+        estilo: 'simple',
         ...DEFAULT_PROPS_BASE_BLOQUE,
         // El título de contacto siempre estuvo centrado (mismo criterio que
         // hero/skills), y el bloque era `max-w-2xl` (el token exacto
@@ -783,12 +863,26 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
         _tituloVisible: 'Contacto',
       },
       fields: {
+        // Contenido
+        texto_llamada: {
+          type: 'text',
+          label: 'Texto de llamada a la acción (máx. 120)',
+        },
         mostrar_formulario: {
           type: 'radio',
           label: 'Mostrar formulario de contacto',
           options: [
             { label: 'Sí', value: true },
             { label: 'No (solo enlaces/CV)', value: false },
+          ],
+        },
+        // Disposición y variantes
+        estilo: {
+          type: 'select',
+          label: 'Estilo del bloque',
+          options: [
+            { label: 'Simple', value: 'simple' },
+            { label: 'Tarjeta destacada', value: 'tarjeta_destacada' },
           ],
         },
         estilo_redes: {
@@ -803,33 +897,25 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
         _visible: VISIBLE_FIELD,
         _tituloVisible: TITULO_VISIBLE_FIELD,
       },
-      render: ({
-        mostrar_formulario,
-        estilo_redes,
-        espaciado_vertical,
-        ancho_contenido,
-        alineacion_texto,
-        fondo_bloque,
-        separador_inferior,
-        _visible,
-        _tituloVisible,
-        puck,
-      }) => {
+      // La llamada solo existe en la tarjeta destacada, que además fuerza el
+      // estilo de botones (`estilo_redes` no aplica).
+      resolveFields: (data, { fields }) =>
+        data.props.estilo === 'tarjeta_destacada'
+          ? sinCampos(fields, ['estilo_redes'])
+          : sinCampos(fields, ['texto_llamada']),
+      render: ({ puck, id: _id, _seccionId, _visible, _tituloVisible, ...config }) => {
         const { datos } = leerMetadata(puck)
         return (
           <EnvoltorioSeccion
-            visible={_visible}
-            espaciado_vertical={espaciado_vertical}
-            ancho_contenido={ancho_contenido ?? 'estrecho'}
-            fondo_bloque={fondo_bloque}
-            separador_inferior={separador_inferior}
+            {...propsEnvoltorio({ ...config, id: _id, _seccionId, _visible, _tituloVisible })}
+            ancho_contenido={config.ancho_contenido ?? 'estrecho'}
           >
             <BloqueContacto
               titulo={_tituloVisible}
-              config={{ mostrar_formulario, estilo_redes }}
+              config={config}
               perfil={datos.perfil}
               redesSociales={datos.redes_sociales}
-              alineacionTitulo={ALINEACION_TEXTO_CLASE[alineacion_texto ?? 'centro']}
+              alineacionTitulo={ALINEACION_TEXTO_CLASE[config.alineacion_texto ?? 'centro']}
             />
           </EnvoltorioSeccion>
         )
@@ -843,6 +929,8 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
         tamano_icono: 'lg',
         mostrar_nombres: true,
         pausar_al_pasar: true,
+        disposicion: 'marquesina',
+        estilo_chip: 'simple',
         ...DEFAULT_PROPS_BASE_BLOQUE,
         // El título de skills siempre estuvo centrado (mismo criterio que
         // hero/contacto) — ver el mismo override en su `render`.
@@ -851,6 +939,37 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
         _tituloVisible: 'Skills',
       },
       fields: {
+        // Contenido
+        mostrar_nombres: campoSiNo('Mostrar nombres'),
+        tamano_icono: {
+          type: 'select',
+          label: 'Tamaño del ícono',
+          options: [
+            { label: 'Pequeño', value: 'sm' },
+            { label: 'Mediano', value: 'md' },
+            { label: 'Grande', value: 'lg' },
+          ],
+        },
+        // Disposición y variantes
+        disposicion: {
+          type: 'select',
+          label: 'Disposición',
+          options: [
+            { label: 'Marquesina (carrusel)', value: 'marquesina' },
+            { label: 'Cuadrícula', value: 'cuadricula' },
+            { label: 'Nube', value: 'nube' },
+          ],
+        },
+        estilo_chip: {
+          type: 'select',
+          label: 'Estilo del chip',
+          options: [
+            { label: 'Simple', value: 'simple' },
+            { label: 'Vidrio', value: 'vidrio' },
+            { label: 'Contorno', value: 'contorno' },
+          ],
+        },
+        // Efectos (solo de la marquesina)
         direccion: {
           type: 'select',
           label: 'Dirección del carrusel',
@@ -868,64 +987,28 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
             { label: 'Rápida', value: 'rapida' },
           ],
         },
-        tamano_icono: {
-          type: 'select',
-          label: 'Tamaño del ícono',
-          options: [
-            { label: 'Pequeño', value: 'sm' },
-            { label: 'Mediano', value: 'md' },
-            { label: 'Grande', value: 'lg' },
-          ],
-        },
-        mostrar_nombres: {
-          type: 'radio',
-          label: 'Mostrar nombres',
-          options: [
-            { label: 'Sí', value: true },
-            { label: 'No', value: false },
-          ],
-        },
-        pausar_al_pasar: {
-          type: 'radio',
-          label: 'Pausar al pasar el mouse',
-          options: [
-            { label: 'Sí', value: true },
-            { label: 'No', value: false },
-          ],
-        },
+        pausar_al_pasar: campoSiNo('Pausar al pasar el mouse'),
         ...CAMPOS_BASE_BLOQUE,
         _visible: VISIBLE_FIELD,
         _tituloVisible: TITULO_VISIBLE_FIELD,
       },
-      render: ({
-        direccion,
-        velocidad,
-        tamano_icono,
-        mostrar_nombres,
-        pausar_al_pasar,
-        espaciado_vertical,
-        ancho_contenido,
-        alineacion_texto,
-        fondo_bloque,
-        separador_inferior,
-        _visible,
-        _tituloVisible,
-        puck,
-      }) => {
+      // Dirección/velocidad/pausa son del carrusel; el estilo de chip solo
+      // aplica a cuadrícula y nube.
+      resolveFields: (data, { fields }) =>
+        (data.props.disposicion ?? 'marquesina') === 'marquesina'
+          ? sinCampos(fields, ['estilo_chip'])
+          : sinCampos(fields, ['direccion', 'velocidad', 'pausar_al_pasar']),
+      render: ({ puck, id: _id, _seccionId, _visible, _tituloVisible, ...config }) => {
         const { datos } = leerMetadata(puck)
         return (
           <EnvoltorioSeccion
-            visible={_visible}
-            espaciado_vertical={espaciado_vertical}
-            ancho_contenido={ancho_contenido}
-            fondo_bloque={fondo_bloque}
-            separador_inferior={separador_inferior}
+            {...propsEnvoltorio({ ...config, id: _id, _seccionId, _visible, _tituloVisible })}
           >
             <BloqueSkills
               titulo={_tituloVisible}
-              config={{ direccion, velocidad, tamano_icono, mostrar_nombres, pausar_al_pasar }}
+              config={config}
               skills={datos.skills}
-              alineacionTitulo={ALINEACION_TEXTO_CLASE[alineacion_texto ?? 'centro']}
+              alineacionTitulo={ALINEACION_TEXTO_CLASE[config.alineacion_texto ?? 'centro']}
             />
           </EnvoltorioSeccion>
         )
@@ -947,11 +1030,13 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
         fotos: [],
         disposicion: 'carousel',
         columnas_grid: 3,
+        efecto_hover: 'zoom',
         ...DEFAULT_PROPS_BASE_BLOQUE,
         _visible: true,
         _tituloVisible: 'Galería',
       },
       fields: {
+        // Contenido
         fotos: {
           type: 'array',
           label: 'Fotos',
@@ -961,6 +1046,7 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
             titulo: { type: 'text', label: 'Título (opcional)' },
           },
         },
+        // Disposición y variantes
         disposicion: {
           type: 'radio',
           label: 'Disposición',
@@ -978,6 +1064,16 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
             { label: '4', value: 4 },
           ],
         },
+        // Efectos
+        efecto_hover: {
+          type: 'select',
+          label: 'Efecto al pasar el cursor',
+          options: [
+            { label: 'Zoom', value: 'zoom' },
+            { label: 'Elevar', value: 'elevar' },
+            { label: 'Ninguno', value: 'ninguno' },
+          ],
+        },
         ...CAMPOS_BASE_BLOQUE,
         _visible: VISIBLE_FIELD,
         _tituloVisible: TITULO_VISIBLE_FIELD,
@@ -986,45 +1082,73 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
       // 'carousel' — mismo criterio de UX que `columnas.resolveFields` para
       // "Columna 3": mejora del sidebar, no la fuente de verdad de qué se
       // renderiza (eso lo decide `BloqueGaleria` con `disposicion === 'grid'`).
-      resolveFields: (data, { fields }) => {
-        if (data.props.disposicion === 'grid') return fields
-        return Object.fromEntries(
-          Object.entries(fields).filter(([nombreCampo]) => nombreCampo !== 'columnas_grid'),
-        ) as typeof fields
-      },
-      render: ({
-        fotos,
-        disposicion,
-        columnas_grid,
-        espaciado_vertical,
-        ancho_contenido,
-        alineacion_texto,
-        fondo_bloque,
-        separador_inferior,
-        _visible,
-        _tituloVisible,
-        puck,
-      }) => {
+      resolveFields: (data, { fields }) =>
+        data.props.disposicion === 'grid' ? fields : sinCampos(fields, ['columnas_grid']),
+      render: ({ puck, id: _id, _seccionId, _visible, _tituloVisible, ...config }) => {
         const { datos } = leerMetadata(puck)
-        const fotosResueltas: GaleriaFoto[] = fotos.map((foto) => ({
+        const fotosResueltas: GaleriaFoto[] = config.fotos.map((foto) => ({
           ...foto,
           media: foto.media_id ? datos.mediaPorId[foto.media_id] : undefined,
         }))
         return (
           <EnvoltorioSeccion
-            visible={_visible}
-            espaciado_vertical={espaciado_vertical}
-            ancho_contenido={ancho_contenido}
-            fondo_bloque={fondo_bloque}
-            separador_inferior={separador_inferior}
+            {...propsEnvoltorio({ ...config, id: _id, _seccionId, _visible, _tituloVisible })}
           >
             <BloqueGaleria
               titulo={_tituloVisible}
-              config={{ fotos: fotosResueltas, disposicion, columnas_grid }}
-              alineacionTitulo={ALINEACION_TEXTO_CLASE[alineacion_texto ?? 'izquierda']}
+              config={{ ...config, fotos: fotosResueltas }}
+              alineacionTitulo={ALINEACION_TEXTO_CLASE[config.alineacion_texto ?? 'izquierda']}
             />
           </EnvoltorioSeccion>
         )
+      },
+    },
+    /**
+     * Barra de navegación del sitio (Fase 7, 7.2/7.3, UC-07 y UC-12). Sus
+     * enlaces no se configuran: se generan con las secciones visibles con
+     * título (`NavegacionEnLienzo`). Como `hero`, no se puede soltar dentro
+     * de `columnas` (`BLOQUES_ANIDABLES`). No usa `EnvoltorioSeccion` ni
+     * muestra los campos base (espaciado, ancho, fondo, separador,
+     * animación) ni el título: su posición (`fixed` en el sitio, `sticky` en
+     * el lienzo) no depende de ellos y un ancestro animado rompería el
+     * `fixed`; la config solo necesita los campos propios de abajo.
+     */
+    navegacion: {
+      label: 'Navegación',
+      defaultProps: {
+        estilo: 'flotante',
+        fijo: true,
+        mostrar_nombre: true,
+        mostrar_cv: true,
+        mostrar_toggle_modo: true,
+        mostrar_progreso_scroll: false,
+        ...DEFAULT_PROPS_BASE_BLOQUE,
+        _visible: true,
+        _tituloVisible: 'Navegación',
+      },
+      fields: {
+        estilo: {
+          type: 'select',
+          label: 'Estilo',
+          options: [
+            { label: 'Flotante (píldora centrada)', value: 'flotante' },
+            { label: 'Barra de ancho completo', value: 'barra' },
+          ],
+        },
+        fijo: campoSiNo('Fija arriba al hacer scroll'),
+        mostrar_nombre: campoSiNo('Mostrar mi nombre'),
+        mostrar_cv: campoSiNo('Mostrar botón del CV'),
+        mostrar_toggle_modo: campoSiNo('Mostrar interruptor claro/oscuro'),
+        mostrar_progreso_scroll: campoSiNo('Mostrar progreso de lectura'),
+        ...CAMPOS_BASE_BLOQUE,
+        _visible: VISIBLE_FIELD,
+        _tituloVisible: TITULO_VISIBLE_FIELD,
+      },
+      resolveFields: (_data, { fields }) =>
+        sinCampos(fields, [...Object.keys(CAMPOS_BASE_BLOQUE), '_tituloVisible']),
+      render: ({ puck, id: _id, _seccionId, _visible, _tituloVisible, ...config }) => {
+        const { datos } = leerMetadata(puck)
+        return <NavegacionEnLienzo config={config} visible={_visible} perfil={datos.perfil} />
       },
     },
     /**
@@ -1032,14 +1156,14 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
      * Slots API de Puck. NO es un placeholder — cada zona `columna_1/2/3` es
      * una zona de drag-and-drop real donde se pueden soltar los tipos de
      * bloque anidables (`BLOQUES_ANIDABLES`, incluye `galeria` desde UC-18),
-     * reforzado con `allow` (nunca
-     * `hero` ni `columnas`, ver comentario de `BLOQUES_ANIDABLES`). A
-     * diferencia de los demás bloques, este SÍ es una `Seccion` cuya
-     * `configuracion` guarda además el contenido de sus hijos (ver
-     * `docs/plan-portafolio.md` §4 y `EditorSeccionesPage.sanearSlots`).
-     * Fase 3.4: solo gana los 5 campos base (sin campos propios nuevos) —
-     * el contenedor en sí no tiene título propio, así que no recibe
-     * `alineacion_texto` resuelto hacia ningún `<h2>`.
+     * reforzado con `allow` (nunca `hero`, `columnas` ni `navegacion`, ver
+     * comentario de `BLOQUES_ANIDABLES`). A diferencia de los demás bloques,
+     * este SÍ es una `Seccion` cuya `configuracion` guarda además el
+     * contenido de sus hijos (ver `docs/plan-portafolio.md` §4 y
+     * `EditorSeccionesPage.sanearSlots`). Fase 3.4: solo gana los campos base
+     * (sin campos propios nuevos) — el contenedor en sí no tiene título
+     * propio, así que no recibe `alineacion_texto` resuelto hacia ningún
+     * `<h2>`.
      */
     columnas: {
       label: 'Columnas',
@@ -1113,33 +1237,23 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
       // qué se renderiza (esa la decide `render` de abajo, no este campo:
       // si `columna_3` ya tenía contenido de una distribución anterior,
       // simplemente deja de mostrarse hasta volver a elegir '1-1-1').
-      resolveFields: (data, { fields }) => {
-        if (data.props.distribucion === '1-1-1') return fields
-        return Object.fromEntries(
-          Object.entries(fields).filter(([nombreCampo]) => nombreCampo !== 'columna_3'),
-        ) as typeof fields
-      },
-      render: ({
-        distribucion,
-        alineacion_vertical,
-        espaciado,
-        columna_1: Columna1,
-        columna_2: Columna2,
-        columna_3: Columna3,
-        espaciado_vertical,
-        ancho_contenido,
-        fondo_bloque,
-        separador_inferior,
-        _visible,
-      }) => {
+      resolveFields: (data, { fields }) =>
+        data.props.distribucion === '1-1-1' ? fields : sinCampos(fields, ['columna_3']),
+      render: (props) => {
+        const {
+          distribucion,
+          alineacion_vertical,
+          espaciado,
+          columna_1: Columna1,
+          columna_2: Columna2,
+          columna_3: Columna3,
+          ancho_contenido,
+        } = props
         const tresColumnas = distribucion === '1-1-1'
         return (
           <EnvoltorioSeccion
-            visible={_visible}
-            espaciado_vertical={espaciado_vertical}
+            {...propsEnvoltorio(props)}
             ancho_contenido={ancho_contenido ?? 'completo'}
-            fondo_bloque={fondo_bloque}
-            separador_inferior={separador_inferior}
           >
             <div
               className={`grid ${GRID_COLS_POR_DISTRIBUCION[distribucion]} ${ALINEACION_VERTICAL_CLASE[alineacion_vertical]} ${ESPACIADO_CLASE[espaciado]}`}

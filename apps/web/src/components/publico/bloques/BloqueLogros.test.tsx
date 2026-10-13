@@ -38,7 +38,7 @@ describe('BloqueLogros (Fase 3.4)', () => {
     expect(screen.getByText('Certificación AWS')).toBeInTheDocument()
     const lista = container.querySelector('ul')
     expect(lista).not.toHaveClass('border-l-2')
-    expect(container.querySelector('li')).toHaveClass('border')
+    expect(container.querySelector('li > div')).toHaveClass('border')
   })
 
   it('estilo_lista="linea_tiempo" usa la línea vertical con marcador por ítem', () => {
