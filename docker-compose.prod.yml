@@ -49,8 +49,29 @@ services:
       AWS_REGION: ${AWS_REGION:-us-east-1}
       S3_BUCKET_NAME: ${S3_BUCKET_NAME:?falta S3_BUCKET_NAME}
       CLOUDFRONT_DOMAIN: ${CLOUDFRONT_DOMAIN:-}
+      # Fase 6 — variables que la API lee en runtime (ver docs/despliegue.md,
+      # sección "Fase 6"):
+      #   TRUST_PROXY: la API está detrás de Traefik (Dokploy/Coolify); con
+      #     esto Express confía en X-Forwarded-For/-Proto para la IP real del
+      #     cliente (rate limiting de login, logs) y la cookie `secure`.
+      #   LOG_LEVEL: nivel de los logs JSON (pino): trace|debug|info|warn|error.
+      #   THROTTLE_TTL_MS / THROTTLE_LIMIT: ventana y máximo de peticiones
+      #     por IP del rate limiting global (120 req/min por defecto).
+      TRUST_PROXY: ${TRUST_PROXY:-true}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      THROTTLE_TTL_MS: ${THROTTLE_TTL_MS:-60000}
+      THROTTLE_LIMIT: ${THROTTLE_LIMIT:-120}
     ports:
       - "${API_PUBLIC_PORT:-3000}:3000"
+    # Fase 6 — liveness desde Compose (además del HEALTHCHECK de la imagen,
+    # que Dokploy/Coolify ya respetan). `GET /health` no toca la base de
+    # datos; `start_period` cubre el `prisma migrate deploy` del entrypoint.
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
 
   web:
     build:
@@ -63,10 +84,33 @@ services:
       args:
         VITE_API_URL: ${VITE_API_URL:?falta VITE_API_URL}
     restart: unless-stopped
+    # Fase 6 — `web` espera a que `api` responda /health antes de arrancar:
+    # así un despliegue nuevo no expone el frontend mientras la API todavía
+    # está migrando la base de datos.
     depends_on:
-      - api
+      api:
+        condition: service_healthy
+    environment:
+      # Fase 6 — orígenes externos de la Content-Security-Policy de nginx
+      # (apps/web/nginx/cabeceras-seguridad.conf). Se resuelven en RUNTIME
+      # (envsubst de la imagen nginx), a diferencia de VITE_API_URL.
+      #   API_ORIGIN: origen público de `api` (connect-src). Normalmente el
+      #     mismo valor que VITE_API_URL, sin ruta ni barra final.
+      #   MEDIA_ORIGIN: origen de S3 o CloudFront desde donde se incrustan
+      #     los PDF (object-src/frame-src), p. ej.
+      #     https://<bucket>.s3.<region>.amazonaws.com o https://<cloudfront>.
+      # Si se dejan vacías, apps/web/docker-entrypoint.d/10-defaults.envsh
+      # cae a `https:` (cualquier origen HTTPS) para no romper el sitio.
+      API_ORIGIN: ${API_ORIGIN:-${VITE_API_URL}}
+      MEDIA_ORIGIN: ${MEDIA_ORIGIN:-}
     ports:
       - "${WEB_PUBLIC_PORT:-8081}:80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ > /dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      start_period: 5s
+      retries: 3
 
 volumes:
   postgres_data:

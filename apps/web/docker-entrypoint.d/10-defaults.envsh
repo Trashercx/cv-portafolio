@@ -1,0 +1,31 @@
+#!/bin/sh
+# Fase 6 — valores por defecto para la Content-Security-Policy de nginx.
+#
+# La imagen oficial nginx:alpine ejecuta en orden los archivos de
+# /docker-entrypoint.d/ al arrancar. Los `*.envsh` se cargan con `source`
+# (no como proceso hijo), así que las variables exportadas aquí quedan
+# visibles para el siguiente script, 20-envsubst-on-templates.sh, que es
+# el que renderiza /etc/nginx/templates/default.conf.template. Un `*.sh`
+# corriente no serviría: se ejecutaría en su propio proceso y sus exports
+# morirían con él.
+#
+# `envsubst` no admite sintaxis de defaults (${VAR:-x}): si API_ORIGIN o
+# MEDIA_ORIGIN llegaran vacías, la CSP quedaría con `connect-src 'self' ;`
+# y el navegador bloquearía todas las llamadas a la API. Para que una
+# variable olvidada nunca tumbe el sitio, el fallback es el esquema
+# genérico `https:` (permite cualquier origen HTTPS: menos estricto, pero
+# funcional). Configurar los orígenes exactos sigue siendo lo recomendado
+# — ver docs/despliegue.md, Fase 6.
+
+: "${API_ORIGIN:=https:}"
+: "${MEDIA_ORIGIN:=https:}"
+
+# Un origen CSP no lleva barra final ni ruta ("https://api.midominio.com",
+# no "https://api.midominio.com/"); se recorta por si alguien pega la URL
+# completa de VITE_API_URL con barra.
+API_ORIGIN="${API_ORIGIN%/}"
+MEDIA_ORIGIN="${MEDIA_ORIGIN%/}"
+
+export API_ORIGIN MEDIA_ORIGIN
+
+echo "[10-defaults.envsh] CSP: API_ORIGIN=${API_ORIGIN} MEDIA_ORIGIN=${MEDIA_ORIGIN}"

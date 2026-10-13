@@ -70,13 +70,37 @@ RUN npm run build --workspace apps/web
 # ---------------------------------------------------------------------------
 FROM nginx:alpine AS runtime
 
-# Sustituye la config por defecto de nginx por una que hace fallback a
-# index.html para rutas de cliente de React Router (ver apps/web/nginx.conf
-# para el detalle de por qué hace falta).
-COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
+# Fase 6 — la config de nginx es una plantilla que la propia imagen oficial
+# renderiza con envsubst al arrancar (/docker-entrypoint.sh →
+# 20-envsubst-on-templates.sh): /etc/nginx/templates/default.conf.template
+# → /etc/nginx/conf.d/default.conf. Así API_ORIGIN y MEDIA_ORIGIN (orígenes
+# de la Content-Security-Policy) se resuelven en RUNTIME del contenedor,
+# no en build, a diferencia de VITE_API_URL. Ver apps/web/nginx/*.
+COPY apps/web/nginx/default.conf.template /etc/nginx/templates/default.conf.template
+
+# Cabeceras de seguridad (CSP, HSTS, nosniff...) — snippet estático que la
+# plantilla incluye en cada location; no pasa por envsubst.
+COPY apps/web/nginx/cabeceras-seguridad.conf /etc/nginx/snippets/cabeceras-seguridad.conf
+
+# Defaults seguros para API_ORIGIN / MEDIA_ORIGIN si no vienen del entorno
+# (envsubst no soporta ${VAR:-default}). Es un `.envsh`: la imagen lo
+# carga con `source` para que sus exports lleguen al paso de envsubst.
+COPY apps/web/docker-entrypoint.d/10-defaults.envsh /docker-entrypoint.d/10-defaults.envsh
+RUN chmod +x /docker-entrypoint.d/10-defaults.envsh
+
+# envsubst SOLO toca estas dos variables: cualquier otro `$nombre` de la
+# plantilla ($uri, $host, $csp_api_origin...) es sintaxis de nginx y debe
+# llegar intacto. Sin este filtro, una variable de entorno llamada
+# casualmente `uri` o `host` corrompería la config.
+ENV NGINX_ENVSUBST_FILTER="^(API_ORIGIN|MEDIA_ORIGIN)$"
 
 COPY --from=build /repo/apps/web/dist /usr/share/nginx/html
 
 EXPOSE 80
+
+# Fase 6 — liveness check: nginx responde el index.html en `/`. `wget` es el
+# de busybox que ya trae alpine.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+  CMD wget -qO- http://127.0.0.1/ > /dev/null || exit 1
 
 CMD ["nginx", "-g", "daemon off;"]
