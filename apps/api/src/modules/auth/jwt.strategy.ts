@@ -6,6 +6,8 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 export interface JwtPayload {
   sub: string;
   email: string;
+  /** Expiración del token (segundos epoch); la usa GET /auth/sesion (octava ronda, UC-01). */
+  exp?: number;
 }
 
 /**
@@ -30,6 +32,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   async validate(payload: JwtPayload): Promise<JwtPayload> {
     // El payload validado queda disponible como `req.user` en rutas protegidas.
-    return { sub: payload.sub, email: payload.email };
+    return { sub: payload.sub, email: payload.email, exp: payload.exp };
   }
 }

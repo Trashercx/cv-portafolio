@@ -191,3 +191,40 @@ describe('POST /auth/logout (e2e, UC-01, Fase 6)', () => {
     await request(app.getHttpServer()).post('/auth/logout').expect(204);
   });
 });
+
+describe('GET /auth/sesion (e2e, octava ronda, UC-01)', () => {
+  let app: INestApplication;
+
+  beforeAll(async () => {
+    app = await crearAppDePrueba();
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it('sin cookie responde 401', async () => {
+    await request(app.getHttpServer()).get('/auth/sesion').expect(401);
+  });
+
+  it('con sesion vigente responde 200 con admin.email y expiracion futura, sin cookie nueva', async () => {
+    const agent = await agenteAutenticado(app);
+    const res = await agent.get('/auth/sesion').expect(200);
+
+    expect(res.body).toEqual({
+      email: process.env.ADMIN_EMAIL,
+      nombre: expect.any(String),
+      expiresAt: expect.any(String),
+    });
+    expect(new Date(res.body.expiresAt).getTime()).toBeGreaterThan(Date.now());
+    expect(res.body.password_hash).toBeUndefined();
+    expect(res.headers['set-cookie']).toBeUndefined();
+  });
+
+  it('tras logout responde 401', async () => {
+    const agent = await agenteAutenticado(app);
+    await agent.get('/auth/sesion').expect(200);
+    await agent.post('/auth/logout').expect(204);
+    await agent.get('/auth/sesion').expect(401);
+  });
+});
