@@ -1,0 +1,47 @@
+# Fase 6 — Fundamentos de producción: análisis estático de seguridad con
+# CodeQL (el lenguaje javascript-typescript cubre apps/api y apps/web).
+#
+# Corre en cada PR y push a main, y además una vez por semana para detectar
+# vulnerabilidades nuevas del catálogo de consultas aunque el código no
+# haya cambiado. Los resultados aparecen en Security > Code scanning.
+name: CodeQL
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  schedule:
+    # Lunes 06:00 UTC (01:00 en Lima).
+    - cron: "0 6 * * 1"
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analizar (javascript-typescript)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+          # security-extended añade consultas de menor precisión pero útiles
+          # para una app con panel de admin y subida de archivos.
+          queries: security-extended
+
+      # JavaScript/TypeScript no requiere compilar: CodeQL extrae el código
+      # fuente directamente (sin paso de autobuild).
+      - uses: github/codeql-action/analyze@v3
+        with:
+          category: /language:javascript-typescript
