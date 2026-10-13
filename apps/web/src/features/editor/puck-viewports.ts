@@ -1,31 +1,27 @@
 import type { UiState, Viewports } from '@puckeditor/core'
 
 /**
- * Opciones del selector de viewport propio (`ViewportSwitcher`), con el
- * escritorio primero (el panel de administración se usa mayormente en
- * desktop). También se pasan como prop `viewports` de `<Puck>` en
- * `LienzoPuck` — Puck las usa para su propio `ViewportControls` nativo, que
- * ya no se monta (el layout se reconstruye a mano vía `children`), pero
- * sigue siendo la fuente de las opciones válidas para `state.ui.viewports`.
+ * Viewports del selector NATIVO de Puck (Fase 7, UC-07): 360 móvil, 768
+ * tablet, 1280 escritorio y el ancho completo del canvas. Antes (Fase 5) un
+ * `ViewportSwitcher` propio los reemplazaba porque el layout manual no podía
+ * montar el `ViewportControls` de Puck; con el layout nativo ya no hace
+ * falta. Los iconos (`'Smartphone'`, `'Tablet'`, `'Monitor'`, `'FullWidth'`)
+ * son los que Puck resuelve internamente.
  */
 export const PUCK_VIEWPORTS: Viewports = [
-  { width: 1280, height: 'auto', icon: 'Monitor', label: 'Escritorio' },
-  { width: 768, height: 'auto', icon: 'Tablet', label: 'Tablet' },
   { width: 360, height: 'auto', icon: 'Smartphone', label: 'Móvil' },
+  { width: 768, height: 'auto', icon: 'Tablet', label: 'Tablet' },
+  { width: 1280, height: 'auto', icon: 'Monitor', label: 'Escritorio' },
+  { width: '100%', height: 'auto', icon: 'FullWidth', label: 'Ancho completo' },
 ]
 
 /**
- * Puck siempre inicializa `state.ui.viewports.current` desde su propio
- * `defaultViewports[0]` (360px / "Small"), sin importar la prop `viewports`
- * de arriba (que solo cambia las OPCIONES del selector, no el estado
- * inicial) — por eso hace falta fijarlo explícitamente vía la prop `ui`.
- * `Partial<UiState>` solo hace opcionales las claves de nivel superior: si
- * se pasa `viewports`, Puck lo mezcla con un spread superficial contra su
- * estado por defecto (confirmado en `reducer/actions/set-ui.ts` — mismo
- * mecanismo que usa `ViewportSwitcher` para cambiar `current` más tarde), así
- * que hay que repetir la forma completa (`current`, `controlsVisible`,
- * `options`) y no solo `current`, o `controlsVisible`/`options` quedarían
- * `undefined`.
+ * Estado inicial de `ui`: Puck 0.21+ arranca en ancho completo, pero el
+ * lienzo debe mostrarse fiel al sitio de escritorio (1280, con auto-zoom
+ * para que quepa), así que se fija el viewport actual explícitamente.
+ * `Partial<UiState>` solo hace opcionales las claves de primer nivel: hay
+ * que repetir la forma completa de `viewports` (`current`,
+ * `controlsVisible`, `options`).
  */
 export const PUCK_UI_INICIAL: Partial<UiState> = {
   viewports: {

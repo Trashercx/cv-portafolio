@@ -93,7 +93,7 @@ export function DialogVistaPrevia({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="outline">Vista previa</Button>
+        <Button variant="outline" size="sm">Vista previa</Button>
       </DialogTrigger>
       <DialogContent className="flex h-[90vh] flex-col sm:max-w-[95vw]">
         <DialogHeader>

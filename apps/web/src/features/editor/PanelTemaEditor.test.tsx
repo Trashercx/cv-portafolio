@@ -48,7 +48,7 @@ const TEMA_INACTIVO: Tema = {
 
 /**
  * Migrado de la extinta `TemaPage` (UC-08, fusionada en el panel lateral del
- * editor — ver `PanelLateralEditor`): esta suite nunca existió como
+ * editor — ahora plugin `tema` del rail de Puck, ver `plugins-editor.tsx`): esta suite nunca existió como
  * `TemaPage.test.tsx` (no había cobertura previa), se agrega acá para no
  * dejar sin tests una pieza de UI reusada 1:1 (`useTemas`/`useActivarTema`/
  * `useEliminarTema`/`TemaFormDialog`, sin lógica de mutación propia).

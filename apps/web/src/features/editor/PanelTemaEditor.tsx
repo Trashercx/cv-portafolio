@@ -15,7 +15,7 @@ const SWATCH_KEYS: Array<{ key: keyof Tema; label: string }> = [
 ]
 
 /**
- * Pestaña "Tema" del panel lateral del editor unificado (Fase 5): mismo
+ * Plugin "Tema" del rail de Puck en el editor unificado (Fase 5, plugin desde Fase 7): mismo
  * listado/creación/activación exclusiva/borrado que la extinta `TemaPage`
  * (UC-08) — se reusan tal cual `useTemas`/`useActivarTema`/`useEliminarTema`
  * y `TemaFormDialog`, sin ninguna lógica de mutación nueva ni duplicada.

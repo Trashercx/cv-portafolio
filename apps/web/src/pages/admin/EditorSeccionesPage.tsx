@@ -41,7 +41,7 @@ import { LienzoPuck } from '@/features/editor/LienzoPuck'
 import { usePublicarVersion, useVersiones } from '@/features/publicacion/usePublicacion'
 import type { VersionSitio } from '@/features/publicacion/types'
 import { useEditorSeccionesStore } from '@/store/editor-secciones-store'
-import { useEditorPanelStore, type PestanaPanel } from '@/store/editor-panel-store'
+import { useEditorPanelStore, type PluginEditor } from '@/store/editor-panel-store'
 
 type EditorData = Data<PuckSeccionesComponents>
 type EditorContentItem = EditorData['content'][number]
@@ -308,24 +308,25 @@ export function EditorSeccionesPage() {
   const publicar = usePublicarVersion()
   const [historialAbierto, setHistorialAbierto] = useState(false)
 
-  // Fase 5 (panel unificado): un enlace externo hacia el panel de Tema o
-  // Fondo (p. ej. `/admin/editor?panel=tema`, ver el redirect que dejaron
-  // las extintas rutas `/admin/tema`/`/admin/fondo` en `App.tsx`) puede pedir
-  // arrancar en esa pestaña en vez de "Bloque" (el default de
-  // `useEditorPanelStore`). Solo se aplica una vez al montar — un `ref`, no
-  // el propio `searchParams` como dependencia del efecto, para no forzar de
-  // nuevo esa pestaña si el admin navega a otra después.
+  // Fase 5 (panel unificado) / Fase 7 (plugin rail): un enlace externo hacia
+  // el panel de Tema o Fondo (p. ej. `/admin/editor?panel=tema`, ver el
+  // redirect de las extintas rutas `/admin/tema`/`/admin/fondo` en
+  // `App.tsx`) abre el plugin `tema`/`fondo` del rail de Puck en vez de
+  // "Bloques": `LienzoPuck` lo lee de `useEditorPanelStore` como
+  // `ui.plugin.current` inicial. Solo se aplica una vez al montar (un `ref`,
+  // no `searchParams` como dependencia) para no pisar la elección del admin
+  // si luego cambia de plugin.
   const [searchParams] = useSearchParams()
-  const setPestanaActiva = useEditorPanelStore((state) => state.setPestanaActiva)
+  const setPluginActivo = useEditorPanelStore((state) => state.setPluginActivo)
   const panelInicialAplicado = useRef(false)
   useEffect(() => {
     if (panelInicialAplicado.current) return
     panelInicialAplicado.current = true
     const panel = searchParams.get('panel')
     if (panel === 'tema' || panel === 'fondo') {
-      setPestanaActiva(panel satisfies PestanaPanel)
+      setPluginActivo(panel satisfies PluginEditor)
     }
-  }, [searchParams, setPestanaActiva])
+  }, [searchParams, setPluginActivo])
 
   // Estado de `DialogVistaPrevia` levantado acá (Fase 4.1, punto 2): ese
   // componente se monta dentro del `toolbar` que arma esta página y viaja
@@ -553,7 +554,7 @@ export function EditorSeccionesPage() {
   const errorCarga = seccionesQuery.error ?? datosError
 
   return (
-    <div className="-mx-4 -my-4 grid gap-0">
+    <div className="-mx-4 -my-4 flex h-[calc(100dvh-3.5rem)] flex-col">
       <Dialog open={historialAbierto} onOpenChange={setHistorialAbierto}>
         <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
@@ -577,7 +578,7 @@ export function EditorSeccionesPage() {
       {versionesQuery.isSuccess && hayCambiosSinPublicar ? (
         <div
           role="status"
-          className="flex items-center gap-2 border-b bg-secondary px-4 py-2 text-sm text-secondary-foreground"
+          className="flex shrink-0 items-center gap-2 border-b bg-secondary px-4 py-2 text-sm text-secondary-foreground"
         >
           <Info className="size-4 shrink-0" aria-hidden="true" />
           <span>
@@ -602,12 +603,12 @@ export function EditorSeccionesPage() {
       ) : null}
 
       {initialData && datos ? (
-        // `h-[calc(100vh-4.5rem)]`: solo se descuenta la cabecera fija de
-        // `AdminLayout` (~4.5rem) — no hay ninguna barra de acciones propia
-        // ENCIMA del lienzo: la barra (`toolbar`) comparte fila con los
-        // controles de deshacer/rehacer y viewport dentro del propio
-        // `LienzoPuck` (Fase 5), que ocupa el resto de este alto completo.
-        <div className="relative h-[calc(100vh-4.5rem)]">
+        // Fase 7 (UC-07): el alto lo fija el contenedor de la página
+        // (`100dvh` menos el header de 3.5rem de `AdminLayout`); el banner de
+        // borrador (`shrink-0`) y este contenedor (`flex-1 min-h-0`) se reparten
+        // lo que queda, así que el editor nunca desborda en vertical aunque el
+        // banner ocupe varias líneas. `LienzoPuck` pasa `height="100%"` a Puck.
+        <div className="relative min-h-0 flex-1">
           {/*
             `inert` (React 19 / atributo HTML nativo) bloquea por completo el
             mouse y el teclado dentro del editor mientras `guardando` es
@@ -726,12 +727,17 @@ export function EditorSeccionesPage() {
                   />
                   <Button
                     variant="outline"
+                    size="sm"
                     onClick={() => setHistorialAbierto(true)}
                   >
                     Historial de versiones
                   </Button>
                   <ConfirmActionDialog
-                    trigger={<Button disabled={publicar.isPending}>Publicar</Button>}
+                    trigger={
+                      <Button size="sm" disabled={publicar.isPending}>
+                        Publicar
+                      </Button>
+                    }
                     title="¿Publicar los cambios actuales?"
                     description="Esto reemplaza de inmediato la versión visible al público con el contenido, secciones y tema actuales."
                     confirmLabel="Publicar"
@@ -740,6 +746,7 @@ export function EditorSeccionesPage() {
                     onConfirm={() => publicar.mutate()}
                   />
                   <Button
+                    size="sm"
                     onClick={guardarCambios}
                     disabled={guardando || !initialData}
                   >

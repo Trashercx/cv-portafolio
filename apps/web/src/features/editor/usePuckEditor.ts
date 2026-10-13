@@ -9,8 +9,8 @@ import { puckConfig } from '@/lib/puck-config'
  * `console.warn` recomendando reemplazarlo por `createUsePuck()` con un
  * selector, que sí evita re-renders innecesarios. Se crea una sola vez acá
  * (en vez de llamar `createUsePuck` dentro de cada componente) para que
- * `ViewportSwitcher`, `PanelBloqueSeleccionado`, `PanelLateralEditor` y
- * `LienzoPuck` compartan la misma función tipada contra
+ * `LienzoPuck` (Fase 7: sin los paneles propios de antes) y
+ * los componentes que lo necesiten compartan la misma función tipada contra
  * `PuckSeccionesComponents`.
  */
 export const usePuckEditor = createUsePuck<typeof puckConfig>()

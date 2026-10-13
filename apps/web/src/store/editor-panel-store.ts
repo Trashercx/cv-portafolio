@@ -1,20 +1,23 @@
 import { create } from 'zustand'
 
-export type PestanaPanel = 'bloque' | 'tema' | 'fondo'
+/** Nombres de los plugins propios del rail de Puck (Fase 7, UC-07/UC-08). */
+export type PluginEditor = 'tema' | 'fondo'
 
 type EditorPanelState = {
   /**
-   * Pestaña activa del panel lateral derecho del editor unificado
-   * (`/admin/editor` — fusión de Editor visual + Tema + Fondo del sitio):
-   * estado de edición en curso (qué pestaña está mirando el admin ahora
-   * mismo), nunca estado del servidor — vive en Zustand por la misma regla
-   * de `CLAUDE.md` que ya sigue `useEditorSeccionesStore`.
+   * Plugin activo del rail de Puck (`ui.plugin.current`: `blocks`,
+   * `outline`, `fields`, `tema` o `fondo`) o `null` si el admin no eligió
+   * ninguno. Puck gestiona por su cuenta el plugin activo mientras el
+   * editor está montado; este estado solo existe para (1) abrir el plugin
+   * pedido por `?panel=tema|fondo` al montar y (2) recordar el plugin
+   * activo cuando `<Puck>` se remonta tras guardar (`editorKey`). Estado de
+   * edición en curso, nunca del servidor (regla de `CLAUDE.md`).
    */
-  pestanaActiva: PestanaPanel
-  setPestanaActiva: (pestana: PestanaPanel) => void
+  pluginActivo: string | null
+  setPluginActivo: (plugin: string | null) => void
 }
 
 export const useEditorPanelStore = create<EditorPanelState>((set) => ({
-  pestanaActiva: 'bloque',
-  setPestanaActiva: (pestanaActiva) => set({ pestanaActiva }),
+  pluginActivo: null,
+  setPluginActivo: (pluginActivo) => set({ pluginActivo }),
 }))

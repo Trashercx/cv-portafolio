@@ -1,6 +1,6 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import type { ReactNode } from 'react'
+import type { ComponentType, ReactNode } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import { toast } from 'sonner'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -8,6 +8,7 @@ import type { Seccion } from '@/features/secciones/types'
 import type { SnapshotSitio } from '@/features/publico/types'
 import type { VersionSitio } from '@/features/publicacion/types'
 import { ThemeProvider } from '@/components/theme/ThemeProvider'
+import { useEditorPanelStore } from '@/store/editor-panel-store'
 import { useEditorSeccionesStore } from '@/store/editor-secciones-store'
 import { EditorSeccionesPage } from './EditorSeccionesPage'
 
@@ -24,10 +25,10 @@ vi.mock('sonner', () => ({
  * fidelidad del harness respecto al árbol real, no una restricción de
  * negocio de esta suite.
  */
-function renderEditor() {
+function renderEditor(entrada = '/admin/editor') {
   return render(
     <ThemeProvider>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[entrada]}>
         <EditorSeccionesPage />
       </MemoryRouter>
     </ThemeProvider>,
@@ -43,37 +44,30 @@ function renderEditor() {
  * `EditorSeccionesPage` inyectando directamente un `content` simulado en
  * el store de Zustand que alimenta el botón "Guardar cambios".
  *
- * Desde Fase 5 (panel unificado) `LienzoPuck` reconstruye TODO el layout de
- * Puck a mano vía `children` (`overrides.headerActions` ya no existe): el
- * stub de `Puck` de acá simplemente renderiza `props.children` tal cual —
- * la barra de acciones (`toolbar`, Borrador/Publicado, Vista previa,
- * Historial de versiones, Publicar, Guardar cambios) viaja como un elemento
- * JSX ya armado (no una función/componente nuevo en cada render, a
- * diferencia de la vieja `overrides.headerActions`), así que sigue siendo
- * consultable por rol/nombre en los tests de abajo sin necesitar ningún
- * trato especial.
+ * Desde Fase 7 (UC-07) `LienzoPuck` usa el layout nativo de Puck: la barra de
+ * acciones (Borrador/Publicado, Vista previa, Historial de versiones,
+ * Publicar, Guardar cambios) vive en `overrides.headerActions`. El stub de
+ * `Puck` renderiza ese override tal cual (como el header nativo) para que la
+ * barra siga siendo consultable por rol/nombre en los tests de abajo.
  *
  * `createUsePuck` también se mockea acá (no solo `Puck`): `usePuckEditor`
  * (`@/features/editor/usePuckEditor`) lo llama a nivel de módulo
- * (`createUsePuck<typeof puckConfig>()`), y ese módulo se importa
- * transitivamente desde `LienzoPuck`/`PanelLateralEditor`/
- * `PanelBloqueSeleccionado`/`ViewportSwitcher` — sin este mock, `Puck` (el
- * hook real) fallaría con "usePuck must be used inside <Puck>." al no haber
- * un `<Puck>` real montado. El estado falso que devuelve (`selectedItem:
- * null`, historial sin pasado/futuro) alcanza para que esos componentes se
- * rendericen sin lanzar, sin ejercitar contra Puck real (fuera del alcance
- * de esta suite, que solo cubre la barra de acciones).
+ * (`createUsePuck<typeof puckConfig>()`) y `LienzoPuck` lo usa para recordar el
+ * plugin activo — sin este mock fallaría con "usePuck must be used inside
+ * <Puck>.". El estado falso alcanza para que se renderice sin lanzar.
  */
+/** Plugin activo que simula el store de Puck: arranca en `ui.plugin.current` (como el `<Puck>` real). */
+const pluginPuck = { actual: 'blocks' }
+
 vi.mock('@puckeditor/core', () => {
-  const PuckStub = Object.assign(
-    (props: { children?: ReactNode }) => <>{props.children}</>,
-    {
-      Components: () => null,
-      Fields: () => null,
-      Outline: () => null,
-      Preview: () => null,
-    },
-  )
+  const PuckStub = (props: {
+    overrides?: { headerActions?: ComponentType<{ children?: ReactNode }> }
+    ui?: { plugin?: { current: string | null } }
+  }) => {
+    pluginPuck.actual = props.ui?.plugin?.current ?? 'blocks'
+    const HeaderActions = props.overrides?.headerActions
+    return HeaderActions ? <HeaderActions>{null}</HeaderActions> : null
+  }
   return {
     Puck: PuckStub,
     createUsePuck:
@@ -82,15 +76,7 @@ vi.mock('@puckeditor/core', () => {
         const estadoFalso = {
           dispatch: vi.fn(),
           selectedItem: null,
-          appState: {
-            ui: {
-              viewports: {
-                current: { width: 1280, height: 'auto' },
-                controlsVisible: true,
-                options: [],
-              },
-            },
-          },
+          appState: { ui: { plugin: { current: pluginPuck.actual } } },
           history: {
             back: vi.fn(),
             forward: vi.fn(),
@@ -333,6 +319,7 @@ vi.mock('@/features/publicacion/usePublicacion', () => ({
 describe('EditorSeccionesPage (UC-07, UC-10, UC-11)', () => {
   beforeEach(() => {
     useEditorSeccionesStore.setState({ content: [] })
+    useEditorPanelStore.setState({ pluginActivo: null })
     seccionesMock.data = [SECCION_HERO, SECCION_CONTACTO]
     crearMutateAsyncMock.mockResolvedValue({ id: 'seccion-c' })
     actualizarMutateAsyncMock.mockResolvedValue(undefined)
@@ -354,6 +341,27 @@ describe('EditorSeccionesPage (UC-07, UC-10, UC-11)', () => {
 
   afterEach(() => {
     vi.clearAllMocks()
+  })
+
+  it('?panel=tema abre el plugin Tema del rail (queda en el store para LienzoPuck) y ?panel=fondo el de Fondo', async () => {
+    const { unmount } = renderEditor('/admin/editor?panel=tema')
+    await waitFor(() =>
+      expect(useEditorPanelStore.getState().pluginActivo).toBe('tema'),
+    )
+    unmount()
+    useEditorPanelStore.setState({ pluginActivo: null })
+    renderEditor('/admin/editor?panel=fondo')
+    await waitFor(() =>
+      expect(useEditorPanelStore.getState().pluginActivo).toBe('fondo'),
+    )
+  })
+
+  it('sin ?panel= Puck arranca en Bloques', async () => {
+    renderEditor()
+    await waitFor(() =>
+      expect(useEditorSeccionesStore.getState().content).toHaveLength(2),
+    )
+    expect(useEditorPanelStore.getState().pluginActivo).toBe('blocks')
   })
 
   it('carga las secciones existentes en el store de edición al montar', async () => {
