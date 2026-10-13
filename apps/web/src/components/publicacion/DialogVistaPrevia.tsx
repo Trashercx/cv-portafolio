@@ -15,6 +15,7 @@ import { usePreviewVersion } from '@/features/publicacion/usePublicacion'
 import type { VersionSitio } from '@/features/publicacion/types'
 import { temaComoVariablesCss } from '@/lib/tema-css'
 import type { ModoTema } from '@/lib/tema-oscuro'
+import { useFuenteTema } from '@/features/tema/useFuenteTema'
 import { cn } from '@/lib/utils'
 import { useEditorPanelStore } from '@/store/editor-panel-store'
 
@@ -78,6 +79,7 @@ export function DialogVistaPrevia({
   // "Vista previa en oscuro" del editor, o el modo del panel si es `null`.
   const modoVistaPrevia = useEditorPanelStore((state) => state.modoVistaPrevia)
   const modo: ModoTema = modoVistaPrevia ?? modoDelPanel
+  useFuenteTema(previewVersion?.snapshot.tema?.fuente_principal)
   // Nodo DOM del `<div>` interior temado (mismo criterio que `PublicHomePage`
   // — `useState`, no `useRef`, porque necesitamos re-render cuando el nodo
   // real se monta), pasado como `container` a `ProveedorDetallePublico` para

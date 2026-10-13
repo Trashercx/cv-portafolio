@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react'
 import type { Tema } from '@/features/tema/types'
+import { familiaCssDeFuente } from '@/features/tema/fuentes'
 import { derivarPaletaOscura, type ModoTema } from './tema-oscuro'
 import { derivarSuperficiesShadcn } from './tema-superficies'
 
@@ -17,23 +18,6 @@ export type TemaColores = Pick<
   | 'color_texto'
   | 'fuente_principal'
 >
-
-/**
- * Mapea los 4 tokens NUEVOS de `fuente_principal` (los únicos que el
- * formulario de Tema ofrece de acá en adelante, ver `tema-schema.ts`) a un
- * stack de `font-family` que sí resuelve visualmente en el navegador. Los
- * valores legados (`'Inter'`, `'Poppins'`, `'Merriweather'`, `'Georgia'`,
- * de temas ya guardados) no están acá a propósito: pasan directo como
- * `font-family` sin traducir (ver el `??` de abajo), preservando el
- * comportamiento previo exacto para no romper temas existentes.
- */
-const MAPA_FUENTE_PRINCIPAL: Record<string, string> = {
-  manrope: "'Manrope Variable', 'Inter', ui-sans-serif, system-ui, sans-serif",
-  sans_sistema:
-    "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
-  serif_sistema: "ui-serif, Georgia, Cambria, 'Times New Roman', serif",
-  mono_sistema: "ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace",
-}
 
 /**
  * Variables CSS del tema (UC-08/UC-12), sin colores hardcodeados en ningún
@@ -75,8 +59,10 @@ export function temaComoVariablesCss(
     '--border': superficies.border,
     '--accent': superficies.accent,
     '--accent-foreground': superficies.accentForeground,
-    fontFamily:
-      MAPA_FUENTE_PRINCIPAL[tema.fuente_principal] ?? tema.fuente_principal,
+    // Fase 7 (UC-08): catálogo de 10 fuentes + 4 legadas mapeadas a la más
+    // parecida (`features/tema/fuentes.ts`); una clave desconocida pasa cruda.
+    // La descarga de la fuente variable la dispara `useFuenteTema`.
+    fontFamily: familiaCssDeFuente(tema.fuente_principal),
     // Bug preexistente (Fase 3.1): `--color-fondo` se declaraba pero nunca
     // se aplicaba como `background-color` en ningún lado — el contenedor
     // raíz de `PublicHomePage`/`PanelVersiones`/`PuckRoot` (editor) queda

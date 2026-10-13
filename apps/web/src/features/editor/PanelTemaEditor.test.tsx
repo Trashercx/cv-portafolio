@@ -7,6 +7,7 @@ import { PanelTemaEditor } from './PanelTemaEditor'
 const activarMutateMock = vi.fn()
 const eliminarMutateMock = vi.fn()
 const crearMutateMock = vi.fn()
+const actualizarMutateMock = vi.fn()
 
 const temasMock: { data: Tema[] | undefined; isLoading: boolean; error: unknown } = {
   data: [],
@@ -23,6 +24,11 @@ vi.mock('@/features/tema/useTemas', () => ({
   useActivarTema: () => ({ mutate: activarMutateMock, isPending: false }),
   useEliminarTema: () => ({ mutate: eliminarMutateMock, isPending: false }),
   useCrearTema: () => ({ mutate: crearMutateMock, isPending: false, error: null }),
+  useActualizarTema: () => ({
+    mutate: actualizarMutateMock,
+    isPending: false,
+    error: null,
+  }),
 }))
 
 const TEMA_ACTIVO: Tema = {
@@ -101,5 +107,27 @@ describe('PanelTemaEditor (UC-08)', () => {
     await user.click(within(dialogo).getByRole('button', { name: /^eliminar$/i }))
 
     expect(eliminarMutateMock).toHaveBeenCalledWith('tema-1')
+  })
+
+  it('cada tema tiene un botón "Editar" que abre el formulario precargado y guarda con PATCH (Fase 7)', async () => {
+    temasMock.data = [TEMA_ACTIVO, TEMA_INACTIVO]
+    const user = userEvent.setup()
+    render(<PanelTemaEditor />)
+
+    const botonesEditar = screen.getAllByRole('button', { name: /^editar$/i })
+    expect(botonesEditar).toHaveLength(2)
+
+    await user.click(botonesEditar[1])
+    const nombre = await screen.findByLabelText(/^nombre$/i)
+    expect(nombre).toHaveValue('Oscuro')
+
+    await user.clear(nombre)
+    await user.type(nombre, 'Oscuro v2')
+    await user.click(screen.getByRole('button', { name: /guardar tema/i }))
+
+    expect(actualizarMutateMock).toHaveBeenCalledWith(
+      expect.objectContaining({ nombre: 'Oscuro v2', modo: 'oscuro' }),
+      expect.objectContaining({ onSuccess: expect.any(Function) }),
+    )
   })
 })

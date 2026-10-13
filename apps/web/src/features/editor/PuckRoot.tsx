@@ -6,6 +6,7 @@ import { useTheme } from '@/components/theme/ThemeProvider'
 import { temaComoVariablesCss } from '@/lib/tema-css'
 import type { ModoTema } from '@/lib/tema-oscuro'
 import { cn } from '@/lib/utils'
+import { useFuenteTema } from '@/features/tema/useFuenteTema'
 import { useEditorPanelStore } from '@/store/editor-panel-store'
 import { useEditorSeccionesStore } from '@/store/editor-secciones-store'
 import { leerMetadata } from './useDatosEditor'
@@ -73,6 +74,8 @@ export function PuckRoot({ children, puck }: PuckRootProps) {
   // fuerza el modo SOLO de este lienzo; `null` sigue al panel.
   const modoVistaPrevia = useEditorPanelStore((state) => state.modoVistaPrevia)
   const modo: ModoTema = modoVistaPrevia ?? modoDelPanel
+  // Fase 7 (UC-08): fuente variable del tema, bajo demanda.
+  useFuenteTema(datos.tema?.fuente_principal)
 
   // Fase 7 (UC-08): el `<html>` del iframe recibe la clase `dark` del panel
   // (`CopyHostStyles` de Puck sincroniza atributos), lo que mantendría
