@@ -3,7 +3,13 @@
 #
 # Corre en cada PR y push a main, y además una vez por semana para detectar
 # vulnerabilidades nuevas del catálogo de consultas aunque el código no
-# haya cambiado. Los resultados aparecen en Security > Code scanning.
+# haya cambiado.
+#
+# El repositorio es privado y sin GitHub Advanced Security, así que Code
+# Scanning (la pestaña Security > Code scanning) no está disponible: el
+# análisis corre igual, el SARIF se guarda como artifact y el job falla si
+# hay alertas. Si el repo pasa a público o a GHAS, basta con quitar
+# `upload: never` y el paso de evaluación para volver a la subida nativa.
 name: CodeQL
 
 on:
@@ -28,8 +34,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      security-events: write
-      actions: read
     steps:
       - uses: actions/checkout@v4
 
@@ -45,3 +49,21 @@ jobs:
       - uses: github/codeql-action/analyze@v3
         with:
           category: /language:javascript-typescript
+          upload: never
+          output: codeql-resultados
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: codeql-sarif
+          path: codeql-resultados
+          retention-days: 30
+
+      - name: Evaluar alertas del SARIF
+        run: |
+          sarif=$(ls codeql-resultados/*.sarif 2>/dev/null | head -n 1)
+          test -n "$sarif" || { echo "No se generó ningún SARIF en codeql-resultados/"; ls -la codeql-resultados || true; exit 1; }
+          total=$(jq '[.runs[].results[]] | length' "$sarif")
+          echo "Alertas de CodeQL: $total"
+          jq -r '.runs[].results[] | [(.level // "warning"), .ruleId, (.locations[0].physicalLocation.artifactLocation.uri + ":" + (.locations[0].physicalLocation.region.startLine | tostring)), .message.text] | @tsv' "$sarif"
+          test "$total" -eq 0
