@@ -2,10 +2,9 @@ import type { TemaColores } from './tema-css'
 
 /**
  * Modo de paleta aplicado al sitio público (Fase 4.6, UC-08/UC-12). Reusa el
- * mismo vocabulario que `Tema.modo` (`features/tema/types.ts`), aunque ese
- * campo de la tabla `tema` sigue siendo metadata inerte en esta fase: el modo
- * real que se aplica al visitante se deriva en el cliente (ver
- * `useModoTema.ts`), no se lee de esa columna.
+ * mismo vocabulario que `Tema.modo` (`features/tema/types.ts`), que desde la
+ * octava ronda es el modo base del tema: el modo del visitante se decide en el
+ * cliente (ver `useModoTema.ts`) y la paleta se invierte solo si difiere.
  */
 export type ModoTema = 'claro' | 'oscuro'
 
@@ -115,12 +114,14 @@ function invertirLuminosidad(hex: string): string {
 }
 
 /**
- * Deriva la paleta oscura de un `Tema` sin persistir nada nuevo: invierte la
+ * Deriva la paleta inversa de un `Tema` sin persistir nada nuevo: invierte la
  * luminosidad de los 4 colores (hue/saturación intactos) y copia
  * `fuente_principal` tal cual, porque la tipografía no cambia con el modo.
- * Usado por `temaComoVariablesCss` cuando `modo === 'oscuro'`.
+ * La inversión es simétrica (salvo el clamp 6..94), así que sirve igual para
+ * derivar una paleta oscura desde una clara que una clara desde una oscura
+ * (octava ronda, UC-08).
  */
-export function derivarPaletaOscura(tema: TemaColores): TemaColores {
+export function derivarPaletaInversa(tema: TemaColores): TemaColores {
   return {
     color_primario: invertirLuminosidad(tema.color_primario),
     color_secundario: invertirLuminosidad(tema.color_secundario),
@@ -128,4 +129,23 @@ export function derivarPaletaOscura(tema: TemaColores): TemaColores {
     color_texto: invertirLuminosidad(tema.color_texto),
     fuente_principal: tema.fuente_principal,
   }
+}
+
+/** Alias histórico (Fase 4.6): paleta oscura derivada de un tema claro. */
+export const derivarPaletaOscura = derivarPaletaInversa
+
+/** Paleta clara derivada de un tema de autoría oscura (octava ronda, UC-08). */
+export const derivarPaletaClara = derivarPaletaInversa
+
+/**
+ * `Tema.modo` es el modo base del tema (octava ronda, UC-08): los colores se
+ * usan tal cual cuando el modo del visitante coincide con él, y se invierten
+ * solo cuando difiere. Un tema sin `modo` se trata como 'claro'.
+ */
+export function paletaEfectiva(
+  tema: TemaColores,
+  modoVisitante: ModoTema,
+): TemaColores {
+  const modoBase = tema.modo ?? 'claro'
+  return modoVisitante === modoBase ? tema : derivarPaletaInversa(tema)
 }

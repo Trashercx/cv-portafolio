@@ -160,6 +160,9 @@ export function TemaFormDialog({ tema }: TemaFormDialogProps = {}) {
       ? vivo.color_texto
       : valoresIniciales.color_texto,
     fuente_principal: vivo.fuente_principal,
+    // Octava ronda (UC-08): el modo del formulario es el modo base; cada
+    // vista previa muestra lo que vería el visitante en su modo.
+    modo: vivo.modo,
   }
 
   /**

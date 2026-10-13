@@ -149,6 +149,45 @@ describe('temaComoVariablesCss — modo', () => {
 })
 
 /**
+ * Octava ronda (UC-08): `Tema.modo` es el modo base. La paleta solo se invierte
+ * cuando el modo del visitante difiere del base del tema.
+ */
+describe('temaComoVariablesCss — Tema.modo como modo base', () => {
+  const colores = {
+    color_primario: '#2563eb',
+    color_secundario: '#7c3aed',
+    color_texto: '#0f172a',
+    fuente_principal: 'manrope',
+  }
+  const temaClaro = { ...colores, color_fondo: '#ffffff', modo: 'claro' as const }
+  const temaOscuro = { ...colores, color_fondo: '#18181b', modo: 'oscuro' as const }
+
+  it('tema claro + visitante claro: colores tal cual', () => {
+    const r = variablesCss(temaComoVariablesCss(temaClaro, 'claro'))
+    expect(r['--color-fondo']).toBe('#ffffff')
+    expect(r['--color-texto']).toBe('#0f172a')
+  })
+
+  it('tema claro + visitante oscuro: paleta invertida', () => {
+    const r = variablesCss(temaComoVariablesCss(temaClaro, 'oscuro'))
+    expect(r['--color-fondo'].toLowerCase()).toBe('#0f0f0f')
+  })
+
+  it('tema oscuro + visitante oscuro: colores tal cual', () => {
+    const r = variablesCss(temaComoVariablesCss(temaOscuro, 'oscuro'))
+    expect(r['--color-fondo']).toBe('#18181b')
+    expect(r['--color-texto']).toBe('#0f172a')
+    expect(r['--background']).toBe('#18181b')
+  })
+
+  it('tema oscuro + visitante claro: paleta invertida (fondo claro)', () => {
+    const r = variablesCss(temaComoVariablesCss(temaOscuro, 'claro'))
+    expect(r['--color-fondo']).not.toBe('#18181b')
+    expect(r['--color-fondo'].toLowerCase()).toBe('#e4e4e7')
+  })
+})
+
+/**
  * Fase 4.7 (fix de convergencia visual del sitio público): las 11 superficies
  * genéricas de shadcn/Tailwind (`derivarSuperficiesShadcn`, `tema-superficies.ts`)
  * se incluyen como variables CSS junto a las 4 de negocio, para que

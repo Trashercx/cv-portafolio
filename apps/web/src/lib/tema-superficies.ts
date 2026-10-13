@@ -1,7 +1,7 @@
 import type { TemaColores } from './tema-css'
 import {
   clamp,
-  derivarPaletaOscura,
+  paletaEfectiva,
   hexARgb,
   hslAHex,
   rgbAHsl,
@@ -50,7 +50,9 @@ export function derivarSuperficiesShadcn(
   tema: TemaColores,
   modo: ModoTema,
 ): Record<string, string> {
-  const colores = modo === 'oscuro' ? derivarPaletaOscura(tema) : tema
+  // Octava ronda (UC-08): paleta efectiva según `tema.modo` (base) y el modo
+  // del visitante; los deltas de superficie dependen del modo del visitante.
+  const colores = paletaEfectiva(tema, modo)
   const deltaSuperficie = modo === 'oscuro' ? 5 : -4
   const deltaMuted = modo === 'oscuro' ? 8 : -6
   const deltaBorder = modo === 'oscuro' ? 12 : -10
