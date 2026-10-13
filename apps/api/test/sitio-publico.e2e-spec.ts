@@ -273,6 +273,8 @@ describe('Versiones del sitio y sitio público (e2e, UC-10 a UC-14)', () => {
     expect(v1.body.publicado_en).not.toBeNull();
 
     const sitio = await request(app.getHttpServer()).get('/sitio').expect(200);
+    // Fase 6 (UC-12): revalidación obligatoria con ETag.
+    expect(sitio.headers['cache-control']).toBe('no-cache');
     expect(
       sitio.body.proyectos.some(
         (p: { id: string }) => p.id === proyectoPublicoId,

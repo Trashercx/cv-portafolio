@@ -1,9 +1,7 @@
-import { INestApplication, ValidationPipe } from '@nestjs/common';
-import { Test, TestingModule } from '@nestjs/testing';
-import * as cookieParser from 'cookie-parser';
+import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
-import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { agenteAutenticado, crearAppDePrueba } from './utils/test-app';
 
 /**
  * UC-01 (Iniciar sesión) end-to-end, contra la base de datos real ya sembrada
@@ -18,22 +16,9 @@ describe('POST /auth/login (e2e, UC-01)', () => {
   const adminPassword = process.env.ADMIN_PASSWORD_SEED as string;
 
   beforeAll(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    app.use(cookieParser());
-    app.useGlobalPipes(
-      new ValidationPipe({
-        whitelist: true,
-        forbidNonWhitelisted: true,
-        transform: true,
-      }),
-    );
-    await app.init();
-
-    prisma = moduleFixture.get(PrismaService);
+    // Fase 6: crearAppDePrueba desactiva el rate limiting.
+    app = await crearAppDePrueba();
+    prisma = app.get(PrismaService);
   });
 
   afterAll(async () => {
@@ -133,22 +118,8 @@ describe('POST /auth/refresh (e2e, UC-01 extensión de sesión)', () => {
   const adminPassword = process.env.ADMIN_PASSWORD_SEED as string;
 
   beforeAll(async () => {
-    const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-
-    app = moduleFixture.createNestApplication();
-    app.use(cookieParser());
-    app.useGlobalPipes(
-      new ValidationPipe({
-        whitelist: true,
-        forbidNonWhitelisted: true,
-        transform: true,
-      }),
-    );
-    await app.init();
-
-    prisma = moduleFixture.get(PrismaService);
+    app = await crearAppDePrueba();
+    prisma = app.get(PrismaService);
   });
 
   afterAll(async () => {
@@ -188,5 +159,35 @@ describe('POST /auth/refresh (e2e, UC-01 extensión de sesión)', () => {
     );
     expect(accessTokenCookie).toBeDefined();
     expect(accessTokenCookie).toMatch(/HttpOnly/i);
+  });
+});
+
+describe('POST /auth/logout (e2e, UC-01, Fase 6)', () => {
+  let app: INestApplication;
+
+  beforeAll(async () => {
+    app = await crearAppDePrueba();
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it('responde 204, borra la cookie y la sesión deja de valer en rutas admin', async () => {
+    const agent = await agenteAutenticado(app);
+    await agent.get('/admin/perfil').expect(200);
+
+    const res = await agent.post('/auth/logout').expect(204);
+    const setCookie = ([] as string[]).concat(res.headers['set-cookie'] ?? []);
+    const borrada = setCookie.find((c) => c.startsWith('access_token=;'));
+    expect(borrada).toBeDefined();
+    expect(borrada).toMatch(/HttpOnly/i);
+    expect(borrada).toMatch(/Path=\//);
+
+    await agent.get('/admin/perfil').expect(401);
+  });
+
+  it('funciona sin sesión (sin guard)', async () => {
+    await request(app.getHttpServer()).post('/auth/logout').expect(204);
   });
 });

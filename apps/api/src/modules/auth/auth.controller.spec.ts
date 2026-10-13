@@ -91,6 +91,22 @@ describe('AuthController (UC-01: POST /auth/login y POST /auth/refresh)', () => 
     ).toBe(true);
   });
 
+  it('POST /auth/logout (sin guard) responde 204 y expira la cookie access_token con las mismas opciones', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/auth/logout')
+      .expect(204);
+
+    const cookies = ([] as string[]).concat(
+      response.headers['set-cookie'] ?? [],
+    );
+    const borrada = cookies.find((c) => c.startsWith('access_token=;'));
+    expect(borrada).toBeDefined();
+    expect(borrada).toMatch(/Expires=Thu, 01 Jan 1970/);
+    expect(borrada).toMatch(/HttpOnly/i);
+    expect(borrada).toMatch(/SameSite=Lax/i);
+    expect(borrada).toMatch(/Path=\//);
+  });
+
   it('POST /auth/refresh sin cookie válida responde 401 (JwtAuthGuard) y no llama a refrescar()', async () => {
     await request(app.getHttpServer()).post('/auth/refresh').expect(401);
     expect(authService.refrescar).not.toHaveBeenCalled();
