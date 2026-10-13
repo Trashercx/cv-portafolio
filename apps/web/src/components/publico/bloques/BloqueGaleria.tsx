@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { GaleriaConfiguracion } from '@/features/secciones/types'
+import { usePrefiereMovimientoReducido } from '@/lib/animaciones'
+import { EFECTO_HOVER_GALERIA_CLASE } from '@/lib/efectos-hover'
 import { COLUMNAS_GRID_CLASE } from '@/lib/escalas-bloque'
 import { cn } from '@/lib/utils'
 import { Lightbox } from '../Lightbox'
@@ -14,34 +16,13 @@ type BloqueGaleriaProps = {
   alineacionTitulo?: string
 }
 
-/**
- * Detecta `prefers-reduced-motion: reduce` (mismo requisito de accesibilidad
- * que ya respeta el carrusel de skills vía CSS puro, ver `index.css` +
- * `BloqueSkills`): acá el scroll se dispara desde JS (`scrollBy`/`scrollTo`
- * con flechas/dots), así que el chequeo se hace en JS con `matchMedia` (mismo
- * patrón que `useIsMobile`, `@/hooks/use-mobile.ts`) en vez de depender solo
- * de una regla CSS — controla tanto la clase `scroll-smooth` como el
- * `behavior` pasado a cada llamada de scroll programático.
- */
-function usePrefiereMovimientoReducido(): boolean {
-  const [prefiereReducido, setPrefiereReducido] = useState(false)
-
-  useEffect(() => {
-    const consulta = window.matchMedia('(prefers-reduced-motion: reduce)')
-    const actualizar = () => setPrefiereReducido(consulta.matches)
-    actualizar()
-    consulta.addEventListener('change', actualizar)
-    return () => consulta.removeEventListener('change', actualizar)
-  }, [])
-
-  return prefiereReducido
-}
-
 /** Bloque `galeria` (UC-18, Fase 4.5), compartido entre el sitio público y el lienzo del editor de Puck. */
 export function BloqueGaleria({ titulo, config, alineacionTitulo }: BloqueGaleriaProps) {
   const fotos = config.fotos ?? []
   const disposicion = config.disposicion ?? 'carousel'
   const columnasGrid = config.columnas_grid ?? 3
+  // Fase 7 (7.3, UC-12): `efecto_hover` (default 'zoom', el `scale-105` de siempre).
+  const efecto = EFECTO_HOVER_GALERIA_CLASE[config.efecto_hover ?? 'zoom']
 
   const [lightboxAbierto, setLightboxAbierto] = useState(false)
   const [indiceLightbox, setIndiceLightbox] = useState(0)
@@ -63,20 +44,20 @@ export function BloqueGaleria({ titulo, config, alineacionTitulo }: BloqueGaleri
               key={`${foto.media_id}-${indice}`}
               onClick={() => abrirLightbox(indice)}
               aria-label={foto.titulo || 'Ver foto'}
-              className="overflow-hidden rounded-lg"
+              className={cn('overflow-hidden rounded-lg', efecto.tarjeta)}
             >
               <img
                 src={foto.media?.url}
                 alt={foto.titulo || foto.media?.alt_text || ''}
                 loading="lazy"
                 decoding="async"
-                className="aspect-square w-full object-cover transition-transform hover:scale-105"
+                className={cn('aspect-square w-full object-cover', efecto.imagen)}
               />
             </TarjetaClicable>
           ))}
         </div>
       ) : (
-        <CarouselGaleria fotos={fotos} onAbrirFoto={abrirLightbox} />
+        <CarouselGaleria fotos={fotos} onAbrirFoto={abrirLightbox} efecto={efecto} />
       )}
       <Lightbox
         fotos={fotos}
@@ -91,6 +72,7 @@ export function BloqueGaleria({ titulo, config, alineacionTitulo }: BloqueGaleri
 type CarouselGaleriaProps = {
   fotos: GaleriaConfiguracion['fotos']
   onAbrirFoto: (indice: number) => void
+  efecto: (typeof EFECTO_HOVER_GALERIA_CLASE)[keyof typeof EFECTO_HOVER_GALERIA_CLASE]
 }
 
 /**
@@ -101,7 +83,7 @@ type CarouselGaleriaProps = {
  * responsive de cada ítem, a diferencia de calcular el índice por proporción
  * del scroll total).
  */
-function CarouselGaleria({ fotos, onAbrirFoto }: CarouselGaleriaProps) {
+function CarouselGaleria({ fotos, onAbrirFoto, efecto }: CarouselGaleriaProps) {
   const prefiereReducido = usePrefiereMovimientoReducido()
   const comportamiento: ScrollBehavior = prefiereReducido ? 'auto' : 'smooth'
 
@@ -151,6 +133,9 @@ function CarouselGaleria({ fotos, onAbrirFoto }: CarouselGaleriaProps) {
         onScroll={manejarScroll}
         className={cn(
           'flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth',
+          // `elevar` sube 4 px y proyecta sombra: este contenedor recorta en
+          // vertical (`overflow-x-auto`), así que se le da aire arriba y abajo.
+          efecto.tarjeta && '-my-3 py-3',
           '[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden',
           prefiereReducido && 'scroll-auto',
         )}
@@ -166,14 +151,14 @@ function CarouselGaleria({ fotos, onAbrirFoto }: CarouselGaleriaProps) {
             <TarjetaClicable
               onClick={() => onAbrirFoto(indice)}
               aria-label={foto.titulo || 'Ver foto'}
-              className="block w-full overflow-hidden rounded-lg"
+              className={cn('block w-full overflow-hidden rounded-lg', efecto.tarjeta)}
             >
               <img
                 src={foto.media?.url}
                 alt={foto.titulo || foto.media?.alt_text || ''}
                 loading="lazy"
                 decoding="async"
-                className="aspect-video w-full object-cover"
+                className={cn('aspect-video w-full object-cover', efecto.imagen)}
               />
             </TarjetaClicable>
           </div>

@@ -4,6 +4,7 @@ import type { LogrosConfiguracion } from '@/features/secciones/types'
 import { formatearFecha } from '@/lib/formato'
 import { cn } from '@/lib/utils'
 import { EnlaceBloque, TarjetaClicable } from '../contexto-renderizado'
+import { TarjetaInteractiva } from '../TarjetaInteractiva'
 
 type BloqueLogrosProps = {
   titulo: string
@@ -100,11 +101,18 @@ export function BloqueLogros({ titulo, config, logros, alineacionTitulo }: Bloqu
       ) : (
         <ul className="grid gap-4">
           {filtrados.map((logro) => (
-            <li key={logro.id} className="grid gap-1 rounded-lg border p-4">
-              <TarjetaLogro
-                logro={logro}
-                onAbrir={() => abrirDetalle('logro', logro)}
-              />
+            <li key={logro.id}>
+              {/* Fase 7 (7.3): `efecto_hover` solo aplica a las tarjetas; la
+                  línea de tiempo no tiene tarjeta que elevar o inclinar. */}
+              <TarjetaInteractiva
+                efecto={config.efecto_hover}
+                className="grid gap-1 rounded-lg border p-4"
+              >
+                <TarjetaLogro
+                  logro={logro}
+                  onAbrir={() => abrirDetalle('logro', logro)}
+                />
+              </TarjetaInteractiva>
             </li>
           ))}
         </ul>

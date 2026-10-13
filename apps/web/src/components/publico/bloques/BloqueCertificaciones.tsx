@@ -5,6 +5,8 @@ import type { CertificacionesConfiguracion } from '@/features/secciones/types'
 import { formatearFecha } from '@/lib/formato'
 import { cn } from '@/lib/utils'
 import { TarjetaClicable } from '../contexto-renderizado'
+import { ItemAnimado } from '../ItemAnimado'
+import { TarjetaInteractiva } from '../TarjetaInteractiva'
 
 type BloqueCertificacionesProps = {
   titulo: string
@@ -30,7 +32,7 @@ const ESTILO_TARJETA_CLASE: Record<
   vidrio: 'border border-border/50 bg-card/60 backdrop-blur-sm',
 }
 
-/** Bloque `certificaciones`, compartido entre el sitio público y el lienzo del editor de Puck (Fase 3.1, extendido Fase 3.4). */
+/** Bloque `certificaciones`, compartido entre el sitio público y el lienzo del editor de Puck (Fase 3.1, extendido Fase 3.4 y Fase 7). */
 export function BloqueCertificaciones({
   titulo,
   config,
@@ -56,55 +58,58 @@ export function BloqueCertificaciones({
         </p>
       ) : (
         <div className={cn('grid gap-4', COLUMNAS_CLASE[config.columnas ?? 3])}>
-          {ordenadas.map((certificacion) => (
-            <TarjetaClicable
-              key={certificacion.id}
-              onClick={() => abrirDetalle('certificacion', certificacion)}
-              aria-label={certificacion.nombre}
-              className={cn(
-                'rounded-lg p-4 text-left transition-colors hover:bg-accent',
-                esVidrio ? 'flex items-center gap-4' : 'grid gap-2',
-                ESTILO_TARJETA_CLASE[config.estilo_tarjeta ?? 'simple'],
-              )}
-            >
-              {certificacion.logo ? (
-                // Tarjeta clicable (abre el detalle en un modal, UC-13): el
-                // zoom/lightbox del logo o documento vive dentro del propio
-                // modal (`DetalleCertificacionContenido`), no acá — mostrar
-                // solo un ícono/miniatura estática en la tarjeta evita anidar
-                // el `Dialog` de `MediaPreview` dentro de este botón. Si el
-                // logo es un PDF (feedback externo, UC-04) se muestra un
-                // ícono en vez de un `<img>` roto.
-                certificacion.logo.tipo === 'imagen' ? (
-                  <img
-                    src={certificacion.logo.url}
-                    alt={certificacion.logo.alt_text ?? certificacion.nombre}
-                    loading="lazy"
-                    decoding="async"
-                    className={cn(
-                      'object-contain',
-                      esVidrio ? 'size-12 shrink-0' : 'size-12',
-                    )}
-                  />
-                ) : (
-                  <IconoDocumento
-                    className={cn('size-12', esVidrio ? 'shrink-0' : undefined)}
-                    iconoClassName="size-6"
-                  />
-                )
-              ) : null}
-              <div className={esVidrio ? 'grid gap-1' : 'contents'}>
-                <h3 className="font-semibold">{certificacion.nombre}</h3>
-                <p className="text-sm text-muted-foreground">
-                  {certificacion.institucion}
-                </p>
-                {mostrarFecha ? (
-                  <p className="text-xs text-muted-foreground">
-                    {formatearFecha(certificacion.fecha_emision)}
-                  </p>
-                ) : null}
-              </div>
-            </TarjetaClicable>
+          {ordenadas.map((certificacion, indice) => (
+            <ItemAnimado key={certificacion.id} indice={indice}>
+              <TarjetaInteractiva efecto={config.efecto_hover} className="h-full">
+                <TarjetaClicable
+                  onClick={() => abrirDetalle('certificacion', certificacion)}
+                  aria-label={certificacion.nombre}
+                  className={cn(
+                    'h-full w-full rounded-lg p-4 text-left transition-colors hover:bg-accent',
+                    esVidrio ? 'flex items-center gap-4' : 'grid gap-2',
+                    ESTILO_TARJETA_CLASE[config.estilo_tarjeta ?? 'simple'],
+                  )}
+                >
+                  {certificacion.logo ? (
+                    // Tarjeta clicable (abre el detalle en un modal, UC-13): el
+                    // zoom/lightbox del logo o documento vive dentro del propio
+                    // modal (`DetalleCertificacionContenido`), no acá — mostrar
+                    // solo un ícono/miniatura estática en la tarjeta evita anidar
+                    // el `Dialog` de `MediaPreview` dentro de este botón. Si el
+                    // logo es un PDF (feedback externo, UC-04) se muestra un
+                    // ícono en vez de un `<img>` roto.
+                    certificacion.logo.tipo === 'imagen' ? (
+                      <img
+                        src={certificacion.logo.url}
+                        alt={certificacion.logo.alt_text ?? certificacion.nombre}
+                        loading="lazy"
+                        decoding="async"
+                        className={cn(
+                          'object-contain',
+                          esVidrio ? 'size-12 shrink-0' : 'size-12',
+                        )}
+                      />
+                    ) : (
+                      <IconoDocumento
+                        className={cn('size-12', esVidrio ? 'shrink-0' : undefined)}
+                        iconoClassName="size-6"
+                      />
+                    )
+                  ) : null}
+                  <div className={esVidrio ? 'grid gap-1' : 'contents'}>
+                    <h3 className="font-semibold">{certificacion.nombre}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {certificacion.institucion}
+                    </p>
+                    {mostrarFecha ? (
+                      <p className="text-xs text-muted-foreground">
+                        {formatearFecha(certificacion.fecha_emision)}
+                      </p>
+                    ) : null}
+                  </div>
+                </TarjetaClicable>
+              </TarjetaInteractiva>
+            </ItemAnimado>
           ))}
         </div>
       )}
