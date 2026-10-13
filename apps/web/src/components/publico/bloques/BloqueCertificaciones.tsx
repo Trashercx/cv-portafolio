@@ -79,6 +79,8 @@ export function BloqueCertificaciones({
                   <img
                     src={certificacion.logo.url}
                     alt={certificacion.logo.alt_text ?? certificacion.nombre}
+                    loading="lazy"
+                    decoding="async"
                     className={cn(
                       'object-contain',
                       esVidrio ? 'size-12 shrink-0' : 'size-12',

@@ -1,7 +1,9 @@
 import { Link, useParams } from 'react-router-dom'
 import { DetalleProyectoContenido } from '@/components/publico/detalle/DetalleProyectoContenido'
+import { MetadatosPagina } from '@/components/publico/MetadatosPagina'
 import { useProyectoPublico } from '@/features/publico/usePublico'
 import { ApiError } from '@/lib/api-client'
+import { recortarDescripcion } from '@/lib/seo'
 
 /**
  * UC-13 (Ver detalle de un proyecto): `GET /proyectos/:id` contra el
@@ -49,6 +51,13 @@ export function ProyectoDetallePage() {
 
   return (
     <div className="mx-auto grid max-w-3xl gap-6 p-6">
+      {/* Fase 6 (UC-13): SEO del detalle. */}
+      <MetadatosPagina
+        titulo={proyecto.titulo}
+        descripcion={recortarDescripcion(proyecto.descripcion)}
+        imagen={proyecto.imagenes[0]?.media.url}
+        tipo="article"
+      />
       <Link to="/" className="text-sm underline underline-offset-4">
         ← Volver al inicio
       </Link>

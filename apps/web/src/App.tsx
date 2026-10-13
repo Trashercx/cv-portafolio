@@ -1,21 +1,57 @@
+import { lazy, Suspense } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { AdminLayout } from '@/components/layout/AdminLayout'
+import { CargandoPagina } from '@/components/CargandoPagina'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { LayoutPublico } from '@/components/publico/LayoutPublico'
 import { Toaster } from '@/components/ui/sonner'
 import { RequireAuth } from '@/features/auth/RequireAuth'
-import { CertificacionesListPage } from '@/pages/admin/CertificacionesListPage'
-import { EditorSeccionesPage } from '@/pages/admin/EditorSeccionesPage'
 import { LoginPage } from '@/pages/admin/LoginPage'
-import { LogrosListPage } from '@/pages/admin/LogrosListPage'
-import { MediaLibraryPage } from '@/pages/admin/MediaLibraryPage'
-import { PerfilPage } from '@/pages/admin/PerfilPage'
-import { ProyectosListPage } from '@/pages/admin/ProyectosListPage'
-import { RedesListPage } from '@/pages/admin/RedesListPage'
-import { SkillsListPage } from '@/pages/admin/SkillsListPage'
-import { CertificacionDetallePage } from '@/pages/public/CertificacionDetallePage'
-import { LogroDetallePage } from '@/pages/public/LogroDetallePage'
-import { ProyectoDetallePage } from '@/pages/public/ProyectoDetallePage'
 import { PublicHomePage } from '@/pages/public/PublicHomePage'
+
+/**
+ * Fase 6 (code splitting): las páginas del panel admin (entre ellas
+ * `EditorSeccionesPage`, que arrastra Puck) y los detalles públicos (UC-13)
+ * se cargan bajo demanda. `PublicHomePage` y `LoginPage` siguen eager (LCP
+ * del sitio y entrada al panel). Los módulos exportan por nombre, de ahí el
+ * `.then` que los adapta al `default` que exige `React.lazy`.
+ */
+const CertificacionesListPage = lazy(() =>
+  import('@/pages/admin/CertificacionesListPage').then((m) => ({ default: m.CertificacionesListPage })),
+)
+const EditorSeccionesPage = lazy(() =>
+  import('@/pages/admin/EditorSeccionesPage').then((m) => ({ default: m.EditorSeccionesPage })),
+)
+const LogrosListPage = lazy(() =>
+  import('@/pages/admin/LogrosListPage').then((m) => ({ default: m.LogrosListPage })),
+)
+const MediaLibraryPage = lazy(() =>
+  import('@/pages/admin/MediaLibraryPage').then((m) => ({ default: m.MediaLibraryPage })),
+)
+const PerfilPage = lazy(() =>
+  import('@/pages/admin/PerfilPage').then((m) => ({ default: m.PerfilPage })),
+)
+const ProyectosListPage = lazy(() =>
+  import('@/pages/admin/ProyectosListPage').then((m) => ({ default: m.ProyectosListPage })),
+)
+const RedesListPage = lazy(() =>
+  import('@/pages/admin/RedesListPage').then((m) => ({ default: m.RedesListPage })),
+)
+const SkillsListPage = lazy(() =>
+  import('@/pages/admin/SkillsListPage').then((m) => ({ default: m.SkillsListPage })),
+)
+const CertificacionDetallePage = lazy(() =>
+  import('@/pages/public/CertificacionDetallePage').then((m) => ({ default: m.CertificacionDetallePage })),
+)
+const LogroDetallePage = lazy(() =>
+  import('@/pages/public/LogroDetallePage').then((m) => ({ default: m.LogroDetallePage })),
+)
+const ProyectoDetallePage = lazy(() =>
+  import('@/pages/public/ProyectoDetallePage').then((m) => ({ default: m.ProyectoDetallePage })),
+)
+const NoEncontradoPage = lazy(() =>
+  import('@/pages/public/NoEncontradoPage').then((m) => ({ default: m.NoEncontradoPage })),
+)
 
 function App() {
   return (
@@ -26,15 +62,22 @@ function App() {
           blanco sin ningún mensaje. Ver `EditorSeccionesPage` para la
           instancia más acotada alrededor del lienzo de Puck. */}
       <ErrorBoundary>
+        <Suspense fallback={<CargandoPagina />}>
         <Routes>
-          {/* Rutas públicas */}
+          {/* Rutas públicas. La home arma su propio `<main>` dentro del
+              contenedor temado; los detalles (UC-13) y la 404 comparten
+              `LayoutPublico` (skip link + `<main id="contenido">`, Fase 6). */}
           <Route path="/" element={<PublicHomePage />} />
-          <Route path="/proyecto/:id" element={<ProyectoDetallePage />} />
-          <Route
-            path="/certificacion/:id"
-            element={<CertificacionDetallePage />}
-          />
-          <Route path="/logro/:id" element={<LogroDetallePage />} />
+          <Route element={<LayoutPublico />}>
+            <Route path="/proyecto/:id" element={<ProyectoDetallePage />} />
+            <Route
+              path="/certificacion/:id"
+              element={<CertificacionDetallePage />}
+            />
+            <Route path="/logro/:id" element={<LogroDetallePage />} />
+            {/* Fase 6: 404 real del sitio público (antes redirigía a `/`). */}
+            <Route path="*" element={<NoEncontradoPage />} />
+          </Route>
 
           {/* Zona de administración */}
           <Route path="/admin/login" element={<LoginPage />} />
@@ -97,8 +140,11 @@ function App() {
             />
           </Route>
 
-          <Route path="*" element={<Navigate to="/" replace />} />
+          {/* Fase 6: rutas /admin/* desconocidas siguen yendo al panel
+              (`RequireAuth` manda al login si no hay sesión). */}
+          <Route path="/admin/*" element={<Navigate to="/admin" replace />} />
         </Routes>
+        </Suspense>
       </ErrorBoundary>
     </>
   )

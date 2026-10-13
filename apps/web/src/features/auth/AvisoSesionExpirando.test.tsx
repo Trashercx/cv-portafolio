@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -5,6 +6,16 @@ import { useAuthStore } from '@/store/auth-store'
 import { AvisoSesionExpirando } from './AvisoSesionExpirando'
 
 const navigateMock = vi.fn()
+
+// Fase 6 (UC-01): el cierre de sesión llama a `POST /auth/logout`; se mockea
+// `apiFetch` para no tocar la red.
+const apiFetchMock = vi.fn()
+
+vi.mock('@/lib/api-client', async () => {
+  const actual =
+    await vi.importActual<typeof import('@/lib/api-client')>('@/lib/api-client')
+  return { ...actual, apiFetch: (...args: unknown[]) => apiFetchMock(...args) }
+})
 
 vi.mock('react-router-dom', async () => {
   const actual =
@@ -37,10 +48,13 @@ vi.mock('./useRefrescarSesion', () => ({
 }))
 
 function renderAviso() {
+  const queryClient = new QueryClient()
   return render(
-    <MemoryRouter>
-      <AvisoSesionExpirando />
-    </MemoryRouter>,
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>
+        <AvisoSesionExpirando />
+      </MemoryRouter>
+    </QueryClientProvider>,
   )
 }
 
@@ -48,6 +62,7 @@ describe('AvisoSesionExpirando', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-01-01T00:00:00.000Z'))
+    apiFetchMock.mockResolvedValue(undefined)
     useAuthStore.setState({ admin: null, isAuthenticated: false })
   })
 
@@ -142,7 +157,7 @@ describe('AvisoSesionExpirando', () => {
     ).toBeDisabled()
   })
 
-  it('"Cancelar" limpia el store y navega al login', () => {
+  it('"Cancelar" llama a POST /auth/logout, limpia el store y navega al login', async () => {
     useAuthStore.setState({
       admin: {
         email: 'admin@example.com',
@@ -155,8 +170,13 @@ describe('AvisoSesionExpirando', () => {
     renderAviso()
     expect(screen.getByRole('alertdialog')).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: /cancelar/i }))
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /cancelar/i }))
+    })
 
+    expect(apiFetchMock).toHaveBeenCalledWith('/auth/logout', {
+      method: 'POST',
+    })
     expect(useAuthStore.getState().admin).toBeNull()
     expect(useAuthStore.getState().isAuthenticated).toBe(false)
     expect(navigateMock).toHaveBeenCalledWith('/admin/login', { replace: true })
@@ -182,7 +202,28 @@ describe('AvisoSesionExpirando', () => {
     expect(screen.getByRole('timer')).toHaveTextContent('0:40')
   })
 
-  it('al llegar a 0 cierra la sesión sola y navega al login con sesion=expirada', () => {
+  it('"Cancelar" cierra la sesión local aunque POST /auth/logout falle', async () => {
+    apiFetchMock.mockRejectedValue(new Error('sin red'))
+    useAuthStore.setState({
+      admin: {
+        email: 'admin@example.com',
+        nombre: 'Oscar',
+        expiresAt: new Date(Date.now() + 45_000).toISOString(),
+      },
+      isAuthenticated: true,
+    })
+
+    renderAviso()
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /cancelar/i }))
+    })
+
+    expect(useAuthStore.getState().admin).toBeNull()
+    expect(navigateMock).toHaveBeenCalledWith('/admin/login', { replace: true })
+  })
+
+  it('al llegar a 0 cierra la sesión sola y navega al login con sesion=expirada', async () => {
     useAuthStore.setState({
       admin: {
         email: 'admin@example.com',
@@ -195,10 +236,11 @@ describe('AvisoSesionExpirando', () => {
     renderAviso()
     expect(navigateMock).not.toHaveBeenCalled()
 
-    act(() => {
+    await act(async () => {
       vi.advanceTimersByTime(3_000)
     })
 
+    expect(apiFetchMock).toHaveBeenCalledTimes(1)
     expect(useAuthStore.getState().admin).toBeNull()
     expect(navigateMock).toHaveBeenCalledTimes(1)
     expect(navigateMock).toHaveBeenCalledWith('/admin/login?sesion=expirada', {

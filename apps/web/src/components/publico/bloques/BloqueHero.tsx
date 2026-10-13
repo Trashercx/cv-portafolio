@@ -53,6 +53,10 @@ export function BloqueHero({ config, perfil, alineacionTitulo }: BloqueHeroProps
       <img
         src={perfil.imagen_perfil.url}
         alt={perfil.imagen_perfil.alt_text ?? perfil.nombre_completo}
+        // Fase 6: la foto del hero está above-the-fold (LCP): prioridad alta,
+        // sin lazy.
+        fetchPriority="high"
+        decoding="async"
         style={{
           ...(config.estilo_foto === 'con_marco'
             ? { borderColor: 'var(--color-primario)' }

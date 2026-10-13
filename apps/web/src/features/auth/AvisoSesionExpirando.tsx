@@ -1,5 +1,4 @@
-import { useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useRef } from 'react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -10,9 +9,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { useCerrarSesion } from '@/features/auth/useCerrarSesion'
 import { useRefrescarSesion } from '@/features/auth/useRefrescarSesion'
 import { useSesionExpirando } from '@/features/auth/useSesionExpirando'
-import { useAuthStore } from '@/store/auth-store'
 
 /** Formatea segundos como `m:ss` (p. ej. 45 -> "0:45"). */
 function formatearTiempo(segundos: number): string {
@@ -30,7 +29,7 @@ function formatearTiempo(segundos: number): string {
  *
  * "Seguir conectado" dispara `POST /auth/refresh`; en éxito el store se
  * actualiza con el nuevo `expiresAt` y el aviso desaparece solo. "Cancelar"
- * limpia el store y navega al login, igual que el logout de `AdminLayout`.
+ * cierra la sesión (`POST /auth/logout`) y navega al login, igual que `AdminLayout`.
  * Si la cuenta llega a 0, la sesión se cierra automáticamente y se navega a
  * `/admin/login?sesion=expirada` (el login muestra el motivo) — antes el
  * diálogo se quedaba abierto hasta que una petición devolviera 401.
@@ -39,27 +38,33 @@ function formatearTiempo(segundos: number): string {
  * panel), junto a `PaletaComandos`.
  */
 export function AvisoSesionExpirando() {
-  const navigate = useNavigate()
-  const clearAdmin = useAuthStore((state) => state.clearAdmin)
+  // Fase 6 (UC-01): ambos caminos de cierre llaman a `POST /auth/logout`
+  // (borra la cookie httpOnly en el servidor) vía `useCerrarSesion`, que en
+  // `onSettled` limpia store + caché y navega al login.
+  const cerrarSesion = useCerrarSesion()
+  const cerrarPorExpiracion = useCerrarSesion('/admin/login?sesion=expirada')
   const { mostrarAviso, segundosRestantes, sesionExpirada } =
     useSesionExpirando()
   const refrescarSesion = useRefrescarSesion()
 
-  // Una sola vez por expiración: `clearAdmin` pone `admin` en null, con lo
-  // que `sesionExpirada` vuelve a false y el efecto no se repite.
+  // Una sola vez por expiración: el `ref` evita repetir la mutación mientras
+  // `onSettled` todavía no limpió el store (y ante el doble efecto de
+  // StrictMode). No se espera la respuesta: la cookie ya venció, el logout
+  // es de mejor esfuerzo y `onSettled` navega pase lo que pase.
+  const cierreDisparado = useRef(false)
+  const { mutate: cerrarPorExpiracionMutate } = cerrarPorExpiracion
   useEffect(() => {
-    if (!sesionExpirada) return
-    clearAdmin()
-    navigate('/admin/login?sesion=expirada', { replace: true })
-  }, [sesionExpirada, clearAdmin, navigate])
+    if (!sesionExpirada || cierreDisparado.current) return
+    cierreDisparado.current = true
+    cerrarPorExpiracionMutate()
+  }, [sesionExpirada, cerrarPorExpiracionMutate])
 
   const handleSeguirConectado = () => {
     refrescarSesion.mutate()
   }
 
   const handleCancelar = () => {
-    clearAdmin()
-    navigate('/admin/login', { replace: true })
+    cerrarSesion.mutate()
   }
 
   return (

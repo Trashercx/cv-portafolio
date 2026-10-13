@@ -1,4 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import {
+  ContenidoPrincipal,
+  SaltarAlContenido,
+} from '@/components/publico/ContenidoPrincipal'
+import { DatosEstructuradosPersona } from '@/components/publico/DatosEstructuradosPersona'
+import { MetadatosPagina } from '@/components/publico/MetadatosPagina'
 import { ProveedorDetallePublico } from '@/components/publico/contexto-detalle'
 import { FondoAnimado } from '@/components/publico/FondoAnimado'
 import { Footer } from '@/components/publico/Footer'
@@ -7,6 +13,8 @@ import { ToggleModoTema } from '@/components/publico/ToggleModoTema'
 import { useSitio } from '@/features/publico/usePublico'
 import { useModoTema } from '@/hooks/useModoTema'
 import { ApiError } from '@/lib/api-client'
+import { recortarDescripcion } from '@/lib/seo'
+import type { HeroConfiguracion } from '@/features/secciones/types'
 import { temaComoVariablesCss } from '@/lib/tema-css'
 import { cn } from '@/lib/utils'
 
@@ -45,14 +53,6 @@ export function PublicHomePage() {
   // nodo real ya está montado.
   const [nodoRaiz, setNodoRaiz] = useState<HTMLDivElement | null>(null)
 
-  useEffect(() => {
-    if (!snapshot) return
-    const perfil = snapshot.perfil
-    document.title = perfil
-      ? `${perfil.nombre_completo} · ${perfil.titulo_profesional}`
-      : 'Portafolio'
-  }, [snapshot])
-
   if (isLoading) {
     return (
       <div className="flex min-h-svh items-center justify-center p-4 text-center">
@@ -83,6 +83,15 @@ export function PublicHomePage() {
     )
   }
 
+  // Fase 6 (UC-12): SEO de la home. Imagen de compartición = foto de perfil o,
+  // en su defecto, la imagen de fondo del hero.
+  const perfil = snapshot.perfil
+  const heroConfig = snapshot.secciones.find(
+    (seccion) => seccion.tipo_seccion === 'hero',
+  )?.configuracion as HeroConfiguracion | undefined
+  const imagenSeo =
+    perfil?.imagen_perfil?.url ?? heroConfig?.imagen_fondo?.url ?? null
+
   return (
     <div
       ref={setNodoRaiz}
@@ -92,10 +101,32 @@ export function PublicHomePage() {
       data-tema-modo={modo}
       className={cn('relative min-h-svh', modo === 'oscuro' && 'dark')}
     >
+      <SaltarAlContenido />
+      <MetadatosPagina
+        titulo={
+          perfil
+            ? `${perfil.nombre_completo} — ${perfil.titulo_profesional}`
+            : 'Portafolio'
+        }
+        descripcion={
+          perfil ? recortarDescripcion(perfil.resumen_bio) : undefined
+        }
+        imagen={imagenSeo}
+        tipo="profile"
+      />
+      {perfil ? (
+        <DatosEstructuradosPersona
+          perfil={perfil}
+          redes={snapshot.redes_sociales}
+          imagen={imagenSeo}
+        />
+      ) : null}
       {snapshot.fondo ? <FondoAnimado fondo={snapshot.fondo} /> : null}
       <div className="relative z-10">
         <ProveedorDetallePublico container={nodoRaiz}>
-          <RenderizadorSecciones snapshot={snapshot} />
+          <ContenidoPrincipal>
+            <RenderizadorSecciones snapshot={snapshot} />
+          </ContenidoPrincipal>
         </ProveedorDetallePublico>
         <Footer perfil={snapshot.perfil} />
         <div className="fixed bottom-4 right-4 z-50">
