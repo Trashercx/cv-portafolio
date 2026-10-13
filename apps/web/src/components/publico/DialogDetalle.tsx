@@ -42,7 +42,7 @@ export function DialogDetalle({ open, onOpenChange, children, container }: Dialo
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         container={container}
-        className="flex h-[90vh] flex-col overflow-y-auto sm:max-w-[95vw] [scrollbar-color:var(--border)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border"
+        className="flex h-[90vh] flex-col overflow-y-auto scrollbar-fina sm:max-w-[95vw]"
       >
         <DialogHeader className="sr-only">
           <DialogTitle>Detalle</DialogTitle>

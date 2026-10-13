@@ -64,7 +64,7 @@ export function BloqueHero({ config, perfil, alineacionTitulo }: BloqueHeroProps
           // `width`/`height` fijos en píxeles y, en el branch de esquina,
           // `position: absolute` con el offset correspondiente: fallback
           // defensivo, SOLO en modo `'editor'` (lienzo de Puck), para una
-          // condición de carrera propia de `@measured/puck` (`AutoFrame
+          // condición de carrera propia de `@puckeditor/core` (`AutoFrame
           // couldn't load a stylesheet`) que puede dejar el mirror de
           // estilos del iframe sin resolver todavía cuando la imagen se
           // pinta — un `style` inline no depende de que cargue ningún

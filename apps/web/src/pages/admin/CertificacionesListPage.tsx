@@ -85,8 +85,8 @@ export function CertificacionesListPage() {
             <TableRow>
               <TableHead className="w-20">Orden</TableHead>
               <TableHead>Nombre</TableHead>
-              <TableHead>Institución</TableHead>
-              <TableHead>Verificación</TableHead>
+              <TableHead className="hidden md:table-cell">Institución</TableHead>
+              <TableHead className="hidden md:table-cell">Verificación</TableHead>
               <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
@@ -103,8 +103,8 @@ export function CertificacionesListPage() {
                   />
                 </TableCell>
                 <TableCell>{certificacion.nombre}</TableCell>
-                <TableCell>{certificacion.institucion}</TableCell>
-                <TableCell>
+                <TableCell className="hidden md:table-cell">{certificacion.institucion}</TableCell>
+                <TableCell className="hidden md:table-cell">
                   <a
                     href={certificacion.url_verificacion}
                     target="_blank"

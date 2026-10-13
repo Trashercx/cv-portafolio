@@ -218,7 +218,7 @@ export function ProyectoFormDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={intentarCerrar}>
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent className="max-h-[90dvh] overflow-y-auto scrollbar-fina sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>
               {esNuevoProyecto ? 'Nuevo proyecto' : 'Editar proyecto'}

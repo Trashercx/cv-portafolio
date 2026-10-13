@@ -1,9 +1,16 @@
 @import 'tailwindcss';
 @import '@fontsource-variable/manrope';
 
-@custom-variant dark (&:is(.dark *));
+/*
+ * Fase 7 (UC-08): `.forzar-claro` marca un subárbol que debe verse en claro
+ * aunque el panel esté en oscuro (toggle "Vista previa en oscuro" apagado con
+ * el panel oscuro, ver `DialogVistaPrevia`): reaplica los tokens claros de
+ * `:root` y desactiva las variantes `dark:` dentro de él.
+ */
+@custom-variant dark (&:is(.dark *):not(:is(.forzar-claro *)));
 
-:root {
+:root,
+.forzar-claro {
   --radius: 0.625rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -75,30 +82,48 @@
 }
 
 /*
- * Séptima ronda (UC-07): Puck no trae modo oscuro propio. Su paleta vive en
- * variables `--puck-color-*` sobre `:root` (`@measured/puck/puck.css`), y su
- * UI (drawer de componentes, outline, campos, marco del preview) pinta
- * fondos con `white`/`grey-11`/`grey-12` y textos con `grey-01..05`/`black`.
- * Aquí se invierte la escala cuando el panel está en modo oscuro (`html.dark`,
- * puesto por `ThemeProvider`). El selector `html.dark` tiene más
- * especificidad que `:root`: necesario porque `puck.css` se inyecta DESPUÉS
- * de este archivo y en un empate ganaría la paleta clara.
+ * Fase 7 (UC-07): chrome oscuro de Puck con los tokens de tema de
+ * `@puckeditor/core` 0.22+ (capa `puck-tokens`, semánticos como
+ * `--puck-color-surface` o `--puck-color-interactive`) en vez de invertir
+ * la escala `--puck-color-grey-*` (Séptima ronda). Cada token apunta a una
+ * variable de shadcn del panel, así el editor queda coherente con el resto
+ * del admin. Estas reglas no están dentro de ninguna `@layer`, por lo que
+ * ganan a la capa `puck-tokens` del paquete sin depender del orden de
+ * inyección del CSS ni de la especificidad.
  */
 html.dark {
-  --puck-color-grey-01: #fafafa;
-  --puck-color-grey-02: #f5f5f5;
-  --puck-color-grey-03: #efefef;
-  --puck-color-grey-04: #dcdcdc;
-  --puck-color-grey-05: #c3c3c3;
-  --puck-color-grey-06: #ababab;
-  --puck-color-grey-07: #949494;
-  --puck-color-grey-08: #767676;
-  --puck-color-grey-09: #5a5a5a;
-  --puck-color-grey-10: #404040;
-  --puck-color-grey-11: #292929;
-  --puck-color-grey-12: #181818;
-  --puck-color-white: #181818;
-  --puck-color-black: #ffffff;
+  --puck-color-white: var(--card);
+  --puck-color-black: var(--foreground);
+  --puck-color-surface: var(--card);
+  --puck-color-surface-muted: var(--background);
+  --puck-color-surface-subtle: var(--muted);
+  --puck-color-surface-inverse: var(--accent);
+  --puck-color-border: var(--border);
+  --puck-color-border-hover: var(--muted-foreground);
+  --puck-color-border-muted: var(--border);
+  --puck-color-border-inverse: var(--border);
+  --puck-color-text: var(--foreground);
+  --puck-color-text-secondary: var(--muted-foreground);
+  --puck-color-text-muted: var(--muted-foreground);
+  --puck-color-text-subtle: var(--muted-foreground);
+  --puck-color-text-inverse: var(--accent-foreground);
+  --puck-color-interactive: var(--primary);
+  --puck-color-interactive-hover: color-mix(in srgb, var(--primary) 85%, white);
+  --puck-color-interactive-active: color-mix(in srgb, var(--primary) 70%, white);
+  --puck-color-interactive-subtle: color-mix(in srgb, var(--primary) 25%, var(--card));
+  --puck-color-interactive-soft: color-mix(in srgb, var(--primary) 15%, var(--card));
+  --puck-color-interactive-soft-hover: color-mix(in srgb, var(--primary) 22%, var(--card));
+  --puck-color-interactive-neutral-hover: var(--accent);
+  --puck-color-focus-ring: var(--ring);
+  --puck-color-selection-bg: color-mix(in srgb, var(--primary) 18%, transparent);
+  --puck-color-selection-border: var(--primary);
+  --puck-color-line-placeholder: var(--primary);
+  --puck-color-bg-disabled: var(--muted);
+  --puck-color-text-disabled: var(--muted-foreground);
+  --puck-color-overlay-backdrop: color-mix(in srgb, black 75%, transparent);
+  --puck-header-color-bg: var(--card);
+  --puck-canvas-color-bg: var(--background);
+  --puck-pluginbar-color-bg: var(--card);
 }
 
 @theme inline {
@@ -300,5 +325,73 @@ html.dark {
     to {
       background-position: 80px 80px;
     }
+  }
+}
+
+/*
+ * Fase 7 (UC-07): scrollbar fina y temada, reutilizable. `scrollbar-width`
+ * no se hereda, por eso la regla cubre también a los descendientes: aplicar
+ * `.scrollbar-fina` al contenedor de un panel de Puck (cuyas clases de CSS
+ * Modules llevan hash y no son estables) alcanza a todos sus paneles con
+ * scroll (rail, plugins, campos, outline, canvas). Los colores salen de los
+ * tokens de shadcn (`--border`, `--muted-foreground`), nunca hardcodeados.
+ * Firefox y Chrome modernos usan las propiedades estándar; los
+ * pseudo-elementos `-webkit-` cubren Safari y Chrome antiguos. Va en
+ * `@layer components` para que utilidades de Tailwind como
+ * `[scrollbar-width:none]` (carrusel de Galería) sigan ganándole.
+ */
+@layer components {
+  .scrollbar-fina,
+  .scrollbar-fina * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .scrollbar-fina::-webkit-scrollbar,
+  .scrollbar-fina *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .scrollbar-fina::-webkit-scrollbar-track,
+  .scrollbar-fina *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-fina::-webkit-scrollbar-thumb,
+  .scrollbar-fina *::-webkit-scrollbar-thumb {
+    background-color: var(--border);
+    border-radius: 9999px;
+  }
+
+  .scrollbar-fina::-webkit-scrollbar-thumb:hover,
+  .scrollbar-fina *::-webkit-scrollbar-thumb:hover {
+    background-color: var(--muted-foreground);
+  }
+}
+
+/*
+ * Fase 7 (UC-07): el header nativo de Puck mantiene `flex-wrap: nowrap` en la
+ * barra de acciones desde 638px, y con el toolbar propio (estado, vista
+ * previa, toggle, historial, publicar, guardar) se salía del ancho en tablet
+ * (~768px) dejando "Guardar cambios" fuera de alcance. Se permite que la barra
+ * pase a varias líneas. Los nombres de clase de Puck son CSS Modules con hash:
+ * se enlaza por el prefijo estable `_MenuBar-inner_` y se sube la
+ * especificidad (`div[...]`) para ganar sin depender del orden de inyección.
+ */
+div[class*='_MenuBar-inner_'] {
+  flex-wrap: wrap;
+}
+
+/*
+ * Con la barra de acciones en varias líneas, las columnas `1fr auto 1fr` del
+ * header (pensadas para un título centrado) le dejaban a las acciones solo un
+ * tercio del ancho y las apilaban una por fila en tablet. Desde 638px (donde
+ * el header es una sola fila) el título pasa junto a los toggles y las
+ * acciones ocupan todo el espacio restante.
+ */
+@media (min-width: 638px) {
+  div[class*='_PuckHeader-inner_'] {
+    grid-template-columns: auto auto minmax(0, 1fr);
   }
 }

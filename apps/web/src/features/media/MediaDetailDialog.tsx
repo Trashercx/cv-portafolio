@@ -64,7 +64,7 @@ export function MediaDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-h-[90dvh] overflow-y-auto scrollbar-fina">
         <DialogHeader>
           <DialogTitle>Detalle del archivo</DialogTitle>
         </DialogHeader>

@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useNavegarProtegido } from '@/features/editor/navegacion-protegida'
 import {
   CommandDialog,
   CommandEmpty,
@@ -63,6 +64,9 @@ const RUTAS_ADMIN: RutaAdmin[] = [
 export function PaletaComandos() {
   const [abierta, setAbierta] = useState(false)
   const navigate = useNavigate()
+  // Fase 7 (UC-08): ir a otra página desde el editor con cambios sin guardar
+  // pide confirmación (`navigate` directo solo se usa al cerrar sesión).
+  const { navegar } = useNavegarProtegido()
   const { toggleTheme } = useTheme()
   const clearAdmin = useAuthStore((state) => state.clearAdmin)
   const comandosContextuales = useComandosActivos()
@@ -84,7 +88,7 @@ export function PaletaComandos() {
     accion()
   }
 
-  const irA = (ruta: string) => ejecutar(() => navigate(ruta))
+  const irA = (ruta: string) => ejecutar(() => navegar(ruta))
   const irAlSitioPublico = () =>
     ejecutar(() => window.open('/', '_blank', 'noopener,noreferrer'))
   const cerrarSesion = () =>

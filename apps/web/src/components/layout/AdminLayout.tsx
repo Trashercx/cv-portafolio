@@ -12,6 +12,7 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar'
 import { AvisoSesionExpirando } from '@/features/auth/AvisoSesionExpirando'
+import { GuardiaNavegacionEditor } from '@/features/editor/navegacion-protegida'
 import { useCerrarSesion } from '@/features/auth/useCerrarSesion'
 import { PaletaComandos } from '@/features/paleta-comandos/PaletaComandos'
 import { ProveedorPaletaComandos } from '@/features/paleta-comandos/contexto-paleta'
@@ -75,27 +76,32 @@ export function AdminLayout() {
       <ProveedorPaletaComandos>
         <PaletaComandos />
         <AvisoSesionExpirando />
+        <GuardiaNavegacionEditor />
         <SidebarProvider open={sidebarAbierta} onOpenChange={setSidebarAbierta}>
           <AppSidebar />
           <SidebarInset>
-            <header className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b bg-background p-4">
+            {/* Fase 7 (UC-07): alto fijo de 3.5rem (`h-14`), del que depende el cálculo de
+                alto del editor (`EditorSeccionesPage`: `100dvh - 3.5rem`); compacto en
+                móvil: nombre truncado y botón de cerrar sesión solo con icono. */}
+            <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center justify-between gap-2 border-b bg-background px-3 sm:gap-4 sm:px-4">
               <SidebarTrigger />
-              <div className="flex items-center gap-4">
+              <div className="flex min-w-0 items-center gap-2 sm:gap-4">
                 <ThemeToggle />
-                <div className="h-6 w-px bg-border" />
+                <div className="h-6 w-px shrink-0 bg-border" />
                 {admin?.nombre ? (
-                  <span className="text-sm text-muted-foreground">
+                  <span className="hidden max-w-[10rem] truncate text-sm text-muted-foreground sm:inline">
                     {admin.nombre}
                   </span>
                 ) : null}
                 <Button
                   variant="outline"
                   size="sm"
+                  aria-label="Cerrar sesión"
                   onClick={handleLogout}
                   disabled={cerrarSesion.isPending}
                 >
                   <LogOut />
-                  Cerrar sesión
+                  <span className="hidden sm:inline">Cerrar sesión</span>
                 </Button>
               </div>
             </header>

@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { CLAVES_FUENTE } from './fuentes'
 
 const HEX_REGEX = /^#[0-9a-fA-F]{6}$/
 
@@ -9,18 +10,12 @@ export const temaSchema = z.object({
   color_secundario: z.string().regex(HEX_REGEX, 'Color inválido'),
   color_fondo: z.string().regex(HEX_REGEX, 'Color inválido'),
   color_texto: z.string().regex(HEX_REGEX, 'Color inválido'),
-  // Solo los 4 tokens nuevos (con stack de `font-family` que sí resuelve,
-  // ver `lib/tema-css.ts`) son válidos para CREAR/EDITAR desde este
-  // formulario. Los valores legados ('Inter'/'Poppins'/'Merriweather'/
-  // 'Georgia') de temas ya guardados se siguen leyendo y mostrando sin
-  // problema (passthrough en `temaComoVariablesCss`), pero ya no se ofrecen
-  // como opción de entrada acá.
-  fuente_principal: z.enum([
-    'manrope',
-    'sans_sistema',
-    'serif_sistema',
-    'mono_sistema',
-  ]),
+  // Fase 7 (UC-08): catálogo cerrado de 10 fuentes (`fuentes.ts`, contrato
+  // 7.2 de `docs/plan-tecnico.md`). Los valores legados ('Inter'/'Poppins'/
+  // 'Merriweather'/'Georgia') de temas ya guardados se siguen leyendo y
+  // mostrando (`familiaCssDeFuente`), pero ya no se ofrecen como entrada: el
+  // formulario de edición los normaliza a su equivalente del catálogo.
+  fuente_principal: z.enum(CLAVES_FUENTE),
   modo: z.enum(['claro', 'oscuro']),
 })
 

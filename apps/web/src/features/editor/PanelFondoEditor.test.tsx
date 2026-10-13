@@ -46,7 +46,7 @@ const FONDO_INACTIVO: FondoSitio = {
 
 /**
  * Migrado de la extinta `FondoSitioPage` (UC-15, fusionada en el panel
- * lateral del editor — ver `PanelLateralEditor`): esta suite nunca existió
+ * lateral del editor — ahora plugin `fondo` del rail de Puck, ver `plugins-editor.tsx`): esta suite nunca existió
  * como `FondoSitioPage.test.tsx` (no había cobertura previa), se agrega acá
  * para no dejar sin tests una pieza de UI reusada 1:1 (`useFondosSitio`/
  * `useActivarFondoSitio`/`useEliminarFondoSitio`/`FondoSitioFormDialog`, sin

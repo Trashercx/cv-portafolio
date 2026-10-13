@@ -1,6 +1,8 @@
 import { ConfirmDeleteDialog } from '@/components/shared/ConfirmDeleteDialog'
 import { Button } from '@/components/ui/button'
+import { obtenerFuente } from '@/features/tema/fuentes'
 import { TemaFormDialog } from '@/features/tema/TemaFormDialog'
+import { useFuenteTema } from '@/features/tema/useFuenteTema'
 import { useActivarTema, useEliminarTema, useTemas } from '@/features/tema/useTemas'
 import type { Tema } from '@/features/tema/types'
 import { ApiError } from '@/lib/api-client'
@@ -15,7 +17,7 @@ const SWATCH_KEYS: Array<{ key: keyof Tema; label: string }> = [
 ]
 
 /**
- * Pestaña "Tema" del panel lateral del editor unificado (Fase 5): mismo
+ * Plugin "Tema" del rail de Puck en el editor unificado (Fase 5, plugin desde Fase 7): mismo
  * listado/creación/activación exclusiva/borrado que la extinta `TemaPage`
  * (UC-08) — se reusan tal cual `useTemas`/`useActivarTema`/`useEliminarTema`
  * y `TemaFormDialog`, sin ninguna lógica de mutación nueva ni duplicada.
@@ -28,6 +30,9 @@ export function PanelTemaEditor() {
   const eliminar = useEliminarTema()
 
   const temaActivo = temas?.find((tema) => tema.activo)
+  // Fase 7 (UC-08): descarga bajo demanda la fuente variable del tema activo
+  // para que la vista previa de abajo se pinte con ella.
+  useFuenteTema(temaActivo?.fuente_principal)
 
   return (
     <div className="grid gap-4 p-4">
@@ -106,9 +111,11 @@ export function PanelTemaEditor() {
               ))}
             </div>
             <p className="text-xs text-muted-foreground">
-              {tema.fuente_principal} · {tema.modo}
+              {obtenerFuente(tema.fuente_principal)?.nombre ??
+                tema.fuente_principal}{' '}
+              · {tema.modo}
             </p>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button
                 size="sm"
                 disabled={tema.activo || activar.isPending}
@@ -116,6 +123,7 @@ export function PanelTemaEditor() {
               >
                 {tema.activo ? 'Activo' : 'Activar'}
               </Button>
+              <TemaFormDialog tema={tema} />
               <ConfirmDeleteDialog
                 trigger={
                   <Button variant="destructive" size="sm">

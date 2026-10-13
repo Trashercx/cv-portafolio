@@ -106,7 +106,7 @@ export function RedFormDialog({ red, open, onOpenChange }: RedFormDialogProps) {
   return (
     <>
       <Dialog open={open} onOpenChange={intentarCerrar}>
-        <DialogContent>
+        <DialogContent className="max-h-[90dvh] overflow-y-auto scrollbar-fina">
           <DialogHeader>
             <DialogTitle>
               {esNuevo ? 'Nuevo enlace de red' : 'Editar enlace de red'}

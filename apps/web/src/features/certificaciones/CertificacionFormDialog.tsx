@@ -158,7 +158,7 @@ export function CertificacionFormDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={intentarCerrar}>
-        <DialogContent>
+        <DialogContent className="max-h-[90dvh] overflow-y-auto scrollbar-fina">
           <DialogHeader>
             <DialogTitle>
               {esNuevo ? 'Nueva certificación' : 'Editar certificación'}

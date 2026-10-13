@@ -1,4 +1,4 @@
-import { type Data } from '@measured/puck'
+import { type Data } from '@puckeditor/core'
 import { Info } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
@@ -17,6 +17,8 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Switch } from '@/components/ui/switch'
+import { useTheme } from '@/components/theme/ThemeProvider'
 import { puckConfig, type PuckSeccionesComponents } from '@/lib/puck-config'
 import { ApiError } from '@/lib/api-client'
 import {
@@ -41,7 +43,7 @@ import { LienzoPuck } from '@/features/editor/LienzoPuck'
 import { usePublicarVersion, useVersiones } from '@/features/publicacion/usePublicacion'
 import type { VersionSitio } from '@/features/publicacion/types'
 import { useEditorSeccionesStore } from '@/store/editor-secciones-store'
-import { useEditorPanelStore, type PestanaPanel } from '@/store/editor-panel-store'
+import { useEditorPanelStore, type PluginEditor } from '@/store/editor-panel-store'
 
 type EditorData = Data<PuckSeccionesComponents>
 type EditorContentItem = EditorData['content'][number]
@@ -308,24 +310,25 @@ export function EditorSeccionesPage() {
   const publicar = usePublicarVersion()
   const [historialAbierto, setHistorialAbierto] = useState(false)
 
-  // Fase 5 (panel unificado): un enlace externo hacia el panel de Tema o
-  // Fondo (p. ej. `/admin/editor?panel=tema`, ver el redirect que dejaron
-  // las extintas rutas `/admin/tema`/`/admin/fondo` en `App.tsx`) puede pedir
-  // arrancar en esa pestaña en vez de "Bloque" (el default de
-  // `useEditorPanelStore`). Solo se aplica una vez al montar — un `ref`, no
-  // el propio `searchParams` como dependencia del efecto, para no forzar de
-  // nuevo esa pestaña si el admin navega a otra después.
+  // Fase 5 (panel unificado) / Fase 7 (plugin rail): un enlace externo hacia
+  // el panel de Tema o Fondo (p. ej. `/admin/editor?panel=tema`, ver el
+  // redirect de las extintas rutas `/admin/tema`/`/admin/fondo` en
+  // `App.tsx`) abre el plugin `tema`/`fondo` del rail de Puck en vez de
+  // "Bloques": `LienzoPuck` lo lee de `useEditorPanelStore` como
+  // `ui.plugin.current` inicial. Solo se aplica una vez al montar (un `ref`,
+  // no `searchParams` como dependencia) para no pisar la elección del admin
+  // si luego cambia de plugin.
   const [searchParams] = useSearchParams()
-  const setPestanaActiva = useEditorPanelStore((state) => state.setPestanaActiva)
+  const setPluginActivo = useEditorPanelStore((state) => state.setPluginActivo)
   const panelInicialAplicado = useRef(false)
   useEffect(() => {
     if (panelInicialAplicado.current) return
     panelInicialAplicado.current = true
     const panel = searchParams.get('panel')
     if (panel === 'tema' || panel === 'fondo') {
-      setPestanaActiva(panel satisfies PestanaPanel)
+      setPluginActivo(panel satisfies PluginEditor)
     }
-  }, [searchParams, setPestanaActiva])
+  }, [searchParams, setPluginActivo])
 
   // Estado de `DialogVistaPrevia` levantado acá (Fase 4.1, punto 2): ese
   // componente se monta dentro del `toolbar` que arma esta página y viaja
@@ -365,6 +368,29 @@ export function EditorSeccionesPage() {
   const [initialData, setInitialData] = useState<EditorData | null>(null)
   const [editorKey, setEditorKey] = useState(0)
   const [guardando, setGuardando] = useState(false)
+
+  // Fase 7 (UC-08): modo de la vista previa (solo lienzo y `DialogVistaPrevia`).
+  const { theme } = useTheme()
+  const modoVistaPrevia = useEditorPanelStore((state) => state.modoVistaPrevia)
+  const setModoVistaPrevia = useEditorPanelStore(
+    (state) => state.setModoVistaPrevia,
+  )
+  const modoEfectivo = modoVistaPrevia ?? (theme === 'dark' ? 'oscuro' : 'claro')
+
+  // Fase 7 (UC-08): cambios sin guardar. Lo enciende `LienzoPuck` (`onCambio`)
+  // con cada acción de Puck que edita datos y lo apaga un guardado exitoso;
+  // `beforeunload`, la guardia de navegación interna
+  // (`GuardiaNavegacionEditor`) y el punto del botón "Guardar cambios" leen
+  // este mismo flag.
+  const hayCambiosSinGuardar = useEditorSeccionesStore(
+    (state) => state.hayCambiosSinGuardar,
+  )
+  const setHayCambiosSinGuardar = useEditorSeccionesStore(
+    (state) => state.setHayCambiosSinGuardar,
+  )
+  const setAccionGuardar = useEditorSeccionesStore(
+    (state) => state.setAccionGuardar,
+  )
 
   // Fuente de verdad de "qué hay persistido ahora mismo" para el diff de
   // `guardarCambios` (ver comentario de `SeccionPersistida` más arriba).
@@ -530,6 +556,7 @@ export function EditorSeccionesPage() {
       setContent(contentActualizado)
       setInitialData({ content: contentActualizado, root: {} })
       setEditorKey((key) => key + 1)
+      setHayCambiosSinGuardar(false)
       toast.success('Cambios guardados correctamente.')
     } catch {
       // No mostramos un toast de error aquí: cada sub-mutación
@@ -549,13 +576,58 @@ export function EditorSeccionesPage() {
     }
   }
 
+  // `Ctrl/Cmd+S` = guardar (Fase 7, UC-08). `guardarRef` siempre apunta a la
+  // versión más reciente de `guardarCambios` (cierra sobre `content`), así el
+  // atajo registrado una sola vez nunca guarda un estado viejo. Dentro del
+  // iframe del lienzo el atajo lo captura `PuckRoot` y delega en la acción
+  // registrada en el store; con el foco en el documento del panel lo captura
+  // el `keydown` de abajo. Ambos hacen `preventDefault` (si no, el navegador
+  // abriría "Guardar página como…").
+  const guardarRef = useRef<() => void>(() => {})
+  useEffect(() => {
+    guardarRef.current = () => {
+      if (!guardando && initialData) void guardarCambios()
+    }
+  })
+  useEffect(() => {
+    setAccionGuardar(() => guardarRef.current())
+    const alPresionar = (event: KeyboardEvent) => {
+      if (event.key.toLowerCase() === 's' && (event.ctrlKey || event.metaKey)) {
+        event.preventDefault()
+        guardarRef.current()
+      }
+    }
+    document.addEventListener('keydown', alPresionar)
+    return () => {
+      document.removeEventListener('keydown', alPresionar)
+      setAccionGuardar(null)
+    }
+  }, [setAccionGuardar])
+
+  // Aviso nativo del navegador al cerrar/recargar la pestaña con cambios.
+  useEffect(() => {
+    if (!hayCambiosSinGuardar) return
+    const alSalir = (event: BeforeUnloadEvent) => {
+      event.preventDefault()
+      // Algunos navegadores solo muestran el aviso si `returnValue` se asigna.
+      event.returnValue = ''
+    }
+    window.addEventListener('beforeunload', alSalir)
+    return () => window.removeEventListener('beforeunload', alSalir)
+  }, [hayCambiosSinGuardar])
+
+  // Al salir del editor (desmontar la página) ya no hay nada pendiente.
+  useEffect(() => {
+    return () => setHayCambiosSinGuardar(false)
+  }, [setHayCambiosSinGuardar])
+
   const cargando = seccionesQuery.isLoading || datosLoading
   const errorCarga = seccionesQuery.error ?? datosError
 
   return (
-    <div className="-mx-4 -my-4 grid gap-0">
+    <div className="-mx-4 -my-4 flex h-[calc(100dvh-3.5rem)] flex-col">
       <Dialog open={historialAbierto} onOpenChange={setHistorialAbierto}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+        <DialogContent className="max-h-[90dvh] overflow-y-auto scrollbar-fina sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>Historial de versiones</DialogTitle>
             <DialogDescription>
@@ -577,7 +649,7 @@ export function EditorSeccionesPage() {
       {versionesQuery.isSuccess && hayCambiosSinPublicar ? (
         <div
           role="status"
-          className="flex items-center gap-2 border-b bg-secondary px-4 py-2 text-sm text-secondary-foreground"
+          className="flex shrink-0 items-center gap-2 border-b bg-secondary px-4 py-2 text-sm text-secondary-foreground"
         >
           <Info className="size-4 shrink-0" aria-hidden="true" />
           <span>
@@ -602,12 +674,12 @@ export function EditorSeccionesPage() {
       ) : null}
 
       {initialData && datos ? (
-        // `h-[calc(100vh-4.5rem)]`: solo se descuenta la cabecera fija de
-        // `AdminLayout` (~4.5rem) — no hay ninguna barra de acciones propia
-        // ENCIMA del lienzo: la barra (`toolbar`) comparte fila con los
-        // controles de deshacer/rehacer y viewport dentro del propio
-        // `LienzoPuck` (Fase 5), que ocupa el resto de este alto completo.
-        <div className="relative h-[calc(100vh-4.5rem)]">
+        // Fase 7 (UC-07): el alto lo fija el contenedor de la página
+        // (`100dvh` menos el header de 3.5rem de `AdminLayout`); el banner de
+        // borrador (`shrink-0`) y este contenedor (`flex-1 min-h-0`) se reparten
+        // lo que queda, así que el editor nunca desborda en vertical aunque el
+        // banner ocupe varias líneas. `LienzoPuck` pasa `height="100%"` a Puck.
+        <div className="relative min-h-0 flex-1">
           {/*
             `inert` (React 19 / atributo HTML nativo) bloquea por completo el
             mouse y el teclado dentro del editor mientras `guardando` es
@@ -664,6 +736,7 @@ export function EditorSeccionesPage() {
               metadata={metadata}
               editorKey={editorKey}
               onChange={(data) => setContent(data.content)}
+              onCambio={() => setHayCambiosSinGuardar(true)}
               // Barra de acciones propia (Fase 3.1, migrada a `toolbar` de
               // `LienzoPuck` en Fase 5 — ver comentario de cabecera de este
               // componente): el estado Borrador/Publicado (UC-10/UC-11) y su
@@ -724,14 +797,52 @@ export function EditorSeccionesPage() {
                     previewVersion={previewVersion}
                     onPreviewVersion={setPreviewVersion}
                   />
+                  {/*
+                    Fase 7 (UC-08): el toggle cambia SOLO el modo del lienzo y
+                    de la vista previa, nunca el chrome del admin (ese lo
+                    gobierna `ThemeToggle`). "Seguir al panel" vuelve a `null`.
+                  */}
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id="vista-previa-oscuro"
+                      size="sm"
+                      aria-label="Vista previa en oscuro"
+                      checked={modoEfectivo === 'oscuro'}
+                      onCheckedChange={(oscuro) =>
+                        setModoVistaPrevia(oscuro ? 'oscuro' : 'claro')
+                      }
+                    />
+                    <label
+                      htmlFor="vista-previa-oscuro"
+                      className="whitespace-nowrap text-xs text-muted-foreground"
+                    >
+                      Vista previa en oscuro
+                    </label>
+                    {modoVistaPrevia !== null ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        onClick={() => setModoVistaPrevia(null)}
+                      >
+                        Seguir al panel
+                      </Button>
+                    ) : null}
+                  </div>
                   <Button
                     variant="outline"
+                    size="sm"
                     onClick={() => setHistorialAbierto(true)}
                   >
                     Historial de versiones
                   </Button>
                   <ConfirmActionDialog
-                    trigger={<Button disabled={publicar.isPending}>Publicar</Button>}
+                    trigger={
+                      <Button size="sm" disabled={publicar.isPending}>
+                        Publicar
+                      </Button>
+                    }
                     title="¿Publicar los cambios actuales?"
                     description="Esto reemplaza de inmediato la versión visible al público con el contenido, secciones y tema actuales."
                     confirmLabel="Publicar"
@@ -740,9 +851,23 @@ export function EditorSeccionesPage() {
                     onConfirm={() => publicar.mutate()}
                   />
                   <Button
+                    size="sm"
                     onClick={guardarCambios}
                     disabled={guardando || !initialData}
+                    title={
+                      hayCambiosSinGuardar
+                        ? 'Hay cambios sin guardar (Ctrl+S)'
+                        : 'Guardar cambios (Ctrl+S)'
+                    }
+                    data-sin-guardar={hayCambiosSinGuardar || undefined}
                   >
+                    {hayCambiosSinGuardar && !guardando ? (
+                      <span
+                        aria-hidden="true"
+                        data-testid="indicador-sin-guardar"
+                        className="size-2 rounded-full bg-primary-foreground"
+                      />
+                    ) : null}
                     {guardando ? 'Guardando…' : 'Guardar cambios'}
                   </Button>
                 </>

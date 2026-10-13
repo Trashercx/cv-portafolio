@@ -1,6 +1,6 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import type { ReactNode } from 'react'
+import type { ComponentType, ReactNode } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import { toast } from 'sonner'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -8,6 +8,8 @@ import type { Seccion } from '@/features/secciones/types'
 import type { SnapshotSitio } from '@/features/publico/types'
 import type { VersionSitio } from '@/features/publicacion/types'
 import { ThemeProvider } from '@/components/theme/ThemeProvider'
+import { useEditorPanelStore } from '@/store/editor-panel-store'
+import { fireEvent } from '@testing-library/react'
 import { useEditorSeccionesStore } from '@/store/editor-secciones-store'
 import { EditorSeccionesPage } from './EditorSeccionesPage'
 
@@ -24,10 +26,10 @@ vi.mock('sonner', () => ({
  * fidelidad del harness respecto al árbol real, no una restricción de
  * negocio de esta suite.
  */
-function renderEditor() {
+function renderEditor(entrada = '/admin/editor') {
   return render(
     <ThemeProvider>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[entrada]}>
         <EditorSeccionesPage />
       </MemoryRouter>
     </ThemeProvider>,
@@ -43,37 +45,34 @@ function renderEditor() {
  * `EditorSeccionesPage` inyectando directamente un `content` simulado en
  * el store de Zustand que alimenta el botón "Guardar cambios".
  *
- * Desde Fase 5 (panel unificado) `LienzoPuck` reconstruye TODO el layout de
- * Puck a mano vía `children` (`overrides.headerActions` ya no existe): el
- * stub de `Puck` de acá simplemente renderiza `props.children` tal cual —
- * la barra de acciones (`toolbar`, Borrador/Publicado, Vista previa,
- * Historial de versiones, Publicar, Guardar cambios) viaja como un elemento
- * JSX ya armado (no una función/componente nuevo en cada render, a
- * diferencia de la vieja `overrides.headerActions`), así que sigue siendo
- * consultable por rol/nombre en los tests de abajo sin necesitar ningún
- * trato especial.
+ * Desde Fase 7 (UC-07) `LienzoPuck` usa el layout nativo de Puck: la barra de
+ * acciones (Borrador/Publicado, Vista previa, Historial de versiones,
+ * Publicar, Guardar cambios) vive en `overrides.headerActions`. El stub de
+ * `Puck` renderiza ese override tal cual (como el header nativo) para que la
+ * barra siga siendo consultable por rol/nombre en los tests de abajo.
  *
  * `createUsePuck` también se mockea acá (no solo `Puck`): `usePuckEditor`
  * (`@/features/editor/usePuckEditor`) lo llama a nivel de módulo
- * (`createUsePuck<typeof puckConfig>()`), y ese módulo se importa
- * transitivamente desde `LienzoPuck`/`PanelLateralEditor`/
- * `PanelBloqueSeleccionado`/`ViewportSwitcher` — sin este mock, `Puck` (el
- * hook real) fallaría con "usePuck must be used inside <Puck>." al no haber
- * un `<Puck>` real montado. El estado falso que devuelve (`selectedItem:
- * null`, historial sin pasado/futuro) alcanza para que esos componentes se
- * rendericen sin lanzar, sin ejercitar contra Puck real (fuera del alcance
- * de esta suite, que solo cubre la barra de acciones).
+ * (`createUsePuck<typeof puckConfig>()`) y `LienzoPuck` lo usa para recordar el
+ * plugin activo — sin este mock fallaría con "usePuck must be used inside
+ * <Puck>.". El estado falso alcanza para que se renderice sin lanzar.
  */
-vi.mock('@measured/puck', () => {
-  const PuckStub = Object.assign(
-    (props: { children?: ReactNode }) => <>{props.children}</>,
-    {
-      Components: () => null,
-      Fields: () => null,
-      Outline: () => null,
-      Preview: () => null,
-    },
-  )
+/** Plugin activo que simula el store de Puck: arranca en `ui.plugin.current` (como el `<Puck>` real). */
+const pluginPuck = { actual: 'blocks' }
+/** `onAction` que `LienzoPuck` le pasa a Puck: permite simular ediciones del admin. */
+const puckProps: { onAction?: (action: { type: string }) => void } = {}
+
+vi.mock('@puckeditor/core', () => {
+  const PuckStub = (props: {
+    overrides?: { headerActions?: ComponentType<{ children?: ReactNode }> }
+    ui?: { plugin?: { current: string | null } }
+    onAction?: (action: { type: string }) => void
+  }) => {
+    puckProps.onAction = props.onAction
+    pluginPuck.actual = props.ui?.plugin?.current ?? 'blocks'
+    const HeaderActions = props.overrides?.headerActions
+    return HeaderActions ? <HeaderActions>{null}</HeaderActions> : null
+  }
   return {
     Puck: PuckStub,
     createUsePuck:
@@ -82,15 +81,7 @@ vi.mock('@measured/puck', () => {
         const estadoFalso = {
           dispatch: vi.fn(),
           selectedItem: null,
-          appState: {
-            ui: {
-              viewports: {
-                current: { width: 1280, height: 'auto' },
-                controlsVisible: true,
-                options: [],
-              },
-            },
-          },
+          appState: { ui: { plugin: { current: pluginPuck.actual } } },
           history: {
             back: vi.fn(),
             forward: vi.fn(),
@@ -333,6 +324,13 @@ vi.mock('@/features/publicacion/usePublicacion', () => ({
 describe('EditorSeccionesPage (UC-07, UC-10, UC-11)', () => {
   beforeEach(() => {
     useEditorSeccionesStore.setState({ content: [] })
+    useEditorPanelStore.setState({ pluginActivo: null, modoVistaPrevia: null })
+    window.localStorage.clear()
+    useEditorSeccionesStore.setState({
+      hayCambiosSinGuardar: false,
+      destinoPendiente: null,
+      accionGuardar: null,
+    })
     seccionesMock.data = [SECCION_HERO, SECCION_CONTACTO]
     crearMutateAsyncMock.mockResolvedValue({ id: 'seccion-c' })
     actualizarMutateAsyncMock.mockResolvedValue(undefined)
@@ -354,6 +352,27 @@ describe('EditorSeccionesPage (UC-07, UC-10, UC-11)', () => {
 
   afterEach(() => {
     vi.clearAllMocks()
+  })
+
+  it('?panel=tema abre el plugin Tema del rail (queda en el store para LienzoPuck) y ?panel=fondo el de Fondo', async () => {
+    const { unmount } = renderEditor('/admin/editor?panel=tema')
+    await waitFor(() =>
+      expect(useEditorPanelStore.getState().pluginActivo).toBe('tema'),
+    )
+    unmount()
+    useEditorPanelStore.setState({ pluginActivo: null })
+    renderEditor('/admin/editor?panel=fondo')
+    await waitFor(() =>
+      expect(useEditorPanelStore.getState().pluginActivo).toBe('fondo'),
+    )
+  })
+
+  it('sin ?panel= Puck arranca en Bloques', async () => {
+    renderEditor()
+    await waitFor(() =>
+      expect(useEditorSeccionesStore.getState().content).toHaveLength(2),
+    )
+    expect(useEditorPanelStore.getState().pluginActivo).toBe('blocks')
   })
 
   it('carga las secciones existentes en el store de edición al montar', async () => {
@@ -881,5 +900,103 @@ describe('EditorSeccionesPage (UC-07, UC-10, UC-11)', () => {
       name: /deshacer última publicación/i,
     })
     expect(botonesRevertir).toHaveLength(1)
+  })
+
+  describe('modo de la vista previa y cambios sin guardar (Fase 7, UC-08)', () => {
+    it('el Switch "Vista previa en oscuro" cambia solo el override (no el tema del panel) y "Seguir al panel" lo limpia', async () => {
+      const user = userEvent.setup()
+      renderEditor()
+
+      const interruptor = await screen.findByRole('switch', {
+        name: 'Vista previa en oscuro',
+      })
+      expect(interruptor).not.toBeChecked()
+      expect(
+        screen.queryByRole('button', { name: 'Seguir al panel' }),
+      ).not.toBeInTheDocument()
+
+      await user.click(interruptor)
+      expect(useEditorPanelStore.getState().modoVistaPrevia).toBe('oscuro')
+      expect(window.localStorage.getItem('panel-admin-theme')).toBe('light')
+      expect(interruptor).toBeChecked()
+
+      await user.click(screen.getByRole('button', { name: 'Seguir al panel' }))
+      expect(useEditorPanelStore.getState().modoVistaPrevia).toBeNull()
+      expect(
+        screen.queryByRole('button', { name: 'Seguir al panel' }),
+      ).not.toBeInTheDocument()
+    })
+
+    it('una acción que edita datos enciende el punto de "Guardar cambios"; las de UI no; guardar lo apaga', async () => {
+      const user = userEvent.setup()
+      renderEditor()
+      await screen.findByRole('button', { name: 'Guardar cambios' })
+      expect(screen.queryByTestId('indicador-sin-guardar')).not.toBeInTheDocument()
+
+      act(() => puckProps.onAction?.({ type: 'setUi' }))
+      act(() => puckProps.onAction?.({ type: 'set' }))
+      expect(useEditorSeccionesStore.getState().hayCambiosSinGuardar).toBe(false)
+
+      act(() => puckProps.onAction?.({ type: 'replace' }))
+      expect(screen.getByTestId('indicador-sin-guardar')).toBeInTheDocument()
+
+      await user.click(screen.getByRole('button', { name: 'Guardar cambios' }))
+      await waitFor(() =>
+        expect(useEditorSeccionesStore.getState().hayCambiosSinGuardar).toBe(false),
+      )
+      expect(screen.queryByTestId('indicador-sin-guardar')).not.toBeInTheDocument()
+    })
+
+    it('beforeunload solo se cancela cuando hay cambios sin guardar', async () => {
+      renderEditor()
+      await screen.findByRole('button', { name: 'Guardar cambios' })
+
+      const sinCambios = new Event('beforeunload', { cancelable: true })
+      window.dispatchEvent(sinCambios)
+      expect(sinCambios.defaultPrevented).toBe(false)
+
+      act(() => puckProps.onAction?.({ type: 'insert' }))
+      const conCambios = new Event('beforeunload', { cancelable: true })
+      window.dispatchEvent(conCambios)
+      expect(conCambios.defaultPrevented).toBe(true)
+    })
+
+    it('Ctrl+S guarda (preventDefault) y la acción registrada en el store hace lo mismo', async () => {
+      renderEditor()
+      await waitFor(() =>
+        expect(useEditorSeccionesStore.getState().content).toHaveLength(2),
+      )
+
+      const atajo = new KeyboardEvent('keydown', {
+        key: 's',
+        ctrlKey: true,
+        bubbles: true,
+        cancelable: true,
+      })
+      act(() => {
+        document.dispatchEvent(atajo)
+      })
+      expect(atajo.defaultPrevented).toBe(true)
+      await waitFor(() => expect(reordenarMutateAsyncMock).toHaveBeenCalledTimes(1))
+
+      fireEvent.keyDown(document, { key: 'S', metaKey: true })
+      await waitFor(() => expect(reordenarMutateAsyncMock).toHaveBeenCalledTimes(2))
+
+      await act(async () => {
+        useEditorSeccionesStore.getState().accionGuardar?.()
+      })
+      await waitFor(() => expect(reordenarMutateAsyncMock).toHaveBeenCalledTimes(3))
+    })
+
+    it('al desmontar el editor limpia el flag de cambios sin guardar y la acción de guardado', async () => {
+      const { unmount } = renderEditor()
+      await screen.findByRole('button', { name: 'Guardar cambios' })
+      act(() => puckProps.onAction?.({ type: 'remove' }))
+      expect(useEditorSeccionesStore.getState().hayCambiosSinGuardar).toBe(true)
+
+      unmount()
+      expect(useEditorSeccionesStore.getState().hayCambiosSinGuardar).toBe(false)
+      expect(useEditorSeccionesStore.getState().accionGuardar).toBeNull()
+    })
   })
 })

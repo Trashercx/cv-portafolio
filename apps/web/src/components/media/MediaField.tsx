@@ -169,7 +169,7 @@ function SelectorBibliotecaMedia({
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90dvh] overflow-y-auto scrollbar-fina">
           <DialogHeader>
             <DialogTitle>Elegir de la biblioteca</DialogTitle>
           </DialogHeader>
@@ -228,7 +228,7 @@ function GrillaMediaBiblioteca({
   }
 
   return (
-    <div className="grid max-h-96 grid-cols-3 gap-3 overflow-y-auto sm:grid-cols-4">
+    <div className="grid max-h-96 grid-cols-3 gap-3 overflow-y-auto scrollbar-fina sm:grid-cols-4">
       {disponibles.map((item) => (
         <button
           key={item.id}

@@ -95,7 +95,7 @@ function obtenerColorIconoSkill(icono: string): string {
  * `size-10`=40px/`size-5`=20px, `size-14`=56px/`size-7`=28px), aplicados
  * como `style` inline además de (no en reemplazo de) esas clases: fallback
  * defensivo para el iframe de Puck, donde una condición de carrera propia de
- * `@measured/puck` (`AutoFrame couldn't load a stylesheet`) puede dejar el
+ * `@puckeditor/core` (`AutoFrame couldn't load a stylesheet`) puede dejar el
  * mirror de estilos del iframe sin resolver todavía cuando el ícono se
  * pinta — un `style` inline no depende de que cargue ningún stylesheet.
  */

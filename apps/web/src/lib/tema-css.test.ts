@@ -8,11 +8,11 @@ function variablesCss(style: CSSProperties) {
 }
 
 /**
- * Fase 3.4 (UC-08): `fuente_principal` pasó de texto libre a 4 tokens
- * nuevos (ver `features/tema/tema-schema.ts`) que deben resolver a un stack
- * de `font-family` real. Los valores legados (temas ya guardados con
- * 'Inter'/'Poppins'/'Merriweather'/'Georgia') deben seguir funcionando sin
- * cambios (passthrough), para no romper la lectura de temas existentes.
+ * Fase 3.4 (UC-08): `fuente_principal` pasó de texto libre a tokens que
+ * resuelven a un stack de `font-family` real; Fase 7 amplía el catálogo a 10
+ * fuentes (`features/tema/fuentes.ts`). Los valores legados (temas ya
+ * guardados con 'Inter'/'Poppins'/'Merriweather'/'Georgia') se mapean a la
+ * fuente del catálogo más parecida; una clave desconocida pasa cruda.
  */
 describe('temaComoVariablesCss', () => {
   const baseTema = {
@@ -64,13 +64,39 @@ describe('temaComoVariablesCss', () => {
     )
   })
 
-  it('deja pasar un valor legado ("Inter") sin traducirlo, para no romper temas ya guardados', () => {
+  it.each([
+    ['inter', 'Inter Variable'],
+    ['space_grotesk', 'Space Grotesk Variable'],
+    ['sora', 'Sora Variable'],
+    ['dm_sans', 'DM Sans Variable'],
+    ['playfair_display', 'Playfair Display Variable'],
+    ['jetbrains_mono', 'JetBrains Mono Variable'],
+  ])('resuelve la fuente del catálogo "%s" a su familia variable', (clave, familia) => {
     const resultado = temaComoVariablesCss({
       ...baseTema,
-      fuente_principal: 'Inter',
+      fuente_principal: clave,
     })
 
-    expect(resultado.fontFamily).toBe('Inter')
+    expect(resultado.fontFamily).toContain(familia)
+  })
+
+  it('mapea los valores legados a la fuente más parecida del catálogo', () => {
+    const fuente = (clave: string) =>
+      temaComoVariablesCss({ ...baseTema, fuente_principal: clave }).fontFamily
+
+    expect(fuente('Inter')).toContain('Inter Variable')
+    expect(fuente('Poppins')).toContain('DM Sans Variable')
+    expect(fuente('Merriweather')).toContain('serif')
+    expect(fuente('Georgia')).toContain('Georgia')
+  })
+
+  it('deja pasar una clave desconocida sin traducirla', () => {
+    const resultado = temaComoVariablesCss({
+      ...baseTema,
+      fuente_principal: 'Comic Neue',
+    })
+
+    expect(resultado.fontFamily).toBe('Comic Neue')
   })
 })
 

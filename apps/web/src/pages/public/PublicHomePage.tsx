@@ -15,6 +15,7 @@ import { useModoTema } from '@/hooks/useModoTema'
 import { ApiError } from '@/lib/api-client'
 import { recortarDescripcion } from '@/lib/seo'
 import type { HeroConfiguracion } from '@/features/secciones/types'
+import { useFuenteTema } from '@/features/tema/useFuenteTema'
 import { temaComoVariablesCss } from '@/lib/tema-css'
 import { cn } from '@/lib/utils'
 
@@ -46,6 +47,8 @@ import { cn } from '@/lib/utils'
 export function PublicHomePage() {
   const { data: snapshot, isLoading, error } = useSitio()
   const { modo } = useModoTema()
+  // Fase 7 (UC-08): descarga bajo demanda la fuente variable del tema publicado.
+  useFuenteTema(snapshot?.tema?.fuente_principal)
   // Nodo DOM del `<div>` raíz temado, expuesto como estado reactivo (no
   // `useRef`, cuyo `.current` no dispara re-render) para que
   // `ProveedorDetallePublico` pueda pasarlo como `container` del modal de
