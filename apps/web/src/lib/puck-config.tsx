@@ -281,6 +281,7 @@ const selectorMediaField: CustomField<string | undefined> = {
   // en los `custom` el render debe envolverse en `FieldLabel`.
   render: ({ field, name, value, onChange, readOnly }) => (
     <FieldLabel
+      el="div"
       label={field.label ?? name}
       icon={<ImageIcon className="size-4" />}
       readOnly={readOnly}
@@ -303,6 +304,7 @@ const selectorMediaRequeridoField: CustomField<string> = {
   label: 'Imagen (biblioteca de medios)',
   render: ({ field, name, value, onChange, readOnly }) => (
     <FieldLabel
+      el="div"
       label={field.label ?? name}
       icon={<ImageIcon className="size-4" />}
       readOnly={readOnly}
@@ -345,6 +347,7 @@ const listaTextosField: CustomField<string[] | undefined> = {
   // Octava ronda (UC-07): etiqueta visible vía `FieldLabel` (ver arriba).
   render: ({ field, name, value, onChange, readOnly }) => (
     <FieldLabel
+      el="div"
       label={field.label ?? name}
       icon={<ListIcon className="size-4" />}
       readOnly={readOnly}

@@ -146,6 +146,23 @@ export function paletaEfectiva(
   tema: TemaColores,
   modoVisitante: ModoTema,
 ): TemaColores {
-  const modoBase = tema.modo ?? 'claro'
-  return modoVisitante === modoBase ? tema : derivarPaletaInversa(tema)
+  return modoVisitante === modoBaseDelTema(tema) ? tema : derivarPaletaInversa(tema)
+}
+
+/**
+ * Modo base real de un tema. Hasta la octava ronda `Tema.modo` era metadata
+ * inerte, así que puede haber temas guardados con `modo: 'oscuro'` y colores
+ * claros (o al revés). Si el modo declarado contradice la luminosidad del
+ * fondo, manda el color: un fondo con luminosidad HSL < 50 % es base oscura.
+ */
+export function modoBaseDelTema(tema: TemaColores): ModoTema {
+  const declarado = tema.modo ?? 'claro'
+  try {
+    const { r, g, b } = hexARgb(tema.color_fondo)
+    const { l } = rgbAHsl(r, g, b)
+    const porColor: ModoTema = l < 50 ? 'oscuro' : 'claro'
+    return porColor
+  } catch {
+    return declarado
+  }
 }
