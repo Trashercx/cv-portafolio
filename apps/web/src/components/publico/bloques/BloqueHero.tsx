@@ -69,14 +69,14 @@ const CONTENEDOR_DISPOSICION_CLASE: Record<Disposicion, string> = {
 
 /** Bloque de texto (título, rotativos, subtítulo, botones, redes) por disposición. */
 const TEXTOS_DISPOSICION_CLASE: Record<Disposicion, string> = {
-  centrado: 'relative z-10 grid gap-4',
-  dividido: 'relative z-10 grid gap-4',
-  editorial: 'relative z-10 grid gap-6',
+  centrado: 'relative z-10 grid min-w-0 gap-4',
+  dividido: 'relative z-10 grid min-w-0 gap-4',
+  editorial: 'relative z-10 grid min-w-0 gap-6',
 }
 
 /** Título editorial: enorme, apretado y siempre a la izquierda. */
 const TITULO_EDITORIAL_CLASE =
-  'text-6xl font-bold leading-[0.95] tracking-tight text-balance break-words md:text-8xl'
+  'text-6xl font-bold leading-[0.95] tracking-tight text-balance md:text-8xl'
 
 const SUBTITULO_DISPOSICION_CLASE: Record<Disposicion, string> = {
   centrado: 'text-center text-lg',
@@ -354,7 +354,9 @@ export function BloqueHero({
     <div className={TEXTOS_DISPOSICION_CLASE[disposicion]}>
       <h1
         className={cn(
-          'font-bold',
+          // `anywhere` (no `break-words`): también reduce el ancho mínimo, así que un
+          // nombre largo no ensancha la rejilla ni provoca scroll horizontal a 360 px.
+          'font-bold [overflow-wrap:anywhere]',
           disposicion === 'editorial'
             ? TITULO_EDITORIAL_CLASE
             : TAMANO_TITULO_CLASE[config.tamano_titulo ?? 'normal'],
