@@ -103,15 +103,16 @@ En Traefik/Dokploy el health check del router se configura con path `/health`, p
 La CSP resultante (con `API_ORIGIN` y `MEDIA_ORIGIN` ya sustituidos):
 
 ```
-default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';
-img-src 'self' data: blob: https:; font-src 'self' data:;
-connect-src 'self' <API_ORIGIN>; object-src 'self' blob: <MEDIA_ORIGIN>;
+default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://rsms.me;
+img-src 'self' data: blob: https:; font-src 'self' data: https://rsms.me;
+connect-src 'self' <API_ORIGIN> https://cloudflareinsights.com; object-src 'self' blob: <MEDIA_ORIGIN>;
 frame-src 'self' <MEDIA_ORIGIN>; frame-ancestors 'self'; base-uri 'self';
 form-action 'self'; worker-src 'self'; manifest-src 'self'
 ```
 
 Cada directiva está justificada en comentarios dentro del propio snippet. Lo relevante operativamente:
 
+- **Dos terceros admitidos a propósito** (hotfix post-Fase 6): `rsms.me`, porque el CSS de Puck importa la fuente Inter desde ahí y, si el navegador bloquea ese `@import`, Chrome marca la hoja entera como fallida, Vite no puede precargar el CSS del editor y `/admin/editor` cae en el `ErrorBoundary` ("Unable to preload CSS"); y `static.cloudflareinsights.com` / `cloudflareinsights.com`, el beacon de Cloudflare Web Analytics que Cloudflare inyecta al proxear el dominio (si se desactiva Web Analytics en Cloudflare, se puede quitar).
 - **Si una imagen externa no carga**: `img-src` ya admite cualquier `https:`, así que una imagen de S3/CloudFront solo falla si se sirve por `http://` (configurar HTTPS en el bucket/CDN, no relajar la CSP).
 - **Si el PDF del CV no se previsualiza en el panel** (la consola del navegador muestra `Refused to load plugin data from 'https://...' because it violates the following Content Security Policy directive: "object-src ..."`): `MEDIA_ORIGIN` no coincide con el origen real del archivo. Corregir la variable en el panel de Dokploy/Coolify y redesplegar `web` (no hace falta reconstruir la imagen). Como último recurso, dejar `MEDIA_ORIGIN` vacía cae a `https:`.
 - **Si el panel no habla con la API** (`Refused to connect to 'https://api...' because it violates ... "connect-src ..."`): `API_ORIGIN` no coincide con `VITE_API_URL`. Mismo remedio.
