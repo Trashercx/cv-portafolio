@@ -99,7 +99,7 @@ Dos actores: el **Administrador** (tú, usuario único autenticado) y el **Visit
 
 | ID | Caso de uso | Parámetros / campos clave | Criterio de aceptación |
 |---|---|---|---|
-| UC-01 | Iniciar sesión | email, contraseña | Con credenciales válidas se emite un token de sesión; tras 3 intentos fallidos se aplica bloqueo temporal. |
+| UC-01 | Iniciar sesión | email, contraseña | Con credenciales válidas se emite un token de sesión; tras 3 intentos fallidos se aplica bloqueo temporal. Fase 6: además hay límite de intentos por IP (`429`), y `POST /auth/logout` cierra la sesión borrando la cookie aunque el token ya haya vencido; el panel lo usa al pulsar "Cerrar sesión", al cancelar el aviso de expiración y al expirar la sesión. |
 | UC-02 | Gestionar perfil personal | nombre completo, título profesional, resumen/bio, foto de perfil, CV en PDF, ubicación | Los cambios guardados aparecen reflejados en la sección "Sobre mí" del sitio publicado. |
 | UC-03 | Gestionar proyectos | título, descripción, tecnologías, URLs (demo/repositorio), fechas, estado (en_progreso/finalizado/pausado), imágenes, orden, destacado | Un proyecto creado, editado o eliminado se refleja en la lista de proyectos respetando el orden definido. |
 | UC-04 | Gestionar certificaciones | nombre, institución, fecha de emisión/expiración, URL de verificación, logo | Las certificaciones se listan ordenadas por fecha u orden manual, con enlace de verificación funcional. |
@@ -122,6 +122,36 @@ Dos actores: el **Administrador** (tú, usuario único autenticado) y el **Visit
 | UC-12 | Ver el sitio publicado | última versión publicada | El contenido, orden de secciones y tema mostrados corresponden siempre a la última versión publicada, nunca a un borrador. |
 | UC-13 | Ver detalle de un proyecto, certificación o logro | identificador del elemento | Cada proyecto/certificación/logro es accesible individualmente con toda su información e imágenes, desde un modal al hacer click en la home o desde un link directo compartible (`/proyecto/:id`, `/certificacion/:id`, `/logro/:id`). |
 | UC-14 | Acceder a redes y descargar el CV | enlaces de redes, archivo de CV | Los enlaces y la descarga del CV funcionan sin requerir autenticación. |
+
+### Casos de uso propuestos — roadmap de profesionalización (2026-10-13, pendientes de aprobación)
+
+Los UC-19 a UC-34 nacen de la propuesta de la Sección 7 (roadmap). Se listan aquí para que el índice de casos de uso siga siendo la única fuente de verdad, pero **ninguno está aprobado ni implementado**: cada fase del roadmap se aprueba por separado y recién entonces se agregan sus entidades al diagrama ER (vía `db-schema`) y se codifica. La Fase 6 (fundamentos de producción) no agrega casos de uso: refuerza UC-01 (cierre de sesión real, límite de intentos por IP) y UC-12/13 (metadatos SEO, accesibilidad, rendimiento).
+
+#### Actor: Administrador (propuestos)
+
+| ID | Caso de uso | Parámetros / campos clave | Criterio de aceptación |
+|---|---|---|---|
+| UC-19 | Gestionar experiencia laboral y formación | experiencia: empresa, cargo, descripción, fecha inicio/fin o "actual", ubicación, modalidad (presencial/remoto/híbrido), tecnologías, orden; formación: institución, título, área, fecha inicio/fin, descripción | El sitio publicado muestra un bloque "Trayectoria" en línea de tiempo (experiencia y formación intercaladas o en pestañas), ordenado por fecha descendente; un puesto "actual" se muestra sin fecha de fin y con duración calculada. |
+| UC-20 | Redactar casos de estudio de proyectos | por proyecto: slug, contexto/problema, mi rol, proceso, solución, resultados (lista de métricas etiqueta + valor + comparación opcional), aprendizajes, imágenes por sección; texto enriquecido | Un proyecto con caso de estudio tiene página propia `/proyecto/:slug` con las secciones en ese orden y las métricas destacadas al inicio; un proyecto sin caso de estudio conserva el modal actual (UC-13). El texto enriquecido se edita con Tiptap y se guarda como JSON de ProseMirror validado. |
+| UC-21 | Publicar notas técnicas (blog) | título, slug único, resumen, contenido enriquecido, imagen de portada, etiquetas, estado (borrador/publicada), fecha de publicación, tiempo de lectura calculado | Solo las notas publicadas aparecen en `/notas` y `/notas/:slug`; cada nota lleva sus propios metadatos SEO; existe un feed RSS en `/notas.xml`. Las notas **no** pasan por el snapshot del sitio: tienen su propio ciclo borrador/publicada. |
+| UC-22 | Gestionar bandeja de mensajes de contacto | mensaje (nombre, email, asunto, cuerpo, fecha, IP enmascarada), estado (nuevo/leído/archivado), nota interna | El panel lista los mensajes recibidos con filtros por estado; marcar leído/archivar persiste; "Responder" abre `mailto:` con asunto citado; el admin recibe un email por cada mensaje válido. |
+| UC-23 | Gestionar testimonios y recomendaciones | autor, cargo, empresa, texto, foto o logo, enlace (LinkedIn), orden, visible | Un testimonio visible aparece en el bloque "Testimonios" del sitio publicado respetando el orden; los ocultos no viajan en el snapshot. |
+| UC-24 | Declarar disponibilidad y "qué estoy haciendo ahora" | estado (disponible / abierto a propuestas / no disponible), mensaje corto, lista "ahora" (texto + enlace opcional), fecha de actualización automática | El hero muestra un distintivo de disponibilidad con el color correspondiente; el bloque "Ahora" lista los ítems con la fecha "actualizado el …". |
+| UC-25 | Comparar versiones y programar publicación | dos versiones a comparar; fecha/hora de publicación programada | El historial muestra, entre dos versiones, qué secciones/entidades cambiaron (diff legible por humanos, no JSON crudo); una versión programada se publica sola a la hora indicada en la zona horaria configurada, y puede cancelarse antes. Revertir sigue siendo UC-11. |
+| UC-26 | Proteger la cuenta de administrador | contraseña actual/nueva; passkeys (WebAuthn) registradas (nombre, fecha, último uso); sesiones activas; registro de accesos (fecha, IP enmascarada, agente, resultado) | Se puede cambiar la contraseña y registrar al menos una passkey; iniciar sesión con passkey no pide contraseña; "cerrar todas las sesiones" invalida los tokens emitidos; cada login (exitoso o fallido), publicación y cambio de credenciales queda en el registro de auditoría. |
+| UC-27 | Ver métricas del sitio | periodo (7/30/90 días); visitas, visitantes únicos, páginas más vistas, referidos, descargas de CV, clics a redes, países | El panel muestra las métricas del periodo sin cookies ni consentimiento (analítica propia, Umami autoalojado); si el servicio de analítica no responde, el panel lo indica sin romper el resto. |
+| UC-28 | Traducir el contenido (ES/EN) | idioma por defecto; por entidad, los campos traducibles (títulos, descripciones, biografía, textos de bloques) con su valor por idioma | El editor muestra qué campos faltan por traducir; el snapshot publicado contiene ambos idiomas; un campo sin traducción cae al idioma por defecto, nunca queda vacío. |
+| UC-29 | Generar el CV en PDF desde los datos | plantilla (clásica/moderna), secciones incluidas, idioma, nombre de archivo | Al publicar se regenera un PDF del CV coherente con el sitio (perfil, experiencia, formación, proyectos destacados, certificaciones, skills); el admin puede seguir subiendo un PDF propio que tiene prioridad (UC-02); el mismo dato se exporta en formato JSON Resume. |
+
+#### Actor: Visitante (propuestos)
+
+| ID | Caso de uso | Parámetros / campos clave | Criterio de aceptación |
+|---|---|---|---|
+| UC-30 | Enviar un mensaje de contacto | nombre, email, asunto, mensaje; campo señuelo (honeypot) oculto; desafío invisible (Cloudflare Turnstile); tiempo mínimo de llenado | Un mensaje válido muestra confirmación y llega a la bandeja (UC-22); un envío con el señuelo lleno, un desafío inválido, un llenado demasiado rápido o más de N envíos por IP y hora se rechaza sin pista útil para bots; el formulario funciona con teclado y lector de pantalla. |
+| UC-31 | Leer notas técnicas y suscribirse por RSS | slug, etiqueta, feed | Las notas publicadas se leen en `/notas/:slug` con título, fecha, tiempo de lectura, etiquetas y navegación anterior/siguiente; el feed RSS valida y actualiza al publicar. |
+| UC-32 | Ver casos de estudio y trayectoria | slug del proyecto | La página del caso de estudio es legible en móvil, con tabla de contenidos y métricas al inicio; la trayectoria se lee como línea de tiempo con fechas y duraciones. |
+| UC-33 | Cambiar el idioma del sitio | idioma (ES/EN), preferencia recordada | El selector cambia todo el contenido traducido sin recargar; la preferencia se recuerda; las URLs públicas aceptan `?lang=` o prefijo `/en/` para compartir. |
+| UC-34 | Compartir enlaces con vista previa correcta y encontrar el sitio en buscadores | URL pública | Al compartir cualquier URL pública en LinkedIn, WhatsApp o X aparece título, descripción e imagen correctos **sin ejecutar JavaScript** (metadatos inyectados en el servidor); existen `sitemap.xml` y `robots.txt` generados desde el contenido publicado; Lighthouse ≥ 90 en rendimiento, accesibilidad, buenas prácticas y SEO en móvil. |
 
 ## 4. Modelo de datos y diagrama ER
 
@@ -315,6 +345,7 @@ Consideraciones para que el VPS propio quede simple de mantener siendo tú el ú
 - **Contenedores:** un contenedor para el frontend, uno para la API NestJS y uno para PostgreSQL (o Postgres administrado aparte con backups automáticos), orquestados con Docker Compose.
 - **Capa de despliegue:** Dokploy o Coolify sobre el VPS para HTTPS automático, variables de entorno y despliegues disparados por cada push a la rama principal.
 - **Respaldo de base de datos:** tarea programada de `pg_dump` con copia en un bucket S3 (el mismo usado para medios u otro dedicado a backups).
+- **Operación (Fase 6):** la API expone `GET /health` (liveness, sin base de datos) y `GET /health/ready` (readiness con `SELECT 1`), sin autenticación y sin detalle del error en la respuesta; las imágenes Docker llevan `HEALTHCHECK` y Compose espera a que la API esté sana antes de levantar el frontend. La API corre detrás del proxy con `TRUST_PROXY=true` y su puerto solo se publica en loopback.
 - **Variables sensibles:** credenciales de AWS (idealmente un usuario/rol IAM con permisos acotados solo al bucket), secreto JWT y credenciales de Postgres fuera del repositorio, gestionadas como variables de entorno del VPS.
 
 ## 6. Control de versiones y flujo de trabajo (Git + Scrum)
@@ -355,14 +386,45 @@ Si en algún momento corres dos subagentes de código a la vez (por ejemplo `bac
 
 Cada sprint cierra con un resumen de `release-manager`: qué UC quedaron terminados y probados, qué quedó pendiente, y qué decisión necesita tu aprobación antes de arrancar el siguiente. El sprint no avanza hasta que des el visto bueno o pidas ajustes.
 
-## 7. Siguientes pasos sugeridos
+## 7. Roadmap de profesionalización (propuesta del 2026-10-13)
 
-1. Confirmar el detalle de `SECCION.configuracion`: qué tipos de bloque existirán al inicio (hero, sobre mí, proyectos, certificaciones, logros, contacto) y qué parámetros tiene cada uno.
-2. Definir el catálogo inicial de `TECNOLOGIA` y `PLATAFORMA_RED` con los valores que usarás desde el día uno.
-3. Definir la política y estructura de carpetas del bucket S3 (por ejemplo, `perfil/`, `proyectos/`, `certificaciones/`, `backups/`) y sus permisos.
-4. Crear el repositorio en GitHub, activar protección de la rama `main` (exigir Pull Request + checks de GitHub Actions) e instalar Husky + lint-staged en el monorepo.
-5. Diseñar los endpoints de la API (por caso de uso) antes de tocar código, siguiendo la tabla de casos de uso como checklist.
-6. Recién entonces, iniciar la implementación siguiendo los sprints de la sección 6: primero el modelo de datos en Prisma, luego autenticación, luego CRUD de contenido y al final el editor visual.
+Los "siguientes pasos" originales de esta sección (repositorio, Husky, catálogos, endpoints, sprints 0–8) ya se cumplieron; ver `docs/plan-tecnico.md`. Esta sección los reemplaza por el plan para llevar el proyecto de "portafolio funcional" a "producto profesional". Resume la investigación hecha ese día (recomendaciones de reclutadores y revisores de portafolios, checklists de producción para Node/NestJS, prácticas de SEO para SPAs, capacidades típicas de un CMS headless y herramientas de observabilidad/analítica autoalojadas; fuentes al final del documento) cruzada con una auditoría del repositorio.
+
+### 7.1 Qué dice la investigación
+
+- **Lo que convence a quien contrata**: proyectos con demo y repositorio, resultados medibles (casos de estudio con problema → solución → métricas), contacto a un clic, carga rápida y móvil impecable. Los revisores de portafolios reportan que más de un tercio de los sitios no se puede navegar con teclado y que las plantillas genéricas no diferencian; lo que sí diferencia es mostrar el proceso y la especialización.
+- **Lo que define una app de producción**: cabeceras de seguridad (helmet/CSP), límite de peticiones, health checks para el orquestador, apagado ordenado, logs JSON estructurados con id de petición, imágenes Docker sin root y con `HEALTHCHECK`, pruebas e2e y análisis estático en CI, dependencias actualizadas automáticamente.
+- **SEO en una SPA**: los bots de LinkedIn, WhatsApp, X y Slack no ejecutan JavaScript; los metadatos y Open Graph deben llegar en el HTML. Con contenido dinámico (publicación por snapshot) el prerender en build no sirve: hay que inyectar los metadatos en el servidor al pedir una ruta pública, o pasar a SSR (Vike). Se elige la inyección en servidor: mínima, sin cambiar la arquitectura.
+- **Lo que un CMS profesional ofrece y aquí falta**: historial con diff y restauración (hay revertir, no comparar), publicación programada, auditoría de acciones, texto enriquecido, previsualización compartible.
+- **Herramientas**: Umami (MIT, ~400 MB de RAM, sin cookies) para analítica; GlitchTip (compatible con los SDK de Sentry, ligero) para errores; Cloudflare Turnstile + honeypot + límite por IP para el formulario de contacto; `@react-pdf/renderer` para generar el CV en el API sin Chromium; Puck 0.21 (`@puckeditor/core`) trae un campo `richtext` basado en Tiptap, que materializa la decisión pendiente de texto enriquecido sin integrar Tiptap a mano.
+
+### 7.2 Fases
+
+| Fase | Nombre | Objetivo | UC | Criticidad |
+|---|---|---|---|---|
+| 6 | Fundamentos de producción | Seguridad HTTP, rate limiting, health checks, logs, logout real, SEO/a11y/rendimiento básicos, Docker endurecido, CI con e2e + CodeQL + Dependabot, higiene del repo | refuerza UC-01, UC-12, UC-13 | crítica (auth + multi-módulo): PR con revisión y visto bueno |
+| 7 | Visibilidad | Metadatos inyectados en servidor, `sitemap.xml`, imágenes responsive (variantes WebP/AVIF generadas con sharp), presupuestos de Lighthouse en CI, analítica Umami y panel de métricas | UC-27, UC-34 | moderada |
+| 8 | Contenido que vende | Experiencia y formación, casos de estudio con texto enriquecido (migración a Puck 0.21 + `richtext`), testimonios, disponibilidad y "ahora" | UC-19, UC-20, UC-23, UC-24, UC-32 | crítica (esquema) |
+| 9 | Conversación | Formulario de contacto con bandeja y email, notas técnicas con RSS, CV en PDF generado desde los datos | UC-21, UC-22, UC-29, UC-30, UC-31 | crítica (esquema, endpoint público con escritura) |
+| 10 | Panel de nivel producto | Diff de versiones y publicación programada, seguridad de la cuenta (passkeys, cambio de contraseña, sesiones, auditoría), i18n ES/EN, observabilidad (GlitchTip), Playwright e2e y regresión visual | UC-25, UC-26, UC-28, UC-33 | crítica (auth, esquema) |
+
+Cada fase se aprueba con su propio resumen de `release-manager`; el orden puede cambiar según prioridad del usuario (por ejemplo, adelantar la Fase 8 si el objetivo inmediato es buscar empleo).
+
+### 7.3 Cambios de modelo de datos que implicará (solo cuando se apruebe cada fase)
+
+Se mantienen las reglas de la Sección 4 (3FN, nombres en español snake_case, JSONB solo donde la forma es variable por diseño). Entidades y columnas previstas, para que el diagrama ER se amplíe de forma coherente:
+
+- **Fase 7**: `MEDIA_VARIANTE` (media_id, formato `webp|avif|jpeg`, ancho, url, bytes) para las variantes responsive; evita un JSON de variantes en `MEDIA`.
+- **Fase 8**: `EXPERIENCIA_LABORAL`, `EXPERIENCIA_TECNOLOGIA` (reutiliza el catálogo `TECNOLOGIA`), `FORMACION`, `CASO_ESTUDIO` (1:1 con `PROYECTO`, `slug` único, secciones de texto enriquecido como JSONB de ProseMirror: forma variable por diseño), `CASO_ESTUDIO_METRICA`, `TESTIMONIO`, `AHORA_ITEM`; en `PERFIL`: `estado_disponibilidad`, `mensaje_disponibilidad`, `disponibilidad_actualizada_en`.
+- **Fase 9**: `MENSAJE_CONTACTO` (sin IP completa: solo hash/enmascarada), `NOTA`, `ETIQUETA`, `NOTA_ETIQUETA`; en `PERFIL`: `cv_generado_media_id` (el PDF generado se guarda como `MEDIA` para reutilizar S3 y el snapshot).
+- **Fase 10**: `CREDENCIAL_PASSKEY`, `EVENTO_AUDITORIA`, `TRADUCCION` (entidad, entidad_id, campo, idioma, valor; única por los cuatro primeros), en `VERSION_SITIO`: `programada_para`, `publicada_por_programacion`; en `USUARIO_ADMIN`: `sesiones_invalidadas_desde` para "cerrar todas las sesiones" sin tabla de sesiones.
+
+### 7.4 Principios que no cambian
+
+- El sitio público sigue leyendo solo el snapshot publicado; las notas técnicas (UC-21) son la única excepción deliberada porque tienen su propio ciclo editorial.
+- Ningún secreto en código; toda integración nueva (Turnstile, Resend/SMTP, Umami, GlitchTip) se configura por variables de entorno y es opcional: si falta, la funcionalidad se desactiva con un aviso en el panel, nunca rompe el sitio.
+- Un solo render para editor y sitio público (WYSIWYG): cada bloque nuevo (trayectoria, testimonios, ahora, contacto) sigue el camino UC → DTO → tipo → componente → `puck-config` → renderer.
+- Todo cambio de esquema pasa por `db-schema` y actualiza primero el diagrama ER de la Sección 4.
 
 ## Fuentes consultadas
 
@@ -374,3 +436,22 @@ Cada sprint cierra con un resumen de `release-manager`: qué UC quedaron termina
 - [Introserv — Dokploy vs Coolify (2026)](https://introserv.com/blog/dokploy-vs-coolify-complete-comparison-of-the-best-self-hosted-paas-platforms-for-vps-and-dedicated-servers-2026/)
 - [Nestbolt — NestJS File Uploads con miniaturas y S3 (2026)](https://nestbolt.io/blog/file-uploads-nestjs-medialibrary)
 - [npm — multer-sharp-s3](https://www.npmjs.com/package/multer-sharp-s3)
+
+Roadmap de profesionalización (2026-10-13):
+
+- [freeCodeCamp — I reviewed fifty portfolios on Reddit and this is what I learned](https://www.freecodecamp.org/news/i-reviewed-fifty-portfolios-on-reddit-and-this-is-what-i-learned-e5d2b43150bc/)
+- [Josh W. Comeau — Building an effective dev portfolio](https://www.joshwcomeau.com/effective-portfolio)
+- [Hakia — Building a portfolio that gets hired](https://www.hakia.com/skills/building-portfolio/)
+- [DeployWise — Node.js production checklist](https://deploywise.dev/guides/nodejs-production-checklist)
+- [StackHarbor — NestJS production deploy (health checks con Terminus)](https://stackharbor.com/en/knowledge-base/nestjs-production-deploy/)
+- [Till Freitag — Prerendering a React SPA for SEO (metadatos, Open Graph y sitemap)](https://till-freitag.com/en/blog/prerendering-react-spa-seo-en)
+- [Vike — SPA vs SSR](https://vite-plugin-ssr.com/SPA-vs-SSR)
+- [Experro — Content versioning and rollback in a headless CMS](https://www.experro.com/blog/content-versioning-rollback-headless-cms/)
+- [Canadian Web Hosting — Plausible vs Umami self-hosted analytics (2026)](https://blog.canadianwebhosting.com/plausible-vs-umami-self-hosted-analytics-2026/)
+- [SigNoz — Sentry alternatives (GlitchTip, OpenTelemetry)](https://signoz.io/comparisons/sentry-alternatives/)
+- [Build Better Websites — Stop using CAPTCHA (honeypot, time-trap, rate limit, Turnstile)](https://buildbetterwebsites.substack.com/p/stop-using-captcha-heres-how-to-actually)
+- [ResumeLens — Node.js PDF generation: react-pdf vs Puppeteer](https://www.resumelens.org/blog/nodejs/nodejs-pdf-generation)
+- [Puck — Puck 0.21: AI beta, rich text editing (Tiptap) y plugin rail](https://puckeditor.com/blog/puck-021)
+- [Puck — Upgrading to Puck 0.21 (`@puckeditor/core`)](https://puckeditor.com/blog/upgrading-to-puck-021)
+- [Slight Future — Passkeys and WebAuthn in 2026](https://slightfuture.com/security/passwordless-authentication-passkeys-webauthn-2026/)
+- [Schema.org Person en JSON-LD (jsonld.com)](https://jsonld.com/person/)

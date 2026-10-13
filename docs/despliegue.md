@@ -77,6 +77,8 @@ Ambas se sustituyen al arrancar el contenedor (envsubst de la imagen `nginx:alpi
 | `LOG_LEVEL` | `info` | Nivel de los logs JSON (`trace`, `debug`, `info`, `warn`, `error`). `debug` solo para diagnosticar; sube mucho el volumen. |
 | `THROTTLE_TTL_MS` | `60000` | Ventana del rate limiting global, en milisegundos. |
 | `THROTTLE_LIMIT` | `120` | Peticiones máximas por IP dentro de esa ventana (120/min). El login (UC-01) además conserva su bloqueo por intentos fallidos. |
+| `THROTTLE_LOGIN_LIMIT` | `5` | Intentos máximos de `POST /auth/login` por IP dentro de `THROTTLE_LOGIN_TTL_MS` (responde 429). Independiente del bloqueo de cuenta por 3 intentos fallidos. |
+| `THROTTLE_LOGIN_TTL_MS` | `60000` | Ventana del límite del login, en milisegundos. |
 
 Todas van en el panel de variables de Dokploy/Coolify, igual que las de la sección 2.
 
@@ -91,6 +93,8 @@ Todas van en el panel de variables de Dokploy/Coolify, igual que las de la secci
 `web` declara `depends_on: api: condition: service_healthy`: en un despliegue nuevo el frontend no se levanta hasta que `api` ya migró la base de datos y responde `/health`. Si la plataforma muestra `api` como *unhealthy* permanentemente, revisar primero `docker logs` (lo normal es `DATABASE_URL` incorrecta o migración fallida).
 
 En Traefik/Dokploy el health check del router se configura con path `/health`, puerto `3000` (el `PORT` interno), intervalo 30 s.
+
+**Rate limiting y proxy (dos riesgos conocidos).** (1) Con `TRUST_PROXY=true` la API cree en `X-Forwarded-For`; por eso `docker-compose.prod.yml` publica el puerto 3000 solo en `127.0.0.1`. Si se expone a la red, cualquiera podría falsear la IP y saltarse el límite. Si en cambio se deja `TRUST_PROXY=false` detrás de Traefik, todos los visitantes comparten la IP del proxy y el límite global (120/min) y el del login (5/min) se vuelven compartidos: una ráfaga normal daría `429`. (2) El límite del login por IP y el bloqueo de cuenta tras 3 intentos (UC-01) permiten que un tercero mantenga al administrador fuera a base de intentos fallidos; es el mismo vector que ya existía y se acepta para un sitio de un solo administrador. La mitigación definitiva (passkeys) está en la Fase 10 del roadmap.
 
 ### 6.3 Cabeceras de seguridad y CSP de `web`
 
