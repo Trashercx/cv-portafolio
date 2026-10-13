@@ -28,12 +28,12 @@ describe('useSesionExpirando', () => {
     expect(result.current.segundosRestantes).toBe(0)
   })
 
-  it('no muestra el aviso cuando faltan más de 30s para expirar', () => {
+  it('no muestra el aviso cuando faltan más de 60s para expirar', () => {
     useAuthStore.setState({
       admin: {
         email: 'admin@example.com',
         nombre: 'Oscar',
-        expiresAt: new Date(Date.now() + 40_000).toISOString(),
+        expiresAt: new Date(Date.now() + 90_000).toISOString(),
       },
       isAuthenticated: true,
     })
@@ -43,12 +43,12 @@ describe('useSesionExpirando', () => {
     expect(result.current.mostrarAviso).toBe(false)
   })
 
-  it('muestra el aviso apenas quedan 30s o menos para expirar', () => {
+  it('muestra el aviso apenas quedan 60s o menos para expirar', () => {
     useAuthStore.setState({
       admin: {
         email: 'admin@example.com',
         nombre: 'Oscar',
-        expiresAt: new Date(Date.now() + 40_000).toISOString(),
+        expiresAt: new Date(Date.now() + 90_000).toISOString(),
       },
       isAuthenticated: true,
     })
@@ -56,13 +56,13 @@ describe('useSesionExpirando', () => {
     const { result } = renderHook(() => useSesionExpirando())
     expect(result.current.mostrarAviso).toBe(false)
 
-    // Pasan 11s: quedan 29s, por debajo del umbral de 30s.
+    // Pasan 31s: quedan 59s, por debajo del umbral de 60s.
     act(() => {
-      vi.advanceTimersByTime(11_000)
+      vi.advanceTimersByTime(31_000)
     })
 
     expect(result.current.mostrarAviso).toBe(true)
-    expect(result.current.segundosRestantes).toBeLessThanOrEqual(30)
+    expect(result.current.segundosRestantes).toBeLessThanOrEqual(60)
   })
 
   it('el aviso desaparece solo cuando expiresAt se extiende (p. ej. tras un refresh exitoso)', () => {
@@ -70,7 +70,7 @@ describe('useSesionExpirando', () => {
       admin: {
         email: 'admin@example.com',
         nombre: 'Oscar',
-        expiresAt: new Date(Date.now() + 20_000).toISOString(),
+        expiresAt: new Date(Date.now() + 45_000).toISOString(),
       },
       isAuthenticated: true,
     })
@@ -82,7 +82,7 @@ describe('useSesionExpirando', () => {
       useAuthStore.getState().setAdmin({
         email: 'admin@example.com',
         nombre: 'Oscar',
-        expiresAt: new Date(Date.now() + 60_000).toISOString(),
+        expiresAt: new Date(Date.now() + 120_000).toISOString(),
       })
     })
     act(() => {
@@ -90,5 +90,26 @@ describe('useSesionExpirando', () => {
     })
 
     expect(result.current.mostrarAviso).toBe(false)
+  })
+
+  it('marca sesionExpirada solo cuando llegan a 0 los segundos restantes', () => {
+    useAuthStore.setState({
+      admin: {
+        email: 'admin@example.com',
+        nombre: 'Oscar',
+        expiresAt: new Date(Date.now() + 3_000).toISOString(),
+      },
+      isAuthenticated: true,
+    })
+
+    const { result } = renderHook(() => useSesionExpirando())
+    expect(result.current.sesionExpirada).toBe(false)
+
+    act(() => {
+      vi.advanceTimersByTime(3_000)
+    })
+
+    expect(result.current.segundosRestantes).toBe(0)
+    expect(result.current.sesionExpirada).toBe(true)
   })
 })

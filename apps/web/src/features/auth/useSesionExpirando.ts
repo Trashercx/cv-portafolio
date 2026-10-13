@@ -3,13 +3,15 @@ import { useAuthStore } from '@/store/auth-store'
 
 /**
  * A cuántos segundos o menos de `admin.expiresAt` se muestra el aviso de
- * expiración de sesión (Fase 4.4).
+ * expiración de sesión (Fase 4.4). Séptima ronda: sube de 30s a 60s para que
+ * el aviso incluya una cuenta regresiva de 1 minuto antes del cierre
+ * automático de la sesión.
  */
-const UMBRAL_AVISO_SEGUNDOS = 30
+const UMBRAL_AVISO_SEGUNDOS = 60
 
 /**
  * Cada cuánto se recalcula el tiempo restante mientras hay una sesión
- * activa. 1s es preciso de sobra para un umbral de 30s sin recalcular en
+ * activa. 1s es preciso de sobra para un umbral de 60s sin recalcular en
  * cada render.
  */
 const INTERVALO_CHEQUEO_MS = 1000
@@ -25,6 +27,10 @@ function segundosRestantesHasta(expiresAt: string): number {
  * `admin.expiresAt` (del auth store), expone `mostrarAviso: true`. Es
  * puramente por tiempo, no por inactividad — no hay tracking de actividad
  * del usuario en este hook.
+ *
+ * Séptima ronda: además expone `sesionExpirada` (hay sesión y ya no quedan
+ * segundos), que `AvisoSesionExpirando` usa para cerrar la sesión sola sin
+ * esperar a que una petición devuelva 401.
  *
  * Si no hay sesión (`admin` es `null`), no hace nada y no monta timers.
  */
@@ -53,5 +59,8 @@ export function useSesionExpirando() {
     return () => window.clearInterval(intervalId)
   }, [expiresAt])
 
-  return { mostrarAviso, segundosRestantes }
+  const sesionExpirada =
+    expiresAt !== null && segundosRestantes === 0 && mostrarAviso
+
+  return { mostrarAviso, segundosRestantes, sesionExpirada }
 }

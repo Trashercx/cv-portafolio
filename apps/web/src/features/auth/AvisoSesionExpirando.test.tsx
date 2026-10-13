@@ -58,12 +58,12 @@ describe('AvisoSesionExpirando', () => {
     vi.useRealTimers()
   })
 
-  it('no muestra nada mientras falten más de 30s para expirar', () => {
+  it('no muestra nada mientras falten más de 60s para expirar', () => {
     useAuthStore.setState({
       admin: {
         email: 'admin@example.com',
         nombre: 'Oscar',
-        expiresAt: new Date(Date.now() + 60_000).toISOString(),
+        expiresAt: new Date(Date.now() + 90_000).toISOString(),
       },
       isAuthenticated: true,
     })
@@ -73,12 +73,12 @@ describe('AvisoSesionExpirando', () => {
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
   })
 
-  it('muestra el aviso a los 30s o menos y "Seguir conectado" dispara el refresh', () => {
+  it('muestra el aviso a los 60s o menos y "Seguir conectado" dispara el refresh', () => {
     useAuthStore.setState({
       admin: {
         email: 'admin@example.com',
         nombre: 'Oscar',
-        expiresAt: new Date(Date.now() + 20_000).toISOString(),
+        expiresAt: new Date(Date.now() + 45_000).toISOString(),
       },
       isAuthenticated: true,
     })
@@ -100,7 +100,7 @@ describe('AvisoSesionExpirando', () => {
       admin: {
         email: 'admin@example.com',
         nombre: 'Oscar',
-        expiresAt: new Date(Date.now() + 20_000).toISOString(),
+        expiresAt: new Date(Date.now() + 45_000).toISOString(),
       },
       isAuthenticated: true,
     })
@@ -108,7 +108,7 @@ describe('AvisoSesionExpirando', () => {
       useAuthStore.getState().setAdmin({
         email: 'admin@example.com',
         nombre: 'Oscar',
-        expiresAt: new Date(Date.now() + 60_000).toISOString(),
+        expiresAt: new Date(Date.now() + 120_000).toISOString(),
       })
     })
 
@@ -130,7 +130,7 @@ describe('AvisoSesionExpirando', () => {
       admin: {
         email: 'admin@example.com',
         nombre: 'Oscar',
-        expiresAt: new Date(Date.now() + 20_000).toISOString(),
+        expiresAt: new Date(Date.now() + 45_000).toISOString(),
       },
       isAuthenticated: true,
     })
@@ -142,12 +142,12 @@ describe('AvisoSesionExpirando', () => {
     ).toBeDisabled()
   })
 
-  it('"Cerrar sesión" limpia el store y navega al login', () => {
+  it('"Cancelar" limpia el store y navega al login', () => {
     useAuthStore.setState({
       admin: {
         email: 'admin@example.com',
         nombre: 'Oscar',
-        expiresAt: new Date(Date.now() + 20_000).toISOString(),
+        expiresAt: new Date(Date.now() + 45_000).toISOString(),
       },
       isAuthenticated: true,
     })
@@ -155,10 +155,54 @@ describe('AvisoSesionExpirando', () => {
     renderAviso()
     expect(screen.getByRole('alertdialog')).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: /cerrar sesión/i }))
+    fireEvent.click(screen.getByRole('button', { name: /cancelar/i }))
 
     expect(useAuthStore.getState().admin).toBeNull()
     expect(useAuthStore.getState().isAuthenticated).toBe(false)
     expect(navigateMock).toHaveBeenCalledWith('/admin/login', { replace: true })
+  })
+
+  it('muestra el contador m:ss y baja al avanzar el tiempo', () => {
+    useAuthStore.setState({
+      admin: {
+        email: 'admin@example.com',
+        nombre: 'Oscar',
+        expiresAt: new Date(Date.now() + 45_000).toISOString(),
+      },
+      isAuthenticated: true,
+    })
+
+    renderAviso()
+    expect(screen.getByRole('timer')).toHaveTextContent('0:45')
+
+    act(() => {
+      vi.advanceTimersByTime(5_000)
+    })
+
+    expect(screen.getByRole('timer')).toHaveTextContent('0:40')
+  })
+
+  it('al llegar a 0 cierra la sesión sola y navega al login con sesion=expirada', () => {
+    useAuthStore.setState({
+      admin: {
+        email: 'admin@example.com',
+        nombre: 'Oscar',
+        expiresAt: new Date(Date.now() + 3_000).toISOString(),
+      },
+      isAuthenticated: true,
+    })
+
+    renderAviso()
+    expect(navigateMock).not.toHaveBeenCalled()
+
+    act(() => {
+      vi.advanceTimersByTime(3_000)
+    })
+
+    expect(useAuthStore.getState().admin).toBeNull()
+    expect(navigateMock).toHaveBeenCalledTimes(1)
+    expect(navigateMock).toHaveBeenCalledWith('/admin/login?sesion=expirada', {
+      replace: true,
+    })
   })
 })
