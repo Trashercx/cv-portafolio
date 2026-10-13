@@ -29,6 +29,8 @@ export function NoEncontradoPage() {
         titulo="Página no encontrada"
         descripcion="La página que buscas no existe o fue movida."
       />
+      {/* La SPA responde 200: se marca noindex para evitar un soft-404 (Fase 6). */}
+      <meta name="robots" content="noindex" />
       <h1 className="text-3xl font-bold">Página no encontrada</h1>
       <p className="text-muted-foreground">
         La página que buscas no existe o fue movida.
