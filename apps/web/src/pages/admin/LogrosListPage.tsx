@@ -79,7 +79,7 @@ export function LogrosListPage() {
             <TableRow>
               <TableHead className="w-20">Orden</TableHead>
               <TableHead>Título</TableHead>
-              <TableHead>Categoría</TableHead>
+              <TableHead className="hidden md:table-cell">Categoría</TableHead>
               <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
@@ -96,7 +96,7 @@ export function LogrosListPage() {
                   />
                 </TableCell>
                 <TableCell>{logro.titulo}</TableCell>
-                <TableCell>{logro.categoria}</TableCell>
+                <TableCell className="hidden md:table-cell">{logro.categoria}</TableCell>
                 <TableCell className="flex justify-end gap-2">
                   <Button
                     variant="outline"

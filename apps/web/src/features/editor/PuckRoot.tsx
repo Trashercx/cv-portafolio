@@ -8,6 +8,23 @@ import type { ModoTema } from '@/lib/tema-oscuro'
 import { cn } from '@/lib/utils'
 import { leerMetadata } from './useDatosEditor'
 
+/**
+ * Scrollbar fina del documento del iframe (Fase 7, UC-07): el scroll del
+ * lienzo es el de `<html>` DENTRO del iframe, fuera del alcance de
+ * `.scrollbar-fina` del panel. `syncHostStyles` copia al iframe las hojas de
+ * estilo del panel (y por tanto `--border`/`--muted-foreground`, incluida la
+ * variante `html.dark`, cuyo atributo `class` también se sincroniza), pero
+ * `.scrollbar-fina` no aplica al propio `<html>` del iframe, así que la regla
+ * equivalente se inyecta aquí.
+ */
+const ESTILO_SCROLLBAR_IFRAME = `
+  html { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+  html::-webkit-scrollbar { width: 8px; height: 8px; }
+  html::-webkit-scrollbar-track { background: transparent; }
+  html::-webkit-scrollbar-thumb { background-color: var(--border); border-radius: 9999px; }
+  html::-webkit-scrollbar-thumb:hover { background-color: var(--muted-foreground); }
+`
+
 type PuckRootProps = {
   children: ReactNode
   puck: PuckContext
@@ -64,6 +81,7 @@ export function PuckRoot({ children, puck }: PuckRootProps) {
       className={cn('relative min-h-svh', modo === 'oscuro' && 'dark')}
       onClickCapture={handleClickCapture}
     >
+      <style>{ESTILO_SCROLLBAR_IFRAME}</style>
       {datos.fondo ? <FondoAnimado fondo={datos.fondo} /> : null}
       <div className="relative z-10">
         <ProveedorModoRenderizado modo="editor">

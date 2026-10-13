@@ -73,7 +73,7 @@ export function MediaPreview({
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-3xl">
+        <DialogContent className="max-h-[90dvh] overflow-y-auto scrollbar-fina sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>{titulo}</DialogTitle>
           </DialogHeader>

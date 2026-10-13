@@ -556,7 +556,7 @@ export function EditorSeccionesPage() {
   return (
     <div className="-mx-4 -my-4 flex h-[calc(100dvh-3.5rem)] flex-col">
       <Dialog open={historialAbierto} onOpenChange={setHistorialAbierto}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+        <DialogContent className="max-h-[90dvh] overflow-y-auto scrollbar-fina sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>Historial de versiones</DialogTitle>
             <DialogDescription>

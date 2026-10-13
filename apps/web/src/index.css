@@ -320,3 +320,45 @@ html.dark {
     }
   }
 }
+
+/*
+ * Fase 7 (UC-07): scrollbar fina y temada, reutilizable. `scrollbar-width`
+ * no se hereda, por eso la regla cubre también a los descendientes: aplicar
+ * `.scrollbar-fina` al contenedor de un panel de Puck (cuyas clases de CSS
+ * Modules llevan hash y no son estables) alcanza a todos sus paneles con
+ * scroll (rail, plugins, campos, outline, canvas). Los colores salen de los
+ * tokens de shadcn (`--border`, `--muted-foreground`), nunca hardcodeados.
+ * Firefox y Chrome modernos usan las propiedades estándar; los
+ * pseudo-elementos `-webkit-` cubren Safari y Chrome antiguos. Va en
+ * `@layer components` para que utilidades de Tailwind como
+ * `[scrollbar-width:none]` (carrusel de Galería) sigan ganándole.
+ */
+@layer components {
+  .scrollbar-fina,
+  .scrollbar-fina * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  .scrollbar-fina::-webkit-scrollbar,
+  .scrollbar-fina *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .scrollbar-fina::-webkit-scrollbar-track,
+  .scrollbar-fina *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-fina::-webkit-scrollbar-thumb,
+  .scrollbar-fina *::-webkit-scrollbar-thumb {
+    background-color: var(--border);
+    border-radius: 9999px;
+  }
+
+  .scrollbar-fina::-webkit-scrollbar-thumb:hover,
+  .scrollbar-fina *::-webkit-scrollbar-thumb:hover {
+    background-color: var(--muted-foreground);
+  }
+}

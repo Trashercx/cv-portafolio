@@ -95,7 +95,7 @@ export function DialogVistaPrevia({
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">Vista previa</Button>
       </DialogTrigger>
-      <DialogContent className="flex h-[90vh] flex-col sm:max-w-[95vw]">
+      <DialogContent className="flex h-[90dvh] flex-col sm:max-w-[95vw]">
         <DialogHeader>
           <DialogTitle>Vista previa</DialogTitle>
           <DialogDescription>
@@ -115,7 +115,7 @@ export function DialogVistaPrevia({
           artboard independiente (`shadow-sm`), no full-bleed contra el
           modal.
         */}
-        <div className="flex-1 overflow-y-auto rounded-lg border bg-muted p-3">
+        <div className="flex-1 overflow-y-auto scrollbar-fina rounded-lg border bg-muted p-3">
           <div
             ref={setNodoTemado}
             style={

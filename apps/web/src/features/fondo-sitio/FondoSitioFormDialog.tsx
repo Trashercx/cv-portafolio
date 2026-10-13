@@ -117,7 +117,7 @@ export function FondoSitioFormDialog() {
         <DialogTrigger asChild>
           <Button>Nuevo fondo</Button>
         </DialogTrigger>
-        <DialogContent>
+        <DialogContent className="max-h-[90dvh] overflow-y-auto scrollbar-fina">
           <DialogHeader>
             <DialogTitle>Nuevo fondo</DialogTitle>
           </DialogHeader>

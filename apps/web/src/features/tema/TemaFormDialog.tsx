@@ -143,7 +143,7 @@ export function TemaFormDialog() {
         <DialogTrigger asChild>
           <Button>Nuevo tema</Button>
         </DialogTrigger>
-        <DialogContent>
+        <DialogContent className="max-h-[90dvh] overflow-y-auto scrollbar-fina">
           <DialogHeader>
             <DialogTitle>Nuevo tema</DialogTitle>
           </DialogHeader>

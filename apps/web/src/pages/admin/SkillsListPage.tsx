@@ -83,7 +83,7 @@ export function SkillsListPage() {
             <TableRow>
               <TableHead className="w-20">Orden</TableHead>
               <TableHead>Skill</TableHead>
-              <TableHead>Visible</TableHead>
+              <TableHead className="hidden md:table-cell">Visible</TableHead>
               <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
@@ -105,7 +105,7 @@ export function SkillsListPage() {
                     {skill.nombre}
                   </span>
                 </TableCell>
-                <TableCell>{skill.visible ? 'Sí' : 'No'}</TableCell>
+                <TableCell className="hidden md:table-cell">{skill.visible ? 'Sí' : 'No'}</TableCell>
                 <TableCell className="flex justify-end gap-2">
                   <Button
                     variant="outline"

@@ -78,7 +78,7 @@ export function RedesListPage() {
             <TableRow>
               <TableHead className="w-20">Orden</TableHead>
               <TableHead>Plataforma</TableHead>
-              <TableHead>URL</TableHead>
+              <TableHead className="hidden md:table-cell">URL</TableHead>
               <TableHead className="text-right">Acciones</TableHead>
             </TableRow>
           </TableHeader>
@@ -97,7 +97,7 @@ export function RedesListPage() {
                 <TableCell>
                   <PlataformaBadge plataforma={red.plataforma} />
                 </TableCell>
-                <TableCell>
+                <TableCell className="hidden max-w-xs break-all md:table-cell">
                   <a
                     href={red.url}
                     target="_blank"
