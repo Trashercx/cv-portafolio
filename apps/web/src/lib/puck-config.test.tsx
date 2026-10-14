@@ -51,6 +51,7 @@ describe('puckConfig — un bloque por tipo_seccion (Fase 7)', () => {
       expect(campo.allow).not.toContain('columnas')
       expect(campo.allow).not.toContain('navegacion')
       expect(campo.allow).toContain('galeria')
+      expect(campo.allow).toContain('insignias') // Fase 7d (UC-35)
     }
   })
 })
@@ -88,6 +89,19 @@ describe('puckConfig — defaults iguales a los del API (Fase 7)', () => {
     ['skills', { disposicion: 'marquesina', estilo_chip: 'simple' }],
     ['contacto', { estilo: 'simple' }],
     ['galeria', { efecto_hover: 'zoom' }],
+    // Fase 7d (UC-35)
+    [
+      'insignias',
+      {
+        columnas: 'auto',
+        tamano: 'normal',
+        efecto_hover: 'inclinar_brillo',
+        mostrar_emisor: true,
+        mostrar_fecha: true,
+        mostrar_habilidades: false,
+        mostrar_enlace: true,
+      },
+    ],
     [
       'navegacion',
       {
@@ -260,5 +274,25 @@ describe('puckConfig — borde_bloque (Fase 7c, UC-12)', () => {
     expect(normalizada.borde_bloque).toBe('sutil')
     const marcada = normalizarConfiguracion('proyectos', { borde_bloque: 'marcado' })
     expect(marcada.borde_bloque).toBe('marcado')
+  })
+})
+
+describe('puckConfig — bloque insignias (Fase 7d, UC-35)', () => {
+  it('ofrece columnas, tamaño y efecto con los valores del contrato, en español', () => {
+    const { fields } = bloques.insignias
+    expect(fields.columnas.options?.map((o) => o.value)).toEqual(['auto', 2, 3, 4])
+    expect(fields.tamano.options?.map((o) => o.value)).toEqual(['compacto', 'normal', 'grande'])
+    expect(fields.efecto_hover.options?.map((o) => o.value)).toEqual([
+      'inclinar_brillo',
+      'girar',
+      'elevar',
+      'ninguno',
+    ])
+    expect(fields.limite).toMatchObject({ type: 'number', min: 1, max: 50 })
+    expect(fields.mostrar_habilidades.label).toBe('Mostrar habilidades')
+  })
+
+  it('está en la categoría "Contenido"', () => {
+    expect(puckConfig.categories?.contenido?.components).toContain('insignias')
   })
 })
