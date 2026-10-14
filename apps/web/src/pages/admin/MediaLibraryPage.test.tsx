@@ -63,6 +63,21 @@ vi.mock('@/features/media/useMediaLibrary', () => ({
   useRegenerarVariantes: () => ({ mutate: regenerarMutateMock, isPending: false }),
 }))
 
+// Fase 7e (UC-09): carpetas de la biblioteca (hooks simulados).
+const CARPETAS = [
+  { id: 'carpeta-1', nombre: 'Certificados', orden: 0, total: 3 },
+  { id: 'carpeta-2', nombre: 'Imágenes', orden: 1, total: 7 },
+]
+const moverMutateMock = vi.fn()
+vi.mock('@/features/media/useCarpetasMedia', () => ({
+  useCarpetasMedia: () => ({ data: CARPETAS }),
+  useMoverMedia: () => ({ mutate: moverMutateMock, isPending: false }),
+  useCrearCarpeta: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useRenombrarCarpeta: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useReordenarCarpetas: () => ({ mutate: vi.fn(), isPending: false }),
+  useEliminarCarpeta: () => ({ mutate: vi.fn(), isPending: false }),
+}))
+
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn(), warning: vi.fn() } }))
 
 function SondaUrl() {
@@ -358,5 +373,151 @@ describe('MediaLibraryPage (UC-09, Fase 7d)', () => {
     useMediaListMock.mockImplementation(() => ({ data: [], isLoading: false, error: null }))
     renderPagina('/admin/media?q=zzz')
     expect(screen.getByText('Ningún archivo coincide con los filtros.')).toBeInTheDocument()
+  })
+
+  describe('carpetas (Fase 7e, UC-09)', () => {
+    it('lee ?carpeta= de la URL, filtra la lista con carpeta_id y la barra la marca activa', () => {
+      renderPagina('/admin/media?carpeta=carpeta-1')
+      expect(useMediaListMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({ carpeta_id: 'carpeta-1' }),
+      )
+      expect(screen.getByRole('button', { name: /^Certificados/ })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      )
+    })
+
+    it('elegir una carpeta o "Sin carpeta" actualiza la URL; "Todos" la quita', async () => {
+      const user = userEvent.setup()
+      renderPagina()
+      expect(useMediaListMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({ carpeta_id: undefined }),
+      )
+
+      await user.click(screen.getByRole('button', { name: /^Imágenes/ }))
+      expect(screen.getByTestId('url')).toHaveTextContent('?carpeta=carpeta-2')
+
+      await user.click(screen.getByRole('button', { name: 'Sin carpeta' }))
+      expect(screen.getByTestId('url')).toHaveTextContent('?carpeta=ninguna')
+      expect(useMediaListMock).toHaveBeenLastCalledWith(
+        expect.objectContaining({ carpeta_id: 'ninguna' }),
+      )
+
+      await user.click(screen.getByRole('button', { name: 'Todos' }))
+      expect(screen.getByTestId('url')).not.toHaveTextContent('carpeta')
+    })
+
+    it('las subidas caen en la carpeta activa y el panel lo indica ("Subiendo a:")', async () => {
+      const user = userEvent.setup()
+      renderPagina('/admin/media?carpeta=carpeta-1')
+
+      const cola = screen.getByRole('region', { name: 'Cola de subida' })
+      expect(within(cola).getByText('Subiendo a:')).toBeInTheDocument()
+      expect(within(cola).getByRole('combobox')).toHaveTextContent('Certificados')
+
+      await user.upload(screen.getByLabelText('Seleccionar archivos para subir'), archivo('uno.png'))
+      await waitFor(() => expect(XhrFalso.instancias).toHaveLength(1))
+      const formData = XhrFalso.instancias[0].body as FormData
+      expect(formData.get('carpeta_id')).toBe('carpeta-1')
+    })
+
+    it('cambiar el destino en el panel antes de subir sobrescribe la carpeta activa; "Sin carpeta" no envía carpeta_id', async () => {
+      const user = userEvent.setup()
+      renderPagina('/admin/media?carpeta=carpeta-1')
+
+      await user.click(within(screen.getByRole('region', { name: 'Cola de subida' })).getByRole('combobox'))
+      await user.click(screen.getByRole('option', { name: 'Imágenes' }))
+      await user.upload(screen.getByLabelText('Seleccionar archivos para subir'), archivo('a.png'))
+      await waitFor(() => expect(XhrFalso.instancias).toHaveLength(1))
+      expect((XhrFalso.instancias[0].body as FormData).get('carpeta_id')).toBe('carpeta-2')
+
+      await user.click(within(screen.getByRole('region', { name: 'Cola de subida' })).getByRole('combobox'))
+      await user.click(screen.getByRole('option', { name: 'Sin carpeta' }))
+      await user.upload(screen.getByLabelText('Seleccionar archivos para subir'), archivo('b.png'))
+      await waitFor(() => expect(XhrFalso.instancias).toHaveLength(2))
+      expect((XhrFalso.instancias[1].body as FormData).has('carpeta_id')).toBe(false)
+    })
+
+    it('"Mover a…" en modo selección mueve los ids marcados y limpia la selección', async () => {
+      const user = userEvent.setup()
+      moverMutateMock.mockImplementation((_payload, opciones) => opciones.onSuccess())
+      renderPagina()
+
+      await user.click(screen.getByRole('button', { name: 'Seleccionar' }))
+      await user.click(screen.getByRole('checkbox', { name: 'Seleccionar cv.pdf' }))
+      await user.click(screen.getByRole('button', { name: /Mover a/ }))
+      await user.click(await screen.findByRole('menuitem', { name: 'Imágenes' }))
+
+      expect(moverMutateMock).toHaveBeenCalledWith(
+        { ids: [PDF.id], carpeta_id: 'carpeta-2' },
+        expect.any(Object),
+      )
+      // Salió del modo selección.
+      expect(screen.getByRole('button', { name: 'Seleccionar' })).toBeInTheDocument()
+    })
+
+    it('"Mover a…" con "Sin carpeta" envía carpeta_id null y está deshabilitado sin selección', async () => {
+      const user = userEvent.setup()
+      renderPagina()
+      await user.click(screen.getByRole('button', { name: 'Seleccionar' }))
+      expect(screen.getByRole('button', { name: /Mover a/ })).toBeDisabled()
+
+      await user.click(screen.getByRole('button', { name: 'Seleccionar todo lo visible' }))
+      await user.click(screen.getByRole('button', { name: /Mover a/ }))
+      await user.click(await screen.findByRole('menuitem', { name: 'Sin carpeta' }))
+      expect(moverMutateMock).toHaveBeenCalledWith(
+        { ids: [IMAGEN.id, PDF.id], carpeta_id: null },
+        expect.any(Object),
+      )
+    })
+
+    it('las tarjetas son arrastrables y llevan su id; si están seleccionadas arrastran toda la selección', async () => {
+      const user = userEvent.setup()
+      const { container } = renderPagina()
+      const tarjetas = container.querySelectorAll('li[draggable="true"]')
+      expect(tarjetas).toHaveLength(2)
+
+      const datos: Record<string, string> = {}
+      const dataTransfer = {
+        types: [] as string[],
+        setData: (tipo: string, valor: string) => {
+          datos[tipo] = valor
+        },
+      }
+      fireEvent.dragStart(tarjetas[0], { dataTransfer })
+      expect(JSON.parse(datos['application/x-media-ids'])).toEqual([IMAGEN.id])
+
+      await user.click(screen.getByRole('button', { name: 'Seleccionar' }))
+      await user.click(screen.getByRole('button', { name: 'Seleccionar todo lo visible' }))
+      fireEvent.dragStart(tarjetas[1], { dataTransfer })
+      expect(JSON.parse(datos['application/x-media-ids'])).toEqual([IMAGEN.id, PDF.id])
+    })
+
+    it('arrastrar una tarjeta a una carpeta de la barra la mueve', () => {
+      renderPagina()
+      const destino = screen.getByRole('button', { name: /^Imágenes/ }).parentElement as HTMLElement
+      const dataTransfer = {
+        types: ['application/x-media-ids'],
+        getData: () => JSON.stringify([IMAGEN.id]),
+      }
+      fireEvent.dragOver(destino, { dataTransfer })
+      fireEvent.drop(destino, { dataTransfer })
+      expect(moverMutateMock).toHaveBeenCalledWith(
+        { ids: [IMAGEN.id], carpeta_id: 'carpeta-2' },
+        expect.any(Object),
+      )
+    })
+
+    it('la vista lista muestra el nombre de la carpeta de cada archivo', async () => {
+      localStorage.setItem('biblioteca-vista', 'lista')
+      useMediaListMock.mockImplementation(() => ({
+        data: [{ ...IMAGEN, carpeta_id: 'carpeta-1' }, PDF],
+        isLoading: false,
+        error: null,
+      }))
+      renderPagina()
+      expect(screen.getByText(/Carpeta: Certificados/)).toBeInTheDocument()
+      expect(screen.getByText(/Carpeta: Sin carpeta/)).toBeInTheDocument()
+    })
   })
 })
