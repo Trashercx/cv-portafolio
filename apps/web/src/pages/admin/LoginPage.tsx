@@ -117,7 +117,8 @@ function PantallaLogin() {
   const error = clasificarErrorLogin(login.error)
 
   // Tras un error la contraseña se vacía y recibe el foco; el aviso
-  // (`role="alert"`) lo anuncia el lector de pantalla.
+  // (`role="alert"`, asertivo) lo anuncia el lector de pantalla sin `aria-live`
+  // extra. El aviso de sesión expirada es informativo y va con `role="status"`.
   useEffect(() => {
     if (!login.error) return
     resetField('password', { defaultValue: '' })
@@ -125,6 +126,11 @@ function PantallaLogin() {
   }, [login.error, resetField, enfocar])
 
   const onSubmit = (values: LoginFormValues) => {
+    // Fase 7f, UC-01: el chunk de `AdminLayout` se precarga mientras viaja la
+    // petición. Así, al navegar a `/admin`, el `ThemeProvider` del layout monta
+    // de inmediato y no hay un parpadeo en claro entre que este `ThemeProvider`
+    // retira `.dark` al desmontarse y el del layout la vuelve a aplicar.
+    void import('@/components/layout/AdminLayout')
     login.mutate(values, {
       onSuccess: (admin) => {
         guardarEmailRecordado(recordar ? values.email : null)
@@ -226,7 +232,7 @@ function PantallaLogin() {
                   className="grid gap-4"
                 >
                   {error ? (
-                    <Alert variant="destructive" aria-live="polite">
+                    <Alert variant="destructive">
                       {error.tipo === 'bloqueo' ? (
                         <TriangleAlert aria-hidden="true" />
                       ) : (
@@ -247,7 +253,7 @@ function PantallaLogin() {
                       </AlertDescription>
                     </Alert>
                   ) : sesionExpirada ? (
-                    <Alert aria-live="polite">
+                    <Alert role="status">
                       <Info aria-hidden="true" />
                       <AlertDescription>
                         <p>Tu sesión expiró. Inicia sesión de nuevo.</p>

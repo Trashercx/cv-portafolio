@@ -300,9 +300,11 @@ describe('LoginPage', () => {
   it('sesión expirada muestra el aviso informativo', () => {
     renderLoginPage('/admin/login?sesion=expirada')
 
-    expect(screen.getByRole('alert')).toHaveTextContent(
+    // Aviso informativo: `role="status"` (cortés), no `alert` (asertivo).
+    expect(screen.getByRole('status')).toHaveTextContent(
       'Tu sesión expiró. Inicia sesión de nuevo.',
     )
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
   it('durante el envío deshabilita los campos y muestra "Ingresando…"', () => {
