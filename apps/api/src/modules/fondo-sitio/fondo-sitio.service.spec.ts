@@ -43,7 +43,7 @@ describe('FondoSitioService (UC-15 Configurar fondo animado del sitio)', () => {
   });
 
   const dtoBase = {
-    tipo: 'aurora_animada' as const,
+    tipo: 'aurora_mesh' as const,
     configuracion: { velocidad: 'media' as const, opacidad: 0.5 },
   };
 

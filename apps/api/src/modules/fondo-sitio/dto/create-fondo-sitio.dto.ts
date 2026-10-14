@@ -3,8 +3,30 @@ import { IsIn, ValidateNested } from 'class-validator';
 import { FondoSitioConfiguracionDto } from './fondo-sitio-configuracion.dto';
 
 /**
+ * Catálogo de fondos (Fase 7b, UC-15 ext.). Única lista en el API; replica
+ * las claves de `apps/web/src/features/fondo-sitio/catalogo-fondos.ts`.
+ * Reemplaza a los 8 tipos anteriores (migración de datos
+ * `fondo_sitio_tipos_fase_7b`; mapa de reemplazo en docs/plan-tecnico.md,
+ * "Fase 7b"). Los tipos antiguos ya no se aceptan (400).
+ */
+export const TIPOS_FONDO = [
+  'solido',
+  'aurora_mesh',
+  'malla_puntos',
+  'rejilla_perspectiva',
+  'particulas_red',
+  'ondas_fluidas',
+  'haces_luz',
+  'degradado_grano',
+  'campo_estrellas',
+] as const;
+
+export type TipoFondo = (typeof TIPOS_FONDO)[number];
+
+/**
  * UC-15 (Configurar fondo animado del sitio) — campos exactos según
- * docs/plan-portafolio.md: tipo, configuracion (velocidad, opacidad), activo.
+ * docs/plan-portafolio.md: tipo, configuracion (velocidad, opacidad y, desde
+ * la Fase 7b, intensidad e interactivo opcionales), activo.
  *
  * `activo` NO forma parte de este DTO a propósito: un fondo siempre se crea
  * inactivo (`activo: false` por default en el esquema); la única forma de
@@ -12,32 +34,10 @@ import { FondoSitioConfiguracionDto } from './fondo-sitio-configuracion.dto';
  * negocio de exclusividad (un solo fondo activo por administrador) dentro de
  * una transacción. Aceptar `activo` aquí permitiría saltarse esa regla.
  * Mismo criterio que `CreateTemaDto`, ver su comentario.
- *
- * `'ondas'`/`'malla_difusa'`/`'lineas_diagonales'` (Fase 3.4) son 3 tipos
- * nuevos que se suman a los 5 originales de UC-15; comparten
- * `FondoSitioConfiguracionDto` (`velocidad`/`opacidad`) con los demás, sin
- * parámetros propios.
  */
 export class CreateFondoSitioDto {
-  @IsIn([
-    'solido',
-    'degradado_animado',
-    'aurora_animada',
-    'particulas',
-    'cuadricula_animada',
-    'ondas',
-    'malla_difusa',
-    'lineas_diagonales',
-  ])
-  tipo:
-    | 'solido'
-    | 'degradado_animado'
-    | 'aurora_animada'
-    | 'particulas'
-    | 'cuadricula_animada'
-    | 'ondas'
-    | 'malla_difusa'
-    | 'lineas_diagonales';
+  @IsIn(TIPOS_FONDO)
+  tipo: TipoFondo;
 
   @ValidateNested()
   @Type(() => FondoSitioConfiguracionDto)
