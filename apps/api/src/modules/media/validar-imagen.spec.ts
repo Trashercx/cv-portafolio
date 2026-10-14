@@ -94,6 +94,16 @@ describe('esHeicPorContenido (Fase 7g, UC-09)', () => {
     ]);
     expect(esHeicPorContenido(avif)).toBe(false);
   });
+  it('AVIF con marca mayor mif1 y compatible avif no cuenta como HEIC', () => {
+    const avif = Buffer.concat([
+      Buffer.from([0, 0, 0, 24]),
+      Buffer.from('ftypmif1'),
+      Buffer.alloc(4),
+      Buffer.from('mif1'),
+      Buffer.from('avif'),
+    ]);
+    expect(esHeicPorContenido(avif)).toBe(false);
+  });
   it('PNG, vacío y corto dan false', async () => {
     const png = await sharp({
       create: { width: 2, height: 2, channels: 3, background: '#fff' },
