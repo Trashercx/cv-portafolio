@@ -113,7 +113,10 @@ export class CarpetasMediaService {
   async mover(usuarioAdminId: string, dto: MoverMediaDto) {
     if (dto.carpeta_id) await this.obtener(usuarioAdminId, dto.carpeta_id);
     const { count } = await this.prisma.media.updateMany({
-      where: { id: { in: [...new Set(dto.ids)] } },
+      where: {
+        id: { in: [...new Set(dto.ids)] },
+        usuario_admin_id: usuarioAdminId,
+      },
       data: { carpeta_id: dto.carpeta_id },
     });
     return { movidos: count };

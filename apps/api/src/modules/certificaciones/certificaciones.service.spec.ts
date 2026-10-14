@@ -96,4 +96,40 @@ describe('CertificacionesService (UC-04 Gestionar certificaciones)', () => {
       },
     });
   });
+
+  describe('fecha_expiracion (Fase 7e, "No expira")', () => {
+    beforeEach(() => {
+      prisma.certificacion.findUnique.mockResolvedValue({ id: 'c1' });
+      prisma.certificacion.update.mockResolvedValue({ id: 'c1' });
+    });
+
+    it('actualizar con null limpia la columna', async () => {
+      await service.actualizar('c1', { fecha_expiracion: null });
+      expect(prisma.certificacion.update).toHaveBeenCalledWith({
+        where: { id: 'c1' },
+        data: expect.objectContaining({ fecha_expiracion: null }),
+      });
+    });
+
+    it('actualizar con undefined no toca la columna', async () => {
+      await service.actualizar('c1', { nombre: 'X' });
+      const { data } = prisma.certificacion.update.mock.calls[0][0];
+      expect(data.fecha_expiracion).toBeUndefined();
+    });
+
+    it('crear con null guarda null', async () => {
+      prisma.certificacion.create.mockResolvedValue({ id: 'c1' });
+      await service.crear('admin', {
+        nombre: 'N',
+        institucion: 'I',
+        fecha_emision: '2024-01-01',
+        fecha_expiracion: null,
+        url_verificacion: 'https://x.example.com',
+        orden: 1,
+      });
+      expect(prisma.certificacion.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ fecha_expiracion: null }),
+      });
+    });
+  });
 });

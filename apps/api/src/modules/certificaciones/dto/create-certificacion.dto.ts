@@ -33,10 +33,10 @@ export class CreateCertificacionDto {
    * Debe ser estrictamente posterior a `fecha_emision` (no puede expirar
    * el mismo día que se emite).
    */
-  @IsOptional()
+  @IsOptional() // null = "No expira" (Fase 7e): IsOptional omite el resto de validadores
   @EsFechaIso()
   @EsPosteriorA('fecha_emision')
-  fecha_expiracion?: string;
+  fecha_expiracion?: string | null;
 
   @IsUrl({ require_tld: false })
   url_verificacion: string;

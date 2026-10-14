@@ -23,6 +23,15 @@ const ORDEN_CERTIFICACIONES = [
   { fecha_emision: 'desc' as const },
 ];
 
+/**
+ * Fase 7e: `null` = "No expira" (limpia la columna); `undefined` = sin
+ * cambios; string = nueva fecha.
+ */
+function aFechaExpiracion(valor?: string | null): Date | null | undefined {
+  if (valor === null) return null;
+  return valor ? new Date(valor) : undefined;
+}
+
 @Injectable()
 export class CertificacionesService {
   constructor(private readonly prisma: PrismaService) {}
@@ -72,9 +81,7 @@ export class CertificacionesService {
         usuario_admin_id: usuarioAdminId,
         ...dto,
         fecha_emision: new Date(dto.fecha_emision),
-        fecha_expiracion: dto.fecha_expiracion
-          ? new Date(dto.fecha_expiracion)
-          : undefined,
+        fecha_expiracion: aFechaExpiracion(dto.fecha_expiracion),
       },
     });
   }
@@ -90,9 +97,7 @@ export class CertificacionesService {
         fecha_emision: dto.fecha_emision
           ? new Date(dto.fecha_emision)
           : undefined,
-        fecha_expiracion: dto.fecha_expiracion
-          ? new Date(dto.fecha_expiracion)
-          : undefined,
+        fecha_expiracion: aFechaExpiracion(dto.fecha_expiracion),
       },
     });
   }

@@ -63,7 +63,7 @@ export class MediaService {
     usuarioAdminId: string,
   ) {
     await normalizarImagen(file);
-    await this.asegurarCarpeta(dto.carpeta_id);
+    await this.asegurarCarpeta(usuarioAdminId, dto.carpeta_id);
     const resultado = await this.storage.upload(file, dto.carpeta);
 
     const creada = await this.prisma.media.create({
@@ -219,12 +219,13 @@ export class MediaService {
   async reemplazar(
     id: string,
     file: Express.Multer.File,
-    carpeta?: string,
-    carpetaId?: string,
+    carpeta: string | undefined,
+    carpetaId: string | null | undefined,
+    usuarioAdminId: string,
   ) {
     await this.obtener(id);
     await normalizarImagen(file);
-    await this.asegurarCarpeta(carpetaId);
+    await this.asegurarCarpeta(usuarioAdminId, carpetaId);
 
     const resultado = await this.storage.upload(file, carpeta);
 
@@ -236,7 +237,8 @@ export class MediaService {
         tipo: inferirTipo(file.mimetype),
         ancho: resultado.width,
         alto: resultado.height,
-        ...(carpetaId ? { carpeta_id: carpetaId } : {}),
+        // null = dejar sin carpeta; undefined = no tocar
+        ...(carpetaId !== undefined ? { carpeta_id: carpetaId } : {}),
       },
     });
 
@@ -311,10 +313,13 @@ export class MediaService {
   }
 
   /** Fase 7e (UC-09): 404 si la carpeta indicada no existe. */
-  private async asegurarCarpeta(carpetaId?: string) {
+  private async asegurarCarpeta(
+    usuarioAdminId: string,
+    carpetaId?: string | null,
+  ) {
     if (!carpetaId) return;
-    const carpeta = await this.prisma.carpetaMedia.findUnique({
-      where: { id: carpetaId },
+    const carpeta = await this.prisma.carpetaMedia.findFirst({
+      where: { id: carpetaId, usuario_admin_id: usuarioAdminId },
       select: { id: true },
     });
     if (!carpeta) {

@@ -138,7 +138,7 @@ describe('CarpetasMediaService (Fase 7e, UC-09)', () => {
       service.mover(ADMIN, { ids: ['m1', 'm2'], carpeta_id: null }),
     ).resolves.toEqual({ movidos: 2 });
     expect(prisma.media.updateMany).toHaveBeenCalledWith({
-      where: { id: { in: ['m1', 'm2'] } },
+      where: { id: { in: ['m1', 'm2'] }, usuario_admin_id: ADMIN },
       data: { carpeta_id: null },
     });
   });

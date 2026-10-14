@@ -1,4 +1,4 @@
-import { IsIn, IsOptional, IsUUID } from 'class-validator';
+import { IsIn, IsOptional, IsUUID, ValidateIf } from 'class-validator';
 import { CARPETAS_MEDIA } from './create-media.dto';
 
 /**
@@ -14,7 +14,8 @@ export class ReemplazarMediaDto {
   carpeta?: (typeof CARPETAS_MEDIA)[number];
 
   /** Fase 7e (UC-09): mueve el archivo a esta carpeta de la biblioteca. */
+  @ValidateIf((o: ReemplazarMediaDto) => o.carpeta_id !== null)
   @IsOptional()
   @IsUUID('4')
-  carpeta_id?: string;
+  carpeta_id?: string | null;
 }
