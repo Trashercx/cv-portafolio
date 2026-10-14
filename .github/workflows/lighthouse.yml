@@ -1,0 +1,95 @@
+name: Lighthouse CI
+
+# Fase 8 (UC-34) — presupuestos de calidad del sitio público. Construye
+# apps/web contra una API SIMULADA (apps/web/scripts/api-simulada.mjs, que
+# sirve el snapshot de apps/web/scripts/fixtures/sitio-demo.json), la sirve
+# con `vite preview` y corre Lighthouse (preset móvil, 3 corridas, mediana)
+# sobre la home y el detalle de un proyecto. Falla el PR si rendimiento,
+# buenas prácticas o SEO bajan de 0.90 o accesibilidad de 0.95
+# (apps/web/lighthouserc.json). Los informes HTML quedan como artefacto del
+# run; nada se sube a almacenamiento público (el repo es privado).
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# Igual que ci.yml: en PRs se cancela el run anterior todavía en curso; en
+# main no (cada push conserva su medición).
+concurrency:
+  group: lighthouse-${{ github.event_name == 'push' && github.sha || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+
+      # El JS del sitio pide los datos al origen incrustado en VITE_API_URL
+      # (Vite lo fija en tiempo de build): aquí es la API simulada local.
+      - name: Build de apps/web contra la API simulada
+        run: npm run build --workspace apps/web
+        env:
+          VITE_API_URL: http://127.0.0.1:4010
+
+      # En producción nginx hace proxy de /robots.txt al API y cae al
+      # estático si falla; `vite preview` no tiene ese proxy y devolvería el
+      # index.html (la auditoría "robots.txt is valid" fallaría). Se copia el
+      # respaldo estático al nombre real para reproducir el caso de fallback.
+      - name: robots.txt de respaldo para el preview
+        run: cp apps/web/public/robots.estatico.txt apps/web/dist/robots.txt
+
+      # API simulada (:4010) y preview estático (:4173) en segundo plano. Los
+      # `&` dejan los procesos vivos durante el resto del job; la espera
+      # activa evita que Lighthouse arranque antes de que respondan.
+      - name: Levantar API simulada y vite preview
+        working-directory: apps/web
+        run: |
+          node scripts/api-simulada.mjs > /tmp/api-simulada.log 2>&1 &
+          npx vite preview --port 4173 --strictPort --host 127.0.0.1 > /tmp/vite-preview.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:4010/health > /dev/null && curl -fsS http://127.0.0.1:4173/ > /dev/null; then
+              echo "API simulada y preview listos (intento $i)"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::La API simulada o vite preview no respondieron a tiempo"
+          cat /tmp/api-simulada.log /tmp/vite-preview.log
+          exit 1
+
+      # Comprobación rápida de que el sitio tiene contenido real que medir
+      # (si /sitio fallara, Lighthouse mediría una página vacía con buen
+      # puntaje y el presupuesto no serviría de nada).
+      - name: Verificar que el snapshot simulado responde
+        run: |
+          curl -fsS http://127.0.0.1:4010/sitio | node -e '
+            let d=""; process.stdin.on("data",c=>d+=c).on("end",()=>{
+              const s=JSON.parse(d);
+              if(!s.perfil||!s.secciones.length||!s.proyectos.length) { console.error("snapshot incompleto"); process.exit(1); }
+              console.log(`perfil=${s.perfil.nombre_completo} secciones=${s.secciones.length} proyectos=${s.proyectos.length}`);
+            })'
+
+      - name: Lighthouse CI
+        uses: treosh/lighthouse-ci-action@v12
+        with:
+          configPath: apps/web/lighthouserc.json
+          uploadArtifacts: true
+          temporaryPublicStorage: false
+          artifactName: lighthouse-informes
+
+      - name: Logs de los servidores (solo si algo falló)
+        if: failure()
+        run: |
+          echo "--- api-simulada"; cat /tmp/api-simulada.log || true
+          echo "--- vite preview"; cat /tmp/vite-preview.log || true
