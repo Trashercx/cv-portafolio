@@ -8,6 +8,12 @@ import { LocalMediaStorageService } from '../src/modules/media/storage/local-med
 import { MEDIA_STORAGE_SERVICE } from '../src/modules/media/storage/media-storage.interface';
 import { agenteAutenticado, crearAppDePrueba } from './utils/test-app';
 
+/** PNG 1x1 real: la subida de imágenes valida el contenido (Fase 7d). */
+const PNG_1X1 = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+  'base64',
+);
+
 /**
  * Módulo `media` (UC-02/UC-03/UC-04 dependen de él como FK; biblioteca
  * completa es UC-09, Sprint 3). El provider por defecto de `MediaModule` es
@@ -82,7 +88,7 @@ describe('Media admin (e2e, UC-02/UC-03/UC-04 + biblioteca UC-09)', () => {
       .post('/admin/media')
       .field('alt_text', 'Foto de prueba e2e')
       .field('tipo', 'imagen')
-      .attach('file', Buffer.from('contenido de prueba e2e'), 'foto.png')
+      .attach('file', PNG_1X1, 'foto.png')
       .expect(201);
 
     expect(respuesta.body).toMatchObject({
@@ -129,7 +135,7 @@ describe('Media admin (e2e, UC-02/UC-03/UC-04 + biblioteca UC-09)', () => {
       const subida = await agent
         .post('/admin/media')
         .field('tipo', 'imagen')
-        .attach('file', Buffer.from('imagen biblioteca'), 'biblioteca.png')
+        .attach('file', PNG_1X1, 'biblioteca.png')
         .expect(201);
       idsCreados.push(subida.body.id);
       keysCreadas.push(subida.body.s3_key);
@@ -154,7 +160,7 @@ describe('Media admin (e2e, UC-02/UC-03/UC-04 + biblioteca UC-09)', () => {
     it('PATCH /admin/media/:id edita el alt_text', async () => {
       const subida = await agent
         .post('/admin/media')
-        .attach('file', Buffer.from('editable'), 'editable.png')
+        .attach('file', PNG_1X1, 'editable.png')
         .expect(201);
       idsCreados.push(subida.body.id);
       keysCreadas.push(subida.body.s3_key);
@@ -170,7 +176,7 @@ describe('Media admin (e2e, UC-02/UC-03/UC-04 + biblioteca UC-09)', () => {
     it('PATCH /admin/media/:id rechaza campos fuera del DTO', async () => {
       const subida = await agent
         .post('/admin/media')
-        .attach('file', Buffer.from('rechazo'), 'rechazo.png')
+        .attach('file', PNG_1X1, 'rechazo.png')
         .expect(201);
       idsCreados.push(subida.body.id);
       keysCreadas.push(subida.body.s3_key);
@@ -184,7 +190,7 @@ describe('Media admin (e2e, UC-02/UC-03/UC-04 + biblioteca UC-09)', () => {
     it('DELETE /admin/media/:id borra un archivo que no está en uso', async () => {
       const subida = await agent
         .post('/admin/media')
-        .attach('file', Buffer.from('borrable'), 'borrable.png')
+        .attach('file', PNG_1X1, 'borrable.png')
         .expect(201);
       keysCreadas.push(subida.body.s3_key);
 
@@ -203,7 +209,7 @@ describe('Media admin (e2e, UC-02/UC-03/UC-04 + biblioteca UC-09)', () => {
 
       const subida = await agent
         .post('/admin/media')
-        .attach('file', Buffer.from('en-uso'), 'en-uso.png')
+        .attach('file', PNG_1X1, 'en-uso.png')
         .expect(201);
       idsCreados.push(subida.body.id);
       keysCreadas.push(subida.body.s3_key);
@@ -235,14 +241,14 @@ describe('Media admin (e2e, UC-02/UC-03/UC-04 + biblioteca UC-09)', () => {
     it('PATCH /admin/media/:id/reemplazar mantiene el mismo id y actualiza url/s3_key', async () => {
       const subida = await agent
         .post('/admin/media')
-        .attach('file', Buffer.from('version original'), 'original.png')
+        .attach('file', PNG_1X1, 'original.png')
         .expect(201);
       idsCreados.push(subida.body.id);
       keysCreadas.push(subida.body.s3_key);
 
       const reemplazo = await agent
         .patch(`/admin/media/${subida.body.id}/reemplazar`)
-        .attach('file', Buffer.from('version nueva'), 'nueva.png')
+        .attach('file', PNG_1X1, 'nueva.png')
         .expect(200);
 
       expect(reemplazo.body.id).toBe(subida.body.id);
@@ -258,7 +264,7 @@ describe('Media admin (e2e, UC-02/UC-03/UC-04 + biblioteca UC-09)', () => {
     it('PATCH /admin/media/:id/reemplazar sin archivo responde 400', async () => {
       const subida = await agent
         .post('/admin/media')
-        .attach('file', Buffer.from('sin-reemplazo'), 'sin-reemplazo.png')
+        .attach('file', PNG_1X1, 'sin-reemplazo.png')
         .expect(201);
       idsCreados.push(subida.body.id);
       keysCreadas.push(subida.body.s3_key);
@@ -391,12 +397,38 @@ describe('Media admin (e2e, UC-02/UC-03/UC-04 + biblioteca UC-09)', () => {
     });
   });
 
+  it('POST /admin/media valida la imagen por contenido (Fase 7d): texto con MIME falso y SVG con script son 400', async () => {
+    await agent
+      .post('/admin/media')
+      .attach('file', Buffer.from('no soy un png'), {
+        filename: 'falso.png',
+        contentType: 'image/png',
+      })
+      .expect(400);
+    await agent
+      .post('/admin/media')
+      .attach(
+        'file',
+        Buffer.from(
+          '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>',
+        ),
+        { filename: 'malo.svg', contentType: 'image/svg+xml' },
+      )
+      .expect(400);
+  });
+
   describe('búsqueda, usos y borrado en lote (Fase 7d, UC-09)', () => {
     const subir = async (alt: string, nombre: string) => {
       const r = await agent
         .post('/admin/media')
         .field('alt_text', alt)
-        .attach('file', Buffer.from(`contenido ${nombre}`), nombre)
+        .attach(
+          'file',
+          nombre.endsWith('.png')
+            ? PNG_1X1
+            : Buffer.from(`contenido ${nombre}`),
+          nombre,
+        )
         .expect(201);
       idsCreados.push(r.body.id);
       keysCreadas.push(r.body.s3_key);

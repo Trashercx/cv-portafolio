@@ -1,5 +1,6 @@
 import { lookup } from 'dns/promises';
 import { isIP } from 'net';
+import { Agent } from 'undici';
 
 /**
  * Descarga remota segura (Fase 7d, 7d.2, UC-35). El endpoint de importación
@@ -7,7 +8,8 @@ import { isIP } from 'net';
  * es un vector de SSRF: toda descarga de `modules/insignias` pasa por
  * `descargarRecursoSeguro`, que:
  *
- * - acepta solo `https:` y rechaza credenciales embebidas en la URL;
+ * - acepta solo `https:` en el puerto 443 (o sin puerto) y rechaza
+ *   credenciales embebidas en la URL;
  * - resuelve el nombre con `dns.lookup({ all: true })` y rechaza el destino si
  *   CUALQUIER dirección es privada, loopback, link-local, de metadata (v4 y
  *   v6, ver `esIpPrivada`);
@@ -17,11 +19,12 @@ import { isIP } from 'net';
  * - limita el tiempo total (`AbortController`) y el tamaño (corta la lectura
  *   del stream al superar `maxBytes`).
  *
- * Limitación conocida: entre `lookup` y la conexión de `fetch` existe una
- * ventana mínima (DNS rebinding) porque `fetch` vuelve a resolver el nombre;
- * se acepta porque el administrador es el único usuario autenticado, la
- * ruta lleva throttling y los demás controles (https, redirecciones
- * revalidadas, tipos, tamaño) siguen vigentes.
+ * Anti DNS rebinding: la IP que se valida es la IP a la que se conecta. Cada
+ * petición usa un `Agent` de undici cuyo `connect.lookup` devuelve
+ * EXACTAMENTE las direcciones ya validadas (nunca vuelve a resolver el
+ * nombre), de modo que un servidor DNS malicioso no puede cambiar la
+ * respuesta entre la validación y la conexión. TLS sigue verificando el
+ * certificado contra el nombre original.
  */
 
 export const USER_AGENT_INSIGNIAS = 'cv-portafolio-insignias/1.0';
@@ -57,6 +60,12 @@ export interface RecursoDescargado {
 // ---------------------------------------------------------------------------
 // Rangos de IP bloqueados
 // ---------------------------------------------------------------------------
+
+/** Dirección ya validada, usada para fijar la conexión. */
+interface DireccionValidada {
+  address: string;
+  family: 4 | 6;
+}
 
 function esV4Privada(a: number, b: number): boolean {
   return (
@@ -146,6 +155,12 @@ export function esIpPrivada(ip: string): boolean {
     ) {
       return esV4Privada(g6 >> 8, g6 & 0xff);
     }
+    // ::/96 (IPv4-compatible, obsoleto, p. ej. ::7f00:1): se bloquea el rango.
+    if (g.slice(0, 6).every((x) => x === 0)) return true;
+    // 6to4 (2002::/16): la v4 embebida (g1:g2) manda.
+    if (g0 === 0x2002) return esV4Privada(g1 >> 8, g1 & 0xff);
+    // Teredo (2001:0000::/32): se bloquea el rango (embebe v4 de servidor y cliente).
+    if (g0 === 0x2001 && g1 === 0) return true;
     if ((g0 & 0xfe00) === 0xfc00) return true; // fc00::/7 (ULA)
     if ((g0 & 0xffc0) === 0xfe80) return true; // fe80::/10 (link-local)
     if ((g0 & 0xff00) === 0xff00) return true; // ff00::/8 (multicast)
@@ -158,12 +173,19 @@ export function esIpPrivada(ip: string): boolean {
 // Descarga
 // ---------------------------------------------------------------------------
 
-async function validarDestino(url: URL): Promise<void> {
+/**
+ * Valida el destino y devuelve las direcciones a las que SÍ se puede conectar
+ * (las que se fijarán en el `Agent`).
+ */
+async function validarDestino(url: URL): Promise<DireccionValidada[]> {
   if (url.protocol !== 'https:') {
     throw new RedSeguraError('Solo se permiten enlaces https');
   }
   if (url.username || url.password) {
     throw new RedSeguraError('El enlace no puede incluir credenciales');
+  }
+  if (url.port !== '' && url.port !== '443') {
+    throw new RedSeguraError('Solo se permite el puerto 443');
   }
   // URL.hostname deja los corchetes de IPv6 literales.
   const host = url.hostname.replace(/^\[|\]$/g, '');
@@ -173,10 +195,10 @@ async function validarDestino(url: URL): Promise<void> {
     if (esIpPrivada(host)) {
       throw new RedSeguraError('El destino no está permitido (red privada)');
     }
-    return;
+    return [{ address: host, family: isIP(host) === 6 ? 6 : 4 }];
   }
 
-  let direcciones: { address: string }[];
+  let direcciones: { address: string; family: number }[];
   try {
     direcciones = await lookup(host, { all: true });
   } catch {
@@ -188,6 +210,36 @@ async function validarDestino(url: URL): Promise<void> {
   if (direcciones.some((d) => esIpPrivada(d.address))) {
     throw new RedSeguraError('El destino no está permitido (red privada)');
   }
+  return direcciones.map((d) => ({
+    address: d.address,
+    family: d.family === 6 ? 6 : 4,
+  }));
+}
+
+/**
+ * `Agent` que conecta SOLO a las direcciones ya validadas (anti DNS
+ * rebinding): su `lookup` ignora el nombre y responde con ellas.
+ */
+function crearAgenteFijo(direcciones: DireccionValidada[]): Agent {
+  return new Agent({
+    connect: {
+      lookup: (_host, opciones, callback) => {
+        const todas = (opciones as { all?: boolean } | undefined)?.all;
+        if (todas) {
+          (callback as unknown as (e: null, r: DireccionValidada[]) => void)(
+            null,
+            direcciones,
+          );
+        } else {
+          (callback as unknown as (e: null, a: string, f: number) => void)(
+            null,
+            direcciones[0].address,
+            direcciones[0].family,
+          );
+        }
+      },
+    },
+  });
 }
 
 async function leerCuerpo(
@@ -226,6 +278,7 @@ export async function descargarRecursoSeguro(
 
   const controlador = new AbortController();
   const temporizador = setTimeout(() => controlador.abort(), timeoutMs);
+  const agentes: Agent[] = [];
 
   try {
     let actual: URL;
@@ -236,7 +289,9 @@ export async function descargarRecursoSeguro(
     }
 
     for (let saltos = 0; ; saltos++) {
-      await validarDestino(actual);
+      const direcciones = await validarDestino(actual);
+      const agente = crearAgenteFijo(direcciones);
+      agentes.push(agente);
 
       const respuesta = await fetch(actual.toString(), {
         method: 'GET',
@@ -247,7 +302,9 @@ export async function descargarRecursoSeguro(
           'User-Agent': USER_AGENT_INSIGNIAS,
           Accept: opciones.accept ?? '*/*',
         },
-      });
+        // `dispatcher` es extensión de undici, ausente en el RequestInit de DOM.
+        dispatcher: agente,
+      } as RequestInit);
 
       if (respuesta.status >= 300 && respuesta.status < 400) {
         const destino = respuesta.headers.get('location');
@@ -295,5 +352,6 @@ export async function descargarRecursoSeguro(
     );
   } finally {
     clearTimeout(temporizador);
+    await Promise.all(agentes.map((a) => a.close().catch(() => undefined)));
   }
 }

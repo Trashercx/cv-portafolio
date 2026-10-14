@@ -473,7 +473,15 @@ describe('Versiones del sitio y sitio público (e2e, UC-10 a UC-14)', () => {
 
     const media = await agent
       .post('/admin/media')
-      .attach('file', Buffer.from('fondo hero e2e'), 'fondo-hero.png')
+      .attach(
+        'file',
+        await sharp({
+          create: { width: 4, height: 4, channels: 3, background: '#335577' },
+        })
+          .png()
+          .toBuffer(),
+        'fondo-hero.png',
+      )
       .expect(201);
     idsMediaCreada.push(media.body.id);
     keysMediaCreada.push(media.body.s3_key);
@@ -614,6 +622,17 @@ describe('Versiones del sitio y sitio público (e2e, UC-10 a UC-14)', () => {
       imagen: { id: media.body.id, url: media.body.url },
     });
     expect(enSnapshot.imagen.variantes.length).toBeGreaterThan(0);
+    // Solo campos públicos: nada interno ni de auditoría.
+    for (const campo of [
+      'usuario_admin_id',
+      'url_origen',
+      'id_externo',
+      'visible',
+      'created_at',
+      'updated_at',
+    ]) {
+      expect(enSnapshot).not.toHaveProperty(campo);
+    }
     const ordenes = sitio.body.insignias.map((i: { orden: number }) => i.orden);
     expect([...ordenes].sort((a, b) => a - b)).toEqual(ordenes);
   });

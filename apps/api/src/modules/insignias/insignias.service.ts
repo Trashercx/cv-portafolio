@@ -6,6 +6,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { INCLUDE_MEDIA_CON_VARIANTES } from '../media/media.select';
 import { MediaService } from '../media/media.service';
+import { validarImagen } from '../media/validar-imagen';
 import { CreateInsigniaDto } from './dto/create-insignia.dto';
 import { UpdateInsigniaDto } from './dto/update-insignia.dto';
 import {
@@ -18,11 +19,12 @@ import {
   leerOpenBadgesHorneado,
   vistaDeHorneado,
 } from './extractores/png-horneado';
-import { extensionDeMime, TIPOS_IMAGEN, vistaVacia } from './extractores/utils';
+import { extensionDeMime, sanearVista, vistaVacia } from './extractores/utils';
 import { descargarRecursoSeguro, RedSeguraError } from './red-segura';
 
 const INCLUDE_IMAGEN = { imagen: { include: INCLUDE_MEDIA_CON_VARIANTES } };
 
+/** Formatos (por contenido) admitidos al importar un archivo de insignia. */
 const MIMES_ARCHIVO_INSIGNIA = ['image/png', 'image/svg+xml'];
 
 function aFecha(valor: string | null | undefined): Date | null | undefined {
@@ -66,12 +68,26 @@ export class InsigniasService {
   /**
    * Para el snapshot (UC-11/UC-12): solo las `visible`, por `orden`, con
    * `imagen` y sus variantes (misma forma que las demás medias del snapshot).
+   * Solo los campos públicos: nada de `usuario_admin_id`, `url_origen`,
+   * `id_externo` ni timestamps.
    */
   async listarVisibles() {
     return this.prisma.insignia.findMany({
       where: { visible: true },
       orderBy: { orden: 'asc' },
-      include: INCLUDE_IMAGEN,
+      select: {
+        id: true,
+        nombre: true,
+        emisor: true,
+        descripcion: true,
+        proveedor: true,
+        url_verificacion: true,
+        fecha_emision: true,
+        fecha_expiracion: true,
+        habilidades: true,
+        orden: true,
+        imagen: { include: INCLUDE_MEDIA_CON_VARIANTES },
+      },
     });
   }
 
@@ -185,6 +201,13 @@ export class InsigniasService {
    * una entrada sin enlace, embed ni imagen es 400.
    */
   async importar(entrada: string): Promise<VistaPreviaInsignia> {
+    // Saneado final: la vista previa nunca trae HTML ni supera los topes del DTO.
+    return sanearVista(await this.importarSinSanear(entrada));
+  }
+
+  private async importarSinSanear(
+    entrada: string,
+  ): Promise<VistaPreviaInsignia> {
     const texto = entrada.trim();
     const candidatos = EXTRACTORES.filter((e) => e.acepta(texto));
     if (candidatos.length === 0) {
@@ -225,9 +248,14 @@ export class InsigniasService {
     file: Express.Multer.File,
     usuarioAdminId: string,
   ): Promise<VistaPreviaInsignia & { imagen_media_id: string }> {
-    if (!MIMES_ARCHIVO_INSIGNIA.includes(file.mimetype)) {
-      throw new BadRequestException('Solo se admiten archivos PNG o SVG');
+    // Tipo por contenido (no por el MIME declarado) y SVG sin código activo.
+    const real = await validarImagen(file.buffer);
+    if (!real || !MIMES_ARCHIVO_INSIGNIA.includes(real.mime)) {
+      throw new BadRequestException(
+        'Solo se admiten archivos PNG o SVG válidos (el SVG no puede contener scripts)',
+      );
     }
+    file.mimetype = real.mime;
 
     const media = await this.mediaService.create(
       file,
@@ -238,7 +266,7 @@ export class InsigniasService {
       url: media.url,
       ancho: media.ancho ?? undefined,
       alto: media.alto ?? undefined,
-      formato: file.mimetype === 'image/svg+xml' ? 'svg' : 'png',
+      formato: real.formato,
     };
 
     let vista: VistaPreviaInsignia;
@@ -262,7 +290,7 @@ export class InsigniasService {
     }
     // La imagen de la vista previa es SIEMPRE la del archivo subido.
     vista.imagen = imagen;
-    return { ...vista, imagen_media_id: media.id };
+    return { ...sanearVista(vista), imagen_media_id: media.id };
   }
 
   // ---------------------------------------------------------------------
@@ -289,14 +317,20 @@ export class InsigniasService {
     if (dto.imagen_url_remota) {
       try {
         const recurso = await descargarRecursoSeguro(dto.imagen_url_remota, {
-          tipos: TIPOS_IMAGEN,
           accept: 'image/*',
         });
+        // Tipo por contenido, no por el `Content-Type` del servidor remoto.
+        const real = await validarImagen(recurso.buffer);
+        if (!real) {
+          throw new BadRequestException(
+            'La imagen remota no es válida (PNG, JPEG, WebP, AVIF o SVG sin scripts)',
+          );
+        }
         const file = {
           fieldname: 'file',
-          originalname: `${slugArchivo(nombre)}.${extensionDeMime(recurso.contentType)}`,
+          originalname: `${slugArchivo(nombre)}.${extensionDeMime(real.mime)}`,
           encoding: '7bit',
-          mimetype: recurso.contentType,
+          mimetype: real.mime,
           size: recurso.buffer.length,
           buffer: recurso.buffer,
         } as Express.Multer.File;

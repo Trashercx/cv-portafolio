@@ -6,8 +6,13 @@
  * (resolver media del snapshot) y `media` (calcular "usos" por archivo).
  */
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type SeccionLike = any;
+export interface SeccionLike {
+  tipo_seccion?: string;
+  titulo_visible?: string | null;
+  configuracion?: unknown;
+}
+
+type Obj = Record<string, unknown>;
 
 export interface ReferenciaMediaEnSeccion {
   mediaId: string;
@@ -17,16 +22,20 @@ export interface ReferenciaMediaEnSeccion {
 }
 
 /** `configuracion.fotos` de una sección `galeria` (vacío si no es array). */
-export function fotosDeSeccion(seccion: SeccionLike): SeccionLike[] {
+export function fotosDeSeccion(seccion: SeccionLike | undefined): Obj[] {
   const configuracion = (seccion?.configuracion ?? {}) as Record<
     string,
     unknown
   >;
-  return Array.isArray(configuracion.fotos) ? configuracion.fotos : [];
+  return Array.isArray(configuracion.fotos)
+    ? (configuracion.fotos as Obj[])
+    : [];
 }
 
 /** Las 3 columnas de una sección `columnas` (siempre 3 arrays). */
-export function columnasDeSeccion(seccion: SeccionLike): SeccionLike[][] {
+export function columnasDeSeccion(
+  seccion: SeccionLike | undefined,
+): SeccionLike[][] {
   const configuracion = (seccion?.configuracion ?? {}) as Record<
     string,
     unknown
@@ -35,7 +44,9 @@ export function columnasDeSeccion(seccion: SeccionLike): SeccionLike[][] {
     configuracion.columna_1,
     configuracion.columna_2,
     configuracion.columna_3,
-  ].map((columna) => (Array.isArray(columna) ? columna : []));
+  ].map((columna) =>
+    Array.isArray(columna) ? (columna as SeccionLike[]) : [],
+  );
 }
 
 /** Lista plana de referencias a media (con repeticiones) en las secciones. */
@@ -44,7 +55,7 @@ export function recolectarReferenciasMedia(
 ): ReferenciaMediaEnSeccion[] {
   return secciones.flatMap((seccion): ReferenciaMediaEnSeccion[] => {
     if (seccion?.tipo_seccion === 'hero') {
-      const id = (seccion.configuracion as Record<string, unknown> | null)
+      const id = (seccion.configuracion as Obj | null | undefined)
         ?.imagen_fondo_media_id;
       return typeof id === 'string' && id.length > 0
         ? [{ mediaId: id, tipo: 'hero', seccion }]

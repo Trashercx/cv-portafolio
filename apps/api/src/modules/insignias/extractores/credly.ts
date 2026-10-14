@@ -5,14 +5,20 @@ import {
   Extractor,
   VistaPreviaInsignia,
 } from './tipos';
-import { aFechaIso, leerMetaTags, resolverUrlHttps, vistaVacia } from './utils';
+import {
+  aFechaIso,
+  leerMetaTags,
+  limpiarTexto,
+  resolverUrlHttps,
+  vistaVacia,
+} from './utils';
 
-const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
-const RE_ENLACE = new RegExp(
-  `credly\.com/(?:badges|embedded_badge)/(${UUID})`,
-  'i',
-);
-const RE_EMBED = new RegExp(`data-share-badge-id\s*=\s*["'](${UUID})["']`, 'i');
+// Literales (no template strings: los escapes `\.`/`\s` se perderian). El host
+// se ancla a `(?:www\.)?credly\.com` precedido de `//` o `.`/inicio no alfanumerico.
+const RE_ENLACE =
+  /(?:^|[^a-z0-9.-])(?:www\.)?credly\.com\/(?:badges|embedded_badge)\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i;
+const RE_EMBED =
+  /data-share-badge-id\s*=\s*["']\s*([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\s*["']/i;
 
 /** Rutas `/users/<x>` que son navegación global de Credly, no un titular. */
 const SLUGS_NAVEGACION = new Set([
@@ -153,13 +159,13 @@ function mapear(vista: VistaPreviaInsignia, badge: CredlyBadge): void {
   const emisor = (entidades.find((e) => e.primary) ?? entidades[0])?.entity
     ?.name;
 
-  vista.nombre = plantilla.name?.trim() ?? '';
-  vista.emisor = emisor?.trim() ?? '';
-  vista.descripcion = plantilla.description?.trim() || null;
+  vista.nombre = limpiarTexto(plantilla.name, 200);
+  vista.emisor = limpiarTexto(emisor, 200);
+  vista.descripcion = limpiarTexto(plantilla.description, 5000) || null;
   vista.fecha_emision = aFechaIso(badge.issued_at_date);
   vista.fecha_expiracion = aFechaIso(badge.expires_at_date);
   vista.habilidades = (plantilla.skills ?? [])
-    .map((s) => s.name?.trim() ?? '')
+    .map((s) => limpiarTexto(s.name, 100))
     .filter(Boolean);
 
   const imagen = badge.image_url
@@ -179,8 +185,8 @@ function respaldoOpenGraph(
   urlBase: string,
 ): void {
   const { meta, titulo } = leerMetaTags(html);
-  vista.nombre = meta['og:title'] || titulo || '';
-  vista.descripcion = meta['og:description'] || null;
+  vista.nombre = limpiarTexto(meta['og:title'] || titulo, 200);
+  vista.descripcion = limpiarTexto(meta['og:description'], 5000) || null;
   const imagen = meta['og:image']
     ? resolverUrlHttps(meta['og:image'], urlBase)
     : null;

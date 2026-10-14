@@ -12,7 +12,7 @@ import {
   pngHorneadoExtractor,
 } from './png-horneado';
 import { crearContextoExtraccion, ExtractorNoAplica } from './tipos';
-import { extraerUrl } from './utils';
+import { extraerUrl, limpiarTexto, sanearVista, vistaVacia } from './utils';
 
 jest.mock('dns/promises', () => ({ lookup: jest.fn() }));
 
@@ -201,6 +201,66 @@ describe('extractores de insignias (Fase 7d, UC-35)', () => {
 
     it('ningún extractor acepta texto sin enlace ni embed', () => {
       expect(EXTRACTORES.some((e) => e.acepta('<<<basura>>>'))).toBe(false);
+    });
+  });
+
+  describe('limpiarTexto', () => {
+    it('quita etiquetas (incluido <script>), decodifica entidades y colapsa espacios', () => {
+      expect(
+        limpiarTexto(
+          '<script>alert(1)</script>Hola &amp; <b>adiós</b>\n\n  fin',
+          200,
+        ),
+      ).toBe('Hola & adiós fin');
+    });
+    it('no deja etiquetas reintroducidas por entidades ni por anidamiento', () => {
+      expect(limpiarTexto('&lt;img src=x onerror=alert(1)&gt;ok', 200)).toBe(
+        'ok',
+      );
+      expect(limpiarTexto('<<b>script>alert(1)<</b>/script>', 200)).not.toMatch(
+        /<script/i,
+      );
+    });
+    it('quita caracteres de control, trunca y tolera valores no texto', () => {
+      expect(limpiarTexto('a\u0000b\u0007c', 10)).toBe('a b c');
+      expect(limpiarTexto('x'.repeat(500), 200)).toHaveLength(200);
+      expect(limpiarTexto(null, 10)).toBe('');
+      expect(limpiarTexto({ a: 1 }, 10)).toBe('');
+      expect(limpiarTexto(42, 10)).toBe('42');
+    });
+  });
+
+  describe('sanearVista', () => {
+    it('limita habilidades a 50 únicas de 100 caracteres y los textos a los topes del DTO', () => {
+      const vista = vistaVacia('manual', null);
+      vista.nombre = 'n'.repeat(500);
+      vista.descripcion = 'd'.repeat(9000);
+      vista.habilidades = [
+        ...Array.from({ length: 80 }, (_, i) => 'h' + i),
+        'h1',
+        'z'.repeat(300),
+      ];
+      vista.url_verificacion = 'https://a.test/' + 'u'.repeat(3000);
+      const v = sanearVista(vista);
+      expect(v.nombre).toHaveLength(200);
+      expect(v.descripcion).toHaveLength(5000);
+      expect(v.habilidades).toHaveLength(50);
+      expect(new Set(v.habilidades).size).toBe(50);
+      expect(v.url_verificacion).toBeNull();
+    });
+  });
+
+  describe('credly (patrones)', () => {
+    it('reconoce credly.com y www.credly.com, y rechaza hosts parecidos', () => {
+      expect(idDeCredly('https://credly.com/badges/' + ID)).toBe(ID);
+      expect(idDeCredly('https://www.credly.com/badges/' + ID)).toBe(ID);
+      expect(idDeCredly('https://credlyXcom/badges/' + ID)).toBeNull();
+      expect(idDeCredly('https://evilcredly.com/badges/' + ID)).toBeNull();
+    });
+    it('el embed admite espacios alrededor de =', () => {
+      expect(idDeCredly('<div data-share-badge-id = "' + ID + '"></div>')).toBe(
+        ID,
+      );
     });
   });
 

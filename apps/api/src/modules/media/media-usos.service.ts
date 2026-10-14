@@ -153,7 +153,7 @@ export class MediaUsosService {
               (typeof seccion.titulo_visible === 'string' &&
                 seccion.titulo_visible) ||
               superior.titulo_visible ||
-              seccion.tipo_seccion,
+              (seccion.tipo_seccion ?? tipo),
           },
         }),
       ),

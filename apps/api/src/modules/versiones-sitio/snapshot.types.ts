@@ -75,7 +75,8 @@ export interface SnapshotSeccionConfiguracion {
 
 /**
  * Insignia del snapshot (Fase 7d, UC-35): solo las `visible`, ordenadas por
- * `orden`, con la imagen y sus variantes ya resueltas. Ausente en snapshots
+ * `orden`, con la imagen y sus variantes ya resueltas. Solo campos públicos (sin
+ * `usuario_admin_id`, `url_origen`, `id_externo` ni timestamps). Ausente en snapshots
  * anteriores a la fase.
  */
 export interface SnapshotInsignia {
@@ -84,14 +85,11 @@ export interface SnapshotInsignia {
   emisor: string;
   descripcion: string | null;
   proveedor: string;
-  id_externo: string | null;
   url_verificacion: string | null;
-  url_origen: string | null;
   fecha_emision: string | null;
   fecha_expiracion: string | null;
   habilidades: string[];
   orden: number;
-  visible: boolean;
   imagen: SnapshotMedia;
   [key: string]: unknown;
 }

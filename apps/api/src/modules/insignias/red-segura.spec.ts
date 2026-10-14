@@ -7,6 +7,13 @@ import {
 } from './red-segura';
 
 jest.mock('dns/promises', () => ({ lookup: jest.fn() }));
+// El Agent real no se construye en tests: se captura su configuración.
+jest.mock('undici', () => ({
+  Agent: jest.fn().mockImplementation((opciones: unknown) => ({
+    opciones,
+    close: jest.fn().mockResolvedValue(undefined),
+  })),
+}));
 
 const lookupMock = lookup as unknown as jest.Mock;
 const PUBLICA = [{ address: '93.184.216.34', family: 4 }];
@@ -41,6 +48,10 @@ describe('esIpPrivada (Fase 7d, UC-35)', () => {
     'fe80::1%eth0',
     '::ffff:127.0.0.1',
     '::ffff:7f00:1',
+    '::7f00:1',
+    '2002:7f00:1::',
+    '2002:a00:1::',
+    '2001:0:7f00:1::',
     '::ffff:a00:1',
     '64:ff9b::a00:1',
     'ff02::1',
@@ -59,6 +70,7 @@ describe('esIpPrivada (Fase 7d, UC-35)', () => {
     '2606:4700:4700::1111',
     '2001:db8::1',
     '::ffff:8.8.8.8',
+    '2002:808:808::',
   ])('%s es pública', (ip) => {
     expect(esIpPrivada(ip)).toBe(false);
   });
@@ -91,6 +103,33 @@ describe('descargarRecursoSeguro (Fase 7d, UC-35)', () => {
     expect(init.redirect).toBe('manual');
     expect(init.credentials).toBe('omit');
     expect(init.headers['User-Agent']).toBe(USER_AGENT_INSIGNIAS);
+  });
+
+  it('rechaza puertos distintos de 443 y acepta 443 explícito', async () => {
+    await expect(
+      descargarRecursoSeguro('https://ejemplo.test:8443/a'),
+    ).rejects.toThrow(/puerto 443/);
+    expect(fetchMock).not.toHaveBeenCalled();
+    fetchMock.mockResolvedValue(respuesta('ok'));
+    await expect(
+      descargarRecursoSeguro('https://ejemplo.test:443/a'),
+    ).resolves.toBeDefined();
+  });
+
+  it('fija la IP validada: el lookup del dispatcher ignora el nombre (anti DNS rebinding)', async () => {
+    fetchMock.mockResolvedValue(respuesta('ok'));
+    await descargarRecursoSeguro('https://ejemplo.test/a');
+    const dispatcher = fetchMock.mock.calls[0][1].dispatcher as {
+      opciones: {
+        connect: { lookup: (...args: unknown[]) => void };
+      };
+    };
+    const cb = jest.fn();
+    dispatcher.opciones.connect.lookup('ejemplo.test', {}, cb);
+    expect(cb).toHaveBeenCalledWith(null, '93.184.216.34', 4);
+    const cbTodas = jest.fn();
+    dispatcher.opciones.connect.lookup('ejemplo.test', { all: true }, cbTodas);
+    expect(cbTodas).toHaveBeenCalledWith(null, PUBLICA);
   });
 
   it('rechaza http', async () => {

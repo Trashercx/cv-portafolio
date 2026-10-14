@@ -5,7 +5,13 @@ import {
   ExtractorNoAplica,
   VistaPreviaInsignia,
 } from './tipos';
-import { aFechaIso, extraerUrl, resolverUrlHttps, vistaVacia } from './utils';
+import {
+  aFechaIso,
+  extraerUrl,
+  limpiarTexto,
+  resolverUrlHttps,
+  vistaVacia,
+} from './utils';
 
 type Json = Record<string, unknown>;
 
@@ -23,8 +29,8 @@ function comoLista(v: unknown): unknown[] {
   return Array.isArray(v) ? v : v === undefined || v === null ? [] : [v];
 }
 
-function texto(v: unknown): string {
-  return typeof v === 'string' ? v.trim() : '';
+function texto(v: unknown, max = 2000): string {
+  return limpiarTexto(v, max);
 }
 
 /** `true` si el JSON parece un assertion / credencial de Open Badges. */
@@ -127,9 +133,9 @@ export async function vistaDeAssertion(
     }
   }
 
-  vista.nombre = texto(badge?.name);
-  vista.descripcion = texto(badge?.description) || null;
-  vista.emisor = texto(emisor?.name);
+  vista.nombre = texto(badge?.name, 200);
+  vista.descripcion = texto(badge?.description, 5000) || null;
+  vista.emisor = texto(emisor?.name, 200);
   vista.fecha_emision = aFechaIso(
     assertion.issuedOn ?? assertion.validFrom ?? assertion.issuanceDate,
   );
@@ -139,9 +145,9 @@ export async function vistaDeAssertion(
 
   const habilidades = [
     ...comoLista(badge?.alignment).map((a) =>
-      esObjeto(a) ? texto(a.targetName) : '',
+      esObjeto(a) ? texto(a.targetName, 100) : '',
     ),
-    ...comoLista(badge?.tags ?? badge?.tag).map((t) => texto(t)),
+    ...comoLista(badge?.tags ?? badge?.tag).map((t) => texto(t, 100)),
   ].filter(Boolean);
   vista.habilidades = [...new Set(habilidades)];
 

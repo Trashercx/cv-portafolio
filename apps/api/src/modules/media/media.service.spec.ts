@@ -8,6 +8,11 @@ import { MediaUsosService } from './media-usos.service';
 import { VariantesImagenService } from './variantes-imagen.service';
 import { MEDIA_STORAGE_SERVICE } from './storage/media-storage.interface';
 
+const PNG_1X1 = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+  'base64',
+);
+
 const pngReal = () =>
   sharp({ create: { width: 10, height: 10, channels: 3, background: '#fff' } })
     .png()
@@ -41,7 +46,7 @@ describe('MediaService (UC-02/03/04 + biblioteca UC-09)', () => {
     ({
       originalname: 'foto.png',
       mimetype: 'image/png',
-      buffer: Buffer.from('contenido'),
+      buffer: PNG_1X1,
       size: 9,
       ...overrides,
     }) as Express.Multer.File;

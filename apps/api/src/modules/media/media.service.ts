@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Inject,
   Injectable,
@@ -6,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '../../../generated/prisma/client';
 import { sharp } from './sharp';
+import { validarImagen } from './validar-imagen';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateMediaDto } from './dto/create-media.dto';
 import { ListarMediaQueryDto } from './dto/listar-media-query.dto';
@@ -29,6 +31,22 @@ function inferirTipo(mimetype: string): string {
   return 'archivo';
 }
 
+/**
+ * Fase 7d (UC-09): si el archivo se declara imagen, el tipo se decide por
+ * CONTENIDO (`validarImagen`) y se usa el MIME real; contenido no admitido
+ * o SVG con codigo activo es 400. Otros tipos (PDF) pasan sin cambios.
+ */
+async function normalizarImagen(file: Express.Multer.File): Promise<void> {
+  if (!file.mimetype?.startsWith('image/')) return;
+  const imagen = await validarImagen(file.buffer);
+  if (!imagen) {
+    throw new BadRequestException(
+      'El archivo no es una imagen válida (PNG, JPEG, WebP, AVIF o SVG sin scripts)',
+    );
+  }
+  file.mimetype = imagen.mime;
+}
+
 @Injectable()
 export class MediaService {
   constructor(
@@ -44,6 +62,7 @@ export class MediaService {
     dto: CreateMediaDto,
     usuarioAdminId: string,
   ) {
+    await normalizarImagen(file);
     const resultado = await this.storage.upload(file, dto.carpeta);
 
     const creada = await this.prisma.media.create({
@@ -194,6 +213,7 @@ export class MediaService {
    */
   async reemplazar(id: string, file: Express.Multer.File, carpeta?: string) {
     await this.obtener(id);
+    await normalizarImagen(file);
 
     const resultado = await this.storage.upload(file, carpeta);
 

@@ -1,5 +1,6 @@
 import { inflateSync } from 'zlib';
 import { sharp } from '../../media/sharp';
+import { validarImagen } from '../../media/validar-imagen';
 import { esAssertionOpenBadges, vistaDeAssertion } from './open-badges';
 import {
   ContextoExtraccion,
@@ -181,10 +182,12 @@ export const pngHorneadoExtractor: Extractor = {
     ) {
       throw new ExtractorNoAplica();
     }
-    const horneado = leerOpenBadgesHorneado(
-      recurso.buffer,
-      recurso.contentType,
-    );
+    // Tipo por contenido: un cuerpo que no es PNG/SVG limpio no aplica aquí.
+    const real = await validarImagen(recurso.buffer);
+    if (!real || (real.mime !== 'image/png' && real.mime !== 'image/svg+xml')) {
+      throw new ExtractorNoAplica();
+    }
+    const horneado = leerOpenBadgesHorneado(recurso.buffer, real.mime);
     if (!horneado) throw new ExtractorNoAplica();
 
     const vista = await vistaDeHorneado(horneado, {

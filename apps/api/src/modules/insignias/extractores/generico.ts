@@ -8,6 +8,7 @@ import {
 import {
   extraerUrl,
   leerMetaTags,
+  limpiarTexto,
   resolverUrlHttps,
   vistaVacia,
 } from './utils';
@@ -33,9 +34,13 @@ export const genericoExtractor: Extractor = {
     const vista = vistaVacia('generico', entrada.trim(), [
       'Datos tomados de los metadatos de la página: revisa los datos.',
     ]);
-    vista.nombre = meta['og:title'] || titulo || '';
-    vista.descripcion = meta['og:description'] || meta.description || null;
-    vista.emisor = meta['og:site_name'] || new URL(recurso.urlFinal).hostname;
+    vista.nombre = limpiarTexto(meta['og:title'] || titulo, 200);
+    vista.descripcion =
+      limpiarTexto(meta['og:description'] || meta.description, 5000) || null;
+    vista.emisor = limpiarTexto(
+      meta['og:site_name'] || new URL(recurso.urlFinal).hostname,
+      200,
+    );
     vista.url_verificacion = recurso.urlFinal;
     const refImagen = meta['og:image'] || meta['twitter:image'];
     const imagen = refImagen

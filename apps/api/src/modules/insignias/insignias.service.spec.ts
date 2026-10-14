@@ -148,8 +148,25 @@ describe('InsigniasService (Fase 7d, UC-35)', () => {
           emisor: 'y',
           imagen_url_remota: 'https://ejemplo.test/a',
         }),
-      ).rejects.toThrow(/tipo de contenido/i);
+      ).rejects.toThrow(/no es válida/i);
       expect(prisma.insignia.create).not.toHaveBeenCalled();
+    });
+
+    it('imagen_url_remota con contenido que no es imagen (aunque diga image/png): 400', async () => {
+      fetchMock.mockResolvedValue(
+        new Response('<svg><script>1</script></svg>', {
+          status: 200,
+          headers: { 'content-type': 'image/png' },
+        }),
+      );
+      await expect(
+        service.crear('a', {
+          nombre: 'x',
+          emisor: 'y',
+          imagen_url_remota: 'https://ejemplo.test/a.png',
+        }),
+      ).rejects.toThrow(BadRequestException);
+      expect(mediaService.create).not.toHaveBeenCalled();
     });
 
     it('sin ninguna imagen, o con ambas: 400', async () => {
@@ -231,7 +248,22 @@ describe('InsigniasService (Fase 7d, UC-35)', () => {
       const args = prisma.insignia.findMany.mock.calls[0][0];
       expect(args.where).toEqual({ visible: true });
       expect(args.orderBy).toEqual({ orden: 'asc' });
-      expect(args.include.imagen.include.variantes).toBeDefined();
+      expect(args.select.imagen.include.variantes).toBeDefined();
+      expect(Object.keys(args.select).sort()).toEqual(
+        [
+          'id',
+          'nombre',
+          'emisor',
+          'descripcion',
+          'proveedor',
+          'url_verificacion',
+          'fecha_emision',
+          'fecha_expiracion',
+          'habilidades',
+          'orden',
+          'imagen',
+        ].sort(),
+      );
     });
   });
 
@@ -272,6 +304,41 @@ describe('InsigniasService (Fase 7d, UC-35)', () => {
       expect(v.proveedor).toBe('credly');
       expect(v.nombre).toBe('Badge');
       expect(v.imagen?.url).toBe('https://images.credly.com/i.png');
+    });
+
+    it('sanea la vista previa: sin HTML, entidades decodificadas y topes del DTO', async () => {
+      const habilidades = Array.from({ length: 80 }, (_, i) => 'hab ' + i);
+      const largo = 'x'.repeat(9000);
+      const assertion = {
+        '@context': 'https://w3id.org/openbadges/v2',
+        type: 'Assertion',
+        id: 'https://a.test/assertion/1',
+        badge: {
+          type: 'BadgeClass',
+          name:
+            '<script>alert(1)</script>Nombre &amp; <b>Co</b>  \u0007 ' + largo,
+          description: '&lt;img src=x onerror=alert(1)&gt;Hola ' + largo,
+          image: 'https://a.test/b.png',
+          tags: [...habilidades, 'y'.repeat(300), 'hab 1'],
+          issuer: { name: '<i>Emisor</i> ' + largo },
+        },
+      };
+      fetchMock.mockResolvedValue(
+        new Response(JSON.stringify(assertion), {
+          headers: { 'content-type': 'application/json' },
+        }),
+      );
+      const v = await service.importar('https://a.test/assertion/1');
+      expect(v.nombre.startsWith('Nombre & Co xxx')).toBe(true);
+      expect(v.nombre).not.toMatch(/[<>\u0007]|script/);
+      expect(v.nombre.length).toBeLessThanOrEqual(200);
+      expect(v.emisor.length).toBeLessThanOrEqual(200);
+      expect(v.emisor).not.toContain('<');
+      expect(v.descripcion).not.toMatch(/[<>]/);
+      expect(v.descripcion!.length).toBeLessThanOrEqual(5000);
+      expect(v.habilidades.length).toBe(50);
+      expect(new Set(v.habilidades).size).toBe(50);
+      expect(v.habilidades.every((h) => h.length <= 100)).toBe(true);
     });
 
     it('una página cualquiera cae al extractor genérico', async () => {
@@ -320,6 +387,53 @@ describe('InsigniasService (Fase 7d, UC-35)', () => {
         originalname: 'badge.png',
         size: buffer.length,
       }) as Express.Multer.File;
+
+    it('rechaza texto con MIME de imagen falso, sin subir nada', async () => {
+      await expect(
+        service.importarArchivo(
+          archivo(Buffer.from('<html>hola</html>'), 'image/png'),
+          'a',
+        ),
+      ).rejects.toThrow(BadRequestException);
+      expect(mediaService.create).not.toHaveBeenCalled();
+    });
+
+    it('rechaza un SVG con <script> o manejadores, sin subir nada', async () => {
+      for (const cuerpo of [
+        '<script>alert(1)</script>',
+        '<rect onclick="x()"/>',
+      ]) {
+        const svg =
+          '<svg xmlns="http://www.w3.org/2000/svg">' + cuerpo + '</svg>';
+        await expect(
+          service.importarArchivo(
+            archivo(Buffer.from(svg), 'image/svg+xml'),
+            'a',
+          ),
+        ).rejects.toThrow(BadRequestException);
+      }
+      expect(mediaService.create).not.toHaveBeenCalled();
+    });
+
+    it('un PNG real declarado como SVG se sube con el MIME real (image/png)', async () => {
+      mediaService.create.mockResolvedValue({
+        id: 'm1',
+        url: 'https://cdn.test/x.png',
+        ancho: 2,
+        alto: 2,
+      });
+      const png = await sharp({
+        create: { width: 2, height: 2, channels: 3, background: '#000' },
+      })
+        .png()
+        .toBuffer();
+      const v = await service.importarArchivo(
+        archivo(png, 'image/svg+xml'),
+        'a',
+      );
+      expect(mediaService.create.mock.calls[0][0].mimetype).toBe('image/png');
+      expect(v.imagen?.formato).toBe('png');
+    });
 
     it('rechaza tipos que no sean PNG o SVG sin subir nada', async () => {
       await expect(
