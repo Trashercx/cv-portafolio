@@ -118,6 +118,6 @@ export class MediaController {
       throw new BadRequestException('Falta el archivo (campo "file")');
     }
 
-    return this.mediaService.reemplazar(id, file, dto.carpeta);
+    return this.mediaService.reemplazar(id, file, dto.carpeta, dto.carpeta_id);
   }
 }

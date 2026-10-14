@@ -290,6 +290,43 @@ describe('MediaService (UC-02/03/04 + biblioteca UC-09)', () => {
     });
   });
 
+  describe('carpetas (Fase 7e, UC-09)', () => {
+    const UUID = '11111111-1111-4111-8111-111111111111';
+
+    it('listar filtra por carpeta_id uuid', async () => {
+      prisma.media.findMany.mockResolvedValue([]);
+      await service.listar({ carpeta_id: UUID });
+      expect(prisma.media.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { carpeta_id: UUID } }),
+      );
+    });
+
+    it('listar con carpeta_id=ninguna filtra carpeta_id IS NULL', async () => {
+      prisma.media.findMany.mockResolvedValue([]);
+      await service.listar({ carpeta_id: 'ninguna' });
+      expect(prisma.media.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { carpeta_id: null } }),
+      );
+    });
+
+    it('create guarda carpeta_id y responde 404 si la carpeta no existe', async () => {
+      const carpetaMedia = { findUnique: jest.fn().mockResolvedValue(null) };
+      (prisma as unknown as { carpetaMedia: unknown }).carpetaMedia =
+        carpetaMedia;
+      await expect(
+        service.create(buildFile(), { carpeta_id: UUID }, 'admin-id'),
+      ).rejects.toThrow(NotFoundException);
+      expect(storage.upload).not.toHaveBeenCalled();
+
+      carpetaMedia.findUnique.mockResolvedValue({ id: UUID });
+      prisma.media.create.mockResolvedValue({ id: 'media-uuid' });
+      await service.create(buildFile(), { carpeta_id: UUID }, 'admin-id');
+      expect(prisma.media.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ carpeta_id: UUID }),
+      });
+    });
+  });
+
   describe('eliminarLote (Fase 7d)', () => {
     it('elimina los libres y omite los que están en uso o no existen, sin 409', async () => {
       prisma.media.findMany.mockResolvedValue([
