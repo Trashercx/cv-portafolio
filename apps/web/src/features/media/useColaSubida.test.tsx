@@ -3,7 +3,15 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { XhrFalso } from '@/test/xhr-falso'
+import { prepararArchivoParaSubir } from './heic-a-jpeg'
 import { useColaSubida } from './useColaSubida'
+
+// Fase 7g: en jsdom no hay decodificación real; por defecto se usa la preparación real
+// (los no HEIC pasan tal cual) y los tests de HEIC la sustituyen con `mockImplementationOnce`.
+vi.mock('./heic-a-jpeg', async (importarOriginal) => {
+  const real = await importarOriginal<typeof import('./heic-a-jpeg')>()
+  return { ...real, prepararArchivoParaSubir: vi.fn(real.prepararArchivoParaSubir) }
+})
 
 const archivo = (nombre: string, tipo = 'image/png') =>
   new File(['x'], nombre, { type: tipo })
@@ -93,9 +101,77 @@ describe('useColaSubida (Fase 7d, UC-09)', () => {
     Object.defineProperty(grande, 'size', { value: 11 * 1024 * 1024 })
     act(() => result.current.agregar([archivo('a.zip', 'application/zip'), grande]))
 
-    expect(result.current.items.map((i) => i.estado)).toEqual(['error', 'error'])
-    expect(result.current.items[0].error).toMatch(/imágenes y PDF/)
+    await waitFor(() =>
+      expect(result.current.items.map((i) => i.estado)).toEqual(['error', 'error']),
+    )
+    expect(result.current.items[0].error).toMatch(/JPG, PNG, WebP, AVIF, GIF, SVG, HEIC y PDF/)
     expect(result.current.items[1].error).toMatch(/10 MB/)
+    expect(XhrFalso.instancias).toHaveLength(0)
+  })
+
+  const cabeceraHeic = new Uint8Array([0, 0, 0, 24, 102, 116, 121, 112, 104, 101, 105, 99])
+  const jpeg = () => new File(['jpg'], 'IMG_1.jpg', { type: 'image/jpeg' })
+
+  it('un HEIC con type vacío pasa convirtiendo → pendiente → subiendo con el JPEG', async () => {
+    let terminar: (f: File) => void = () => {}
+    vi.mocked(prepararArchivoParaSubir).mockImplementationOnce(
+      () => new Promise((resolver) => (terminar = (file) => resolver({ file, formato: 'imagen' }))),
+    )
+    const { result } = montar()
+    const heic = new File([cabeceraHeic], 'IMG_1.HEIC', { type: '' })
+    act(() => result.current.agregar([heic]))
+
+    expect(result.current.items[0].estado).toBe('convirtiendo')
+    expect(XhrFalso.instancias).toHaveLength(0)
+    await waitFor(() => expect(prepararArchivoParaSubir).toHaveBeenCalledWith(heic))
+
+    act(() => terminar(jpeg()))
+
+    await waitFor(() => expect(XhrFalso.instancias).toHaveLength(1))
+    expect(result.current.items[0].file.name).toBe('IMG_1.jpg')
+    expect(result.current.items[0].normalizado).toBe(true)
+    expect(result.current.items[0].estado).toBe('subiendo')
+  })
+
+  it('un fallo de conversión deja el item en error con el mensaje', async () => {
+    vi.mocked(prepararArchivoParaSubir).mockResolvedValueOnce({ error: 'No se pudo convertir la foto HEIC.' })
+    const { result } = montar()
+    act(() => result.current.agregar([new File(['x'], 'a.heic', { type: '' })]))
+
+    await waitFor(() => expect(result.current.items[0].estado).toBe('error'))
+    expect(result.current.items[0].error).toMatch(/No se pudo convertir/)
+    expect(XhrFalso.instancias).toHaveLength(0)
+  })
+
+  it('reintentar tras un fallo de conversión vuelve a convertir y sube el JPEG', async () => {
+    vi.mocked(prepararArchivoParaSubir).mockResolvedValueOnce({ error: 'No se pudo convertir la foto HEIC.' })
+    const { result } = montar()
+    const heic = new File([cabeceraHeic], 'IMG_1.HEIC', { type: '' })
+    act(() => result.current.agregar([heic]))
+    await waitFor(() => expect(result.current.items[0].estado).toBe('error'))
+
+    vi.mocked(prepararArchivoParaSubir).mockResolvedValueOnce({ file: jpeg(), formato: 'imagen' })
+    act(() => result.current.reintentar(result.current.items[0].id))
+
+    await waitFor(() => expect(XhrFalso.instancias).toHaveLength(1))
+    expect(prepararArchivoParaSubir).toHaveBeenLastCalledWith(heic)
+    expect(result.current.items[0].file.name).toBe('IMG_1.jpg')
+  })
+
+  it('cancelar durante convirtiendo deja el item cancelado aunque la conversión termine después', async () => {
+    let terminar: (f: File) => void = () => {}
+    vi.mocked(prepararArchivoParaSubir).mockImplementationOnce(
+      () => new Promise((resolver) => (terminar = (file) => resolver({ file, formato: 'imagen' }))),
+    )
+    const { result } = montar()
+    act(() => result.current.agregar([new File([cabeceraHeic], 'IMG_1.HEIC', { type: '' })]))
+    await waitFor(() => expect(prepararArchivoParaSubir).toHaveBeenCalled())
+
+    act(() => result.current.cancelar(result.current.items[0].id))
+    expect(result.current.items[0].estado).toBe('cancelado')
+
+    await act(async () => terminar(jpeg()))
+    expect(result.current.items[0].estado).toBe('cancelado')
     expect(XhrFalso.instancias).toHaveLength(0)
   })
 

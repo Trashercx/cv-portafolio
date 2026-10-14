@@ -1,3 +1,4 @@
+import { ACCEPT_IMAGENES_Y_PDF } from '@/features/media/formatos-imagen'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -228,7 +229,7 @@ describe('MediaLibraryPage (UC-09, Fase 7d)', () => {
 
     const input = screen.getByLabelText('Seleccionar archivos para subir')
     expect(input).toHaveAttribute('multiple')
-    expect(input).toHaveAttribute('accept', 'image/*,application/pdf')
+    expect(input).toHaveAttribute('accept', ACCEPT_IMAGENES_Y_PDF)
 
     await user.upload(input, [archivo('uno.png'), archivo('dos.pdf', 'application/pdf')])
 

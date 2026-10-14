@@ -3,6 +3,7 @@ import { MediaPreview } from '@/components/media/MediaPreview'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { prepararArchivoParaSubir } from '@/features/media/heic-a-jpeg'
 import { useUploadMedia } from '@/features/media/useUploadMedia'
 import type { Media } from '@/features/media/types'
 import { ApiError } from '@/lib/api-client'
@@ -47,9 +48,11 @@ function tipoDesdeMime(mimetype: string): string {
   return 'archivo'
 }
 
-/** Solo imagen y PDF tienen una previsualización local con `URL.createObjectURL` — otros tipos muestran el nombre del archivo. */
-function esPrevisualizable(mimetype: string): boolean {
-  return mimetype.startsWith('image/') || mimetype === 'application/pdf'
+/** Fase 7g (UC-09): `Media.tipo` esperable de un archivo según su formato detectado (un `.heic` ya llega convertido a JPEG). */
+function tipoDelArchivo(file: File): string {
+  const porMime = tipoDesdeMime(file.type)
+  if (porMime !== 'archivo') return porMime
+  return /\.pdf$/i.test(file.name) ? 'pdf' : 'imagen'
 }
 
 /**
@@ -93,6 +96,8 @@ export function MediaUploadField({
   const [previewConfirmadoTipo, setPreviewConfirmadoTipo] = useState<
     string | null
   >(null)
+  const [convirtiendo, setConvirtiendo] = useState(false)
+  const [errorLocal, setErrorLocal] = useState<string | null>(null)
   const upload = useUploadMedia()
 
   // Refs que siempre reflejan el último valor de cada estado: se usan solo
@@ -135,13 +140,27 @@ export function MediaUploadField({
     if (inputRef.current) inputRef.current.value = ''
   }
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const original = event.target.files?.[0]
+    if (!original) return
+
+    // Fase 7g (UC-09): formato por contenido (un `.heic` llega con `type` vacío en
+    // Windows) y conversión HEIC → JPEG antes de armar la vista previa.
+    setErrorLocal(null)
+    setConvirtiendo(true)
+    const preparado = await prepararArchivoParaSubir(original)
+    setConvirtiendo(false)
+    if ('error' in preparado) {
+      setErrorLocal(preparado.error)
+      limpiarInput()
+      return
+    }
+    const file = preparado.file
 
     setPreviewPendienteUrl((previo) => {
       if (previo) URL.revokeObjectURL(previo)
-      return esPrevisualizable(file.type) ? URL.createObjectURL(file) : null
+      // Tras la detección solo quedan imágenes y PDF, ambos previsualizables.
+      return URL.createObjectURL(file)
     })
     setArchivoPendiente(file)
   }
@@ -189,11 +208,12 @@ export function MediaUploadField({
   const previewConfirmadoTipoResuelto =
     previewConfirmadoTipo ?? currentMediaTipo ?? 'imagen'
   const errorMessage =
-    upload.error instanceof ApiError
+    errorLocal ??
+    (upload.error instanceof ApiError
       ? upload.error.message
       : upload.error
         ? 'No se pudo subir el archivo. Intenta de nuevo.'
-        : null
+        : null)
 
   return (
     <div className="grid gap-2">
@@ -203,7 +223,7 @@ export function MediaUploadField({
         <div className="grid gap-2">
           {previewPendienteUrl ? (
             <MediaPreview
-              tipo={tipoDesdeMime(archivoPendiente.type)}
+              tipo={tipoDelArchivo(archivoPendiente)}
               url={previewPendienteUrl}
               nombre={archivoPendiente.name}
             />
@@ -219,7 +239,7 @@ export function MediaUploadField({
             <Button
               type="button"
               size="sm"
-              disabled={upload.isPending}
+              disabled={upload.isPending || convirtiendo}
               onClick={handleSubir}
             >
               {upload.isPending ? 'Subiendo…' : 'Subir'}
@@ -245,14 +265,20 @@ export function MediaUploadField({
             </p>
           ) : null}
 
+          {convirtiendo ? (
+            <p role="status" className="text-sm text-muted-foreground">
+              Convirtiendo…
+            </p>
+          ) : null}
+
           <div className="flex items-center gap-2">
             <Input
               id={inputId}
               ref={inputRef}
               type="file"
               accept={accept}
-              disabled={disabled}
-              onChange={handleFileChange}
+              disabled={disabled || convirtiendo}
+              onChange={(event) => void handleFileChange(event)}
             />
             {(currentMediaId || previewConfirmado) && onClear ? (
               <Button

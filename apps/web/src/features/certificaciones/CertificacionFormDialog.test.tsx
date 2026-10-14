@@ -1,3 +1,4 @@
+import { ACCEPT_IMAGENES_Y_PDF } from '@/features/media/formatos-imagen'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -88,7 +89,7 @@ describe('CertificacionFormDialog (nueva)', () => {
     const inputLogo = screen.getByLabelText(
       /logo o documento del certificado \(imagen o pdf\)/i,
     )
-    expect(inputLogo).toHaveAttribute('accept', 'image/*,application/pdf')
+    expect(inputLogo).toHaveAttribute('accept', ACCEPT_IMAGENES_Y_PDF)
   })
 
   it('no llama a la mutación cuando falta un campo obligatorio', async () => {

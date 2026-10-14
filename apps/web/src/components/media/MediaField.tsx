@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ACCEPT_IMAGENES } from '@/features/media/formatos-imagen'
 import { useCarpetasMedia } from '@/features/media/useCarpetasMedia'
 import { useMediaList } from '@/features/media/useMediaLibrary'
 import type { Media } from '@/features/media/types'
@@ -26,7 +27,7 @@ import type { Media } from '@/features/media/types'
 export type MediaTipoPermitido = 'imagen' | 'pdf'
 
 const ACCEPT_POR_TIPO: Record<MediaTipoPermitido, string> = {
-  imagen: 'image/*',
+  imagen: ACCEPT_IMAGENES,
   pdf: 'application/pdf',
 }
 

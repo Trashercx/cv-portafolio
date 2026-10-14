@@ -12,6 +12,7 @@ import type { CarpetaMedia } from './types'
 import type { EstadoSubida, ItemCola } from './useColaSubida'
 
 const ETIQUETA_ESTADO: Record<EstadoSubida, string> = {
+  convirtiendo: 'Convirtiendo…',
   pendiente: 'En espera',
   subiendo: 'Subiendo',
   listo: 'Listo',
@@ -109,7 +110,7 @@ export function PanelColaSubida({
                 {ETIQUETA_ESTADO[item.estado]}
                 {item.estado === 'subiendo' ? ` ${item.progreso}%` : ''}
               </span>
-              {item.estado === 'pendiente' || item.estado === 'subiendo' ? (
+              {item.estado === 'convirtiendo' || item.estado === 'pendiente' || item.estado === 'subiendo' ? (
                 <Button
                   type="button"
                   variant="ghost"
