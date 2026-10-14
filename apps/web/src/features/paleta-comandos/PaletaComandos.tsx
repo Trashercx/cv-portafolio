@@ -1,4 +1,5 @@
 import {
+  Award,
   BadgeCheck,
   BarChart3,
   ExternalLink,
@@ -40,6 +41,8 @@ const RUTAS_ADMIN: RutaAdmin[] = [
   { to: '/admin/perfil', label: 'Perfil', icon: User },
   { to: '/admin/proyectos', label: 'Proyectos', icon: LayoutGrid },
   { to: '/admin/certificaciones', label: 'Certificaciones', icon: BadgeCheck },
+  // Fase 7d (UC-35).
+  { to: '/admin/insignias', label: 'Insignias', icon: Award },
   { to: '/admin/logros', label: 'Logros', icon: Trophy },
   { to: '/admin/skills', label: 'Skills', icon: Sparkles },
   { to: '/admin/redes', label: 'Redes sociales', icon: Share2 },

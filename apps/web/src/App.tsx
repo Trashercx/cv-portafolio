@@ -28,6 +28,10 @@ const Toaster = lazy(() =>
 const CertificacionesListPage = lazy(() =>
   import('@/pages/admin/CertificacionesListPage').then((m) => ({ default: m.CertificacionesListPage })),
 )
+// Fase 7d (UC-35): el panel de insignias va lazy, fuera del chunk inicial.
+const InsigniasListPage = lazy(() =>
+  import('@/pages/admin/InsigniasListPage').then((m) => ({ default: m.InsigniasListPage })),
+)
 const EditorSeccionesPage = lazy(() =>
   import('@/pages/admin/EditorSeccionesPage').then((m) => ({ default: m.EditorSeccionesPage })),
 )
@@ -120,6 +124,8 @@ function App() {
               path="certificaciones"
               element={<CertificacionesListPage />}
             />
+
+            <Route path="insignias" element={<InsigniasListPage />} />
 
             <Route path="logros" element={<LogrosListPage />} />
 
