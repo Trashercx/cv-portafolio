@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { CertificacionesModule } from '../certificaciones/certificaciones.module';
 import { FondoSitioModule } from '../fondo-sitio/fondo-sitio.module';
+import { InsigniasModule } from '../insignias/insignias.module';
 import { LogrosModule } from '../logros/logros.module';
 import { PerfilModule } from '../perfil/perfil.module';
 import { ProyectosModule } from '../proyectos/proyectos.module';
@@ -21,6 +22,7 @@ import { VersionesSitioService } from './versiones-sitio.service';
     LogrosModule,
     RedesSocialesModule,
     SkillsModule,
+    InsigniasModule,
     FondoSitioModule,
   ],
   controllers: [VersionesSitioAdminController],

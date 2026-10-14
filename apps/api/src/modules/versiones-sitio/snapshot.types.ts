@@ -73,6 +73,29 @@ export interface SnapshotSeccionConfiguracion {
   [key: string]: unknown;
 }
 
+/**
+ * Insignia del snapshot (Fase 7d, UC-35): solo las `visible`, ordenadas por
+ * `orden`, con la imagen y sus variantes ya resueltas. Ausente en snapshots
+ * anteriores a la fase.
+ */
+export interface SnapshotInsignia {
+  id: string;
+  nombre: string;
+  emisor: string;
+  descripcion: string | null;
+  proveedor: string;
+  id_externo: string | null;
+  url_verificacion: string | null;
+  url_origen: string | null;
+  fecha_emision: string | null;
+  fecha_expiracion: string | null;
+  habilidades: string[];
+  orden: number;
+  visible: boolean;
+  imagen: SnapshotMedia;
+  [key: string]: unknown;
+}
+
 export interface SnapshotSeccion extends SnapshotConId {
   tipo_seccion: string;
   configuracion: SnapshotSeccionConfiguracion;
@@ -87,6 +110,8 @@ export interface SnapshotSitio {
   logros: SnapshotConId[];
   redes_sociales: SnapshotConId[];
   skills: SnapshotConId[];
+  /** Fase 7d (UC-35); ausente en snapshots anteriores. */
+  insignias?: SnapshotInsignia[];
   fondo: Record<string, unknown> | null;
 }
 

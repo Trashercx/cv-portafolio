@@ -46,6 +46,7 @@ describe('Versiones del sitio y sitio público (e2e, UC-10 a UC-14)', () => {
   const idsMediaCreada: string[] = [];
   const keysMediaCreada: string[] = [];
   const idsSeccionesCreadas: string[] = [];
+  const idsInsigniasCreadas: string[] = [];
 
   const dtoProyectoBase = {
     descripcion: 'Proyecto de prueba generado por el e2e de Sprint 4.',
@@ -80,6 +81,10 @@ describe('Versiones del sitio y sitio público (e2e, UC-10 a UC-14)', () => {
   });
 
   afterAll(async () => {
+    // Las insignias referencian Media con onDelete Restrict: van antes.
+    await prisma.insignia.deleteMany({
+      where: { id: { in: idsInsigniasCreadas } },
+    });
     await prisma.seccion.deleteMany({
       where: { id: { in: idsSeccionesCreadas } },
     });
@@ -549,5 +554,67 @@ describe('Versiones del sitio y sitio público (e2e, UC-10 a UC-14)', () => {
     );
     expect(variantes[0]).not.toHaveProperty('s3_key');
     expect(variantes[0]).not.toHaveProperty('bytes');
+  });
+
+  it('el snapshot publicado incluye solo las insignias visibles, por orden y con la imagen resuelta (Fase 7d, UC-35)', async () => {
+    const png = await sharp({
+      create: { width: 700, height: 700, channels: 3, background: '#aa3366' },
+    })
+      .png()
+      .toBuffer();
+    const media = await agent
+      .post('/admin/media')
+      .attach('file', png, 'insignia-snapshot.png')
+      .expect(201);
+    idsMediaCreada.push(media.body.id);
+    keysMediaCreada.push(media.body.s3_key);
+    const variantesDb = await prisma.mediaVariante.findMany({
+      where: { media_id: media.body.id },
+    });
+    keysMediaCreada.push(...variantesDb.map((v) => v.s3_key));
+
+    const sufijo = Date.now();
+    const visible = await agent
+      .post('/admin/insignias')
+      .send({
+        nombre: `Insignia visible ${sufijo}`,
+        emisor: 'Emisor e2e',
+        imagen_media_id: media.body.id,
+        habilidades: ['Nest', 'Prisma'],
+        fecha_emision: '2024-03-15',
+      })
+      .expect(201);
+    idsInsigniasCreadas.push(visible.body.id);
+    const oculta = await agent
+      .post('/admin/insignias')
+      .send({
+        nombre: `Insignia oculta ${sufijo}`,
+        emisor: 'Emisor e2e',
+        imagen_media_id: media.body.id,
+        visible: false,
+      })
+      .expect(201);
+    idsInsigniasCreadas.push(oculta.body.id);
+
+    const version = await agent.post('/admin/versiones/publicar').expect(201);
+    idsVersionesCreadas.push(version.body.id);
+
+    const sitio = await request(app.getHttpServer()).get('/sitio').expect(200);
+    const ids = sitio.body.insignias.map((i: { id: string }) => i.id);
+    expect(ids).toContain(visible.body.id);
+    expect(ids).not.toContain(oculta.body.id);
+
+    const enSnapshot = sitio.body.insignias.find(
+      (i: { id: string }) => i.id === visible.body.id,
+    );
+    expect(enSnapshot).toMatchObject({
+      emisor: 'Emisor e2e',
+      habilidades: ['Nest', 'Prisma'],
+      fecha_emision: '2024-03-15T00:00:00.000Z',
+      imagen: { id: media.body.id, url: media.body.url },
+    });
+    expect(enSnapshot.imagen.variantes.length).toBeGreaterThan(0);
+    const ordenes = sitio.body.insignias.map((i: { orden: number }) => i.orden);
+    expect([...ordenes].sort((a, b) => a - b)).toEqual(ordenes);
   });
 });

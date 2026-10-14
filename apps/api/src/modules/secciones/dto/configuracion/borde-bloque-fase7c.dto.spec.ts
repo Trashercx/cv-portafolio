@@ -15,6 +15,7 @@ const MINIMOS: Record<string, Record<string, unknown>> = {
   skills: { direccion: 'izquierda', velocidad: 'media' },
   galeria: {},
   navegacion: {},
+  insignias: {},
 };
 
 describe('borde_bloque (Fase 7c)', () => {

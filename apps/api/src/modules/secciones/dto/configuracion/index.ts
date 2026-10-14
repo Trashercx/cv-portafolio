@@ -3,6 +3,7 @@ import { ColumnasConfiguracionDto } from './columnas-configuracion.dto';
 import { ContactoConfiguracionDto } from './contacto-configuracion.dto';
 import { GaleriaConfiguracionDto } from './galeria-configuracion.dto';
 import { HeroConfiguracionDto } from './hero-configuracion.dto';
+import { InsigniasConfiguracionDto } from './insignias-configuracion.dto';
 import { LogrosConfiguracionDto } from './logros-configuracion.dto';
 import { NavegacionConfiguracionDto } from './navegacion-configuracion.dto';
 import { ProyectosConfiguracionDto } from './proyectos-configuracion.dto';
@@ -15,6 +16,7 @@ export {
   ContactoConfiguracionDto,
   GaleriaConfiguracionDto,
   HeroConfiguracionDto,
+  InsigniasConfiguracionDto,
   LogrosConfiguracionDto,
   NavegacionConfiguracionDto,
   ProyectosConfiguracionDto,
@@ -23,11 +25,11 @@ export {
 };
 
 /**
- * Los 10 tipos de bloque del editor visual (UC-07), decididos en
+ * Los 11 tipos de bloque del editor visual (UC-07), decididos en
  * docs/plan-tecnico.md sección 5 (`skills` agregado en Sprint 8, UC-16;
  * `navegacion` agregado en Fase 7, 7.2: barra de navegación del sitio,
  * nunca dentro de `columnas`; `columnas` agregado en Fase 3.3, UC-17 — contenedor de layout
- * multi-columna, ver `docs/plan-portafolio.md` §4; `galeria` agregado en
+ * multi-columna, ver `docs/plan-portafolio.md` §4; `insignias` agregado en Fase 7d, UC-35; `galeria` agregado en
  * Fase 4.5, UC-18 — bloque de galería de fotos, reusa el patrón jsonb de
  * `columnas` sin tabla propia). `Seccion.tipo_seccion` solo puede ser uno de
  * estos valores.
@@ -43,6 +45,7 @@ export const TIPOS_SECCION = [
   'columnas',
   'galeria',
   'navegacion',
+  'insignias',
 ] as const;
 
 export type TipoSeccion = (typeof TIPOS_SECCION)[number];
@@ -64,4 +67,5 @@ export const CONFIGURACION_DTO_POR_TIPO: Record<TipoSeccion, new () => object> =
     columnas: ColumnasConfiguracionDto,
     galeria: GaleriaConfiguracionDto,
     navegacion: NavegacionConfiguracionDto,
+    insignias: InsigniasConfiguracionDto,
   };
