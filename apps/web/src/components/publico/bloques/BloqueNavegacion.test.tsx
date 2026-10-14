@@ -1,7 +1,7 @@
 import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { PerfilPublico } from '@/features/publico/types'
 import type { NavegacionConfiguracion } from '@/features/secciones/types'
 import type { EnlaceNavegacion } from '@/lib/navegacion'
@@ -170,6 +170,19 @@ describe('BloqueNavegacion — contenido opcional (Fase 7)', () => {
       'href',
       expect.stringMatching(/\/cv$/),
     )
+  })
+
+  it('el botón del CV registra descargar_cv sin cambiar el href (Fase 8, UC-27)', async () => {
+    const track = vi.fn()
+    window.umami = { track }
+    const user = userEvent.setup()
+    renderNav()
+    const enlace = screen.getByRole('link', { name: 'Descargar CV' })
+    // jsdom no navega al hacer clic en un enlace; solo comprobamos el evento.
+    await user.click(enlace)
+    expect(track).toHaveBeenCalledWith('descargar_cv', undefined)
+    expect(enlace).toHaveAttribute('href', expect.stringMatching(/\/cv$/))
+    delete window.umami
   })
 
   it('sin CV en el perfil o con mostrar_cv=false no hay botón', () => {

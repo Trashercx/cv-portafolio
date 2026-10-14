@@ -2,6 +2,7 @@ import type { Media } from '@/features/media/types'
 import { PlataformaIcono } from '@/features/redes-sociales/iconos-plataforma'
 import type { RedSocial } from '@/features/redes-sociales/types'
 import { API_BASE_URL } from '@/lib/api-client'
+import { registrarEvento } from '@/lib/analitica'
 import { cn } from '@/lib/utils'
 import { EnlaceBloque } from './contexto-renderizado'
 
@@ -61,6 +62,8 @@ export function RedesSociales({
                 href={red.url}
                 target="_blank"
                 rel="noreferrer"
+                // Fase 8 (UC-27): `clic_red`; registra y deja seguir el enlace.
+                onClick={() => registrarEvento('clic_red', { red: red.plataforma.nombre })}
                 aria-label={compacto ? red.plataforma.nombre : undefined}
                 style={
                   esBotones && !compacto
@@ -87,6 +90,8 @@ export function RedesSociales({
       {cvMedia && !compacto ? (
         <EnlaceBloque
           href={`${API_BASE_URL}/cv`}
+          // Fase 8 (UC-27): `descargar_cv`.
+          onClick={() => registrarEvento('descargar_cv')}
           style={{ backgroundColor: 'var(--color-primario)' }}
           className="mx-auto inline-block rounded-md px-6 py-2.5 text-sm font-medium text-white"
         >
