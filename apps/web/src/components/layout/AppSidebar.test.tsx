@@ -24,6 +24,7 @@ const ITEMS_ESPERADOS = [
   'Perfil',
   'Proyectos',
   'Certificaciones',
+  'Insignias', // Fase 7d (UC-35)
   'Logros',
   'Skills',
   'Redes sociales',
@@ -33,7 +34,7 @@ const ITEMS_ESPERADOS = [
 ]
 
 describe('AppSidebar', () => {
-  it('muestra las 9 entradas de navegación agrupadas en 4 secciones', () => {
+  it('muestra las 10 entradas de navegación agrupadas en 4 secciones', () => {
     renderSidebar('/admin/perfil')
 
     for (const label of ITEMS_ESPERADOS) {

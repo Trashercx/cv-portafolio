@@ -1,5 +1,6 @@
 import type { Certificacion } from '@/features/certificaciones/types'
 import type { FondoSitio } from '@/features/fondo-sitio/types'
+import type { InsigniaPublica } from '@/features/insignias/types'
 import type { Logro } from '@/features/logros/types'
 import type { Media } from '@/features/media/types'
 import type { Proyecto } from '@/features/proyectos/types'
@@ -36,6 +37,8 @@ export type PerfilPublico = {
  */
 export type CertificacionPublica = Certificacion & { logo: Media | null }
 
+export type { InsigniaPublica }
+
 /**
  * Forma exacta de `GET /sitio` (UC-12) y de `VersionSitio.snapshot`
  * (ver `apps/api/src/modules/versiones-sitio/snapshot.types.ts`).
@@ -50,4 +53,9 @@ export type SnapshotSitio = {
   redes_sociales: RedSocial[]
   skills: Skill[]
   fondo: FondoSitio | null
+  /**
+   * Fase 7d (UC-35): solo las visibles, con `imagen` resuelta. Opcional: los
+   * snapshots publicados antes de la fase no lo traen (el bloque queda vacío).
+   */
+  insignias?: InsigniaPublica[]
 }

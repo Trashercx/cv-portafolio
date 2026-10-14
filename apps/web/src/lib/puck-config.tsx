@@ -7,6 +7,7 @@ import {
   BloqueContacto,
   BloqueGaleria,
   BloqueHero,
+  BloqueInsignias,
   BloqueLogros,
   BloqueProyectos,
   BloqueSkills,
@@ -29,6 +30,7 @@ import type {
   GaleriaConfiguracion,
   GaleriaFoto,
   HeroConfiguracion,
+  InsigniasConfiguracion,
   LogrosConfiguracion,
   NavegacionConfiguracion,
   ProyectosConfiguracion,
@@ -56,6 +58,7 @@ const BLOQUES_ANIDABLES: TipoSeccionAnidable[] = [
   'contacto',
   'skills',
   'galeria',
+  'insignias',
 ]
 
 // Clases Tailwind literales para el layout de columnas (nunca construidas en
@@ -383,6 +386,7 @@ export type PuckSeccionesComponents = {
   contacto: ConInternos<ContactoConfiguracion>
   skills: ConInternos<SkillsConfiguracion>
   galeria: ConInternos<GaleriaConfiguracion>
+  insignias: ConInternos<InsigniasConfiguracion>
   navegacion: ConInternos<NavegacionConfiguracion>
   /**
    * A diferencia de los demás bloques, `columna_1/2/3` NO reutilizan
@@ -436,6 +440,7 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
         'contacto',
         'skills',
         'galeria',
+        'insignias',
       ],
     },
   },
@@ -1140,6 +1145,87 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
             <BloqueGaleria
               titulo={_tituloVisible}
               config={{ ...config, fotos: fotosResueltas }}
+              alineacionTitulo={ALINEACION_TEXTO_CLASE[config.alineacion_texto ?? 'izquierda']}
+            />
+          </EnvoltorioSeccion>
+        )
+      },
+    },
+    /**
+     * Insignias importables (Fase 7d, UC-35): muestra las insignias visibles
+     * de la entidad `insignia` (no viven en la configuración; el lienzo las
+     * lee de `datos.insignias`, cargadas por `useDatosEditor`). Permitido
+     * dentro de `columnas`. Los `defaultProps` coinciden con los fallbacks de
+     * render de `BloqueInsignias` y con los defaults del API.
+     */
+    insignias: {
+      label: 'Insignias',
+      defaultProps: {
+        columnas: 'auto',
+        tamano: 'normal',
+        efecto_hover: 'inclinar_brillo',
+        mostrar_emisor: true,
+        mostrar_fecha: true,
+        mostrar_habilidades: false,
+        mostrar_enlace: true,
+        ...DEFAULT_PROPS_BASE_BLOQUE,
+        _visible: true,
+        _tituloVisible: 'Insignias',
+      },
+      fields: {
+        // Contenido
+        titulo: { type: 'text', label: 'Título (opcional)' },
+        subtitulo: { type: 'text', label: 'Subtítulo (opcional)' },
+        limite: { type: 'number', label: 'Máximo de insignias (vacío = todas)', min: 1, max: 50 },
+        mostrar_emisor: campoSiNo('Mostrar emisor'),
+        mostrar_fecha: campoSiNo('Mostrar fecha'),
+        mostrar_habilidades: campoSiNo('Mostrar habilidades'),
+        mostrar_enlace: campoSiNo('Mostrar enlace "Verificar"'),
+        // Disposición y variantes
+        columnas: {
+          type: 'select',
+          label: 'Columnas',
+          options: [
+            { label: 'Automático', value: 'auto' },
+            { label: '2', value: 2 },
+            { label: '3', value: 3 },
+            { label: '4', value: 4 },
+          ],
+        },
+        tamano: {
+          type: 'select',
+          label: 'Tamaño de la insignia',
+          options: [
+            { label: 'Compacto', value: 'compacto' },
+            { label: 'Normal', value: 'normal' },
+            { label: 'Grande', value: 'grande' },
+          ],
+        },
+        // Efectos
+        efecto_hover: {
+          type: 'select',
+          label: 'Efecto al pasar el cursor',
+          options: [
+            { label: 'Inclinar con brillo', value: 'inclinar_brillo' },
+            { label: 'Girar (muestra los detalles)', value: 'girar' },
+            { label: 'Elevar', value: 'elevar' },
+            { label: 'Ninguno', value: 'ninguno' },
+          ],
+        },
+        ...CAMPOS_BASE_BLOQUE,
+        _visible: VISIBLE_FIELD,
+        _tituloVisible: TITULO_VISIBLE_FIELD,
+      },
+      render: ({ puck, id: _id, _seccionId, _visible, _tituloVisible, ...config }) => {
+        const { datos } = leerMetadata(puck)
+        return (
+          <EnvoltorioSeccion
+            {...propsEnvoltorio({ ...config, id: _id, _seccionId, _visible, _tituloVisible })}
+          >
+            <BloqueInsignias
+              titulo={_tituloVisible}
+              config={config}
+              insignias={datos.insignias ?? []}
               alineacionTitulo={ALINEACION_TEXTO_CLASE[config.alineacion_texto ?? 'izquierda']}
             />
           </EnvoltorioSeccion>

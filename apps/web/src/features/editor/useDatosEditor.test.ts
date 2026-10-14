@@ -2,6 +2,7 @@ import { renderHook } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Perfil } from '@/features/perfil/types'
 import type { Certificacion } from '@/features/certificaciones/types'
+import type { Insignia } from '@/features/insignias/types'
 import type { Media } from '@/features/media/types'
 import { useDatosEditor } from './useDatosEditor'
 
@@ -86,6 +87,7 @@ const estado = {
   perfil: null as Perfil | null | undefined,
   certificaciones: [] as Certificacion[],
   media: [] as Media[],
+  insignias: [] as Insignia[],
 }
 
 vi.mock('@/features/perfil/usePerfil', () => ({
@@ -110,6 +112,10 @@ vi.mock('@/features/media/useMediaLibrary', () => ({
     isLoading: false,
     error: null,
   }),
+}))
+
+vi.mock('@/features/insignias/useInsignias', () => ({
+  useInsignias: () => ({ data: estado.insignias, isLoading: false, error: null }),
 }))
 
 vi.mock('@/features/proyectos/useProyectos', () => ({
@@ -141,6 +147,7 @@ describe('useDatosEditor', () => {
     estado.perfil = null
     estado.certificaciones = []
     estado.media = []
+    estado.insignias = []
   })
 
   it('resuelve imagen_perfil y cv_media cuando el id existe en la biblioteca de medios', () => {
@@ -197,5 +204,34 @@ describe('useDatosEditor', () => {
 
     const [certificacion] = result.current.datos?.certificaciones ?? []
     expect(certificacion.logo).toBeNull()
+  })
+
+  it('Fase 7d: expone solo las insignias visibles con su imagen resuelta y omite las sin imagen', () => {
+    const base = {
+      usuario_admin_id: 'admin-1',
+      emisor: 'Emisor',
+      descripcion: null,
+      proveedor: 'manual' as const,
+      id_externo: null,
+      url_verificacion: null,
+      url_origen: null,
+      fecha_emision: null,
+      fecha_expiracion: null,
+      habilidades: [],
+      created_at: '2026-01-01T00:00:00.000Z',
+      updated_at: '2026-01-01T00:00:00.000Z',
+    }
+    estado.perfil = PERFIL
+    estado.media = [MEDIA_PERFIL]
+    estado.insignias = [
+      { ...base, id: 'i1', nombre: 'Visible', orden: 0, visible: true, imagen_media_id: 'media-perfil' },
+      { ...base, id: 'i2', nombre: 'Oculta', orden: 1, visible: false, imagen_media_id: 'media-perfil' },
+      { ...base, id: 'i3', nombre: 'Rota', orden: 2, visible: true, imagen_media_id: 'media-borrada' },
+    ]
+
+    const { result } = renderHook(() => useDatosEditor())
+
+    expect(result.current.datos?.insignias?.map((i) => i.id)).toEqual(['i1'])
+    expect(result.current.datos?.insignias?.[0].imagen).toEqual(MEDIA_PERFIL)
   })
 })

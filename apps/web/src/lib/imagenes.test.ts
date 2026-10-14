@@ -40,6 +40,7 @@ describe('imagenes (Fase 8, UC-34)', () => {
         'galeria',
         'hero_fondo',
         'hero_foto',
+        'insignia', // Fase 7d (UC-35)
         'lightbox',
         'proyecto_tarjeta',
         'sobre_mi',
