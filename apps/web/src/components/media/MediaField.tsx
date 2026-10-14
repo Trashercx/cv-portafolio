@@ -75,8 +75,8 @@ export function MediaField({
     <div className="grid gap-2">
       <Tabs defaultValue="subir">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="subir">Subir nuevo</TabsTrigger>
-          <TabsTrigger value="biblioteca">Elegir de biblioteca</TabsTrigger>
+          <TabsTrigger value="subir" className="whitespace-normal text-center leading-tight">Subir nuevo</TabsTrigger>
+          <TabsTrigger value="biblioteca" className="whitespace-normal text-center leading-tight">Elegir de biblioteca</TabsTrigger>
         </TabsList>
         <TabsContent value="subir">
           <MediaUploadField

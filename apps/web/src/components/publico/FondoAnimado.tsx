@@ -166,6 +166,7 @@ export function FondoAnimado({ fondo, modo = 'sitio', ambito }: FondoAnimadoProp
       style={{ opacity: opacidad }}
       className={cn(
         'fondo-animado pointer-events-none absolute inset-0 z-0 overflow-hidden',
+        // Gancho sin estilos (novena ronda): la pausa CSS ya no existe; lo usan los tests.
         modo === 'miniatura' && 'fondo-miniatura',
       )}
     >

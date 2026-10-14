@@ -26,12 +26,19 @@ let cafSpy: ReturnType<typeof vi.spyOn>
 let cuadros: Map<number, FrameRequestCallback>
 let siguienteId: number
 
+/** Cuenta los dibujos reales (ambos canvas llaman a `clearRect` una vez por cuadro dibujado). */
+const clearRectSpy = vi.fn()
+
 function contextoFalso() {
   return new Proxy(
     {},
     {
       get: (_destino, propiedad) =>
-        propiedad === 'canvas' ? undefined : () => undefined,
+        propiedad === 'canvas'
+          ? undefined
+          : propiedad === 'clearRect'
+            ? clearRectSpy
+            : () => undefined,
       set: () => true,
     },
   ) as unknown as CanvasRenderingContext2D
@@ -51,6 +58,7 @@ function simularMedia(coincide: (consulta: string) => boolean) {
 }
 
 beforeEach(() => {
+  clearRectSpy.mockClear()
   observadoresInterseccion = []
   observadoresTamano = []
   cuadros = new Map()
@@ -145,8 +153,13 @@ describe.each(CANVAS)('canvas %s', (tipo) => {
     await waitFor(() => expect(rafSpy).toHaveBeenCalled())
     // A 20 fps (50 ms) un cuadro a 10 ms del anterior no dibuja, pero sigue agendando.
     ejecutarCuadro(1000)
+    const tras1000 = clearRectSpy.mock.calls.length
+    expect(tras1000).toBeGreaterThan(0)
     ejecutarCuadro(1010)
+    expect(clearRectSpy.mock.calls.length).toBe(tras1000)
     expect(cuadros.size).toBeGreaterThan(0)
+    ejecutarCuadro(1060)
+    expect(clearRectSpy.mock.calls.length).toBe(tras1000 + 1)
     const tipos = alta.mock.calls.map((c) => c[0])
     expect(tipos).not.toContain('pointermove')
     expect(tipos).not.toContain('scroll')
@@ -165,8 +178,13 @@ describe.each(CANVAS)('canvas %s', (tipo) => {
     await waitFor(() => expect(rafSpy).toHaveBeenCalled())
     // Con tope de 30 fps un cuadro a 10 ms del anterior no dibuja, pero sigue agendando.
     ejecutarCuadro(1000)
+    const tras1000 = clearRectSpy.mock.calls.length
+    expect(tras1000).toBeGreaterThan(0)
     ejecutarCuadro(1010)
+    expect(clearRectSpy.mock.calls.length).toBe(tras1000)
     expect(cuadros.size).toBeGreaterThan(0)
+    ejecutarCuadro(1040)
+    expect(clearRectSpy.mock.calls.length).toBe(tras1000 + 1)
     unmount()
     expect(cuadros.size).toBe(0)
   })
