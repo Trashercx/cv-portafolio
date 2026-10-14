@@ -25,7 +25,14 @@ import { descargarRecursoSeguro, RedSeguraError } from './red-segura';
 const INCLUDE_IMAGEN = { imagen: { include: INCLUDE_MEDIA_CON_VARIANTES } };
 
 /** Formatos (por contenido) admitidos al importar un archivo de insignia. */
-const MIMES_ARCHIVO_INSIGNIA = ['image/png', 'image/svg+xml'];
+// Fase 7g, UC-35: JPEG y WebP entran como imagen simple (el Open Badges
+// horneado solo aplica a PNG/SVG; `leerOpenBadgesHorneado` devuelve null).
+const MIMES_ARCHIVO_INSIGNIA = [
+  'image/png',
+  'image/jpeg',
+  'image/webp',
+  'image/svg+xml',
+];
 
 function aFecha(valor: string | null | undefined): Date | null | undefined {
   if (valor === undefined) return undefined;
@@ -256,7 +263,7 @@ export class InsigniasService {
     }
     if (!MIMES_ARCHIVO_INSIGNIA.includes(real.mime)) {
       throw new BadRequestException(
-        'Solo se admiten archivos PNG o SVG válidos (el SVG no puede contener scripts)',
+        'Solo se admiten imágenes PNG, JPEG, WebP o SVG válidas (el SVG no puede contener scripts)',
       );
     }
     file.mimetype = real.mime;
