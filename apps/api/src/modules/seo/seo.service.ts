@@ -78,11 +78,22 @@ export class SeoService {
   normalizarRuta(cabecera: string | string[] | undefined): string {
     const bruto = Array.isArray(cabecera) ? cabecera[0] : cabecera;
     if (!bruto) return '/';
-    let ruta = bruto.split(/[?#]/)[0].trim();
-    if (!ruta.startsWith('/')) ruta = `/${ruta}`;
-    ruta = ruta.replace(/\/{2,}/g, '/');
-    if (ruta.length > 1) ruta = ruta.replace(/\/+$/, '');
-    return ruta || '/';
+    // Sin expresiones regulares sobre la cabecera (CodeQL js/polynomial-redos):
+    // se corta en el primer "?" o "#" y se recomponen los segmentos no vacíos,
+    // lo que elimina barras repetidas y la barra final en un solo paso lineal.
+    let fin = bruto.length;
+    for (let k = 0; k < bruto.length; k++) {
+      if (bruto[k] === '?' || bruto[k] === '#') {
+        fin = k;
+        break;
+      }
+    }
+    const segmentos = bruto
+      .slice(0, fin)
+      .trim()
+      .split('/')
+      .filter((segmento) => segmento.length > 0);
+    return `/${segmentos.join('/')}`;
   }
 
   private urlAbsoluta(url: string): string {

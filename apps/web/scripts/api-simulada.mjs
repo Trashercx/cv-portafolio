@@ -19,7 +19,7 @@
 // referencia: el API real vive en apps/api/src/modules/seo.
 
 import { createServer } from 'node:http'
-import { readFile, stat } from 'node:fs/promises'
+import { readFile } from 'node:fs/promises'
 import { basename, dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -145,12 +145,12 @@ const servidor = createServer(async (req, res) => {
     if (!archivo.endsWith('.svg')) return noEncontrado(res, ruta)
     const rutaArchivo = join(DIR_IMG, archivo)
     try {
-      const info = await stat(rutaArchivo)
+      // Una sola lectura, sin `stat` previo: evita la carrera que marca CodeQL.
       const cuerpo = await readFile(rutaArchivo)
       res.writeHead(200, {
         ...CABECERAS_BASE,
         'Content-Type': 'image/svg+xml',
-        'Content-Length': info.size,
+        'Content-Length': cuerpo.length,
         // Caché larga como la de S3/CloudFront en producción: así Lighthouse
         // no penaliza "Serve static assets with an efficient cache policy".
         'Cache-Control': 'public, max-age=31536000, immutable',

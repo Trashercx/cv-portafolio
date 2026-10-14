@@ -93,7 +93,9 @@ describe('SeoService (Fase 8, UC-34)', () => {
 
   it('JSON-LD escapa "<" como \\u003c', async () => {
     const html = await publicada().generarFragmento('/');
-    const json = /<script[^>]*>(.*)<\/script>/.exec(html)![1];
+    // Sin regex de etiquetas (CodeQL js/bad-tag-filter): se recorta por índices.
+    const inicio = html.indexOf('>', html.indexOf('<script')) + 1;
+    const json = html.slice(inicio, html.indexOf('</script>'));
     expect(json).not.toContain('<');
     expect(json).toContain('\\u003cDev>');
   });
