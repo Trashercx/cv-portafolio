@@ -3,7 +3,7 @@ import { CapaFondo } from './CapaFondo'
 import { useBucleCanvas } from './hooks/useBucleCanvas'
 import { usePunteroRelativo } from './hooks/usePunteroRelativo'
 import { useScrollRelativo } from './hooks/useScrollRelativo'
-import { acotar, factorIntensidad, ritmo, type PropsFondoVisual } from './utilidades'
+import { acotar, factorIntensidad, oscurecerColor, ritmo, type PropsFondoVisual } from './utilidades'
 
 type Estrella = { x: number; y: number; radio: number; fase: number; brillo: number }
 type CapaEstrellas = { estrellas: Estrella[]; profundidad: number }
@@ -77,7 +77,13 @@ export function CampoEstrellas({
 
       ctx.clearRect(0, 0, ancho, alto)
       capas.current.forEach((capa, indice) => {
-        const color = CAPAS[indice].color === 'primario' ? colores.primario : colores.secundario
+        const claro = colores.claro
+        const base = CAPAS[indice].color === 'primario' ? colores.primario : colores.secundario
+        // Fondo claro (QA Fase 7b): puntos oscuros/saturados, más grandes y sin
+        // atenuar tanto el parpadeo; las estrellas cercanas llevan halo primario.
+        const color = claro ? oscurecerColor(base, 0.35) : base
+        const colorHalo = claro ? colores.primario : color
+        const escalaRadio = claro ? 1.7 : 1
         ctx.fillStyle = color
         const desplX = -a.px * capa.profundidad * 70
         const desplY =
@@ -88,16 +94,18 @@ export function CampoEstrellas({
           const x = (((e.x + desplX) % ancho) + ancho) % ancho
           const y = (((e.y + desplY) % alto) + alto) % alto
           const parpadeo = 0.7 + 0.3 * Math.sin(t * 1.3 * velocidadRitmo + e.fase)
-          const alfa = acotar(e.brillo * parpadeo, 0.1, 1)
+          const alfa = acotar(e.brillo * parpadeo, claro ? 0.55 : 0.1, 1)
           if (indice === CAPAS.length - 1) {
-            ctx.globalAlpha = alfa * 0.18
+            ctx.fillStyle = colorHalo
+            ctx.globalAlpha = alfa * (claro ? 0.3 : 0.18)
             ctx.beginPath()
-            ctx.arc(x, y, e.radio * 3.4, 0, Math.PI * 2)
+            ctx.arc(x, y, e.radio * escalaRadio * 3.4, 0, Math.PI * 2)
             ctx.fill()
+            ctx.fillStyle = color
           }
           ctx.globalAlpha = alfa
           ctx.beginPath()
-          ctx.arc(x, y, e.radio, 0, Math.PI * 2)
+          ctx.arc(x, y, e.radio * escalaRadio, 0, Math.PI * 2)
           ctx.fill()
         }
       })

@@ -192,16 +192,23 @@ export function PanelFondoEditor() {
     setFondoEnEdicion(null)
   }
 
-  const manejarActivar = (tipo: TipoFondo) => {
+  // Crear + activar se encadenan con `mutateAsync`: no dependen de que el
+  // componente siga montado. Los errores ya los notifica `query-client` (toast).
+  const manejarActivar = async (tipo: TipoFondo) => {
     const guardado = porTipo.get(tipo)
-    if (guardado) {
-      if (!guardado.activo) activar.mutate(guardado.id)
-      return
+    try {
+      if (guardado) {
+        if (!guardado.activo) await activar.mutateAsync(guardado.id)
+        return
+      }
+      const nuevo = await crear.mutateAsync({
+        tipo,
+        configuracion: { ...CONFIGURACION_FONDO_DEFAULT },
+      })
+      await activar.mutateAsync(nuevo.id)
+    } catch {
+      // Ya notificado por el manejador global de mutaciones.
     }
-    crear.mutate(
-      { tipo, configuracion: { ...CONFIGURACION_FONDO_DEFAULT } },
-      { onSuccess: (nuevo) => activar.mutate(nuevo.id) },
-    )
   }
 
   const manejarAjustar = (tipo: TipoFondo) => {
@@ -222,21 +229,20 @@ export function PanelFondoEditor() {
     setBorrador((actual) => ({ ...actual, ...parcial }))
   }
 
-  const manejarGuardar = () => {
+  const manejarGuardar = async () => {
     if (!ajustando) return
-    if (existente) {
-      actualizar.mutate({ configuracion: borrador }, { onSuccess: cerrarAjuste })
-      return
+    try {
+      if (existente) {
+        await actualizar.mutateAsync({ configuracion: borrador })
+        cerrarAjuste()
+        return
+      }
+      const nuevo = await crear.mutateAsync({ tipo: ajustando, configuracion: borrador })
+      cerrarAjuste()
+      await activar.mutateAsync(nuevo.id)
+    } catch {
+      // Ya notificado por el manejador global de mutaciones.
     }
-    crear.mutate(
-      { tipo: ajustando, configuracion: borrador },
-      {
-        onSuccess: (nuevo) => {
-          activar.mutate(nuevo.id)
-          cerrarAjuste()
-        },
-      },
-    )
   }
 
   const entradaAjuste = ajustando ? entradaCatalogo(ajustando) : null
@@ -310,13 +316,11 @@ export function PanelFondoEditor() {
 
           <div className="grid gap-1.5">
             <div className="flex items-center justify-between text-xs font-medium">
-              <Label htmlFor="fondo-opacidad" className="text-xs">
-                Opacidad
-              </Label>
+              {/* Sin `htmlFor`: la raíz del Slider no es enfocable; el thumb lleva `aria-label`. */}
+              <Label className="text-xs">Opacidad</Label>
               <span aria-hidden="true">{Math.round(borrador.opacidad * 100)} %</span>
             </div>
             <Slider
-              id="fondo-opacidad"
               aria-label="Opacidad"
               min={0}
               max={100}

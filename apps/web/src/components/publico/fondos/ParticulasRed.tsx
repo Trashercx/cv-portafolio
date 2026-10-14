@@ -2,7 +2,7 @@ import { useRef } from 'react'
 import { CapaFondo } from './CapaFondo'
 import { useBucleCanvas } from './hooks/useBucleCanvas'
 import { usePunteroRelativo } from './hooks/usePunteroRelativo'
-import { acotar, factorIntensidad, ritmo, type PropsFondoVisual } from './utilidades'
+import { acotar, factorIntensidad, oscurecerColor, ritmo, type PropsFondoVisual } from './utilidades'
 
 type Particula = {
   x: number
@@ -75,6 +75,14 @@ export function ParticulasRed({
 
       ctx.clearRect(0, 0, ancho, alto)
 
+      // Fondo claro (QA Fase 7b): trazos más oscuros y con más alfa, o no se ven.
+      const claro = colores.claro
+      const colorEnlace = claro ? oscurecerColor(colores.secundario, 0.25) : colores.secundario
+      const colorNodo = claro ? oscurecerColor(colores.primario, 0.2) : colores.primario
+      const alfaEnlace = claro ? 0.9 : 0.55
+      const alfaNodo = claro ? 1 : 0.9
+      const alfaHalo = claro ? 0.26 : 0.14
+
       for (const p of lista) {
         if (cursor) {
           const dx = p.x - cursor.x
@@ -97,13 +105,13 @@ export function ParticulasRed({
       }
 
       // Enlaces entre vecinas.
-      ctx.strokeStyle = colores.secundario
-      ctx.lineWidth = 1
+      ctx.strokeStyle = colorEnlace
+      ctx.lineWidth = claro ? 1.3 : 1
       for (let i = 0; i < lista.length; i++) {
         for (let j = i + 1; j < lista.length; j++) {
           const d = Math.hypot(lista[i].x - lista[j].x, lista[i].y - lista[j].y)
           if (d < DISTANCIA_ENLACE) {
-            ctx.globalAlpha = (1 - d / DISTANCIA_ENLACE) * 0.55 * Math.min(1, f)
+            ctx.globalAlpha = (1 - d / DISTANCIA_ENLACE) * alfaEnlace * Math.min(1, f)
             ctx.beginPath()
             ctx.moveTo(lista[i].x, lista[i].y)
             ctx.lineTo(lista[j].x, lista[j].y)
@@ -114,7 +122,7 @@ export function ParticulasRed({
 
       // Hilos del cursor hacia los nodos próximos.
       if (cursor) {
-        ctx.strokeStyle = colores.primario
+        ctx.strokeStyle = colorNodo
         for (const p of lista) {
           const d = Math.hypot(p.x - cursor.x, p.y - cursor.y)
           if (d < RADIO_CURSOR) {
@@ -128,13 +136,13 @@ export function ParticulasRed({
       }
 
       // Nodos con un halo tenue para dar profundidad.
-      ctx.fillStyle = colores.primario
+      ctx.fillStyle = colorNodo
       for (const p of lista) {
-        ctx.globalAlpha = 0.14
+        ctx.globalAlpha = alfaHalo
         ctx.beginPath()
         ctx.arc(p.x, p.y, p.radio * 3.2, 0, Math.PI * 2)
         ctx.fill()
-        ctx.globalAlpha = 0.9
+        ctx.globalAlpha = alfaNodo
         ctx.beginPath()
         ctx.arc(p.x, p.y, p.radio, 0, Math.PI * 2)
         ctx.fill()

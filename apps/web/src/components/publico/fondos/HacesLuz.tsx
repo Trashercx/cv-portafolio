@@ -19,6 +19,13 @@ type Haz = {
   retraso: number
 }
 
+/** Táctil (`hover: none`): sin puntero ni GPU de escritorio, se aligera el fondo. */
+function esTactil(): boolean {
+  return typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+    ? window.matchMedia('(hover: none)').matches
+    : false
+}
+
 const HACES: Haz[] = [
   { clase: 'left-[8%] w-[15%]', color: 'var(--color-primario)', angulo: 20, base: 13, retraso: 0 },
   { clase: 'left-[32%] w-[10%]', color: 'var(--color-secundario)', angulo: 26, base: 17, retraso: -4 },
@@ -27,7 +34,7 @@ const HACES: Haz[] = [
 ]
 
 /**
- * Haces de luz (Fase 7b, UC-15). Cuatro haces diagonales con degradado
+ * Haces de luz (Fase 7b, UC-15). Cuatro haces diagonales (tres en táctil o con intensidad `sutil`) con degradado
  * lineal que se desvanece hacia abajo, suavizados con `blur`, que oscilan
  * alrededor de su inclinación de reposo (variable `--ang`) y "respiran" en
  * opacidad con desfases distintos. Todo el conjunto se inclina hacia el
@@ -40,6 +47,10 @@ export function HacesLuz({ velocidad, intensidad, interactivo, ambito }: PropsFo
     capa.current?.style.setProperty('--px', p ? String(acotar(p.x * 2 - 1, -1, 1)) : '0')
   })
   const f = factorIntensidad(intensidad)
+  // Móvil (QA Fase 7b): 4 capas con blur(16px) al 150 % cuestan fill-rate; con
+  // `(hover: none)` o intensidad `sutil` se usan 3 haces y blur(8px).
+  const ligero = intensidad === 'sutil' || esTactil()
+  const haces = ligero ? HACES.slice(0, 3) : HACES
 
   return (
     <CapaFondo ambito={ambito} capaRef={capa}>
@@ -56,7 +67,7 @@ export function HacesLuz({ velocidad, intensidad, interactivo, ambito }: PropsFo
           transition: 'transform 900ms cubic-bezier(0.22, 0.61, 0.36, 1)',
         }}
       >
-        {HACES.map((h) => (
+        {haces.map((h) => (
           <div
             key={h.clase}
             className={`absolute -top-[12%] h-[150%] origin-top will-change-transform ${h.clase}`}
@@ -64,7 +75,7 @@ export function HacesLuz({ velocidad, intensidad, interactivo, ambito }: PropsFo
               {
                 '--ang': `${h.angulo}deg`,
                 backgroundImage: `linear-gradient(to bottom, color-mix(in srgb, ${h.color} 85%, transparent), transparent 82%)`,
-                filter: 'blur(16px)',
+                filter: ligero ? 'blur(8px)' : 'blur(16px)',
                 opacity: acotar(0.55 * f, 0.25, 0.95),
                 animation: `haz-oscilar ${duracionCss(h.base, velocidad)} ease-in-out ${h.retraso}s infinite alternate`,
               } as CSSProperties

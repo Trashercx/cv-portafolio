@@ -112,7 +112,20 @@ export function useBucleCanvas(
     sincronizar()
 
     const observadorTamano =
-      typeof ResizeObserver !== 'undefined' ? new ResizeObserver(redimensionar) : null
+      typeof ResizeObserver !== 'undefined'
+        ? new ResizeObserver(() => {
+            // La notificación inicial del `observe` repite el tamaño ya preparado:
+            // se ignora si no cambió (evita regenerar partículas y redibujar).
+            const rect = canvas.getBoundingClientRect()
+            if (
+              Math.max(1, Math.round(rect.width)) === ancho &&
+              Math.max(1, Math.round(rect.height)) === alto
+            ) {
+              return
+            }
+            redimensionar()
+          })
+        : null
     observadorTamano?.observe(canvas)
 
     const observadorVisibilidad =

@@ -28,10 +28,10 @@ vi.mock('@/features/fondo-sitio/useFondosSitio', () => ({
     isLoading: fondosMock.isLoading,
     error: fondosMock.error,
   }),
-  useActivarFondoSitio: () => ({ mutate: activarMutateMock, isPending: false }),
+  useActivarFondoSitio: () => ({ mutateAsync: activarMutateMock, isPending: false }),
   useEliminarFondoSitio: () => ({ mutate: eliminarMutateMock, isPending: false }),
-  useCrearFondoSitio: () => ({ mutate: crearMutateMock, isPending: false }),
-  useActualizarFondoSitio: () => ({ mutate: actualizarMutateMock, isPending: false }),
+  useCrearFondoSitio: () => ({ mutateAsync: crearMutateMock, isPending: false }),
+  useActualizarFondoSitio: () => ({ mutateAsync: actualizarMutateMock, isPending: false }),
 }))
 
 vi.mock('@/features/tema/useTemas', () => ({
@@ -171,9 +171,7 @@ describe('PanelFondoEditor (UC-15, Fase 7b)', () => {
   })
 
   it('"Activar" sobre un tipo sin guardar lo crea con los valores por defecto y luego lo activa', async () => {
-    crearMutateMock.mockImplementation((_payload, opciones) =>
-      opciones?.onSuccess?.({ id: 'nuevo-1' }),
-    )
+    crearMutateMock.mockResolvedValue({ id: 'nuevo-1' })
     const user = userEvent.setup()
     renderPanel()
 
@@ -236,7 +234,7 @@ describe('PanelFondoEditor (UC-15, Fase 7b)', () => {
 
   it('"Guardar" sobre un fondo existente hace un único PATCH con la configuración y limpia el store', async () => {
     fondosMock.data = [FONDO_ACTIVO]
-    actualizarMutateMock.mockImplementation((_payload, opciones) => opciones?.onSuccess?.())
+    actualizarMutateMock.mockResolvedValue({})
     const user = userEvent.setup()
     renderPanel()
     await user.click(within(tarjeta('aurora_mesh')).getByRole('button', { name: 'Ajustar' }))
@@ -255,9 +253,7 @@ describe('PanelFondoEditor (UC-15, Fase 7b)', () => {
   })
 
   it('"Guardar" sobre un tipo sin guardar crea el fondo y lo activa', async () => {
-    crearMutateMock.mockImplementation((_payload, opciones) =>
-      opciones?.onSuccess?.({ id: 'nuevo-2' }),
-    )
+    crearMutateMock.mockResolvedValue({ id: 'nuevo-2' })
     const user = userEvent.setup()
     renderPanel()
     await user.click(within(tarjeta('campo_estrellas')).getByRole('button', { name: 'Ajustar' }))
