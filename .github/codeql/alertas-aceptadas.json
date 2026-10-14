@@ -3,5 +3,10 @@
     "ruleId": "js/request-forgery",
     "uri": "apps/api/src/modules/insignias/red-segura.ts",
     "motivo": "Fase 7d (UC-35): la URL es del admin autenticado por diseño (importar insignia). Mitigado en descargarRecursoSeguro: solo https:443, DNS resuelto y rangos privados/metadata rechazados, redirecciones revalidadas, IP fijada con un Agent de undici, 10 MB y 8 s, sin cookies, @Throttle."
+  },
+  {
+    "ruleId": "js/xss-through-dom",
+    "uri": "apps/web/src/components/media/MediaPreview.tsx",
+    "motivo": "Fase 7g (UC-09): el `url` que llega a `src`/`data`/`href` es el que produce `URL.createObjectURL(file)` en MediaUploadField (una URL `blob:` generada por el propio navegador para un File elegido por el admin) o la URL de la media ya guardada; nunca se interpreta como HTML (React escapa atributos) y los enlaces llevan `rel=\"noreferrer\"`. Alerta previa a la fase (fallaba en cada push a main desde el 2026-10-13); el PR #57 la hizo visible en el análisis por diff al tocar ese flujo."
   }
 ]
