@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto';
 import { promises as fs } from 'fs';
 import { join } from 'path';
 import * as request from 'supertest';
+import { sharp } from '../src/modules/media/sharp';
 import { LocalMediaStorageService } from '../src/modules/media/storage/local-media-storage.service';
 import { MEDIA_STORAGE_SERVICE } from '../src/modules/media/storage/media-storage.interface';
 import { PrismaService } from '../src/prisma/prisma.service';
@@ -503,5 +504,50 @@ describe('Versiones del sitio y sitio público (e2e, UC-10 a UC-14)', () => {
       id: media.body.id,
       url: media.body.url,
     });
+  });
+
+  it('el snapshot publicado incluye variantes (webp/avif) de la imagen de perfil (Fase 8, UC-34)', async () => {
+    const png = await sharp({
+      create: { width: 1300, height: 800, channels: 3, background: '#336699' },
+    })
+      .png()
+      .toBuffer();
+
+    const media = await agent
+      .post('/admin/media')
+      .attach('file', png, 'perfil-variantes.png')
+      .expect(201);
+    idsMediaCreada.push(media.body.id);
+    keysMediaCreada.push(media.body.s3_key);
+    const variantesDb = await prisma.mediaVariante.findMany({
+      where: { media_id: media.body.id },
+    });
+    keysMediaCreada.push(...variantesDb.map((v) => v.s3_key));
+
+    await prisma.perfil.update({
+      where: { usuario_admin_id: adminId },
+      data: { imagen_perfil_id: media.body.id },
+    });
+
+    const version = await agent.post('/admin/versiones/publicar').expect(201);
+    idsVersionesCreadas.push(version.body.id);
+
+    const sitio = await request(app.getHttpServer()).get('/sitio').expect(200);
+    const variantes = sitio.body.perfil.imagen_perfil.variantes;
+
+    expect(
+      variantes.map(
+        (v: { formato: string; ancho: number }) => `${v.formato}-${v.ancho}`,
+      ),
+    ).toEqual(
+      expect.arrayContaining([
+        'webp-640',
+        'avif-640',
+        'webp-1024',
+        'avif-1024',
+      ]),
+    );
+    expect(variantes[0]).not.toHaveProperty('s3_key');
+    expect(variantes[0]).not.toHaveProperty('bytes');
   });
 });

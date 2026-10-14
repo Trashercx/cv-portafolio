@@ -1,8 +1,16 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../../prisma/prisma.service';
+import { sharp } from './sharp';
 import { MediaService } from './media.service';
+import { INCLUDE_MEDIA_CON_VARIANTES } from './media.select';
+import { VariantesImagenService } from './variantes-imagen.service';
 import { MEDIA_STORAGE_SERVICE } from './storage/media-storage.interface';
+
+const pngReal = () =>
+  sharp({ create: { width: 10, height: 10, channels: 3, background: '#fff' } })
+    .png()
+    .toBuffer();
 
 describe('MediaService (UC-02/03/04 + biblioteca UC-09)', () => {
   let service: MediaService;
@@ -18,7 +26,17 @@ describe('MediaService (UC-02/03/04 + biblioteca UC-09)', () => {
     certificacion: { findFirst: jest.Mock };
     perfil: { findFirst: jest.Mock };
   };
-  let storage: { upload: jest.Mock };
+  let storage: {
+    upload: jest.Mock;
+    subirDerivado: jest.Mock;
+    descargar: jest.Mock;
+    eliminar: jest.Mock;
+  };
+  let variantes: {
+    generar: jest.Mock;
+    eliminarDe: jest.Mock;
+    esRasterizable: jest.Mock;
+  };
 
   const buildFile = (overrides: Partial<Express.Multer.File> = {}) =>
     ({
@@ -42,7 +60,16 @@ describe('MediaService (UC-02/03/04 + biblioteca UC-09)', () => {
       certificacion: { findFirst: jest.fn() },
       perfil: { findFirst: jest.fn() },
     };
+    variantes = {
+      generar: jest.fn().mockResolvedValue({ generadas: 0, omitida: false }),
+      eliminarDe: jest.fn().mockResolvedValue(undefined),
+      esRasterizable: jest.fn().mockReturnValue(true),
+    };
+    prisma.media.findUnique.mockResolvedValue({ id: 'media-uuid' });
     storage = {
+      subirDerivado: jest.fn(),
+      descargar: jest.fn(),
+      eliminar: jest.fn(),
       upload: jest.fn().mockResolvedValue({
         url: 'https://bucket.s3.us-east-1.amazonaws.com/biblioteca/abc.png',
         key: 'biblioteca/abc.png',
@@ -54,6 +81,7 @@ describe('MediaService (UC-02/03/04 + biblioteca UC-09)', () => {
         MediaService,
         { provide: PrismaService, useValue: prisma },
         { provide: MEDIA_STORAGE_SERVICE, useValue: storage },
+        { provide: VariantesImagenService, useValue: variantes },
       ],
     }).compile();
 
@@ -81,6 +109,23 @@ describe('MediaService (UC-02/03/04 + biblioteca UC-09)', () => {
           alto: undefined,
           alt_text: 'Foto de perfil',
         },
+      });
+    });
+
+    it('genera variantes tras crear la fila y devuelve la media con variantes', async () => {
+      prisma.media.create.mockResolvedValue({ id: 'media-uuid' });
+
+      await service.create(buildFile(), {}, 'admin-uuid');
+
+      expect(variantes.generar).toHaveBeenCalledWith(
+        'media-uuid',
+        expect.any(Buffer),
+        'biblioteca/abc.png',
+        'image/png',
+      );
+      expect(prisma.media.findUnique).toHaveBeenCalledWith({
+        where: { id: 'media-uuid' },
+        include: INCLUDE_MEDIA_CON_VARIANTES,
       });
     });
 
@@ -122,6 +167,7 @@ describe('MediaService (UC-02/03/04 + biblioteca UC-09)', () => {
       expect(prisma.media.findMany).toHaveBeenCalledWith({
         where: undefined,
         orderBy: { created_at: 'desc' },
+        include: INCLUDE_MEDIA_CON_VARIANTES,
       });
     });
 
@@ -133,6 +179,7 @@ describe('MediaService (UC-02/03/04 + biblioteca UC-09)', () => {
       expect(prisma.media.findMany).toHaveBeenCalledWith({
         where: { tipo: 'imagen' },
         orderBy: { created_at: 'desc' },
+        include: INCLUDE_MEDIA_CON_VARIANTES,
       });
     });
   });
@@ -160,6 +207,7 @@ describe('MediaService (UC-02/03/04 + biblioteca UC-09)', () => {
       expect(prisma.media.update).toHaveBeenCalledWith({
         where: { id: 'media-uuid' },
         data: { alt_text: 'nuevo' },
+        include: INCLUDE_MEDIA_CON_VARIANTES,
       });
       expect(resultado.alt_text).toBe('nuevo');
     });
@@ -177,6 +225,7 @@ describe('MediaService (UC-02/03/04 + biblioteca UC-09)', () => {
 
       await service.eliminar('media-uuid');
 
+      expect(variantes.eliminarDe).toHaveBeenCalledWith('media-uuid');
       expect(prisma.media.delete).toHaveBeenCalledWith({
         where: { id: 'media-uuid' },
       });
@@ -243,6 +292,13 @@ describe('MediaService (UC-02/03/04 + biblioteca UC-09)', () => {
         },
       });
       expect(resultado.id).toBe('media-uuid');
+      expect(variantes.eliminarDe).toHaveBeenCalledWith('media-uuid');
+      expect(variantes.generar).toHaveBeenCalledWith(
+        'media-uuid',
+        expect.any(Buffer),
+        'biblioteca/nuevo.png',
+        'image/png',
+      );
     });
 
     it('lanza NotFoundException si el id no existe', async () => {
@@ -252,6 +308,112 @@ describe('MediaService (UC-02/03/04 + biblioteca UC-09)', () => {
         service.reemplazar('no-existe', buildFile()),
       ).rejects.toThrow(NotFoundException);
       expect(storage.upload).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('regenerarVariantes / regenerarFaltantes (Fase 8, UC-34)', () => {
+    it('regenerarVariantes lanza 404 si la media no existe', async () => {
+      prisma.media.findUnique.mockResolvedValue(null);
+
+      await expect(service.regenerarVariantes('x')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('omite medias que no son imagen', async () => {
+      prisma.media.findUnique.mockResolvedValue({ id: 'm', tipo: 'pdf' });
+
+      await expect(service.regenerarVariantes('m')).resolves.toEqual({
+        generadas: 0,
+        omitida: true,
+      });
+      expect(storage.descargar).not.toHaveBeenCalled();
+    });
+
+    it('omite imágenes no rasterizables (p. ej. svg)', async () => {
+      prisma.media.findUnique.mockResolvedValue({
+        id: 'm',
+        tipo: 'imagen',
+        s3_key: 'a.svg',
+      });
+      storage.descargar.mockResolvedValue(Buffer.from('<svg/>'));
+
+      await expect(service.regenerarVariantes('m')).resolves.toEqual({
+        generadas: 0,
+        omitida: true,
+      });
+      expect(variantes.generar).not.toHaveBeenCalled();
+    });
+
+    it('regenerarVariantes incluye el error si generar falla', async () => {
+      prisma.media.findUnique.mockResolvedValue({
+        id: 'm',
+        tipo: 'imagen',
+        s3_key: 'a.png',
+      });
+      storage.descargar.mockResolvedValue(await pngReal());
+      variantes.generar.mockResolvedValue({
+        generadas: 0,
+        omitida: false,
+        error: 'S3 caído',
+      });
+
+      await expect(service.regenerarVariantes('m')).resolves.toEqual({
+        generadas: 0,
+        omitida: false,
+        error: 'S3 caído',
+      });
+    });
+
+    it('regenerarVariantes responde generadas y omitida en el caso feliz', async () => {
+      prisma.media.findUnique.mockResolvedValue({
+        id: 'm',
+        tipo: 'imagen',
+        s3_key: 'a.png',
+      });
+      storage.descargar.mockResolvedValue(await pngReal());
+      variantes.generar.mockResolvedValue({ generadas: 4, omitida: false });
+
+      await expect(service.regenerarVariantes('m')).resolves.toEqual({
+        generadas: 4,
+        omitida: false,
+      });
+    });
+
+    it('regenerarFaltantes cuenta procesadas, omitidas y errores reales', async () => {
+      prisma.media.findMany.mockResolvedValue([
+        { id: 'a' },
+        { id: 'b' },
+        { id: 'c' },
+        { id: 'd' },
+      ]);
+      const espia = jest
+        .spyOn(service, 'regenerarVariantes')
+        .mockResolvedValueOnce({ generadas: 4, omitida: false })
+        .mockRejectedValueOnce(new Error('sin objeto'))
+        .mockResolvedValueOnce({ generadas: 0, omitida: true })
+        .mockResolvedValueOnce({
+          generadas: 0,
+          omitida: false,
+          error: 'fallo al generar',
+        });
+
+      const resultado = await service.regenerarFaltantes();
+
+      expect(prisma.media.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { tipo: 'imagen', variantes: { none: {} } },
+        }),
+      );
+      expect(resultado).toEqual({
+        procesadas: 1,
+        omitidas: 1,
+        errores: [
+          { id: 'b', motivo: 'sin objeto' },
+          { id: 'd', motivo: 'fallo al generar' },
+        ],
+      });
+      espia.mockRestore();
     });
   });
 });

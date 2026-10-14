@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UpsertPerfilDto } from './dto/upsert-perfil.dto';
+import { INCLUDE_MEDIA_CON_VARIANTES } from '../media/media.select';
 
 @Injectable()
 export class PerfilService {
@@ -28,7 +29,10 @@ export class PerfilService {
   async obtenerConMedia(usuarioAdminId: string) {
     return this.prisma.perfil.findUnique({
       where: { usuario_admin_id: usuarioAdminId },
-      include: { imagen_perfil: true, cv_media: true },
+      include: {
+        imagen_perfil: { include: INCLUDE_MEDIA_CON_VARIANTES },
+        cv_media: { include: INCLUDE_MEDIA_CON_VARIANTES },
+      },
     });
   }
 

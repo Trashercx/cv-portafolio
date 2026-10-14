@@ -21,6 +21,7 @@ import {
   SnapshotSeccion,
   SnapshotSitio,
 } from './snapshot.types';
+import { INCLUDE_MEDIA_CON_VARIANTES } from '../media/media.select';
 
 /**
  * UC-10 (Previsualizar cambios) y UC-11 (Publicar o revertir una versión).
@@ -144,6 +145,7 @@ export class VersionesSitioService {
     if (idsMedia.length > 0) {
       const medias = await this.prisma.media.findMany({
         where: { id: { in: idsMedia } },
+        include: INCLUDE_MEDIA_CON_VARIANTES,
       });
 
       medias.forEach((media) =>

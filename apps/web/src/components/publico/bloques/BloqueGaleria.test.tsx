@@ -70,9 +70,9 @@ describe('BloqueGaleria (UC-18)', () => {
     // El lightbox muestra la MISMA foto en la que se hizo click (índice 1),
     // no siempre la primera — se verifica con el título visible dentro del
     // modal (`Lightbox`, cubierto en detalle en `Lightbox.test.tsx`).
-    expect(
-      screen.getByRole('dialog').textContent?.includes('Segunda foto'),
-    ).toBe(true)
+    // El Lightbox es lazy (Fase 8.3): se espera a que cargue.
+    const dialogo = await screen.findByRole('dialog')
+    expect(dialogo.textContent?.includes('Segunda foto')).toBe(true)
   })
 
   it('click en una foto de la grilla abre el lightbox', async () => {
@@ -81,7 +81,7 @@ describe('BloqueGaleria (UC-18)', () => {
 
     await user.click(screen.getByRole('button', { name: 'Primera foto' }))
 
-    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(await screen.findByRole('dialog')).toBeInTheDocument()
   })
 
   it('sin fotos muestra el mensaje de lista vacía', () => {

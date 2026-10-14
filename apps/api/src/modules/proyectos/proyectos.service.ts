@@ -10,11 +10,15 @@ import { CreateProyectoDto } from './dto/create-proyecto.dto';
 import { ReordenarImagenProyectoItemDto } from './dto/reordenar-imagen-proyecto-item.dto';
 import { ReordenarProyectoItemDto } from './dto/reordenar-proyecto-item.dto';
 import { UpdateProyectoDto } from './dto/update-proyecto.dto';
+import { INCLUDE_MEDIA_CON_VARIANTES } from '../media/media.select';
 
 /** Relaciones incluidas en el detalle público y en el listado del panel admin. */
 const INCLUDE_DETALLE = {
   tecnologias: { include: { tecnologia: true } },
-  imagenes: { include: { media: true }, orderBy: { orden: 'asc' as const } },
+  imagenes: {
+    include: { media: { include: INCLUDE_MEDIA_CON_VARIANTES } },
+    orderBy: { orden: 'asc' as const },
+  },
 };
 
 @Injectable()

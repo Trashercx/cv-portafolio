@@ -1,5 +1,8 @@
 import type { ReactNode } from 'react'
-import { LazyMotion, domAnimation } from 'motion/react'
+import { LazyMotion } from 'motion/react'
+
+// Fase 8 (8.3, UC-34): carga diferida de las features (chunk aparte).
+const cargarFeatures = () => import('./motion-features').then((m) => m.default)
 
 /**
  * Proveedor único de `motion` (Fase 7, 7.3, UC-12): `LazyMotion` con el
@@ -11,5 +14,5 @@ import { LazyMotion, domAnimation } from 'motion/react'
  * estáticos, sin animación y sin romper.
  */
 export function ProveedorMotion({ children }: { children: ReactNode }) {
-  return <LazyMotion features={domAnimation}>{children}</LazyMotion>
+  return <LazyMotion features={cargarFeatures}>{children}</LazyMotion>
 }

@@ -1,8 +1,13 @@
 import { Injectable } from '@nestjs/common';
-import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import {
+  DeleteObjectsCommand,
+  GetObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3';
 import { randomUUID } from 'crypto';
 import { extname } from 'path';
-import sharp from 'sharp';
+import { sharp } from '../sharp';
 import {
   MediaStorageService,
   UploadedMediaResult,
@@ -75,6 +80,44 @@ export class S3MediaStorageService implements MediaStorageService {
     );
 
     return { url: this.construirUrl(key), key, width, height };
+  }
+
+  /** Fase 8 (UC-34): derivado con caché inmutable de un año. */
+  async subirDerivado(
+    buffer: Buffer,
+    key: string,
+    contentType: string,
+  ): Promise<{ url: string; key: string }> {
+    await this.client.send(
+      new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: key,
+        Body: buffer,
+        ContentType: contentType,
+        CacheControl: 'public, max-age=31536000, immutable',
+      }),
+    );
+    return { url: this.construirUrl(key), key };
+  }
+
+  async descargar(key: string): Promise<Buffer> {
+    const respuesta = await this.client.send(
+      new GetObjectCommand({ Bucket: this.bucket, Key: key }),
+    );
+    if (!respuesta.Body) {
+      throw new Error(`El objeto ${key} no tiene cuerpo`);
+    }
+    return Buffer.from(await respuesta.Body.transformToByteArray());
+  }
+
+  async eliminar(keys: string[]): Promise<void> {
+    if (keys.length === 0) return;
+    await this.client.send(
+      new DeleteObjectsCommand({
+        Bucket: this.bucket,
+        Delete: { Objects: keys.map((Key) => ({ Key })), Quiet: true },
+      }),
+    );
   }
 
   /** No bloquea la subida si el archivo no es imagen o sharp no logra leer su metadata. */

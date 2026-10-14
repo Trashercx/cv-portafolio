@@ -1,0 +1,42 @@
+{
+  "$schema": "https://raw.githubusercontent.com/GoogleChrome/lighthouse-ci/main/packages/cli/schema.json",
+  "ci": {
+    "collect": {
+      "url": [
+        "http://127.0.0.1:4173/",
+        "http://127.0.0.1:4173/proyecto/11111111-1111-4111-8111-111111111101"
+      ],
+      "numberOfRuns": 3,
+      "settings": {
+        "formFactor": "mobile",
+        "onlyCategories": ["performance", "accessibility", "best-practices", "seo"]
+      }
+    },
+    "assert": {
+      "assertMatrix": [
+        {
+          "matchingUrlPattern": "/proyecto/",
+          "assertions": {
+            "categories:performance": ["error", { "minScore": 0.9, "aggregationMethod": "median-run" }],
+            "categories:accessibility": ["error", { "minScore": 0.95, "aggregationMethod": "median-run" }],
+            "categories:best-practices": ["error", { "minScore": 0.9, "aggregationMethod": "median-run" }],
+            "categories:seo": ["error", { "minScore": 0.9, "aggregationMethod": "median-run" }]
+          }
+        },
+        {
+          "matchingUrlPattern": "^https?://[^/]+/$",
+          "assertions": {
+            "categories:performance": ["error", { "minScore": 0.85, "aggregationMethod": "median-run" }],
+            "categories:accessibility": ["error", { "minScore": 0.95, "aggregationMethod": "median-run" }],
+            "categories:best-practices": ["error", { "minScore": 0.9, "aggregationMethod": "median-run" }],
+            "categories:seo": ["error", { "minScore": 0.9, "aggregationMethod": "median-run" }]
+          }
+        }
+      ]
+    },
+    "upload": {
+      "target": "filesystem",
+      "outputDir": ".lighthouseci"
+    }
+  }
+}

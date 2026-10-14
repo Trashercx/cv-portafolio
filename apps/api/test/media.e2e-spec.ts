@@ -2,6 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { promises as fs } from 'fs';
 import { join } from 'path';
 import * as request from 'supertest';
+import { sharp } from '../src/modules/media/sharp';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { LocalMediaStorageService } from '../src/modules/media/storage/local-media-storage.service';
 import { MEDIA_STORAGE_SERVICE } from '../src/modules/media/storage/media-storage.interface';
@@ -265,6 +266,128 @@ describe('Media admin (e2e, UC-02/UC-03/UC-04 + biblioteca UC-09)', () => {
       await agent
         .patch(`/admin/media/${subida.body.id}/reemplazar`)
         .expect(400);
+    });
+  });
+
+  // ---------------------------------------------------------------------
+  // Fase 8 (UC-34, ext. UC-09): variantes responsive webp/avif
+  // ---------------------------------------------------------------------
+
+  describe('variantes responsive (Fase 8, UC-34)', () => {
+    const pngReal = () =>
+      sharp({
+        create: {
+          width: 1300,
+          height: 800,
+          channels: 3,
+          background: '#336699',
+        },
+      })
+        .png()
+        .toBuffer();
+
+    const claves = (variantes: { formato: string; ancho: number }[]) =>
+      variantes.map((v) => `${v.formato}-${v.ancho}`).sort();
+
+    it('POST /admin/media de un PNG de 1300x800 devuelve variantes 640 y 1024 en webp y avif', async () => {
+      const inicio = Date.now();
+      const respuesta = await agent
+        .post('/admin/media')
+        .attach('file', await pngReal(), 'grande.png')
+        .expect(201);
+      // eslint-disable-next-line no-console
+      console.log(`Variantes generadas en ${Date.now() - inicio} ms`);
+      idsCreados.push(respuesta.body.id);
+      keysCreadas.push(respuesta.body.s3_key);
+
+      expect(claves(respuesta.body.variantes)).toEqual([
+        'avif-1024',
+        'avif-640',
+        'webp-1024',
+        'webp-640',
+      ]);
+      expect(respuesta.body.variantes[0]).toEqual({
+        formato: expect.any(String),
+        ancho: 640,
+        alto: 394,
+        url: expect.any(String),
+      });
+
+      const enDb = await prisma.mediaVariante.findMany({
+        where: { media_id: respuesta.body.id },
+      });
+      keysCreadas.push(...enDb.map((v) => v.s3_key));
+      expect(enDb).toHaveLength(4);
+    });
+
+    it('una imagen que no es raster (svg) se sube sin variantes y sin fallar', async () => {
+      const respuesta = await agent
+        .post('/admin/media')
+        .attach(
+          'file',
+          Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>'),
+          { filename: 'logo.svg', contentType: 'image/svg+xml' },
+        )
+        .expect(201);
+      idsCreados.push(respuesta.body.id);
+      keysCreadas.push(respuesta.body.s3_key);
+
+      expect(respuesta.body.variantes).toEqual([]);
+    });
+
+    it('POST /admin/media/:id/variantes regenera y POST /admin/media/variantes/regenerar responde la forma del contrato', async () => {
+      const subida = await agent
+        .post('/admin/media')
+        .attach('file', await pngReal(), 'regenerar.png')
+        .expect(201);
+      idsCreados.push(subida.body.id);
+      keysCreadas.push(subida.body.s3_key);
+
+      // Simula una imagen anterior a la Fase 8: sin variantes.
+      await prisma.mediaVariante.deleteMany({
+        where: { media_id: subida.body.id },
+      });
+
+      const faltantes = await agent
+        .post('/admin/media/variantes/regenerar')
+        .expect(201);
+      expect(faltantes.body).toEqual({
+        procesadas: expect.any(Number),
+        omitidas: expect.any(Number),
+        errores: expect.any(Array),
+      });
+      expect(faltantes.body.procesadas).toBeGreaterThanOrEqual(1);
+
+      const individual = await agent
+        .post(`/admin/media/${subida.body.id}/variantes`)
+        .expect(201);
+      expect(individual.body).toEqual({ generadas: 4, omitida: false });
+
+      const enDb = await prisma.mediaVariante.findMany({
+        where: { media_id: subida.body.id },
+      });
+      keysCreadas.push(...enDb.map((v) => v.s3_key));
+      expect(enDb).toHaveLength(4);
+
+      await agent
+        .post('/admin/media/00000000-0000-4000-8000-000000000000/variantes')
+        .expect(404);
+    });
+
+    it('DELETE /admin/media/:id borra las variantes en cascada', async () => {
+      const subida = await agent
+        .post('/admin/media')
+        .attach('file', await pngReal(), 'cascada.png')
+        .expect(201);
+      expect(subida.body.variantes).toHaveLength(4);
+
+      await agent.delete(`/admin/media/${subida.body.id}`).expect(200);
+
+      expect(
+        await prisma.mediaVariante.count({
+          where: { media_id: subida.body.id },
+        }),
+      ).toBe(0);
     });
   });
 });

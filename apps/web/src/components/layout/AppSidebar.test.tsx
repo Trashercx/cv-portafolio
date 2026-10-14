@@ -29,10 +29,11 @@ const ITEMS_ESPERADOS = [
   'Redes sociales',
   'Editor visual',
   'Biblioteca de medios',
+  'Métricas', // Fase 8 (UC-27)
 ]
 
 describe('AppSidebar', () => {
-  it('muestra las 8 entradas de navegación agrupadas en 3 secciones', () => {
+  it('muestra las 9 entradas de navegación agrupadas en 4 secciones', () => {
     renderSidebar('/admin/perfil')
 
     for (const label of ITEMS_ESPERADOS) {
@@ -42,6 +43,7 @@ describe('AppSidebar', () => {
     expect(screen.getByText('Contenido')).toBeInTheDocument()
     expect(screen.getByText('Diseño')).toBeInTheDocument()
     expect(screen.getByText('Recursos')).toBeInTheDocument()
+    expect(screen.getByText('Analítica')).toBeInTheDocument()
   })
 
   it('no muestra "Tema" ni "Fondo del sitio" como ítems propios (fusionados en el panel lateral del editor)', () => {

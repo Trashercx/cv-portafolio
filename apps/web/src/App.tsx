@@ -1,21 +1,30 @@
 import { lazy, Suspense } from 'react'
-import { Navigate, Route, Routes } from 'react-router-dom'
-import { AdminLayout } from '@/components/layout/AdminLayout'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { Analitica } from '@/components/publico/Analitica'
 import { CargandoPagina } from '@/components/CargandoPagina'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { LayoutPublico } from '@/components/publico/LayoutPublico'
-import { Toaster } from '@/components/ui/sonner'
 import { RequireAuth } from '@/features/auth/RequireAuth'
-import { LoginPage } from '@/pages/admin/LoginPage'
 import { PublicHomePage } from '@/pages/public/PublicHomePage'
 
 /**
  * Fase 6 (code splitting): las páginas del panel admin (entre ellas
  * `EditorSeccionesPage`, que arrastra Puck) y los detalles públicos (UC-13)
- * se cargan bajo demanda. `PublicHomePage` y `LoginPage` siguen eager (LCP
- * del sitio y entrada al panel). Los módulos exportan por nombre, de ahí el
+ * se cargan bajo demanda. `PublicHomePage` sigue eager (LCP del sitio); `AdminLayout`,
+ * `LoginPage` y `Toaster` (Fase 8.3) tambien son lazy. Los módulos exportan por nombre, de ahí el
  * `.then` que los adapta al `default` que exige `React.lazy`.
  */
+const AdminLayout = lazy(() =>
+  import('@/components/layout/AdminLayout').then((m) => ({ default: m.AdminLayout })),
+)
+const LoginPage = lazy(() =>
+  import('@/pages/admin/LoginPage').then((m) => ({ default: m.LoginPage })),
+)
+// Fase 8 (8.3, UC-34): sonner solo se descarga en rutas /admin/*; los toasts
+// de mutaciones se cargan de forma diferida en `query-client.ts`.
+const Toaster = lazy(() =>
+  import('@/components/ui/sonner').then((m) => ({ default: m.Toaster })),
+)
 const CertificacionesListPage = lazy(() =>
   import('@/pages/admin/CertificacionesListPage').then((m) => ({ default: m.CertificacionesListPage })),
 )
@@ -27,6 +36,9 @@ const LogrosListPage = lazy(() =>
 )
 const MediaLibraryPage = lazy(() =>
   import('@/pages/admin/MediaLibraryPage').then((m) => ({ default: m.MediaLibraryPage })),
+)
+const MetricasPage = lazy(() =>
+  import('@/pages/admin/MetricasPage').then((m) => ({ default: m.MetricasPage })),
 )
 const PerfilPage = lazy(() =>
   import('@/pages/admin/PerfilPage').then((m) => ({ default: m.PerfilPage })),
@@ -54,9 +66,18 @@ const NoEncontradoPage = lazy(() =>
 )
 
 function App() {
+  const { pathname } = useLocation()
+  const esAdmin = pathname === '/admin' || pathname.startsWith('/admin/')
+
   return (
     <>
-      <Toaster />
+      {esAdmin ? (
+        <Suspense fallback={null}>
+          <Toaster />
+        </Suspense>
+      ) : null}
+      {/* Fase 8 (8.4, UC-27): tracker de Umami solo en rutas públicas. */}
+      {esAdmin ? null : <Analitica />}
       {/* Fase 4.1, punto 5: red de seguridad general — un error de render en
           cualquier ruta ya no tumba React entero dejando una pantalla en
           blanco sin ningún mensaje. Ver `EditorSeccionesPage` para la
@@ -127,6 +148,8 @@ function App() {
               element={<Navigate to="/admin/editor?panel=fondo" replace />}
             />
             <Route path="media" element={<MediaLibraryPage />} />
+            {/* Fase 8 (8.4, UC-27): métricas de Umami. */}
+            <Route path="metricas" element={<MetricasPage />} />
             {/*
               UC-10/UC-11 (Publicación) se fusionaron dentro de "Editor
               visual" (Sprint 7): ya no hay una página independiente, así que

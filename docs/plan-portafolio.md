@@ -134,9 +134,21 @@ Aprobada por el usuario como siguiente fase, por delante del resto del roadmap (
 | UC-08 | Toggle "Vista previa en oscuro" que cambia solo el lienzo de Puck y la vista previa, sin tocar el modo del panel; edición de temas existentes; vista previa en vivo claro/oscuro dentro del formulario; indicador de contraste WCAG; 12 plantillas; catálogo de 7 fuentes variables cargadas bajo demanda | Con el panel en modo claro, activar el toggle muestra el lienzo en oscuro con la paleta derivada y el panel sigue claro (y viceversa); un tema con contraste texto/fondo < 4.5:1 muestra aviso antes de guardar; cambiar la fuente se ve en el lienzo sin recargar. |
 | UC-12 | Opciones visuales nuevas en los bloques: animación de entrada y separadores por bloque, fondos degradado/vidrio; hero con disposición (centrado/dividido/editorial), títulos rotativos, segundo botón, redes, indicador de scroll, efecto de título y decoración de fondo; estadísticas con contador en "Sobre mí"; proyectos en tarjetas/bento/lista con hover elevar/inclinar; skills en marquesina/cuadrícula/nube; contacto destacado; galería con zoom | Cada opción se ve igual en el lienzo, en la vista previa y en el sitio publicado; las animaciones se desactivan con `prefers-reduced-motion`; el sitio no tiene scroll horizontal a 360 px. |
 
+### Extensiones de UC-09, UC-12 y UC-14 — Fase 8, visibilidad (2026-10-14)
+
+Aprobada por el usuario el 2026-10-14 como siguiente fase del roadmap (§7); con ella UC-27 y UC-34 pasan de propuestos a aprobados e implementados. Agrega una sola entidad (`MEDIA_VARIANTE`, ver diagrama ER) y ninguna otra tabla. El contrato técnico exacto (rutas, formas, variables) está en `docs/plan-tecnico.md`, "Fase 8".
+
+| UC | Extensión | Criterio de aceptación |
+|---|---|---|
+| UC-09 | Variantes responsive de cada imagen de la biblioteca (WebP y AVIF a 640/1024/1600 px, generadas con sharp al subir o reemplazar) y acción "Generar variantes faltantes" para las imágenes anteriores a esta fase | Subir una imagen rasterizada crea sus variantes sin que la subida falle aunque la generación falle; reemplazarla las regenera; eliminarla las borra; la acción de relleno informa procesadas, omitidas y errores. |
+| UC-12 | Las imágenes del sitio se sirven con `<picture>`/`srcset` (AVIF → WebP → original) y `sizes` por contexto; la imagen de fondo del hero con `image-set()` | En móvil el navegador descarga la variante de 640 px; sin variantes (snapshots anteriores a la fase) se muestra el original; las imágenes declaran `width`/`height` y no desplazan el contenido al cargar. |
+| UC-14 | Los enlaces a redes y al CV registran los eventos `clic_red` y `descargar_cv` en la analítica, si está configurada | Sin analítica configurada los enlaces funcionan igual y el sitio no carga ningún script externo. |
+| UC-27 | Página `/admin/metricas` con periodo 7/30/90 días, entrada "Métricas" en el panel | Ver fila UC-27 más abajo; la página indica el motivo (`no_configurado`, `sin_respuesta`, `no_autorizado`) cuando la analítica no está disponible, sin romper el resto del panel. |
+| UC-34 | Metadatos inyectados por nginx (SSI) desde el API para `/`, `/proyecto/:id`, `/certificacion/:id` y `/logro/:id`; `sitemap.xml` y `robots.txt` generados desde la versión publicada; Lighthouse CI con presupuestos | `curl` sin JavaScript a cualquier URL pública devuelve `<title>`, `description`, Open Graph y Twitter card correctos; `/sitemap.xml` lista la home y los detalles publicados; el workflow de Lighthouse falla si rendimiento < 90, accesibilidad < 95, buenas prácticas < 90 o SEO < 90 en móvil. |
+
 ### Casos de uso propuestos — roadmap de profesionalización (2026-10-13, pendientes de aprobación)
 
-Los UC-19 a UC-34 nacen de la propuesta de la Sección 7 (roadmap). Se listan aquí para que el índice de casos de uso siga siendo la única fuente de verdad, pero **ninguno está aprobado ni implementado**: cada fase del roadmap se aprueba por separado y recién entonces se agregan sus entidades al diagrama ER (vía `db-schema`) y se codifica. La Fase 6 (fundamentos de producción) no agrega casos de uso: refuerza UC-01 (cierre de sesión real, límite de intentos por IP) y UC-12/13 (metadatos SEO, accesibilidad, rendimiento).
+Los UC-19 a UC-34 nacen de la propuesta de la Sección 7 (roadmap). Se listan aquí para que el índice de casos de uso siga siendo la única fuente de verdad. **Solo UC-27 y UC-34 están aprobados e implementados** (Fase 8, 2026-10-14); el resto sigue pendiente: cada fase del roadmap se aprueba por separado y recién entonces se agregan sus entidades al diagrama ER (vía `db-schema`) y se codifica. La Fase 6 (fundamentos de producción) no agrega casos de uso: refuerza UC-01 (cierre de sesión real, límite de intentos por IP) y UC-12/13 (metadatos SEO, accesibilidad, rendimiento).
 
 #### Actor: Administrador (propuestos)
 
@@ -200,6 +212,17 @@ erDiagram
         int ancho
         int alto
         string alt_text
+        timestamp created_at
+    }
+    MEDIA_VARIANTE {
+        uuid id PK
+        uuid media_id FK
+        string formato
+        int ancho
+        int alto
+        string url
+        string s3_key
+        int bytes
         timestamp created_at
     }
     PROYECTO {
@@ -321,13 +344,16 @@ erDiagram
     PERFIL }o--o| MEDIA : "cv en pdf"
     PROYECTO ||--o{ PROYECTO_IMAGEN : contiene
     MEDIA ||--o{ PROYECTO_IMAGEN : "usado en"
+    MEDIA ||--o{ MEDIA_VARIANTE : "derivadas"
     PROYECTO ||--o{ PROYECTO_TECNOLOGIA : usa
     TECNOLOGIA ||--o{ PROYECTO_TECNOLOGIA : "aplicada en"
     CERTIFICACION }o--o| MEDIA : logo
     PLATAFORMA_RED ||--o{ RED_SOCIAL : clasifica
 ```
 
-Dieciséis entidades: el administrador es el dueño de todo el contenido; `MEDIA`, `TECNOLOGIA` y `PLATAFORMA_RED` son catálogos compartidos en vez de campos de texto libre repetidos; `SECCION`, `TEMA`, `FONDO_SITIO` y `VERSION_SITIO` sostienen el editor visual y la publicación por versiones. `SKILL` sigue el mismo patrón que `LOGRO`: contenido propio del administrador (no un catálogo compartido) — a diferencia de `TECNOLOGIA`, que solo clasifica proyectos, `SKILL` es lo que se muestra en el carrusel de habilidades del sitio público, así que no tendría sentido reutilizar aquel catálogo para este propósito distinto. `FONDO_SITIO` sigue el mismo patrón de "configuración visual exclusiva" que `TEMA`, pero es deliberadamente independiente de él: `TEMA` solo maneja color y tipografía, `FONDO_SITIO` maneja el fondo animado del landing.
+Diecisiete entidades: el administrador es el dueño de todo el contenido; `MEDIA`, `TECNOLOGIA` y `PLATAFORMA_RED` son catálogos compartidos en vez de campos de texto libre repetidos; `SECCION`, `TEMA`, `FONDO_SITIO` y `VERSION_SITIO` sostienen el editor visual y la publicación por versiones. `SKILL` sigue el mismo patrón que `LOGRO`: contenido propio del administrador (no un catálogo compartido) — a diferencia de `TECNOLOGIA`, que solo clasifica proyectos, `SKILL` es lo que se muestra en el carrusel de habilidades del sitio público, así que no tendría sentido reutilizar aquel catálogo para este propósito distinto. `FONDO_SITIO` sigue el mismo patrón de "configuración visual exclusiva" que `TEMA`, pero es deliberadamente independiente de él: `TEMA` solo maneja color y tipografía, `FONDO_SITIO` maneja el fondo animado del landing.
+
+`MEDIA_VARIANTE` guarda las variantes responsive (WebP/AVIF por ancho) derivadas de cada `MEDIA` (Fase 8, UC-34), en tabla propia y no como JSON dentro de `MEDIA`, para respetar 3FN y poder borrarlas en cascada.
 
 `USUARIO_ADMIN.intentos_fallidos` (int, default 0) y `USUARIO_ADMIN.bloqueado_hasta` (timestamp, nullable) se agregan porque el criterio de aceptación de UC-01 exige bloqueo temporal tras 3 intentos fallidos de login, y el esquema original no tenía dónde contar esos intentos ni hasta cuándo dura el bloqueo.
 
@@ -415,7 +441,7 @@ Los "siguientes pasos" originales de esta sección (repositorio, Husky, catálog
 |---|---|---|---|---|
 | 6 | Fundamentos de producción | Seguridad HTTP, rate limiting, health checks, logs, logout real, SEO/a11y/rendimiento básicos, Docker endurecido, CI con e2e + CodeQL + Dependabot, higiene del repo | refuerza UC-01, UC-12, UC-13 | crítica (auth + multi-módulo): PR con revisión y visto bueno |
 | 7 | Frontend espectacular y editor usable | Puck 0.23 con rail de plugins e interfaz en español, scrollbars y alto correcto, toggle de modo solo para la vista previa, edición de temas con contraste y fuentes bajo demanda, bloque `navegacion`, animaciones y variantes visuales en todos los bloques, responsive | UC-07, UC-08, UC-12 (ext.) | crítica (multi-módulo): PR con revisión y visto bueno |
-| 8 | Visibilidad | Metadatos inyectados en servidor, `sitemap.xml`, imágenes responsive (variantes WebP/AVIF generadas con sharp), presupuestos de Lighthouse en CI, analítica Umami y panel de métricas | UC-27, UC-34 | moderada |
+| 8 | Visibilidad (**aprobada el 2026-10-14**) | Metadatos inyectados en servidor (SSI de nginx + API), `sitemap.xml`/`robots.txt` generados, imágenes responsive (variantes WebP/AVIF generadas con sharp), presupuestos de Lighthouse en CI, analítica Umami y página de métricas | UC-27, UC-34 | moderada |
 | 9 | Contenido que vende | Experiencia y formación, casos de estudio con texto enriquecido (migración a Puck 0.21 + `richtext`), testimonios, disponibilidad y "ahora" | UC-19, UC-20, UC-23, UC-24, UC-32 | crítica (esquema) |
 | 10 | Conversación | Formulario de contacto con bandeja y email, notas técnicas con RSS, CV en PDF generado desde los datos | UC-21, UC-22, UC-29, UC-30, UC-31 | crítica (esquema, endpoint público con escritura) |
 | 11 | Panel de nivel producto | Diff de versiones y publicación programada, seguridad de la cuenta (passkeys, cambio de contraseña, sesiones, auditoría), i18n ES/EN, observabilidad (GlitchTip), Playwright e2e y regresión visual | UC-25, UC-26, UC-28, UC-33 | crítica (auth, esquema) |
@@ -426,7 +452,7 @@ Cada fase se aprueba con su propio resumen de `release-manager`; el orden puede 
 
 Se mantienen las reglas de la Sección 4 (3FN, nombres en español snake_case, JSONB solo donde la forma es variable por diseño). Entidades y columnas previstas, para que el diagrama ER se amplíe de forma coherente:
 
-- **Fase 8**: `MEDIA_VARIANTE` (media_id, formato `webp|avif|jpeg`, ancho, url, bytes) para las variantes responsive; evita un JSON de variantes en `MEDIA`.
+- **Fase 8** (aprobada): `MEDIA_VARIANTE` (id, media_id, formato `webp|avif` con `jpeg` reservado, ancho, alto, url, s3_key, bytes, created_at; única por media_id + formato + ancho) para las variantes responsive; evita un JSON de variantes en `MEDIA`. Ya incorporada al diagrama ER.
 - **Fase 9**: `EXPERIENCIA_LABORAL`, `EXPERIENCIA_TECNOLOGIA` (reutiliza el catálogo `TECNOLOGIA`), `FORMACION`, `CASO_ESTUDIO` (1:1 con `PROYECTO`, `slug` único, secciones de texto enriquecido como JSONB de ProseMirror: forma variable por diseño), `CASO_ESTUDIO_METRICA`, `TESTIMONIO`, `AHORA_ITEM`; en `PERFIL`: `estado_disponibilidad`, `mensaje_disponibilidad`, `disponibilidad_actualizada_en`.
 - **Fase 10**: `MENSAJE_CONTACTO` (sin IP completa: solo hash/enmascarada), `NOTA`, `ETIQUETA`, `NOTA_ETIQUETA`; en `PERFIL`: `cv_generado_media_id` (el PDF generado se guarda como `MEDIA` para reutilizar S3 y el snapshot).
 - **Fase 11**: `CREDENCIAL_PASSKEY`, `EVENTO_AUDITORIA`, `TRADUCCION` (entidad, entidad_id, campo, idioma, valor; única por los cuatro primeros), en `VERSION_SITIO`: `programada_para`, `publicada_por_programacion`; en `USUARIO_ADMIN`: `sesiones_invalidadas_desde` para "cerrar todas las sesiones" sin tabla de sesiones.

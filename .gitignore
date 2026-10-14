@@ -9,6 +9,7 @@ npm-debug.log*
 .DS_Store
 Thumbs.db
 coverage/
+.lighthouseci/
 .turbo/
 .vscode/*
 !.vscode/extensions.json

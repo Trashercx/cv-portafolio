@@ -1,5 +1,4 @@
 import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query'
-import { toast } from 'sonner'
 import { ApiError } from './api-client'
 import { useAuthStore } from '@/store/auth-store'
 
@@ -50,6 +49,15 @@ function manejarSesionExpirada(error: unknown): boolean {
   return false
 }
 
+/**
+ * Fase 8 (8.3, UC-34): sonner se importa de forma diferida para que no entre
+ * en el bundle inicial del sitio publico (solo las mutaciones del panel
+ * muestran toasts).
+ */
+function mostrarToast(tipo: 'success' | 'error', mensaje: string) {
+  void import('sonner').then(({ toast }) => toast[tipo](mensaje))
+}
+
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -68,11 +76,11 @@ export const queryClient = new QueryClient({
           ? error.message
           : (mutation.meta?.mensajeError ??
             'Ocurrió un error inesperado. Intenta de nuevo.')
-      toast.error(mensaje)
+      mostrarToast('error', mensaje)
     },
     onSuccess: (_data, _variables, _context, mutation) => {
       if (mutation.meta?.mensajeExito) {
-        toast.success(mutation.meta.mensajeExito)
+        mostrarToast('success', mutation.meta.mensajeExito)
       }
     },
   }),

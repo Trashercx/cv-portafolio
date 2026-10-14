@@ -7,6 +7,8 @@ Guía de referencia para desplegar el portafolio en un VPS con Docker + Dokploy 
 - `apps/api/Dockerfile`: imagen de la API (NestJS). Corre migraciones (`prisma migrate deploy`) al arrancar y luego `node dist/src/main.js`.
 - `apps/web/Dockerfile`: imagen del frontend (build de Vite servido por nginx, con fallback de SPA). La config de nginx vive en `apps/web/nginx/` (plantilla + snippet de cabeceras de seguridad, ver sección 6).
 - `docker-compose.prod.yml`: define los tres servicios (`postgres`, `api`, `web`) para un despliegue "Docker Compose" en Dokploy/Coolify.
+- `docker-compose.umami.yml` (Fase 8, opcional): stack aparte con Umami (analítica sin cookies) y su propio Postgres — ver sección 7.4.
+- `apps/web/scripts/api-simulada.mjs` + `apps/web/scripts/fixtures/` (Fase 8): API pública simulada y snapshot de prueba que usa el workflow de Lighthouse CI; también sirven para probar la plantilla de nginx en local — ver sección 7.5.
 - `apps/api/scripts/backup-db.sh`: backup de la base de datos (`pg_dump`) con copia a la carpeta `backups/` del bucket S3.
 - `scripts/smoke-test.sh`: verificación rápida post-despliegue (login + sitio público).
 - `.github/workflows/ci.yml`: además de lint/test/build, en push a `main` construye y publica las imágenes en GitHub Container Registry (`ghcr.io/<owner>/<repo>/api` y `.../web`), y opcionalmente dispara un webhook de despliegue.
@@ -28,6 +30,12 @@ Todas están documentadas con su propósito en `.env.example` (raíz). Antes de 
 | `CLOUDFRONT_DOMAIN` | Media (opcional) | Vacío si no se usa CloudFront en v1. |
 | `VITE_API_URL` | Build de `apps/web` | **Build arg**, no variable de runtime — ver Dockerfile de `apps/web`. Debe ser la URL pública real de `api` antes de construir la imagen. |
 | `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | Servicio `postgres` de `docker-compose.prod.yml` | Deben coincidir con las credenciales embebidas en `DATABASE_URL`. |
+| `API_ORIGIN` / `MEDIA_ORIGIN` | CSP de nginx (`web`, runtime) | Fase 6, ver 6.1. Opcionales (caen a `https:`). |
+| `SEO_UPSTREAM` | nginx (`web`, runtime) | **Opcional** (Fase 8). URL interna del API para SSI de metadatos, sitemap y robots; default `http://api:3000`. Ver 7.2. |
+| `ANALITICA_ORIGIN` | CSP de nginx (`web`, runtime) | **Opcional** (Fase 8). Origen de Umami; vacío = sin analítica. Ver 7.4. |
+| `VITE_UMAMI_URL` / `VITE_UMAMI_WEBSITE_ID` | Build de `apps/web` | **Opcionales** (Fase 8). **Build args**, como `VITE_API_URL`; activan el tracker de Umami en el sitio público. Ver 7.4. |
+| `UMAMI_API_URL` / `UMAMI_WEBSITE_ID` / `UMAMI_API_TOKEN` o `UMAMI_USUARIO` + `UMAMI_CONTRASENA` | `GET /admin/metricas` (`api`, runtime) | **Opcionales** (Fase 8). Sin ellas la página de métricas del panel muestra "no configurado". Ver 7.4. |
+| `UMAMI_DB_PASSWORD` / `UMAMI_APP_SECRET` (+ `UMAMI_DB_USER`, `UMAMI_DB_NAME`, `UMAMI_PUBLIC_PORT`) | `docker-compose.umami.yml` | Solo si se despliega Umami; las dos primeras son obligatorias **para ese stack**. Ver 7.4. |
 
 En Dokploy/Coolify estas variables se cargan desde el panel del proyecto (no como archivo `.env` en el servidor). En GitHub Actions, `VITE_API_URL` de producción y (opcionalmente) `DEPLOY_WEBHOOK_URL` se configuran como *secrets* del repositorio (`VITE_API_URL_PRODUCCION`, `DEPLOY_WEBHOOK_URL`).
 
@@ -53,6 +61,24 @@ ADMIN_PASSWORD=la-contrasena-real \
 ```
 
 Verifica: login (UC-01), que una ruta admin autenticada responde con la cookie de sesión, y que el sitio público (`GET /sitio`, UC-12) responde igual con y sin cookie (acceso anónimo). Sale con código distinto de 0 en el primer fallo — apto para encadenarse después de `trigger-deploy` en CI si se quiere automatizar más adelante.
+
+**Comprobaciones manuales de la Fase 8** (contra el dominio público de `web`, no del API; detalle en la sección 7):
+
+```bash
+WEB=https://tudominio.com
+# 7.2 — metadatos inyectados por SSI: el PRIMER <title> debe ser el del perfil, no "Portafolio"
+curl -s "$WEB/" | grep -m1 '<title'
+# ... y en un detalle, el del proyecto (como lo vería el bot de Facebook/LinkedIn)
+curl -s -A "facebookexternalhit/1.1" "$WEB/proyecto/<id>" | grep 'og:'
+# 7.3 — sitemap y robots generados por el API (robots debe traer la línea Sitemap:)
+curl -si "$WEB/sitemap.xml" | grep -i '^HTTP\|content-type\|<loc'
+curl -s  "$WEB/robots.txt"
+# la ruta interna del SSI nunca se expone (200 vacío o 404, nunca metadatos)
+curl -s -o /dev/null -w '%{http_code} %{size_download}\n' "$WEB/_seo/metadatos"
+# 7.4 — solo si Umami está activo: el script del tracker y su origen en la CSP
+curl -s "$WEB/" | grep -o 'script.js[^>]*data-website-id="[^"]*"'
+curl -sI "$WEB/" | grep -io 'script-src[^;]*'
+```
 
 ## 6. Fase 6 — Fundamentos de producción
 
@@ -136,8 +162,105 @@ nginx (`web`) mantiene el formato de acceso por defecto; los assets con hash y `
 
 - `api` corre como el usuario `node` (uid 1000) de la imagen base; `/app` (incluido `uploads/`, solo para el fallback local sin S3) le pertenece. `prisma migrate deploy` del entrypoint y `scripts/backup-db.sh` (escribe en `/tmp`) siguen funcionando sin privilegios. Si se monta un volumen sobre `/app/uploads`, debe pertenecer al uid 1000.
 - `web` sigue arrancando nginx como root (el master abre el puerto 80 y cede los workers al usuario `nginx`, comportamiento estándar de la imagen oficial). Pasar a `nginxinc/nginx-unprivileged` (puerto 8080) queda como mejora opcional.
-- nginx comprime con gzip (`text/css`, JS, JSON, SVG, XML; mínimo 1 KB). Los assets con hash de Vite se cachean 30 días como `immutable`; `index.html` sigue en `no-cache`; `robots.txt` (`apps/web/public/robots.txt`, bloquea `/admin` a los rastreadores) se cachea 1 hora.
+- nginx comprime con gzip (`text/css`, JS, JSON, SVG, XML; mínimo 1 KB). Los assets con hash de Vite se cachean 30 días como `immutable`; `index.html` sigue en `no-cache`; `robots.txt` (desde la Fase 8 lo genera el API y nginx lo proxea; `apps/web/public/robots.estatico.txt` es el respaldo si el API no responde; bloquea `/admin` a los rastreadores) se cachea 1 hora.
 
 ### 6.6 CI
 
 `.github/workflows/ci.yml` levanta un `postgres:16` como servicio del job `api`, corre `prisma migrate deploy` + `prisma db seed` con credenciales dummy exclusivas del runner y luego `npm run test:e2e`; los unit tests corren con cobertura y el reporte se sube como artifact (`cobertura-api`, 7 días). Los runs obsoletos de un mismo PR se cancelan (`concurrency`); en `main` no, para no cortar un build-and-push a medias. `.github/workflows/codeql.yml` analiza el código (javascript-typescript, consultas `security-extended`) en cada PR, push a `main` y semanalmente; como el repositorio es privado sin GitHub Advanced Security, no sube los resultados a Code Scanning: guarda el SARIF como artifact (`codeql-sarif`, 30 días) y el job falla si hay alertas, listándolas en el log; `.github/dependabot.yml` abre un PR semanal agrupado con las actualizaciones minor/patch de npm (lockfile único en la raíz) y otro para las acciones de GitHub, etiquetados `dependencias`.
+
+## 7. Fase 8 — Visibilidad
+
+Infraestructura de la Fase 8 (UC-27, UC-34; contrato en `docs/plan-tecnico.md`, "Fase 8 — Visibilidad"): metadatos SEO inyectados en el servidor sin SSR, sitemap y robots generados por el API, presupuestos de Lighthouse en CI y analítica opcional con Umami. Nada de esto es obligatorio para que el sitio funcione: sin configurar ninguna variable nueva, el despliegue de la Fase 6 sigue igual (con `SEO_UPSTREAM` en su default, que ya apunta al servicio `api` del compose).
+
+### 7.1 Variables nuevas
+
+**`web` (runtime del contenedor nginx, NO build arg):**
+
+| Variable | Default | Qué hace |
+|---|---|---|
+| `SEO_UPSTREAM` | `http://api:3000` | URL interna (esquema + host + puerto, sin barra final) a la que nginx hace proxy para el fragmento SSI de metadatos, `/sitemap.xml` y `/robots.txt`. El default es el servicio `api` de `docker-compose.prod.yml` por la red interna de Docker. Cambiarlo solo si el API vive en otro stack o máquina; admite `https://` (nginx manda SNI). |
+| `ANALITICA_ORIGIN` | vacío | Origen público de Umami (`https://analitica.tudominio.com`) que se suma a `script-src` y `connect-src` de la CSP. Vacío = sin analítica y CSP idéntica a la de la Fase 6. Debe coincidir con `VITE_UMAMI_URL`. |
+
+Ambas pasan por el mismo `envsubst` + `10-defaults.envsh` que `API_ORIGIN`/`MEDIA_ORIGIN` (el log de arranque muestra `[10-defaults.envsh] SEO: SEO_UPSTREAM=...`).
+
+**`web` (build args, como `VITE_API_URL`):**
+
+| Variable | Default | Qué hace |
+|---|---|---|
+| `VITE_UMAMI_URL` | vacío | Origen del tracker de Umami, sin barra final. |
+| `VITE_UMAMI_WEBSITE_ID` | vacío | Id del sitio creado en Umami. |
+
+Si falta cualquiera de las dos, `Analitica.tsx` no inyecta ningún script. Quedan incrustadas en el JS: cambiarlas exige **reconstruir la imagen `web`** (en GitHub Actions, como secretos adicionales del job `build-and-push-web`, igual que `VITE_API_URL_PRODUCCION`; en Dokploy, como build args del servicio).
+
+**`api` (runtime):**
+
+| Variable | Default | Qué hace |
+|---|---|---|
+| `UMAMI_API_URL` | vacío | URL de Umami sin barra final. La pública (`https://analitica.tudominio.com`) es la opción simple; `http://umami:3000` solo si se unen las redes de los dos stacks (7.4). |
+| `UMAMI_WEBSITE_ID` | vacío | Mismo id que `VITE_UMAMI_WEBSITE_ID`. |
+| `UMAMI_API_TOKEN` | vacío | Token de API de Umami (`Authorization: Bearer`). |
+| `UMAMI_USUARIO` / `UMAMI_CONTRASENA` | vacío | Alternativa al token: el API hace login en `/api/auth/login` y cachea el token en memoria. Si existe `UMAMI_API_TOKEN`, gana el token. |
+
+Sin `UMAMI_API_URL` o `UMAMI_WEBSITE_ID`, `GET /admin/metricas` responde `{ disponible: false, motivo: 'no_configurado' }` y la página "Métricas" del panel lo explica; nunca un 5xx.
+
+**Stack `docker-compose.umami.yml`** (solo si se despliega Umami): `UMAMI_DB_PASSWORD` y `UMAMI_APP_SECRET` obligatorias (`openssl rand -hex 32` para ambas); `UMAMI_DB_USER` (`umami`), `UMAMI_DB_NAME` (`umami`) y `UMAMI_PUBLIC_PORT` (`3100`, solo loopback) con default.
+
+### 7.2 Metadatos por SSI (UC-34)
+
+**Cómo funciona.** El sitio sigue siendo una SPA servida por nginx: no hay SSR. `apps/web/index.html` lleva en `<head>`, antes del `<title>` estático, la directiva `<!--# include virtual="/_seo/metadatos" -->`. nginx tiene `ssi on` solo en las respuestas de `index.html` (fallback de SPA y `location = /index.html`; los assets con hash no pasan por el filtro) y resuelve el include con un subrequest interno a `location = /_seo/metadatos`, que hace `proxy_pass ${SEO_UPSTREAM}/seo/metadatos` enviando la ruta original del visitante en la cabecera `X-Ruta-Publica`. El API (`SeoController`, módulo `seo`) lee la versión publicada y devuelve el fragmento HTML de esa ruta (`<title>`, `description`, `canonical`, Open Graph, Twitter card y, en la home, el JSON-LD `Person`), siempre con 200. Los bots que no ejecutan JavaScript (Facebook, LinkedIn, Slack, Twitter, Google en su primera pasada) ven así metadatos reales; en el navegador, `MetadatosPagina` retira esos nodos (`data-meta-estatico`) al montar y pone los suyos, como en la Fase 6. Como el `proxy_pass` usa una variable, nginx necesita un `resolver` (`127.0.0.11`, el DNS de Docker) y resuelve `api` en runtime: el contenedor `web` levanta aunque `api` todavía no exista.
+
+**Qué pasa si el API cae.** Timeouts cortos (`resolver_timeout 1s`, `proxy_connect_timeout 1s`, `proxy_read_timeout 2s`) y `error_page 404 500 502 503 504 =200 /_seo/vacio`: el include se sustituye por una cadena vacía (`ssi_silent_errors on`, sin el texto "[an error occurred...]") y el HTML sale igual, con los metadatos estáticos de respaldo de `index.html`. Coste: mientras `api` está caído cada `index.html` tarda ~1-2 s más (el DNS de Docker no responde NXDOMAIN para un contenedor detenido, simplemente no contesta). El `HEALTHCHECK` de `web` (`wget /`) sigue pasando. `/_seo/metadatos` es `internal`: pedido desde fuera responde 200 vacío (el 404 de `internal` también cae en el `error_page`), nunca metadatos ni errores del API.
+
+**El build protege la directiva.** Vite conserva los comentarios de `index.html`, pero el `Dockerfile` de `web` ejecuta `grep -q 'include virtual="/_seo/metadatos"' apps/web/dist/index.html` tras el build: si una minificación futura la eliminara, la imagen no se construiría en vez de perder el SEO en silencio. En desarrollo (Vite) la directiva es un comentario inerte.
+
+**Cómo comprobarlo** (contra el dominio de `web`):
+
+```bash
+# El primer <title> del documento debe ser el inyectado (el estático "Portafolio" viene después)
+curl -s https://tudominio.com/ | grep -m1 '<title'
+# Como lo ve el bot de Facebook/LinkedIn en un detalle de proyecto
+curl -A "facebookexternalhit/1.1" https://tudominio.com/proyecto/<id> | grep og:
+# Ruta desconocida: noindex
+curl -s https://tudominio.com/no-existe | grep -m1 'robots'
+```
+
+Si el `<title>` inyectado no aparece: (1) `docker logs <web>` — un `could not be resolved` o `connect() failed` apunta a `SEO_UPSTREAM` (nombre o puerto del servicio `api` incorrectos, o `web` y `api` en redes distintas); (2) `docker exec <web> wget -qO- --header 'X-Ruta-Publica: /' http://api:3000/seo/metadatos` debe devolver el fragmento; (3) si el API responde pero el HTML no cambia, confirmar que `dist/index.html` conserva la directiva (`docker exec <web> grep -c '_seo/metadatos' /usr/share/nginx/html/index.html`).
+
+### 7.3 Sitemap y robots
+
+`GET /sitemap.xml` y `GET /robots.txt` los genera el API desde la versión publicada (home con `lastmod`, una `<url>` por proyecto, certificación y logro; robots con `Disallow: /admin` y la línea `Sitemap: ${FRONTEND_ORIGIN}/sitemap.xml`). nginx hace proxy de las dos rutas al mismo `SEO_UPSTREAM` con los mismos timeouts, así siguen viviendo bajo el dominio del sitio (los rastreadores solo aceptan un sitemap del mismo host). Respaldo si el API no responde: `/robots.txt` sirve `apps/web/public/robots.estatico.txt` (mismo contenido sin `Sitemap:`, 200, caché 1 h) y `/sitemap.xml` responde **503 en texto plano** (nunca el `index.html` del fallback de SPA: un sitemap con HTML lo descarta Google, un 503 solo le dice "vuelve luego"). La caché de las respuestas normales la decide el API (`Cache-Control: public, max-age=3600`). Para dar de alta el sitemap en Google Search Console basta con la URL `https://tudominio.com/sitemap.xml`.
+
+### 7.4 Umami (analítica sin cookies, UC-27)
+
+Umami se despliega como **stack aparte y opcional** (`docker-compose.umami.yml`): quien no lo quiera no gasta sus ~400 MB de RAM, y tiene su propio Postgres (nunca la base del portafolio). No usa cookies ni requiere banner de consentimiento.
+
+1. **Desplegar el stack.** En el mismo proyecto de Dokploy, crear un segundo servicio "Docker Compose" apuntando a este repo y a `docker-compose.umami.yml`. Variables: `UMAMI_DB_PASSWORD` y `UMAMI_APP_SECRET` (obligatorias, `openssl rand -hex 32`). Asignarle un dominio (p. ej. `analitica.tudominio.com`, puerto interno 3000; Traefik termina el TLS). El primer arranque corre las migraciones de Umami (el `healthcheck` da 60 s de gracia).
+2. **Primer acceso.** Usuario inicial `admin` / contraseña `umami`: cambiarla de inmediato (Settings → Profile).
+3. **Crear el sitio.** Settings → Websites → Add website (nombre y dominio del portafolio). Copiar el **Website ID**.
+4. **Activar el tracker en `web`.** Build args `VITE_UMAMI_URL=https://analitica.tudominio.com` y `VITE_UMAMI_WEBSITE_ID=<id>` → **reconstruir la imagen `web`** (en CI: añadir los dos secretos al `build-args` de `build-and-push-web`; en Dokploy: build args del servicio). Y en runtime de `web`, `ANALITICA_ORIGIN=https://analitica.tudominio.com` para que la CSP permita `script.js` y los envíos a `/api/send` (redesplegar `web`, sin reconstruir, si solo cambia esta). Sin `ANALITICA_ORIGIN` la consola del navegador mostrará `Refused to load the script 'https://analitica.../script.js'`.
+5. **Métricas en el panel (`api`).** Crear en Umami las credenciales que usará el API: o bien un token de API (Settings → API keys, en las versiones que lo traen) para `UMAMI_API_TOKEN`, o bien un usuario de solo lectura (Settings → Users → rol *View only*) para `UMAMI_USUARIO` + `UMAMI_CONTRASENA`. Cargar `UMAMI_API_URL=https://analitica.tudominio.com` y `UMAMI_WEBSITE_ID=<id>` en `api` y redesplegar. La página `/admin/metricas` del panel muestra resumen, páginas, referidos, países y los eventos `descargar_cv` / `clic_red` del periodo elegido (7/30/90 días), con caché de 60 s.
+
+**Cómo se conecta `api` con Umami.** Por la URL pública (la opción simple y recomendada): funciona aunque los stacks estén en redes de Docker distintas (en Dokploy cada Compose tiene la suya) y va por HTTPS. La alternativa es unir redes: declarar en ambos compose una red `external` compartida (Dokploy ya crea `dokploy-network`) y usar `UMAMI_API_URL=http://umami:3000`; ahorra el salto por Internet pero acopla los despliegues. El tracker del navegador siempre carga por el dominio público, en cualquiera de los dos casos.
+
+Si las tarjetas del panel dicen "sin respuesta" (`motivo: 'sin_respuesta'`), el API no alcanza `UMAMI_API_URL` en 5 s (dominio, TLS o red); "no autorizado" (`no_autorizado`) es token o usuario/contraseña inválidos.
+
+### 7.5 Lighthouse CI
+
+`.github/workflows/lighthouse.yml` corre en cada PR y push a `main`: construye `apps/web` con `VITE_API_URL=http://127.0.0.1:4010`, levanta la **API simulada** (`apps/web/scripts/api-simulada.mjs`, un servidor Node sin dependencias que responde `GET /sitio`, `/proyectos/:id`, `/certificaciones/:id`, `/redes`, `/cv` y las imágenes SVG del fixture desde `apps/web/scripts/fixtures/sitio-demo.json`) y `vite preview` en `:4173`, y ejecuta `treosh/lighthouse-ci-action` con `apps/web/lighthouserc.json`: home y detalle del primer proyecto del fixture, preset **móvil** (el default de Lighthouse, con su red y CPU simuladas), **3 corridas** y mediana. El fixture es un snapshot realista (navegación, hero con imagen de fondo y foto, sobre-mí con estadísticas, 3 proyectos con imágenes y tecnologías, skills, certificaciones, galería, logros, contacto y fondo animado) para que la medida se parezca al sitio real y no a una página vacía.
+
+**Qué mide y umbrales** (`ci.assert.assertions`, todas con nivel `error`: el PR falla si bajan): `performance ≥ 0.90`, `accessibility ≥ 0.95`, `best-practices ≥ 0.90`, `seo ≥ 0.90`.
+
+**Cómo leer el artefacto.** El run sube `lighthouse-informes` (carpeta `.lighthouseci`): un `lhr-*.html` por corrida y URL (abrir en el navegador: es el informe normal de Lighthouse, con las auditorías que restan puntos y el filmstrip), los `lhr-*.json` crudos y `manifest.json` (qué corrida es la mediana por URL, `isRepresentativeRun`). En el log del paso "Lighthouse CI" aparecen las aserciones fallidas con el valor obtenido y el esperado.
+
+**Cómo ajustar.** Umbrales en `apps/web/lighthouserc.json` (`minScore`); para exigir una auditoría concreta, añadir p. ej. `"largest-contentful-paint": ["warn", { "maxNumericValue": 2500 }]` (`warn` no rompe el PR). Para medir otra página, añadir su URL a `ci.collect.url` (y los datos que necesite, al fixture). Para probar en local sin CI:
+
+```bash
+cd apps/web
+VITE_API_URL=http://127.0.0.1:4010 npm run build
+cp public/robots.estatico.txt dist/robots.txt   # lo mismo que hace el workflow: el preview no tiene el proxy de nginx
+npm run api-simulada &                          # :4010
+npx vite preview --port 4173 --strictPort --host 127.0.0.1 &
+npx @lhci/cli@0.14 autorun --config=lighthouserc.json   # informes en apps/web/.lighthouseci (ignorado por git)
+```
+
+La API simulada expone además `/seo/metadatos`, `/sitemap.xml` y `/robots.txt` con una versión mínima del contrato 8.1, útil para probar la plantilla de nginx en local: levantar `node:20-alpine` con `HOST=0.0.0.0 node /scripts/api-simulada.mjs` y `nginx:alpine` con `dist/` y la plantilla renderizada (`SEO_UPSTREAM=http://<contenedor-api>:4010`) en la misma red de Docker, y hacer `curl` como en la sección 5.

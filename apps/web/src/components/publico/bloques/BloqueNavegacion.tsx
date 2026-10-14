@@ -5,6 +5,7 @@ import type { PerfilPublico } from '@/features/publico/types'
 import type { NavegacionConfiguracion } from '@/features/secciones/types'
 import { API_BASE_URL } from '@/lib/api-client'
 import { useAnimacionesActivas } from '@/lib/animaciones'
+import { registrarEvento } from '@/lib/analitica'
 import { anclaSeccion, type EnlaceNavegacion } from '@/lib/navegacion'
 import { cn } from '@/lib/utils'
 import { EnlaceBloque, useModoRenderizado } from '../contexto-renderizado'
@@ -258,6 +259,8 @@ export function BloqueNavegacion({
             {tieneCv ? (
               <EnlaceBloque
                 href={`${API_BASE_URL}/cv`}
+                // Fase 8 (UC-27): `descargar_cv`.
+                onClick={() => registrarEvento('descargar_cv')}
                 aria-label="Descargar CV"
                 style={{ backgroundColor: 'var(--color-primario)' }}
                 className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium text-white"

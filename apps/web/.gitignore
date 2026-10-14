@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Fase 8 — informes locales de Lighthouse CI (lhci collect/autorun)
+.lighthouseci/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -4,11 +4,28 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Portafolio</title>
+    <!-- Fase 8 (UC-34, Lighthouse): el sitio público pide `GET /sitio` a otro
+         origen (VITE_API_URL, que Vite sustituye aquí en tiempo de build) en
+         cuanto arranca el JS; abrir la conexión TCP+TLS desde el HTML ahorra
+         ~150 ms en móvil. `crossorigin` porque esos fetch van sin credenciales
+         (`credentials: 'omit'`, lib/api-client.ts) y así comparten conexión. -->
+    <link rel="preconnect" href="%VITE_API_URL%" crossorigin />
+    <!-- Fase 8 (UC-34): directiva SSI de nginx. En producción nginx la
+         reemplaza por el fragmento que devuelve `GET /seo/metadatos` del API
+         (title, description, canonical, Open Graph, Twitter card y JSON-LD
+         de la ruta pública pedida), así los bots que no ejecutan JS ven
+         metadatos reales. Si el API no responde, nginx deja el include vacío
+         (`ssi_silent_errors`) y valen los metadatos estáticos de abajo. En
+         desarrollo (Vite) es un comentario inerte. El Dockerfile de web
+         comprueba tras el build que la directiva sigue en dist/index.html. -->
+    <!--# include virtual="/_seo/metadatos" -->
     <!-- Fase 6: metadatos genéricos de respaldo; `MetadatosPagina` los
          reemplaza por los de cada página (por eso `data-meta-estatico`).
+         El <title> va DESPUÉS del include (Fase 8): navegadores y bots usan
+         el primer <title> del documento, que debe ser el del API.
          `theme-color` es estático por necesidad: el tema real llega por API
          en runtime, después del primer pintado. -->
+    <title data-meta-estatico>Portafolio</title>
     <meta
       name="description"
       content="Portafolio profesional: proyectos, certificaciones, logros y datos de contacto."

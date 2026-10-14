@@ -1,13 +1,19 @@
-import { useRef, useState } from 'react'
+import { lazy, Suspense, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { GaleriaConfiguracion } from '@/features/secciones/types'
 import { usePrefiereMovimientoReducido } from '@/lib/animaciones'
 import { EFECTO_HOVER_GALERIA_CLASE } from '@/lib/efectos-hover'
 import { COLUMNAS_GRID_CLASE } from '@/lib/escalas-bloque'
+import { SIZES_POR_CONTEXTO } from '@/lib/imagenes'
 import { cn } from '@/lib/utils'
-import { Lightbox } from '../Lightbox'
+import { ImagenResponsive } from '../ImagenResponsive'
 import { TarjetaClicable } from '../contexto-renderizado'
+
+// Fase 8 (8.3, UC-34): el Lightbox (Radix Dialog) se descarga al primer clic.
+const Lightbox = lazy(() =>
+  import('../Lightbox').then((m) => ({ default: m.Lightbox })),
+)
 
 type BloqueGaleriaProps = {
   titulo: string
@@ -25,10 +31,12 @@ export function BloqueGaleria({ titulo, config, alineacionTitulo }: BloqueGaleri
   const efecto = EFECTO_HOVER_GALERIA_CLASE[config.efecto_hover ?? 'zoom']
 
   const [lightboxAbierto, setLightboxAbierto] = useState(false)
+  const [lightboxMontado, setLightboxMontado] = useState(false)
   const [indiceLightbox, setIndiceLightbox] = useState(0)
 
   function abrirLightbox(indice: number) {
     setIndiceLightbox(indice)
+    setLightboxMontado(true)
     setLightboxAbierto(true)
   }
 
@@ -46,11 +54,10 @@ export function BloqueGaleria({ titulo, config, alineacionTitulo }: BloqueGaleri
               aria-label={foto.titulo || 'Ver foto'}
               className={cn('overflow-hidden rounded-lg', efecto.tarjeta)}
             >
-              <img
-                src={foto.media?.url}
+              <ImagenResponsive
+                media={foto.media}
                 alt={foto.titulo || foto.media?.alt_text || ''}
-                loading="lazy"
-                decoding="async"
+                sizes={SIZES_POR_CONTEXTO.galeria}
                 className={cn('aspect-square w-full object-cover', efecto.imagen)}
               />
             </TarjetaClicable>
@@ -59,12 +66,16 @@ export function BloqueGaleria({ titulo, config, alineacionTitulo }: BloqueGaleri
       ) : (
         <CarouselGaleria fotos={fotos} onAbrirFoto={abrirLightbox} efecto={efecto} />
       )}
-      <Lightbox
-        fotos={fotos}
-        indiceInicial={indiceLightbox}
-        open={lightboxAbierto}
-        onOpenChange={setLightboxAbierto}
-      />
+      {lightboxMontado ? (
+        <Suspense fallback={null}>
+          <Lightbox
+            fotos={fotos}
+            indiceInicial={indiceLightbox}
+            open={lightboxAbierto}
+            onOpenChange={setLightboxAbierto}
+          />
+        </Suspense>
+      ) : null}
     </div>
   )
 }
@@ -153,11 +164,10 @@ function CarouselGaleria({ fotos, onAbrirFoto, efecto }: CarouselGaleriaProps) {
               aria-label={foto.titulo || 'Ver foto'}
               className={cn('block w-full overflow-hidden rounded-lg', efecto.tarjeta)}
             >
-              <img
-                src={foto.media?.url}
+              <ImagenResponsive
+                media={foto.media}
                 alt={foto.titulo || foto.media?.alt_text || ''}
-                loading="lazy"
-                decoding="async"
+                sizes={SIZES_POR_CONTEXTO.galeria}
                 className={cn('aspect-video w-full object-cover', efecto.imagen)}
               />
             </TarjetaClicable>

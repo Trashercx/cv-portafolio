@@ -1,5 +1,7 @@
 import type { Proyecto } from '@/features/proyectos/types'
 import { formatearFecha } from '@/lib/formato'
+import { SIZES_POR_CONTEXTO } from '@/lib/imagenes'
+import { ImagenResponsive } from '../ImagenResponsive'
 
 type DetalleProyectoContenidoProps = {
   proyecto: Proyecto
@@ -45,12 +47,11 @@ export function DetalleProyectoContenido({ proyecto }: DetalleProyectoContenidoP
       {proyecto.imagenes.length > 0 ? (
         <div className="grid gap-3 sm:grid-cols-2">
           {proyecto.imagenes.map((imagen) => (
-            <img
+            <ImagenResponsive
               key={imagen.media_id}
-              src={imagen.media.url}
+              media={imagen.media}
               alt={imagen.media.alt_text ?? proyecto.titulo}
-              loading="lazy"
-              decoding="async"
+              sizes={SIZES_POR_CONTEXTO.detalle}
               className="rounded-lg object-cover"
             />
           ))}

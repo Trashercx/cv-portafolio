@@ -1,5 +1,6 @@
 import {
   BadgeCheck,
+  BarChart3,
   ExternalLink,
   Image,
   LayoutGrid,
@@ -44,6 +45,7 @@ const RUTAS_ADMIN: RutaAdmin[] = [
   { to: '/admin/redes', label: 'Redes sociales', icon: Share2 },
   { to: '/admin/editor', label: 'Editor visual', icon: Wand2 },
   { to: '/admin/media', label: 'Biblioteca de medios', icon: Image },
+  { to: '/admin/metricas', label: 'Métricas', icon: BarChart3 },
 ]
 
 /**

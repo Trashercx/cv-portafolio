@@ -3,13 +3,12 @@ const sendMock = jest.fn().mockResolvedValue({});
 jest.mock('@aws-sdk/client-s3', () => ({
   S3Client: jest.fn().mockImplementation(() => ({ send: sendMock })),
   PutObjectCommand: jest.fn().mockImplementation((input) => ({ input })),
+  GetObjectCommand: jest.fn().mockImplementation((input) => ({ input })),
+  DeleteObjectsCommand: jest.fn().mockImplementation((input) => ({ input })),
 }));
 
 const metadataMock = jest.fn();
-jest.mock('sharp', () => ({
-  __esModule: true,
-  default: jest.fn(() => ({ metadata: metadataMock })),
-}));
+jest.mock('sharp', () => jest.fn(() => ({ metadata: metadataMock })));
 
 import { S3MediaStorageService } from './s3-media-storage.service';
 
@@ -88,5 +87,51 @@ describe('S3MediaStorageService (UC-09)', () => {
     const resultado = await service.upload(buildFile());
 
     expect(resultado.url).toBe(`https://cdn.example.com/${resultado.key}`);
+  });
+
+  describe('derivados (Fase 8, UC-34)', () => {
+    it('subirDerivado usa la key dada con caché inmutable', async () => {
+      const service = new S3MediaStorageService();
+
+      const resultado = await service.subirDerivado(
+        Buffer.from('x'),
+        'perfil/abc-640.webp',
+        'image/webp',
+      );
+
+      expect(sendMock.mock.calls[0][0].input).toMatchObject({
+        Key: 'perfil/abc-640.webp',
+        ContentType: 'image/webp',
+        CacheControl: 'public, max-age=31536000, immutable',
+      });
+      expect(resultado).toEqual({
+        key: 'perfil/abc-640.webp',
+        url: 'https://mi-bucket.s3.us-east-1.amazonaws.com/perfil/abc-640.webp',
+      });
+    });
+
+    it('descargar devuelve el cuerpo como Buffer', async () => {
+      sendMock.mockResolvedValue({
+        Body: { transformToByteArray: async () => new Uint8Array([1, 2, 3]) },
+      });
+      const service = new S3MediaStorageService();
+
+      const buffer = await service.descargar('perfil/abc.png');
+
+      expect(buffer).toEqual(Buffer.from([1, 2, 3]));
+    });
+
+    it('eliminar borra en lote e ignora una lista vacía', async () => {
+      const service = new S3MediaStorageService();
+
+      await service.eliminar([]);
+      expect(sendMock).not.toHaveBeenCalled();
+
+      await service.eliminar(['a.webp', 'b.avif']);
+      expect(sendMock.mock.calls[0][0].input.Delete.Objects).toEqual([
+        { Key: 'a.webp' },
+        { Key: 'b.avif' },
+      ]);
+    });
   });
 });
