@@ -8,6 +8,12 @@ import { LocalMediaStorageService } from '../src/modules/media/storage/local-med
 import { MEDIA_STORAGE_SERVICE } from '../src/modules/media/storage/media-storage.interface';
 import { agenteAutenticado, crearAppDePrueba } from './utils/test-app';
 
+/** PNG 1x1 real: la subida de imágenes valida el contenido (Fase 7d). */
+const PNG_1X1 = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+  'base64',
+);
+
 /**
  * Módulo `media` (UC-02/UC-03/UC-04 dependen de él como FK; biblioteca
  * completa es UC-09, Sprint 3). El provider por defecto de `MediaModule` es
@@ -82,7 +88,7 @@ describe('Media admin (e2e, UC-02/UC-03/UC-04 + biblioteca UC-09)', () => {
       .post('/admin/media')
       .field('alt_text', 'Foto de prueba e2e')
       .field('tipo', 'imagen')
-      .attach('file', Buffer.from('contenido de prueba e2e'), 'foto.png')
+      .attach('file', PNG_1X1, 'foto.png')
       .expect(201);
 
     expect(respuesta.body).toMatchObject({
@@ -129,7 +135,7 @@ describe('Media admin (e2e, UC-02/UC-03/UC-04 + biblioteca UC-09)', () => {
       const subida = await agent
         .post('/admin/media')
         .field('tipo', 'imagen')
-        .attach('file', Buffer.from('imagen biblioteca'), 'biblioteca.png')
+        .attach('file', PNG_1X1, 'biblioteca.png')
         .expect(201);
       idsCreados.push(subida.body.id);
       keysCreadas.push(subida.body.s3_key);
@@ -154,7 +160,7 @@ describe('Media admin (e2e, UC-02/UC-03/UC-04 + biblioteca UC-09)', () => {
     it('PATCH /admin/media/:id edita el alt_text', async () => {
       const subida = await agent
         .post('/admin/media')
-        .attach('file', Buffer.from('editable'), 'editable.png')
+        .attach('file', PNG_1X1, 'editable.png')
         .expect(201);
       idsCreados.push(subida.body.id);
       keysCreadas.push(subida.body.s3_key);
@@ -170,7 +176,7 @@ describe('Media admin (e2e, UC-02/UC-03/UC-04 + biblioteca UC-09)', () => {
     it('PATCH /admin/media/:id rechaza campos fuera del DTO', async () => {
       const subida = await agent
         .post('/admin/media')
-        .attach('file', Buffer.from('rechazo'), 'rechazo.png')
+        .attach('file', PNG_1X1, 'rechazo.png')
         .expect(201);
       idsCreados.push(subida.body.id);
       keysCreadas.push(subida.body.s3_key);
@@ -184,7 +190,7 @@ describe('Media admin (e2e, UC-02/UC-03/UC-04 + biblioteca UC-09)', () => {
     it('DELETE /admin/media/:id borra un archivo que no está en uso', async () => {
       const subida = await agent
         .post('/admin/media')
-        .attach('file', Buffer.from('borrable'), 'borrable.png')
+        .attach('file', PNG_1X1, 'borrable.png')
         .expect(201);
       keysCreadas.push(subida.body.s3_key);
 
@@ -203,7 +209,7 @@ describe('Media admin (e2e, UC-02/UC-03/UC-04 + biblioteca UC-09)', () => {
 
       const subida = await agent
         .post('/admin/media')
-        .attach('file', Buffer.from('en-uso'), 'en-uso.png')
+        .attach('file', PNG_1X1, 'en-uso.png')
         .expect(201);
       idsCreados.push(subida.body.id);
       keysCreadas.push(subida.body.s3_key);
@@ -235,14 +241,14 @@ describe('Media admin (e2e, UC-02/UC-03/UC-04 + biblioteca UC-09)', () => {
     it('PATCH /admin/media/:id/reemplazar mantiene el mismo id y actualiza url/s3_key', async () => {
       const subida = await agent
         .post('/admin/media')
-        .attach('file', Buffer.from('version original'), 'original.png')
+        .attach('file', PNG_1X1, 'original.png')
         .expect(201);
       idsCreados.push(subida.body.id);
       keysCreadas.push(subida.body.s3_key);
 
       const reemplazo = await agent
         .patch(`/admin/media/${subida.body.id}/reemplazar`)
-        .attach('file', Buffer.from('version nueva'), 'nueva.png')
+        .attach('file', PNG_1X1, 'nueva.png')
         .expect(200);
 
       expect(reemplazo.body.id).toBe(subida.body.id);
@@ -258,7 +264,7 @@ describe('Media admin (e2e, UC-02/UC-03/UC-04 + biblioteca UC-09)', () => {
     it('PATCH /admin/media/:id/reemplazar sin archivo responde 400', async () => {
       const subida = await agent
         .post('/admin/media')
-        .attach('file', Buffer.from('sin-reemplazo'), 'sin-reemplazo.png')
+        .attach('file', PNG_1X1, 'sin-reemplazo.png')
         .expect(201);
       idsCreados.push(subida.body.id);
       keysCreadas.push(subida.body.s3_key);
@@ -388,6 +394,157 @@ describe('Media admin (e2e, UC-02/UC-03/UC-04 + biblioteca UC-09)', () => {
           where: { media_id: subida.body.id },
         }),
       ).toBe(0);
+    });
+  });
+
+  it('POST /admin/media valida la imagen por contenido (Fase 7d): texto con MIME falso y SVG con script son 400', async () => {
+    await agent
+      .post('/admin/media')
+      .attach('file', Buffer.from('no soy un png'), {
+        filename: 'falso.png',
+        contentType: 'image/png',
+      })
+      .expect(400);
+    await agent
+      .post('/admin/media')
+      .attach(
+        'file',
+        Buffer.from(
+          '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>',
+        ),
+        { filename: 'malo.svg', contentType: 'image/svg+xml' },
+      )
+      .expect(400);
+  });
+
+  describe('búsqueda, usos y borrado en lote (Fase 7d, UC-09)', () => {
+    const subir = async (alt: string, nombre: string) => {
+      const r = await agent
+        .post('/admin/media')
+        .field('alt_text', alt)
+        .attach(
+          'file',
+          nombre.endsWith('.png')
+            ? PNG_1X1
+            : Buffer.from(`contenido ${nombre}`),
+          nombre,
+        )
+        .expect(201);
+      idsCreados.push(r.body.id);
+      keysCreadas.push(r.body.s3_key);
+      return r.body as { id: string; s3_key: string };
+    };
+
+    it('GET /admin/media?q= busca sin distinguir mayúsculas y ?orden= se valida', async () => {
+      const marca = `zq${Date.now()}`;
+      const a = await subir(`Alfa ${marca.toUpperCase()}`, 'lote-a.png');
+      const b = await subir(`Beta ${marca}`, 'lote-b.png');
+
+      const res = await agent.get(`/admin/media?q=${marca}`).expect(200);
+      expect(res.body.map((m: { id: string }) => m.id).sort()).toEqual(
+        [a.id, b.id].sort(),
+      );
+      expect(res.body[0]).toHaveProperty('variantes');
+
+      const nombre = await agent
+        .get(`/admin/media?q=${marca}&orden=nombre`)
+        .expect(200);
+      expect(nombre.body.map((m: { id: string }) => m.id)).toEqual([
+        a.id,
+        b.id,
+      ]);
+
+      const antiguo = await agent
+        .get(`/admin/media?q=${marca}&orden=antiguo`)
+        .expect(200);
+      expect(antiguo.body[0].id).toBe(a.id);
+
+      await agent.get('/admin/media?orden=raro').expect(400);
+    });
+
+    it('GET /admin/media/usos refleja el logo de una certificación y omite la libre', async () => {
+      const admin = await prisma.usuarioAdmin.findUniqueOrThrow({
+        where: { email: process.env.ADMIN_EMAIL },
+      });
+      const usada = await subir('logo usos', 'usos-a.png');
+      const libre = await subir('libre usos', 'usos-b.png');
+      const cert = await prisma.certificacion.create({
+        data: {
+          usuario_admin_id: admin.id,
+          nombre: `Cert usos ${Date.now()}`,
+          institucion: 'Inst',
+          fecha_emision: new Date('2024-01-01'),
+          url_verificacion: 'https://example.com/v',
+          logo_media_id: usada.id,
+          orden: 9999,
+        },
+      });
+
+      try {
+        await request(app.getHttpServer()).get('/admin/media/usos').expect(401);
+        const res = await agent.get('/admin/media/usos').expect(200);
+        expect(res.body[usada.id]).toEqual([
+          { tipo: 'certificacion', id: cert.id, nombre: cert.nombre },
+        ]);
+        expect(res.body[libre.id]).toBeUndefined();
+      } finally {
+        await prisma.certificacion.delete({ where: { id: cert.id } });
+      }
+    });
+
+    it('POST /admin/media/eliminar-lote elimina libres y omite en uso e inexistentes', async () => {
+      const admin = await prisma.usuarioAdmin.findUniqueOrThrow({
+        where: { email: process.env.ADMIN_EMAIL },
+      });
+      const enUso = await subir('lote en uso', 'lote-uso.png');
+      const libre = await subir('lote libre', 'lote-libre.png');
+      const fantasma = '00000000-0000-4000-8000-000000000001';
+      const cert = await prisma.certificacion.create({
+        data: {
+          usuario_admin_id: admin.id,
+          nombre: `Cert lote ${Date.now()}`,
+          institucion: 'Inst',
+          fecha_emision: new Date('2024-01-01'),
+          url_verificacion: 'https://example.com/v',
+          logo_media_id: enUso.id,
+          orden: 9999,
+        },
+      });
+
+      try {
+        await agent
+          .post('/admin/media/eliminar-lote')
+          .send({ ids: [] })
+          .expect(400);
+        await agent
+          .post('/admin/media/eliminar-lote')
+          .send({ ids: ['no-uuid'] })
+          .expect(400);
+
+        const res = await agent
+          .post('/admin/media/eliminar-lote')
+          .send({ ids: [enUso.id, libre.id, fantasma] })
+          .expect(201);
+
+        expect(res.body.eliminados).toEqual([libre.id]);
+        expect(res.body.omitidos).toHaveLength(2);
+        expect(
+          res.body.omitidos.find((o: { id: string }) => o.id === enUso.id)
+            .motivo,
+        ).toContain(cert.nombre);
+        expect(
+          res.body.omitidos.find((o: { id: string }) => o.id === fantasma)
+            .motivo,
+        ).toBe('no existe');
+        expect(
+          await prisma.media.findUnique({ where: { id: libre.id } }),
+        ).toBeNull();
+        expect(
+          await prisma.media.findUnique({ where: { id: enUso.id } }),
+        ).not.toBeNull();
+      } finally {
+        await prisma.certificacion.delete({ where: { id: cert.id } });
+      }
     });
   });
 });

@@ -22,6 +22,7 @@ export async function crearAppDePrueba(
   // ajusta a propósito. Los logs ya salen en silencio con NODE_ENV=test.
   process.env.THROTTLE_LIMIT ??= '100000';
   process.env.THROTTLE_LOGIN_LIMIT ??= '100000';
+  process.env.THROTTLE_IMPORTAR_LIMIT ??= '100000';
   let builder = Test.createTestingModule({ imports: [AppModule] });
   if (configurar) {
     builder = configurar(builder);

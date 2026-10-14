@@ -15,18 +15,20 @@ import {
 
 /**
  * Estructura de carpetas del bucket (docs/plan-tecnico.md sección 5):
- * `perfil/`, `proyectos/`, `certificaciones/`, `logros/`. `POST /admin/media`
+ * `perfil/`, `proyectos/`, `certificaciones/`, `logros/` e `insignias/`
+ * (Fase 7d, UC-35: imágenes de insignias importadas). `POST /admin/media`
  * sube el archivo a la biblioteca antes de saber si terminará usado en
  * perfil/proyecto/certificación (la asociación es posterior, vía
  * `media_id`), así que se acepta un `carpeta` opcional como parámetro
  * (ver `CreateMediaDto.carpeta`) y se cae a un prefijo genérico
- * (`biblioteca/`) cuando no se indica una de las cuatro carpetas válidas.
+ * (`biblioteca/`) cuando no se indica una de las carpetas válidas.
  */
 const CARPETAS_VALIDAS = new Set([
   'perfil',
   'proyectos',
   'certificaciones',
   'logros',
+  'insignias',
 ]);
 const CARPETA_GENERICA = 'biblioteca';
 

@@ -7,6 +7,7 @@ import { Prisma } from '../../../generated/prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CertificacionesService } from '../certificaciones/certificaciones.service';
 import { FondoSitioService } from '../fondo-sitio/fondo-sitio.service';
+import { InsigniasService } from '../insignias/insignias.service';
 import { LogrosService } from '../logros/logros.service';
 import { PerfilService } from '../perfil/perfil.service';
 import { ProyectosService } from '../proyectos/proyectos.service';
@@ -21,6 +22,7 @@ import {
   SnapshotSeccion,
   SnapshotSitio,
 } from './snapshot.types';
+import { recolectarReferenciasMedia } from '../../common/media-en-secciones';
 import { INCLUDE_MEDIA_CON_VARIANTES } from '../media/media.select';
 
 /**
@@ -45,6 +47,7 @@ export class VersionesSitioService {
     private readonly logrosService: LogrosService,
     private readonly redesSocialesService: RedesSocialesService,
     private readonly skillsService: SkillsService,
+    private readonly insigniasService: InsigniasService,
     private readonly fondoSitioService: FondoSitioService,
   ) {}
 
@@ -70,6 +73,7 @@ export class VersionesSitioService {
       logros,
       redes_sociales,
       skills,
+      insignias,
       fondo,
     ] = await Promise.all([
       this.perfilService.obtenerConMedia(usuarioAdminId),
@@ -80,6 +84,7 @@ export class VersionesSitioService {
       this.logrosService.listar(),
       this.redesSocialesService.listar(),
       this.skillsService.listar(),
+      this.insigniasService.listarVisibles(),
       this.fondoSitioService.obtenerActivo(usuarioAdminId),
     ]);
 
@@ -92,6 +97,7 @@ export class VersionesSitioService {
       logros,
       redes_sociales,
       skills,
+      insignias,
       fondo,
     } as unknown as SnapshotSitio;
   }
@@ -168,29 +174,9 @@ export class VersionesSitioService {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     secciones: any[],
   ): string[] {
-    return secciones.flatMap((seccion) => {
-      if (seccion.tipo_seccion === 'hero') {
-        const id = (seccion.configuracion as Record<string, unknown> | null)
-          ?.imagen_fondo_media_id;
-        return typeof id === 'string' && id.length > 0 ? [id] : [];
-      }
-
-      if (seccion.tipo_seccion === 'galeria') {
-        return this.fotosDeSeccion(seccion)
-          .map((foto) => foto.media_id)
-          .filter(
-            (id): id is string => typeof id === 'string' && id.length > 0,
-          );
-      }
-
-      if (seccion.tipo_seccion === 'columnas') {
-        return this.columnasDeSeccion(seccion).flatMap((columna) =>
-          this.recolectarIdsMediaDeSecciones(columna),
-        );
-      }
-
-      return [];
-    });
+    // Fase 7d: el recorrido vive en `common/media-en-secciones.ts`, compartido
+    // con `MediaUsosService` (usos por archivo, UC-09).
+    return recolectarReferenciasMedia(secciones).map((r) => r.mediaId);
   }
 
   /**

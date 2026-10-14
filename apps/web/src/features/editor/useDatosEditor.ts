@@ -2,6 +2,8 @@ import { useMemo } from 'react'
 import type { PuckContext } from '@puckeditor/core'
 import { useCertificaciones } from '@/features/certificaciones/useCertificaciones'
 import { useFondosSitio } from '@/features/fondo-sitio/useFondosSitio'
+import { useInsignias } from '@/features/insignias/useInsignias'
+import type { InsigniaPublica } from '@/features/insignias/types'
 import { useMediaList } from '@/features/media/useMediaLibrary'
 import type { Media } from '@/features/media/types'
 import { usePerfil } from '@/features/perfil/usePerfil'
@@ -81,7 +83,7 @@ type ResultadoUseDatosEditor = {
 }
 
 /**
- * Compone los 9 hooks admin necesarios para armar `DatosEditor`. Resuelve
+ * Compone los 10 hooks admin necesarios para armar `DatosEditor`. Resuelve
  * los 3 huecos de media que los endpoints admin no traen resueltos (a
  * diferencia del snapshot publicado, que sí los resuelve en el backend):
  * `perfil.imagen_perfil`/`cv_media` (`GET /admin/perfil` solo trae los
@@ -107,6 +109,7 @@ export function useDatosEditor(): ResultadoUseDatosEditor {
   const temasQuery = useTemas()
   const fondosQuery = useFondosSitio()
   const mediaQuery = useMediaList()
+  const insigniasQuery = useInsignias()
 
   const queries = [
     perfilQuery,
@@ -118,6 +121,7 @@ export function useDatosEditor(): ResultadoUseDatosEditor {
     temasQuery,
     fondosQuery,
     mediaQuery,
+    insigniasQuery,
   ]
 
   const isLoading = queries.some((query) => query.isLoading)
@@ -142,7 +146,8 @@ export function useDatosEditor(): ResultadoUseDatosEditor {
       !skillsQuery.data ||
       !temasQuery.data ||
       !fondosQuery.data ||
-      !mediaQuery.data
+      !mediaQuery.data ||
+      !insigniasQuery.data
     ) {
       return null
     }
@@ -169,6 +174,15 @@ export function useDatosEditor(): ResultadoUseDatosEditor {
       }),
     )
 
+    // Fase 7d (UC-35): como el snapshot, solo las visibles y con la imagen
+    // resuelta (`mediaPorId` o la que ya traiga el endpoint); sin imagen se omiten.
+    const insignias: InsigniaPublica[] = insigniasQuery.data
+      .filter((insignia) => insignia.visible)
+      .flatMap((insignia) => {
+        const imagen = mediaPorId[insignia.imagen_media_id] ?? insignia.imagen
+        return imagen ? [{ ...insignia, imagen }] : []
+      })
+
     return {
       perfil,
       tema: temasQuery.data.find((tema) => tema.activo) ?? null,
@@ -178,6 +192,7 @@ export function useDatosEditor(): ResultadoUseDatosEditor {
       redes_sociales: redesSocialesQuery.data,
       skills: skillsQuery.data,
       fondo: fondosQuery.data.find((fondo) => fondo.activo) ?? null,
+      insignias,
       mediaPorId,
     }
   }, [
@@ -190,6 +205,7 @@ export function useDatosEditor(): ResultadoUseDatosEditor {
     temasQuery.data,
     fondosQuery.data,
     mediaQuery.data,
+    insigniasQuery.data,
     mediaPorId,
   ])
 

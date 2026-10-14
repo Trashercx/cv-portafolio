@@ -9,6 +9,7 @@ import { AppService } from './app.service';
 import { AuthModule } from './modules/auth/auth.module';
 import { CertificacionesModule } from './modules/certificaciones/certificaciones.module';
 import { FondoSitioModule } from './modules/fondo-sitio/fondo-sitio.module';
+import { InsigniasModule } from './modules/insignias/insignias.module';
 import { LogrosModule } from './modules/logros/logros.module';
 import { MediaModule } from './modules/media/media.module';
 import { MetricasModule } from './modules/metricas/metricas.module';
@@ -86,6 +87,8 @@ import { PrismaModule } from './prisma/prisma.module';
     SeccionesModule,
     TemaModule,
     SkillsModule,
+    // Fase 7d: insignias importables (UC-35).
+    InsigniasModule,
     FondoSitioModule,
     VersionesSitioModule,
     PublicoModule,

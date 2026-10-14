@@ -1,17 +1,71 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiFetch, apiUpload } from '@/lib/api-client'
-import type { Media } from './types'
+import type {
+  FiltrosMedia,
+  Media,
+  ResultadoEliminarLote,
+  UsosPorMedia,
+} from './types'
 
 export const MEDIA_QUERY_KEY = ['media'] as const
-export const mediaListQueryKey = (tipo?: string) => [...MEDIA_QUERY_KEY, { tipo: tipo ?? null }] as const
+export const mediaUsosQueryKey = [...MEDIA_QUERY_KEY, 'usos'] as const
 
-/** `GET /admin/media?tipo=` (UC-09): biblioteca completa, filtro opcional por `tipo`. */
-export function useMediaList(tipo?: string) {
+function normalizarFiltros(filtros?: string | FiltrosMedia): Required<FiltrosMedia> {
+  const f: FiltrosMedia = typeof filtros === 'string' ? { tipo: filtros } : (filtros ?? {})
+  return { tipo: f.tipo ?? '', q: f.q?.trim() ?? '', orden: f.orden ?? 'reciente' }
+}
+
+export const mediaListQueryKey = (filtros?: string | FiltrosMedia) =>
+  [...MEDIA_QUERY_KEY, 'lista', normalizarFiltros(filtros)] as const
+
+/**
+ * `GET /admin/media?tipo=&q=&orden=` (UC-09, Fase 7d): biblioteca con filtros.
+ * Acepta un `string` (solo `tipo`, como los selectores de los formularios) o
+ * el objeto de filtros de la biblioteca. Sin filtros comparte caché con el
+ * resto de consumidores (`useDatosEditor`, `puck-config`).
+ */
+export function useMediaList(filtros?: string | FiltrosMedia) {
+  const { tipo, q, orden } = normalizarFiltros(filtros)
   return useQuery({
-    queryKey: mediaListQueryKey(tipo),
+    queryKey: mediaListQueryKey(filtros),
     queryFn: () => {
-      const query = tipo ? `?tipo=${encodeURIComponent(tipo)}` : ''
-      return apiFetch<Media[]>(`/admin/media${query}`)
+      const params = new URLSearchParams()
+      if (tipo) params.set('tipo', tipo)
+      if (q) params.set('q', q)
+      if (orden !== 'reciente') params.set('orden', orden)
+      const query = params.toString()
+      return apiFetch<Media[]>(`/admin/media${query ? `?${query}` : ''}`)
+    },
+  })
+}
+
+/** `GET /admin/media/usos` (Fase 7d, UC-09): dónde se usa cada archivo, en una pasada. */
+export function useMediaUsos() {
+  return useQuery({
+    queryKey: mediaUsosQueryKey,
+    queryFn: () => apiFetch<UsosPorMedia>('/admin/media/usos'),
+    staleTime: 30_000,
+  })
+}
+
+/**
+ * `POST /admin/media/eliminar-lote` (Fase 7d, UC-09): los archivos en uso se
+ * omiten (nunca 409 global); el llamador muestra `omitidos` con su motivo.
+ */
+export function useEliminarMediaLote() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (ids: string[]) =>
+      apiFetch<ResultadoEliminarLote>('/admin/media/eliminar-lote', {
+        method: 'POST',
+        body: { ids },
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: MEDIA_QUERY_KEY })
+    },
+    meta: {
+      mensajeError: 'No se pudieron eliminar los archivos seleccionados.',
     },
   })
 }

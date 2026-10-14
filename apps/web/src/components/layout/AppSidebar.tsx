@@ -1,4 +1,5 @@
 import {
+  Award,
   BadgeCheck,
   BarChart3,
   ExternalLink,
@@ -52,6 +53,8 @@ const GRUPOS_NAV: Array<{ label: string; items: NavItem[] }> = [
         label: 'Certificaciones',
         icon: BadgeCheck,
       },
+      // Fase 7d (UC-35): insignias importables (Credly, Open Badges).
+      { to: '/admin/insignias', label: 'Insignias', icon: Award },
       { to: '/admin/logros', label: 'Logros', icon: Trophy },
       { to: '/admin/skills', label: 'Skills', icon: Sparkles },
       { to: '/admin/redes', label: 'Redes sociales', icon: Share2 },

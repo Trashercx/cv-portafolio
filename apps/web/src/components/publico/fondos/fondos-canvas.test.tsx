@@ -191,6 +191,9 @@ describe.each(CANVAS)('canvas %s', (tipo) => {
 
   it('se pausa cuando el canvas sale del viewport y se reanuda al volver', async () => {
     const { unmount } = await montar(tipo)
+    // El bucle arranca en un efecto posterior: se espera al primer cuadro agendado
+    // (bajo carga, afirmar de inmediato dejaba la cuenta en 0 y fallaba).
+    await waitFor(() => expect(cuadros.size).toBe(1))
     const observador = observadoresInterseccion[observadoresInterseccion.length - 1]
 
     act(() => observador.notificar(false))

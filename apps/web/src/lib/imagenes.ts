@@ -58,6 +58,8 @@ export const SIZES_POR_CONTEXTO = {
   proyecto_tarjeta: '(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw',
   galeria: '(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw',
   certificacion_logo: '6rem',
+  // Fase 7d (UC-35): la insignia más grande (`tamano: 'grande'`) mide 13 rem.
+  insignia: '(min-width: 640px) 13rem, 10rem',
   detalle: '(min-width: 1024px) 56rem, 100vw',
   lightbox: '100vw',
 } as const

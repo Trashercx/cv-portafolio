@@ -11,7 +11,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ApiError } from '@/lib/api-client'
-import type { Media } from './types'
+import type { Media, UsoMedia } from './types'
 import {
   useActualizarMedia,
   useEliminarMedia,
@@ -20,12 +20,14 @@ import {
 
 type MediaDetailDialogProps = {
   media: Media
+  /** Fase 7d: usos del archivo (`GET /admin/media/usos`); con usos, "Eliminar" queda deshabilitado. */
+  usos?: UsoMedia[]
   open: boolean
   onOpenChange: (open: boolean) => void
 }
 
 /**
- * UC-09: detalle de un archivo de la biblioteca — edición de `alt_text`,
+ * UC-09 (Fase 7d: muestra los usos y bloquea el borrado si hay): detalle de un archivo de la biblioteca — edición de `alt_text`,
  * reemplazo de archivo (misma fila, mismo `id`) y borrado con confirmación.
  * Si el borrado responde 409 (archivo en uso), el mensaje se muestra tal
  * cual y el archivo permanece en la lista (no se cierra el diálogo).
@@ -36,6 +38,7 @@ type MediaDetailDialogProps = {
  */
 export function MediaDetailDialog({
   media,
+  usos = [],
   open,
   onOpenChange,
 }: MediaDetailDialogProps) {
@@ -132,6 +135,21 @@ export function MediaDetailDialog({
             ) : null}
           </div>
 
+          <div className="grid gap-1">
+            <p className="text-sm font-medium">Usos</p>
+            {usos.length > 0 ? (
+              <ul className="list-disc pl-5 text-sm text-muted-foreground">
+                {usos.map((uso) => (
+                  <li key={`${uso.tipo}-${uso.id}`}>{`${uso.tipo}: ${uso.nombre}`}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No se usa en ningún lugar.
+              </p>
+            )}
+          </div>
+
           {errorMessage(eliminar.error, 'No se pudo eliminar el archivo.') ? (
             <p role="alert" className="text-sm text-destructive">
               {errorMessage(eliminar.error, 'No se pudo eliminar el archivo.')}
@@ -142,7 +160,9 @@ export function MediaDetailDialog({
         <DialogFooter>
           <ConfirmDeleteDialog
             trigger={
-              <Button variant="destructive">Eliminar</Button>
+              <Button variant="destructive" disabled={usos.length > 0}>
+                Eliminar
+              </Button>
             }
             title="¿Eliminar este archivo?"
             description="Si está en uso en proyectos, certificaciones o el perfil, el servidor rechazará el borrado."

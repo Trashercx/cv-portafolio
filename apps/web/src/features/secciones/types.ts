@@ -22,6 +22,7 @@ export const TIPOS_SECCION = [
   'columnas',
   'galeria',
   'navegacion',
+  'insignias',
 ] as const
 
 export type TipoSeccion = (typeof TIPOS_SECCION)[number]
@@ -38,6 +39,7 @@ export const TIPO_SECCION_LABEL: Record<TipoSeccion, string> = {
   columnas: 'Columnas',
   galeria: 'Galería',
   navegacion: 'Navegación',
+  insignias: 'Insignias',
 }
 
 /**
@@ -310,6 +312,33 @@ export type NavegacionConfiguracion = BloqueConfiguracionBase & {
   mostrar_progreso_scroll?: boolean
 }
 
+/**
+ * `configuracion` para `tipo_seccion = 'insignias'` (Fase 7d, UC-35). Espeja
+ * `InsigniasConfiguracionDto`. Las insignias en sí (entidad `insignia`) no
+ * viven en la configuración: se leen del snapshot (`insignias[]`) o, en el
+ * lienzo, de `admin/insignias`. Se permite dentro de `columnas`.
+ */
+export type InsigniasConfiguracion = BloqueConfiguracionBase & {
+  titulo?: string
+  subtitulo?: string
+  /** @default 'auto' */
+  columnas?: 2 | 3 | 4 | 'auto'
+  /** @default 'normal' */
+  tamano?: 'compacto' | 'normal' | 'grande'
+  /** @default 'inclinar_brillo' */
+  efecto_hover?: 'inclinar_brillo' | 'girar' | 'elevar' | 'ninguno'
+  /** @default true */
+  mostrar_emisor?: boolean
+  /** @default true */
+  mostrar_fecha?: boolean
+  /** @default false */
+  mostrar_habilidades?: boolean
+  /** @default true */
+  mostrar_enlace?: boolean
+  /** 1-50; sin valor = todas. */
+  limite?: number
+}
+
 export type ConfiguracionPorTipo = {
   hero: HeroConfiguracion
   'sobre-mi': SobreMiConfiguracion
@@ -321,6 +350,7 @@ export type ConfiguracionPorTipo = {
   columnas: ColumnasConfiguracion
   galeria: GaleriaConfiguracion
   navegacion: NavegacionConfiguracion
+  insignias: InsigniasConfiguracion
 }
 
 /** Forma exacta de `Seccion` devuelta por `GET /admin/secciones`. */

@@ -1,3 +1,4 @@
+import type { InsigniaPublica } from '@/features/insignias/types'
 import type { Logro } from '@/features/logros/types'
 import type { Proyecto } from '@/features/proyectos/types'
 import type { CertificacionPublica, PerfilPublico } from '@/features/publico/types'
@@ -7,6 +8,7 @@ import type {
   CertificacionesConfiguracion,
   ContactoConfiguracion,
   GaleriaConfiguracion,
+  InsigniasConfiguracion,
   LogrosConfiguracion,
   ProyectosConfiguracion,
   SkillsConfiguracion,
@@ -18,6 +20,7 @@ import { ALINEACION_TEXTO_CLASE } from '@/lib/escalas-bloque'
 import { BloqueCertificaciones } from './BloqueCertificaciones'
 import { BloqueContacto } from './BloqueContacto'
 import { BloqueGaleria } from './BloqueGaleria'
+import { BloqueInsignias } from './BloqueInsignias'
 import { BloqueLogros } from './BloqueLogros'
 import { BloqueProyectos } from './BloqueProyectos'
 import { BloqueSkills } from './BloqueSkills'
@@ -41,6 +44,8 @@ export type DatosDespachoBloque = {
   logros: Logro[]
   redes_sociales: RedSocial[]
   skills: Skill[]
+  /** Fase 7d (UC-35): ausente en snapshots anteriores a la fase. */
+  insignias?: InsigniaPublica[]
 }
 
 type DespachoBloqueSeccionProps = {
@@ -159,6 +164,16 @@ export function DespachoBloqueSeccion({
           titulo={titulo_visible}
           alineacionTitulo={alineacionTitulo}
           config={configuracion as GaleriaConfiguracion}
+        />
+      )
+    case 'insignias':
+      // Fase 7d (UC-35): las insignias vienen del snapshot/`DatosEditor`, no de la configuración.
+      return (
+        <BloqueInsignias
+          titulo={titulo_visible}
+          alineacionTitulo={alineacionTitulo}
+          config={configuracion as InsigniasConfiguracion}
+          insignias={datos.insignias ?? []}
         />
       )
     default:
