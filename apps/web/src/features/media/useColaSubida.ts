@@ -4,8 +4,13 @@ import { ApiError } from '@/lib/api-client'
 import type { Media } from './types'
 import { MEDIA_QUERY_KEY } from './useMediaLibrary'
 import { subirMedia } from './useUploadMedia'
+import { prepararArchivoParaSubir } from './heic-a-jpeg'
+import { MAX_BYTES_SUBIDA } from './limites-lienzo'
+
+export { MAX_BYTES_SUBIDA }
 
 export type EstadoSubida =
+  | 'convirtiendo'
   | 'pendiente'
   | 'subiendo'
   | 'listo'
@@ -22,17 +27,8 @@ export type ItemCola = {
   media?: Media
   /** Fase 7e (UC-09): carpeta destino fijada al encolar; `undefined` = sin carpeta. */
   carpeta_id?: string
-}
-
-/** Límite del API por archivo (10 MB). */
-export const MAX_BYTES_SUBIDA = 10 * 1024 * 1024
-const TIPO_PERMITIDO = /^(image\/|application\/pdf$)/
-
-/** Valida en cliente lo mismo que el API para no gastar una subida segura de fallar. */
-function validarArchivo(file: File): string | undefined {
-  if (!TIPO_PERMITIDO.test(file.type)) return 'Solo se admiten imágenes y PDF.'
-  if (file.size > MAX_BYTES_SUBIDA) return 'El archivo supera los 10 MB.'
-  return undefined
+  /** Fase 7g: `true` cuando `file` ya pasó por `prepararArchivoParaSubir` (un reintento no repite la conversión). */
+  normalizado: boolean
 }
 
 let contador = 0
@@ -48,6 +44,10 @@ export function useColaSubida(concurrencia = 3) {
   const [items, setItems] = useState<ItemCola[]>([])
   const iniciados = useRef(new Set<string>())
   const controladores = useRef(new Map<string, AbortController>())
+  const itemsRef = useRef<ItemCola[]>([])
+  useEffect(() => {
+    itemsRef.current = items
+  }, [items])
 
   // Revisión Fase 7d: al desmontar la página se abortan las subidas en vuelo
   // para no dejar peticiones huérfanas ni actualizaciones de estado tardías.
@@ -65,20 +65,39 @@ export function useColaSubida(concurrencia = 3) {
     )
   }, [])
 
-  const agregar = useCallback((archivos: File[], carpeta_id?: string) => {
-    const nuevos: ItemCola[] = archivos.map((file) => {
-      const error = validarArchivo(file)
-      return {
+  // Fase 7g (UC-09): cada archivo entra como `convirtiendo` mientras se detecta su
+  // formato y, si es HEIC, se convierte a JPEG en el navegador; luego pasa a
+  // `pendiente` (con el `File` convertido) o a `error` con el motivo. El resultado
+  // solo se aplica si el item sigue en `convirtiendo` (si se canceló o se limpió
+  // mientras tanto, se descarta).
+  const prepararItem = useCallback(async (id: string, file: File) => {
+    const resultado = await prepararArchivoParaSubir(file)
+    setItems((actuales) =>
+      actuales.map((item) => {
+        if (item.id !== id || item.estado !== 'convirtiendo') return item
+        return 'error' in resultado
+          ? { ...item, estado: 'error', error: resultado.error }
+          : { ...item, file: resultado.file, normalizado: true, estado: 'pendiente', error: undefined }
+      }),
+    )
+  }, [])
+
+  const agregar = useCallback(
+    (archivos: File[], carpeta_id?: string) => {
+      if (archivos.length === 0) return
+      const nuevos: ItemCola[] = archivos.map((file) => ({
         id: `subida-${++contador}`,
         file,
-        estado: error ? 'error' : 'pendiente',
+        estado: 'convirtiendo',
         progreso: 0,
-        error,
         carpeta_id,
-      }
-    })
-    if (nuevos.length > 0) setItems((actuales) => [...actuales, ...nuevos])
-  }, [])
+        normalizado: false,
+      }))
+      setItems((actuales) => [...actuales, ...nuevos])
+      for (const item of nuevos) void prepararItem(item.id, item.file)
+    },
+    [prepararItem],
+  )
 
   // Bomba de la cola: arranca pendientes mientras haya cupo.
   useEffect(() => {
@@ -126,28 +145,44 @@ export function useColaSubida(concurrencia = 3) {
     }
     setItems((actuales) =>
       actuales.map((item) =>
-        item.id === id && item.estado === 'pendiente'
+        item.id === id && (item.estado === 'pendiente' || item.estado === 'convirtiendo')
           ? { ...item, estado: 'cancelado' }
           : item,
       ),
     )
   }, [])
 
-  const reintentar = useCallback((id: string) => {
-    iniciados.current.delete(id)
-    setItems((actuales) =>
-      actuales.map((item) =>
-        item.id === id && (item.estado === 'error' || item.estado === 'cancelado')
-          ? { ...item, estado: 'pendiente', progreso: 0, error: undefined }
-          : item,
-      ),
-    )
-  }, [])
+  const reintentar = useCallback(
+    (id: string) => {
+      const actual = itemsRef.current.find((i) => i.id === id)
+      if (!actual || (actual.estado !== 'error' && actual.estado !== 'cancelado')) return
+      iniciados.current.delete(id)
+      if (!actual.normalizado) {
+        // El fallo vino de la preparación (formato, tamaño o conversión HEIC): se repite
+        // desde el archivo original, nunca se sube sin convertir.
+        setItems((actuales) =>
+          actuales.map((item) =>
+            item.id === id ? { ...item, estado: 'convirtiendo', progreso: 0, error: undefined } : item,
+          ),
+        )
+        void prepararItem(id, actual.file)
+        return
+      }
+      setItems((actuales) =>
+        actuales.map((item) =>
+          item.id === id ? { ...item, estado: 'pendiente', progreso: 0, error: undefined } : item,
+        ),
+      )
+    },
+    [prepararItem],
+  )
 
   /** Quita de la cola los terminados (`listo`, `error`, `cancelado`). */
   const limpiar = useCallback(() => {
     setItems((actuales) =>
-      actuales.filter((i) => i.estado === 'pendiente' || i.estado === 'subiendo'),
+      actuales.filter(
+        (i) => i.estado === 'convirtiendo' || i.estado === 'pendiente' || i.estado === 'subiendo',
+      ),
     )
   }, [])
 

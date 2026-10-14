@@ -98,3 +98,46 @@ export async function validarImagen(
   }
   return null;
 }
+
+/**
+ * Fase 7g, UC-09: mensajes de rechazo. El sharp precompilado no decodifica
+ * HEIC/HEIF con HEVC, asi que se detecta por contenido y se explica la causa.
+ */
+export const MENSAJE_HEIC_NO_ADMITIDO =
+  'Las fotos HEIC/HEIF no se admiten directamente: el panel las convierte a JPG al subirlas; si usas el API, conviértela antes.';
+export const MENSAJE_IMAGEN_NO_ADMITIDA =
+  'El archivo no es una imagen admitida. Formatos aceptados: PNG, JPEG, WebP, AVIF, GIF, SVG (sin contenido activo) y PDF.';
+
+const MARCAS_HEIC = new Set(['heic', 'heix', 'hevc', 'hevx', 'mif1', 'msf1']);
+const MAX_LECTURA_FTYP = 256;
+
+/**
+ * Fase 7g, UC-09: `true` si el contenido es HEIC/HEIF (caja ISO BMFF `ftyp`
+ * con marca mayor o compatible HEIC/HEVC). `avif`/`avis` NO cuentan: sharp
+ * si los lee.
+ */
+export function esHeicPorContenido(buffer: Buffer): boolean {
+  if (!buffer || buffer.length < 12) return false;
+  if (buffer.toString('latin1', 4, 8) !== 'ftyp') return false;
+  const tamano = buffer.readUInt32BE(0);
+  const fin = Math.min(
+    tamano >= 16 ? tamano : MAX_LECTURA_FTYP,
+    buffer.length,
+    MAX_LECTURA_FTYP,
+  );
+  // Marca mayor y compatibles (de 16 en adelante, de 4 en 4 bytes). Si alguna
+  // es avif/avis el archivo es AVIF (aunque declare mif1): lo lee sharp.
+  const marcas = [buffer.toString('latin1', 8, 12)];
+  for (let i = 16; i + 4 <= fin; i += 4) {
+    marcas.push(buffer.toString('latin1', i, i + 4));
+  }
+  if (marcas.some((m) => m === 'avif' || m === 'avis')) return false;
+  return marcas.some((m) => MARCAS_HEIC.has(m));
+}
+
+/** Mensaje 400 segun el contenido rechazado (Fase 7g, UC-09). */
+export function mensajeRechazoImagen(buffer: Buffer): string {
+  return esHeicPorContenido(buffer)
+    ? MENSAJE_HEIC_NO_ADMITIDO
+    : MENSAJE_IMAGEN_NO_ADMITIDA;
+}

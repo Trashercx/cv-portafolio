@@ -148,7 +148,7 @@ describe('InsigniasService (Fase 7d, UC-35)', () => {
           emisor: 'y',
           imagen_url_remota: 'https://ejemplo.test/a',
         }),
-      ).rejects.toThrow(/no es válida/i);
+      ).rejects.toThrow(/no es una imagen admitida/i);
       expect(prisma.insignia.create).not.toHaveBeenCalled();
     });
 
@@ -435,7 +435,30 @@ describe('InsigniasService (Fase 7d, UC-35)', () => {
       expect(v.imagen?.formato).toBe('png');
     });
 
-    it('rechaza tipos que no sean PNG o SVG sin subir nada', async () => {
+    it('acepta JPEG y WebP como imagen simple (Fase 7g, UC-35)', async () => {
+      mediaService.create.mockResolvedValue({
+        id: 'mj',
+        url: 'https://cdn.test/insignias/x.jpg',
+        ancho: 4,
+        alto: 4,
+      });
+      const base = sharp({
+        create: { width: 4, height: 4, channels: 3, background: '#fff' },
+      });
+      const jpeg = await base.clone().jpeg().toBuffer();
+      const v = await service.importarArchivo(archivo(jpeg, 'image/jpeg'), 'a');
+      expect(mediaService.create.mock.calls[0][0].mimetype).toBe('image/jpeg');
+      expect(v.imagen_media_id).toBe('mj');
+      expect(v.imagen).toMatchObject({
+        url: 'https://cdn.test/insignias/x.jpg',
+        formato: 'jpeg',
+      });
+      const webp = await base.clone().webp().toBuffer();
+      const w = await service.importarArchivo(archivo(webp, 'image/webp'), 'a');
+      expect(w.imagen?.formato).toBe('webp');
+    });
+
+    it('rechaza tipos que no sean PNG, JPEG, WebP o SVG sin subir nada', async () => {
       await expect(
         service.importarArchivo(archivo(Buffer.from('x'), 'image/jpeg'), 'a'),
       ).rejects.toThrow(BadRequestException);

@@ -1,3 +1,4 @@
+import { ACCEPT_IMAGENES } from '@/features/media/formatos-imagen'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -108,7 +109,7 @@ describe('MediaField', () => {
 
     expect(screen.getByLabelText(/foto de perfil/i)).toHaveAttribute(
       'accept',
-      'image/*',
+      ACCEPT_IMAGENES,
     )
   })
 
@@ -128,7 +129,7 @@ describe('MediaField', () => {
 
     expect(
       screen.getByLabelText(/logo o documento del certificado/i),
-    ).toHaveAttribute('accept', 'image/*,application/pdf')
+    ).toHaveAttribute('accept', `${ACCEPT_IMAGENES},application/pdf`)
 
     await user.click(
       screen.getByRole('tab', { name: /elegir de biblioteca/i }),

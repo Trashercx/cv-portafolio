@@ -417,6 +417,21 @@ describe('Media admin (e2e, UC-02/UC-03/UC-04 + biblioteca UC-09)', () => {
       .expect(400);
   });
 
+  it('POST /admin/media rechaza HEIC con mensaje explicativo (Fase 7g, UC-09)', async () => {
+    const heic = Buffer.from(
+      '00000018667479706865696300000000' + '6d6966316865' + '6963',
+      'hex',
+    );
+    const r = await agent
+      .post('/admin/media')
+      .attach('file', heic, {
+        filename: 'foto.heic',
+        contentType: 'image/heic',
+      })
+      .expect(400);
+    expect(JSON.stringify(r.body.message)).toContain('HEIC/HEIF');
+  });
+
   describe('búsqueda, usos y borrado en lote (Fase 7d, UC-09)', () => {
     const subir = async (alt: string, nombre: string) => {
       const r = await agent

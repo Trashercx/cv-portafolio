@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/select'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { BarraCarpetas } from '@/features/media/BarraCarpetas'
+import { ACCEPT_IMAGENES_Y_PDF } from '@/features/media/formatos-imagen'
 import { EliminarLoteDialog } from '@/features/media/EliminarLoteDialog'
 import { MediaDetailDialog } from '@/features/media/MediaDetailDialog'
 import { PanelColaSubida } from '@/features/media/PanelColaSubida'
@@ -335,7 +336,7 @@ export function MediaLibraryPage() {
               ref={inputArchivos}
               type="file"
               multiple
-              accept="image/*,application/pdf"
+              accept={ACCEPT_IMAGENES_Y_PDF}
               className="sr-only"
               aria-label="Seleccionar archivos para subir"
               tabIndex={-1}

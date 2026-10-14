@@ -542,5 +542,47 @@ describe('Insignias (e2e, UC-35)', () => {
         .expect(400);
       await agent.post('/admin/insignias/importar-archivo').expect(400);
     });
+
+    it('acepta un JPEG como imagen simple (Fase 7g, UC-35)', async () => {
+      const jpeg = await sharp({
+        create: { width: 4, height: 4, channels: 3, background: '#fff' },
+      })
+        .jpeg()
+        .toBuffer();
+      const r = await agent
+        .post('/admin/insignias/importar-archivo')
+        .attach('file', jpeg, { filename: 'b.jpg', contentType: 'image/jpeg' });
+      expect([200, 201]).toContain(r.status);
+      idsMedia.push(r.body.imagen_media_id);
+      expect(r.body.imagen).toMatchObject({ formato: 'jpeg' });
+      expect(typeof r.body.imagen.url).toBe('string');
+    });
+
+    it('rechaza un GIF válido con el mensaje de formatos de insignia (Fase 7g, UC-35)', async () => {
+      const gif = await sharp({
+        create: { width: 4, height: 4, channels: 3, background: '#fff' },
+      })
+        .gif()
+        .toBuffer();
+      const r = await agent
+        .post('/admin/insignias/importar-archivo')
+        .attach('file', gif, { filename: 'a.gif', contentType: 'image/gif' })
+        .expect(400);
+      expect(JSON.stringify(r.body.message)).toContain(
+        'Solo se admiten imágenes PNG, JPEG, WebP o SVG válidas',
+      );
+    });
+
+    it('rechaza HEIC con mensaje explicativo (Fase 7g, UC-09)', async () => {
+      const heic = Buffer.from(
+        '00000018667479706865696300000000' + '6d6966316865' + '6963',
+        'hex',
+      );
+      const r = await agent
+        .post('/admin/insignias/importar-archivo')
+        .attach('file', heic, { filename: 'a.heic', contentType: 'image/heic' })
+        .expect(400);
+      expect(JSON.stringify(r.body.message)).toContain('HEIC/HEIF');
+    });
   });
 });

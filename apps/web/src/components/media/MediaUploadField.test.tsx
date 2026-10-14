@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { ACCEPT_IMAGENES } from '@/features/media/formatos-imagen'
 import { MediaUploadField } from './MediaUploadField'
 
 // jsdom no implementa `URL.createObjectURL`/`revokeObjectURL` de forma real;
@@ -8,6 +9,22 @@ import { MediaUploadField } from './MediaUploadField'
 // prematura vs. limpieza al desmontar).
 let contadorBlob = 0
 
+
+// Fase 7g: la conversión real no corre en jsdom; los .heic se "convierten" a un JPEG simulado.
+vi.mock('@/features/media/heic-a-jpeg', async (importarOriginal) => {
+  const real = await importarOriginal<typeof import('@/features/media/heic-a-jpeg')>()
+  return {
+    ...real,
+    prepararArchivoParaSubir: vi.fn(async (file: File) =>
+      /\.heic$/i.test(file.name)
+        ? {
+            file: new File(['jpg'], file.name.replace(/\.heic$/i, '.jpg'), { type: 'image/jpeg' }),
+            formato: 'imagen' as const,
+          }
+        : real.prepararArchivoParaSubir(file),
+    ),
+  }
+})
 
 const uploadMutateMock = vi.fn()
 const uploadState: { isPending: boolean; error: unknown } = {
@@ -269,5 +286,40 @@ describe('MediaUploadField', () => {
     // valores capturados en el primer render), así que este blob quedaba
     // sin revocar para siempre.
     expect(revokeObjectURLSpy).toHaveBeenCalledWith(previewConfirmadoUrl)
+  })
+
+  it('Fase 7g: acepta un .heic con type vacío, lo convierte a JPEG y sube ese archivo', async () => {
+    const user = userEvent.setup()
+    render(
+      <MediaUploadField
+        label="Foto de perfil"
+        accept={ACCEPT_IMAGENES}
+        tipo="imagen"
+        onUploaded={onUploadedMock}
+      />,
+    )
+    const heic = new File(['cabecera'], 'IMG_0001.HEIC', { type: '' })
+    await user.upload(screen.getByLabelText(/foto de perfil/i), heic)
+
+    expect(await screen.findByText(/pendiente de subir/i)).toBeInTheDocument()
+    expect(createObjectURLSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'IMG_0001.jpg', type: 'image/jpeg' }),
+    )
+    await user.click(screen.getByRole('button', { name: /^subir$/i }))
+    expect(uploadMutateMock).toHaveBeenCalledWith(
+      expect.objectContaining({ file: expect.objectContaining({ name: 'IMG_0001.jpg' }) }),
+      expect.anything(),
+    )
+  })
+
+  it('Fase 7g: rechaza un formato desconocido enumerando los admitidos', async () => {
+    const user = userEvent.setup()
+    render(<MediaUploadField label="Foto de perfil" onUploaded={onUploadedMock} />)
+    await user.upload(
+      screen.getByLabelText(/foto de perfil/i),
+      new File(['PK'], 'datos.zip', { type: 'application/zip' }),
+    )
+    expect(await screen.findByRole('alert')).toHaveTextContent(/JPG, PNG, WebP, AVIF, GIF, SVG, HEIC y PDF/)
+    expect(screen.queryByText(/pendiente de subir/i)).not.toBeInTheDocument()
   })
 })
