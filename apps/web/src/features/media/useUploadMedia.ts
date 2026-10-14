@@ -7,6 +7,8 @@ export type UploadMediaPayload = {
   altText?: string
   tipo?: string
   carpeta?: string
+  /** Fase 7e (UC-09): carpeta de la biblioteca donde cae el archivo; omitido = sin carpeta. */
+  carpeta_id?: string
 }
 
 export type OpcionesSubida = {
@@ -23,7 +25,7 @@ export type OpcionesSubida = {
  * navegador pone el boundary del multipart).
  */
 export function subirMedia(
-  { file, altText, tipo, carpeta }: UploadMediaPayload,
+  { file, altText, tipo, carpeta, carpeta_id }: UploadMediaPayload,
   { onProgress, signal }: OpcionesSubida = {},
 ): Promise<Media> {
   return new Promise<Media>((resolve, reject) => {
@@ -40,6 +42,7 @@ export function subirMedia(
     if (altText) formData.append('alt_text', altText)
     if (tipo) formData.append('tipo', tipo)
     if (carpeta) formData.append('carpeta', carpeta)
+    if (carpeta_id) formData.append('carpeta_id', carpeta_id)
 
     const xhr = new XMLHttpRequest()
     xhr.open('POST', `${API_BASE_URL}${path}`)

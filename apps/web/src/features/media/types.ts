@@ -24,6 +24,8 @@ export type Media = {
   alto: number | null
   alt_text: string | null
   created_at: string
+  /** Fase 7e (UC-09): carpeta de la biblioteca; `null` = "Sin carpeta". Ausente en datos anteriores a la 7e. */
+  carpeta_id?: string | null
   /** Fase 8 (8.2): ausente en snapshots antiguos o en imágenes sin procesar. */
   variantes?: VarianteMedia[]
 }
@@ -58,4 +60,14 @@ export type FiltrosMedia = {
   tipo?: string
   q?: string
   orden?: OrdenMedia
+  /** Fase 7e (UC-09): id de carpeta o `'ninguna'` (archivos sin carpeta). */
+  carpeta_id?: string | 'ninguna'
+}
+
+/** `GET /admin/media/carpetas` (Fase 7e, UC-09): carpeta plana con su total de archivos. */
+export type CarpetaMedia = {
+  id: string
+  nombre: string
+  orden: number
+  total: number
 }
