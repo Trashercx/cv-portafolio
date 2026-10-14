@@ -61,4 +61,13 @@ export class BloqueConfiguracionBaseDto {
   @IsOptional()
   @IsIn(['ninguno', 'onda', 'diagonal', 'curva'])
   separador_forma: 'ninguno' | 'onda' | 'diagonal' | 'curva' = 'ninguno';
+
+  /**
+   * Fase 7c (7c.3, UC-07/UC-12): contorno de los contenedores y tarjetas del
+   * bloque. Sin default persistido: el frontend trata la clave ausente como
+   * 'sutil' (aspecto previo), por lo que las filas viejas siguen válidas.
+   */
+  @IsOptional()
+  @IsIn(['ninguno', 'sutil', 'marcado'])
+  borde_bloque?: 'ninguno' | 'sutil' | 'marcado';
 }

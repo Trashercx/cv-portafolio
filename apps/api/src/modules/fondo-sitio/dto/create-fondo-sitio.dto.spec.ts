@@ -12,7 +12,7 @@ function validarFondo(payload: Record<string, unknown>) {
 const configuracionValida = { velocidad: 'media', opacidad: 0.5 };
 
 describe('CreateFondoSitioDto (Fase 7b, UC-15 ext.)', () => {
-  it('expone exactamente los 9 tipos del contrato', () => {
+  it('expone exactamente los 20 tipos del contrato (Fase 7c)', () => {
     expect([...TIPOS_FONDO]).toEqual([
       'solido',
       'aurora_mesh',
@@ -23,7 +23,19 @@ describe('CreateFondoSitioDto (Fase 7b, UC-15 ext.)', () => {
       'haces_luz',
       'degradado_grano',
       'campo_estrellas',
+      'constelacion',
+      'nieve',
+      'luciernagas',
+      'burbujas',
+      'estrellas_fugaces',
+      'confeti_suave',
+      'aurora_boreal',
+      'seda',
+      'plasma',
+      'liquido',
+      'ondas_dither',
     ]);
+    expect(TIPOS_FONDO).toHaveLength(20);
   });
 
   it.each([...TIPOS_FONDO])('acepta el tipo nuevo "%s"', async (tipo) => {
@@ -32,6 +44,14 @@ describe('CreateFondoSitioDto (Fase 7b, UC-15 ext.)', () => {
       configuracion: configuracionValida,
     });
     expect(errores).toHaveLength(0);
+  });
+
+  it('rechaza un tipo inventado', async () => {
+    const errores = await validarFondo({
+      tipo: 'fuego_artificial',
+      configuracion: configuracionValida,
+    });
+    expect(errores.length).toBeGreaterThan(0);
   });
 
   it.each([

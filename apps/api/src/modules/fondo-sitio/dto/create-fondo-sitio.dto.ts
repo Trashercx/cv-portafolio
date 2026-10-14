@@ -8,6 +8,8 @@ import { FondoSitioConfiguracionDto } from './fondo-sitio-configuracion.dto';
  * Reemplaza a los 8 tipos anteriores (migración de datos
  * `fondo_sitio_tipos_fase_7b`; mapa de reemplazo en docs/plan-tecnico.md,
  * "Fase 7b"). Los tipos antiguos ya no se aceptan (400).
+ * Fase 7c (UC-15 ext.): suma 11 tipos (6 de tsparticles y 5 shaders de ogl),
+ * 20 en total.
  */
 export const TIPOS_FONDO = [
   'solido',
@@ -19,6 +21,17 @@ export const TIPOS_FONDO = [
   'haces_luz',
   'degradado_grano',
   'campo_estrellas',
+  'constelacion',
+  'nieve',
+  'luciernagas',
+  'burbujas',
+  'estrellas_fugaces',
+  'confeti_suave',
+  'aurora_boreal',
+  'seda',
+  'plasma',
+  'liquido',
+  'ondas_dither',
 ] as const;
 
 export type TipoFondo = (typeof TIPOS_FONDO)[number];
