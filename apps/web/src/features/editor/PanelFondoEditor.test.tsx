@@ -99,7 +99,7 @@ function renderPanel() {
 }
 
 /**
- * Plugin "Fondo" (UC-15, Fase 7b): galería de 9 tarjetas con miniatura en
+ * Plugin "Fondo" (UC-15, Fase 7b): galería de 20 tarjetas con miniatura en
  * vivo, Activar (crea + activa o solo activa), Ajustar (editor inline +
  * `fondoEnEdicion` en el store), Guardar (un solo PATCH) y Cancelar.
  */
@@ -119,10 +119,10 @@ describe('PanelFondoEditor (UC-15, Fase 7b)', () => {
     vi.clearAllMocks()
   })
 
-  it('muestra la galería con las 9 tarjetas del catálogo aunque no haya fondos guardados', () => {
+  it('muestra la galería con las 20 tarjetas del catálogo aunque no haya fondos guardados', () => {
     renderPanel()
 
-    expect(screen.getAllByRole('listitem')).toHaveLength(9)
+    expect(screen.getAllByRole('listitem')).toHaveLength(20)
     for (const entrada of CATALOGO_FONDOS) {
       const t = within(tarjeta(entrada.tipo))
       expect(t.getByText(entrada.nombre)).toBeInTheDocument()
@@ -135,14 +135,14 @@ describe('PanelFondoEditor (UC-15, Fase 7b)', () => {
     renderPanel()
 
     const miniaturas = screen.getAllByTestId('fondo-mock')
-    expect(miniaturas).toHaveLength(9)
+    expect(miniaturas).toHaveLength(20)
     for (const m of miniaturas) expect(m).toHaveAttribute('data-modo', 'miniatura')
   })
 
   it('marca "Interactivo" solo en los fondos interactivos', () => {
     renderPanel()
 
-    expect(screen.getAllByText('Interactivo')).toHaveLength(7)
+    expect(screen.getAllByText('Interactivo')).toHaveLength(14)
     expect(within(tarjeta('solido')).queryByText('Interactivo')).not.toBeInTheDocument()
     expect(within(tarjeta('degradado_grano')).queryByText('Interactivo')).not.toBeInTheDocument()
     expect(within(tarjeta('campo_estrellas')).getByText('Interactivo')).toBeInTheDocument()

@@ -24,6 +24,8 @@ export type PropsFondoVisual = {
    * `caja`: ocupa solo su contenedor (miniaturas y vista previa del panel).
    */
   ambito: 'pagina' | 'caja'
+  /** Fase 7c: dónde se dibuja (los fondos con tsparticles/ogl ajustan cantidad, DPR y puntero). Ausente = `sitio`. */
+  modo?: 'sitio' | 'editor' | 'miniatura'
 }
 
 const FACTOR_VELOCIDAD: Record<VelocidadFondo, number> = {
