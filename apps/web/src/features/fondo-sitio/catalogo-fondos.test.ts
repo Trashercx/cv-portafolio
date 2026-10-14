@@ -6,10 +6,10 @@ import {
   normalizarTipoFondo,
 } from './catalogo-fondos'
 
-describe('catálogo de fondos (Fase 7b, UC-15)', () => {
-  it('tiene 9 entradas con tipo único y descripción de una línea', () => {
-    expect(CATALOGO_FONDOS).toHaveLength(9)
-    expect(new Set(CATALOGO_FONDOS.map((e) => e.tipo)).size).toBe(9)
+describe('catálogo de fondos (Fases 7b y 7c, UC-15)', () => {
+  it('tiene 20 entradas con tipo único y descripción de una línea', () => {
+    expect(CATALOGO_FONDOS).toHaveLength(20)
+    expect(new Set(CATALOGO_FONDOS.map((e) => e.tipo)).size).toBe(20)
     expect(CATALOGO_FONDOS.map((e) => e.tipo)).toEqual([...TIPOS_FONDO])
     for (const entrada of CATALOGO_FONDOS) {
       expect(entrada.nombre.length).toBeGreaterThan(0)
@@ -17,10 +17,17 @@ describe('catálogo de fondos (Fase 7b, UC-15)', () => {
     }
   })
 
-  it('marca como no interactivos solo sólido y degradado con grano', () => {
+  it('marca como no interactivos sólido, degradado con grano, luciérnagas, estrellas fugaces, confeti y seda', () => {
     expect(
       CATALOGO_FONDOS.filter((e) => !e.interactivo).map((e) => e.tipo),
-    ).toEqual(['solido', 'degradado_grano'])
+    ).toEqual([
+      'solido',
+      'degradado_grano',
+      'luciernagas',
+      'estrellas_fugaces',
+      'confeti_suave',
+      'seda',
+    ])
   })
 
   it('los valores por defecto coinciden con el contrato', () => {
@@ -46,7 +53,7 @@ describe('normalizarTipoFondo', () => {
     expect(normalizarTipoFondo(antiguo)).toBe(nuevo)
   })
 
-  it('deja intactos los 9 tipos vigentes', () => {
+  it('deja intactos los 20 tipos vigentes', () => {
     for (const tipo of TIPOS_FONDO) expect(normalizarTipoFondo(tipo)).toBe(tipo)
   })
 

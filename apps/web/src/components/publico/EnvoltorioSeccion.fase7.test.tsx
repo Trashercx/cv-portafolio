@@ -1,8 +1,9 @@
 import { render } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { simularMovimientoReducido } from '@/test/movimiento'
-import { ProveedorModoRenderizado } from './contexto-renderizado'
+import { ProveedorModoRenderizado, ProveedorVistaLimpia } from './contexto-renderizado'
 import { EnvoltorioSeccion } from './EnvoltorioSeccion'
+import { CLASES_BORDE_VIDRIO_BLOQUE } from '@/lib/escalas-bloque'
 
 /**
  * Fase 7 (7.3, UC-12): ancla `#seccion-{id}`, `separador_forma`, fondos
@@ -84,7 +85,7 @@ describe('EnvoltorioSeccion (Fase 7)', () => {
     expect(document.getElementById('seccion-v')).toHaveClass(
       'bg-card/60',
       'backdrop-blur',
-      'border-border/50',
+      CLASES_BORDE_VIDRIO_BLOQUE,
       'rounded-2xl',
     )
   })
@@ -148,5 +149,40 @@ describe('EnvoltorioSeccion (Fase 7)', () => {
       expect(section.style.opacity).toBe('')
       expect(section).toHaveClass('opacity-40')
     })
+  })
+})
+
+describe('EnvoltorioSeccion: Vista limpia (Fase 7c, UC-07)', () => {
+  it('sin Vista limpia una sección oculta se pinta atenuada con el aviso', () => {
+    const { container } = render(
+      <EnvoltorioSeccion visible={false} id="o">
+        <p>Contenido oculto</p>
+      </EnvoltorioSeccion>,
+    )
+    expect(container.querySelector('section')).toHaveClass('opacity-40')
+    expect(container).toHaveTextContent('Oculta · no se publicará')
+  })
+
+  it('con Vista limpia una sección oculta no pinta nada (como en el sitio publicado)', () => {
+    const { container } = render(
+      <ProveedorVistaLimpia activa>
+        <EnvoltorioSeccion visible={false} id="o">
+          <p>Contenido oculto</p>
+        </EnvoltorioSeccion>
+      </ProveedorVistaLimpia>,
+    )
+    expect(container).toBeEmptyDOMElement()
+  })
+
+  it('con Vista limpia una sección visible se pinta igual', () => {
+    const { container } = render(
+      <ProveedorVistaLimpia activa>
+        <EnvoltorioSeccion visible id="v">
+          <p>Contenido visible</p>
+        </EnvoltorioSeccion>
+      </ProveedorVistaLimpia>,
+    )
+    expect(container.querySelector('section')).not.toHaveClass('opacity-40')
+    expect(container).toHaveTextContent('Contenido visible')
   })
 })

@@ -3,6 +3,7 @@ import type { RedSocial } from '@/features/redes-sociales/types'
 import type { ContactoConfiguracion } from '@/features/secciones/types'
 import { cn } from '@/lib/utils'
 import { RedesSociales } from '../RedesSociales'
+import { CLASES_BORDE_BLOQUE } from '@/lib/escalas-bloque'
 
 type BloqueContactoProps = {
   titulo: string
@@ -15,7 +16,7 @@ type BloqueContactoProps = {
 
 /** Tarjeta grande con degradado de la variante `tarjeta_destacada` (Fase 7, 7.3, UC-12). */
 const TARJETA_DESTACADA_CLASE =
-  'grid gap-6 rounded-3xl border bg-linear-to-br from-[var(--color-primario)]/15 to-[var(--color-secundario)]/15 p-8 text-center shadow-lg sm:p-12'
+  `grid gap-6 rounded-3xl ${CLASES_BORDE_BLOQUE} bg-linear-to-br from-[var(--color-primario)]/15 to-[var(--color-secundario)]/15 p-8 text-center shadow-lg sm:p-12`
 
 /** Bloque `contacto`, compartido entre el sitio público y el lienzo del editor de Puck (Fase 3.1, extendido Fase 3.4 y Fase 7). */
 export function BloqueContacto({

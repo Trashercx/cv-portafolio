@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import type { RedSocial } from '@/features/redes-sociales/types'
 import { BloqueContacto } from './BloqueContacto'
+import { CLASES_BORDE_BLOQUE } from '@/lib/escalas-bloque'
 
 /**
  * Fase 3.4 (personalización visual por bloque): `estilo_redes` cambia cómo
@@ -34,7 +35,7 @@ describe('BloqueContacto (Fase 3.4)', () => {
     )
 
     const enlace = screen.getByRole('link', { name: /github/i })
-    expect(enlace).toHaveClass('border')
+    expect(enlace).toHaveClass(CLASES_BORDE_BLOQUE)
     expect(enlace.style.backgroundColor).toBe('')
   })
 
@@ -49,7 +50,7 @@ describe('BloqueContacto (Fase 3.4)', () => {
     )
 
     const enlace = screen.getByRole('link', { name: /github/i })
-    expect(enlace).not.toHaveClass('border')
+    expect(enlace).not.toHaveClass(CLASES_BORDE_BLOQUE)
     expect(enlace.style.backgroundColor).toBe('var(--color-primario)')
   })
 })

@@ -52,6 +52,40 @@ const FONDOS: Record<Exclude<TipoFondo, 'solido'>, FondoLazy> = {
   haces_luz: lazy(() => import('./fondos/HacesLuz').then((m) => ({ default: m.HacesLuz }))),
   degradado_grano: lazy(() => import('./fondos/DegradadoGrano').then((m) => ({ default: m.DegradadoGrano }))),
   campo_estrellas: lazy(() => import('./fondos/CampoEstrellas').then((m) => ({ default: m.CampoEstrellas }))),
+  // Fase 7c (UC-15): tsparticles (chunk compartido de las seis) y shaders con ogl (chunk compartido de las cinco).
+  constelacion: lazy(() =>
+    import('./fondos/tsparticles/Constelacion').then((m) => ({ default: m.Constelacion })),
+  ),
+  nieve: lazy(() =>
+    import('./fondos/tsparticles/Nieve').then((m) => ({ default: m.Nieve })),
+  ),
+  luciernagas: lazy(() =>
+    import('./fondos/tsparticles/Luciernagas').then((m) => ({ default: m.Luciernagas })),
+  ),
+  burbujas: lazy(() =>
+    import('./fondos/tsparticles/Burbujas').then((m) => ({ default: m.Burbujas })),
+  ),
+  estrellas_fugaces: lazy(() =>
+    import('./fondos/tsparticles/EstrellasFugaces').then((m) => ({ default: m.EstrellasFugaces })),
+  ),
+  confeti_suave: lazy(() =>
+    import('./fondos/tsparticles/ConfetiSuave').then((m) => ({ default: m.ConfetiSuave })),
+  ),
+  aurora_boreal: lazy(() =>
+    import('./fondos/ogl/AuroraBoreal').then((m) => ({ default: m.AuroraBoreal })),
+  ),
+  seda: lazy(() =>
+    import('./fondos/ogl/Seda').then((m) => ({ default: m.Seda })),
+  ),
+  plasma: lazy(() =>
+    import('./fondos/ogl/Plasma').then((m) => ({ default: m.Plasma })),
+  ),
+  liquido: lazy(() =>
+    import('./fondos/ogl/Liquido').then((m) => ({ default: m.Liquido })),
+  ),
+  ondas_dither: lazy(() =>
+    import('./fondos/ogl/OndasDither').then((m) => ({ default: m.OndasDither })),
+  ),
 }
 
 /** Tipos con canvas (los que más cuestan en miniatura). */
@@ -107,7 +141,7 @@ function useFondoListo(diferir: boolean): boolean {
 }
 
 /**
- * Fondo animado del sitio (UC-15, Fase 7b): despachador compartido entre
+ * Fondo animado del sitio (UC-15, Fases 7b y 7c): despachador compartido entre
  * `PublicHomePage` (`modo="sitio"`), el lienzo de Puck (`PuckRoot`,
  * `modo="editor"`) y el panel Fondo (miniaturas y vista previa), de modo que
  * todos se vean igual. Se posiciona `absolute inset-0` detrás del contenido
@@ -156,6 +190,7 @@ export function FondoAnimado({ fondo, modo = 'sitio', ambito }: FondoAnimadoProp
     estatico: reducido,
     maxFps: MAX_FPS_POR_MODO[modo],
     ambito: ambito ?? (modo === 'miniatura' ? 'caja' : 'pagina'),
+    modo,
   }
 
   return (

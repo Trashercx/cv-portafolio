@@ -1,4 +1,5 @@
 import '@testing-library/jest-dom/vitest'
+import { vi } from 'vitest'
 
 // jsdom no implementa `ResizeObserver` (usado por componentes Radix como
 // Checkbox/Select) ni algunas APIs de puntero: se stubean globalmente para
@@ -62,3 +63,10 @@ if (typeof window !== 'undefined') {
       window.clearTimeout(id)) as typeof window.cancelIdleCallback
   }
 }
+
+// Fase 7c (UC-15): jsdom no tiene canvas ni WebGL, así que los motores de los
+// fondos nuevos se sustituyen por dobles inertes en todos los tests. Los
+// registros (`registroParticulas`, `registroOgl`) permiten inspeccionarlos.
+vi.mock('@tsparticles/engine', () => import('./mocks/tsparticles-engine'))
+vi.mock('@tsparticles/slim', () => import('./mocks/tsparticles-slim'))
+vi.mock('ogl', () => import('./mocks/ogl'))

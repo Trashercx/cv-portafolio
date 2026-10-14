@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import type { ComponentType, ReactNode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useEditorPanelStore } from '@/store/editor-panel-store'
@@ -50,6 +51,9 @@ vi.mock('@puckeditor/core', () => ({
 
 const pluginActivoMock: { actual: string } = { actual: 'blocks' }
 
+const previewModeMock: { actual: 'edit' | 'interactive' } = { actual: 'edit' }
+const dispatchMock = vi.fn()
+
 const viewportMock: { actual: { width: number; height: number | 'auto' } | undefined } = {
   actual: { width: 1280, height: 'auto' },
 }
@@ -57,8 +61,10 @@ const viewportMock: { actual: { width: number; height: number | 'auto' } | undef
 vi.mock('./usePuckEditor', () => ({
   usePuckEditor: (selector: (state: unknown) => unknown) =>
     selector({
+      dispatch: dispatchMock,
       appState: {
         ui: {
+          previewMode: previewModeMock.actual,
           plugin: { current: pluginActivoMock.actual },
           viewports: { current: viewportMock.actual },
         },
@@ -91,7 +97,9 @@ describe('LienzoPuck (layout nativo con rail de plugins)', () => {
     propsPuck.actual = {}
     pluginActivoMock.actual = 'blocks'
     viewportMock.actual = { width: 1280, height: 'auto' }
-    useEditorPanelStore.setState({ pluginActivo: null, viewportActual: null })
+    previewModeMock.actual = 'edit'
+    dispatchMock.mockClear()
+    useEditorPanelStore.setState({ pluginActivo: null, viewportActual: null, vistaLimpia: false })
   })
 
   afterEach(() => {
@@ -201,5 +209,85 @@ describe('LienzoPuck (layout nativo con rail de plugins)', () => {
     viewportMock.actual = undefined
     renderLienzo()
     expect(propsPuck.actual.ui?.viewports?.current).toEqual({ width: 1280, height: 'auto' })
+  })
+})
+
+describe('Vista limpia (Fase 7c, UC-07)', () => {
+  beforeEach(() => {
+    propsPuck.actual = {}
+    previewModeMock.actual = 'edit'
+    dispatchMock.mockClear()
+    useEditorPanelStore.setState({ pluginActivo: null, viewportActual: null, vistaLimpia: false })
+  })
+
+  it('el toggle del toolbar alterna vistaLimpia y aria-pressed', async () => {
+    const user = userEvent.setup()
+    renderLienzo()
+    const boton = screen.getByRole('button', { name: /vista limpia/i })
+    expect(boton).toHaveAttribute('aria-pressed', 'false')
+
+    await user.click(boton)
+    expect(useEditorPanelStore.getState().vistaLimpia).toBe(true)
+    expect(screen.getByRole('button', { name: /vista limpia/i })).toHaveAttribute('aria-pressed', 'true')
+
+    await user.click(screen.getByRole('button', { name: /vista limpia/i }))
+    expect(useEditorPanelStore.getState().vistaLimpia).toBe(false)
+  })
+
+  it('activa despacha setUi con previewMode interactive', () => {
+    useEditorPanelStore.setState({ vistaLimpia: true })
+    renderLienzo()
+    expect(dispatchMock).toHaveBeenCalledWith({
+      type: 'setUi',
+      ui: { previewMode: 'interactive' },
+    })
+  })
+
+  it('desactiva (con Puck aún en interactive) despacha setUi con previewMode edit', () => {
+    previewModeMock.actual = 'interactive'
+    renderLienzo()
+    expect(dispatchMock).toHaveBeenCalledWith({ type: 'setUi', ui: { previewMode: 'edit' } })
+  })
+
+  it('sin cambios de modo no despacha nada', () => {
+    renderLienzo()
+    expect(dispatchMock).not.toHaveBeenCalled()
+  })
+
+  it('el panel de campos muestra el aviso mientras está activa, aun con bloque seleccionado', () => {
+    useEditorPanelStore.setState({ vistaLimpia: true })
+    renderLienzo()
+    const Campos = propsPuck.actual.overrides?.fields as ComponentType<{
+      children?: ReactNode
+      itemSelector?: unknown
+    }>
+    render(
+      <Campos itemSelector={{ index: 0, zone: 'root:default-zone' }}>
+        <div>Campos del bloque</div>
+      </Campos>,
+    )
+    expect(
+      screen.getByText('Vista limpia: desactívala para seleccionar bloques'),
+    ).toBeInTheDocument()
+    expect(screen.queryByText('Campos del bloque')).not.toBeInTheDocument()
+  })
+
+  it('Ctrl+Shift+L (y Cmd+Shift+L) alterna la vista limpia; Ctrl+L solo, no', () => {
+    renderLienzo()
+    fireEvent.keyDown(document, { key: 'L', ctrlKey: true, shiftKey: true })
+    expect(useEditorPanelStore.getState().vistaLimpia).toBe(true)
+    fireEvent.keyDown(document, { key: 'l', metaKey: true, shiftKey: true })
+    expect(useEditorPanelStore.getState().vistaLimpia).toBe(false)
+    fireEvent.keyDown(document, { key: 'l', ctrlKey: true })
+    expect(useEditorPanelStore.getState().vistaLimpia).toBe(false)
+  })
+
+  it('se desactiva sola al desmontar el editor (cambio de ruta) y quita el atajo', () => {
+    useEditorPanelStore.setState({ vistaLimpia: true })
+    const { unmount } = renderLienzo()
+    unmount()
+    expect(useEditorPanelStore.getState().vistaLimpia).toBe(false)
+    fireEvent.keyDown(document, { key: 'L', ctrlKey: true, shiftKey: true })
+    expect(useEditorPanelStore.getState().vistaLimpia).toBe(false)
   })
 })

@@ -34,6 +34,28 @@ export function useModoRenderizado(): ModoRenderizado {
   return useContext(ContextoModoRenderizado)
 }
 
+/**
+ * Fase 7c (UC-07): `true` cuando el lienzo del editor está en "Vista limpia".
+ * `PuckRoot` lo provee a partir de `editor-panel-store`; `EnvoltorioSeccion`
+ * lo lee para dejar de pintar las secciones ocultas (el sitio público nunca
+ * lo provee: default `false`).
+ */
+const ContextoVistaLimpia = createContext(false)
+
+export function ProveedorVistaLimpia({
+  activa,
+  children,
+}: {
+  activa: boolean
+  children: ReactNode
+}) {
+  return <ContextoVistaLimpia.Provider value={activa}>{children}</ContextoVistaLimpia.Provider>
+}
+
+export function useVistaLimpia(): boolean {
+  return useContext(ContextoVistaLimpia)
+}
+
 type EnlaceBloqueProps = {
   /** Ruta interna (react-router). Mutuamente excluyente con `href`. */
   to?: string

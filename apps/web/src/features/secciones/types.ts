@@ -55,6 +55,8 @@ export type EspaciadoVerticalBloque = 'compacto' | 'normal' | 'amplio'
 export type AnchoContenidoBloque = 'estrecho' | 'normal' | 'amplio' | 'completo'
 export type AlineacionTextoBloque = 'izquierda' | 'centro'
 export type FondoBloqueBloque = 'ninguno' | 'sutil' | 'tarjeta' | 'degradado' | 'vidrio'
+/** Fase 7c (UC-12): contorno de los contenedores y tarjetas de un bloque (`ninguno` = sin recuadros). */
+export type BordeBloqueBloque = 'ninguno' | 'sutil' | 'marcado'
 /** Fase 7 (7.2, UC-07): animación de entrada al hacer scroll. */
 export type AnimacionEntradaBloque =
   | 'ninguna'
@@ -93,6 +95,8 @@ export type BloqueConfiguracionBase = {
   animacion_entrada?: AnimacionEntradaBloque
   /** Fase 7 (7.2). @default 'ninguno' */
   separador_forma?: SeparadorFormaBloque
+  /** Fase 7c (UC-12): contorno de contenedores y tarjetas del bloque. @default 'sutil' (aspecto previo) */
+  borde_bloque?: BordeBloqueBloque
 }
 
 export type HeroConfiguracion = BloqueConfiguracionBase & {

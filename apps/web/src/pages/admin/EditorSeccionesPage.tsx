@@ -285,6 +285,7 @@ export function sanearSlots(configuracion: Record<string, unknown>): ColumnasCon
     separador_inferior,
     animacion_entrada,
     separador_forma,
+    borde_bloque,
     distribucion,
     alineacion_vertical,
     espaciado,
@@ -319,6 +320,8 @@ export function sanearSlots(configuracion: Record<string, unknown>): ColumnasCon
     // descartaría al guardar y `columnas` volvería siempre a los defaults.
     animacion_entrada,
     separador_forma,
+    // Fase 7c (UC-12): igual que los dos anteriores, la whitelist descartaría el contorno.
+    borde_bloque,
     distribucion,
     alineacion_vertical,
     espaciado,

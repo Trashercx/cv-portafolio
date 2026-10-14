@@ -61,4 +61,15 @@ export class BloqueConfiguracionBaseDto {
   @IsOptional()
   @IsIn(['ninguno', 'onda', 'diagonal', 'curva'])
   separador_forma: 'ninguno' | 'onda' | 'diagonal' | 'curva' = 'ninguno';
+
+  /**
+   * Fase 7c (7c.3, UC-07/UC-12): contorno de los contenedores y tarjetas del
+   * bloque. El API no impone default: la clave ausente (filas y snapshots
+   * anteriores a la fase) se interpreta como 'sutil' (aspecto previo) en el
+   * render; el editor, como con los demás campos base, persiste el valor
+   * elegido ('sutil' por defecto) en los bloques nuevos.
+   */
+  @IsOptional()
+  @IsIn(['ninguno', 'sutil', 'marcado'])
+  borde_bloque?: 'ninguno' | 'sutil' | 'marcado';
 }

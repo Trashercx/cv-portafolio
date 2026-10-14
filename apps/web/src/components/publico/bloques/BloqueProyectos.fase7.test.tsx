@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { ProveedorDetallePublico } from '@/components/publico/contexto-detalle'
 import type { Proyecto } from '@/features/proyectos/types'
 import { BloqueProyectos } from './BloqueProyectos'
+import { CLASES_BORDE_VIDRIO_BLOQUE } from '@/lib/escalas-bloque'
 
 /**
  * Fase 7 (7.3, UC-12): `disposicion` (tarjetas/bento/lista), `estilo_tarjeta`
@@ -119,7 +120,7 @@ describe('BloqueProyectos — tarjeta y tecnologías (Fase 7)', () => {
     expect(screen.getByRole('button', { name: 'Proyecto 1' })).toHaveClass(
       'bg-card/60',
       'backdrop-blur-sm',
-      'border-border/50',
+      CLASES_BORDE_VIDRIO_BLOQUE,
     )
   })
 

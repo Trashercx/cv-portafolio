@@ -5,6 +5,7 @@ import { formatearFecha } from '@/lib/formato'
 import { cn } from '@/lib/utils'
 import { EnlaceBloque, TarjetaClicable } from '../contexto-renderizado'
 import { TarjetaInteractiva } from '../TarjetaInteractiva'
+import { CLASES_BORDE_BLOQUE, LINEA_BORDE_BLOQUE_CLASE } from '@/lib/escalas-bloque'
 
 type BloqueLogrosProps = {
   titulo: string
@@ -81,8 +82,7 @@ export function BloqueLogros({ titulo, config, logros, alineacionTitulo }: Bloqu
         <p className="text-muted-foreground">Todavía no hay logros.</p>
       ) : estiloLista === 'linea_tiempo' ? (
         <ul
-          className="grid gap-6 border-l-2 pl-6"
-          style={{ borderColor: 'var(--color-primario)' }}
+          className={cn('grid gap-6 pl-6', LINEA_BORDE_BLOQUE_CLASE)}
         >
           {filtrados.map((logro) => (
             <li key={logro.id} className="relative grid gap-1">
@@ -106,7 +106,7 @@ export function BloqueLogros({ titulo, config, logros, alineacionTitulo }: Bloqu
                   línea de tiempo no tiene tarjeta que elevar o inclinar. */}
               <TarjetaInteractiva
                 efecto={config.efecto_hover}
-                className="grid gap-1 rounded-lg border p-4"
+                className={cn('grid gap-1 rounded-lg p-4', CLASES_BORDE_BLOQUE)}
               >
                 <TarjetaLogro
                   logro={logro}
