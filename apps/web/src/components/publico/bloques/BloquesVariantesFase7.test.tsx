@@ -10,6 +10,7 @@ import { BloqueContacto } from './BloqueContacto'
 import { BloqueGaleria } from './BloqueGaleria'
 import { BloqueLogros } from './BloqueLogros'
 import { BloqueSkills } from './BloqueSkills'
+import { CLASES_BORDE_BLOQUE } from '@/lib/escalas-bloque'
 
 /**
  * Fase 7 (7.3, UC-12): variantes nuevas de skills (cuadrícula/nube y chips),
@@ -78,7 +79,7 @@ describe('BloqueSkills — disposición y chips (Fase 7)', () => {
   it.each([
     ['simple', 'bg-muted'],
     ['vidrio', 'backdrop-blur-sm'],
-    ['contorno', 'border-2'],
+    ['contorno', CLASES_BORDE_BLOQUE],
   ] as const)('estilo_chip="%s" aplica %s', (estilo, clase) => {
     const { container } = render(
       <BloqueSkills

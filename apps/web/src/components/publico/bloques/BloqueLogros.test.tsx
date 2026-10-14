@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { ProveedorDetallePublico } from '@/components/publico/contexto-detalle'
 import type { Logro } from '@/features/logros/types'
 import { BloqueLogros } from './BloqueLogros'
+import { CLASES_BORDE_BLOQUE, LINEA_BORDE_BLOQUE_CLASE } from '@/lib/escalas-bloque'
 
 /**
  * Fase 3.4 (personalización visual por bloque): `estilo_lista` alterna entre
@@ -37,8 +38,8 @@ describe('BloqueLogros (Fase 3.4)', () => {
 
     expect(screen.getByText('Certificación AWS')).toBeInTheDocument()
     const lista = container.querySelector('ul')
-    expect(lista).not.toHaveClass('border-l-2')
-    expect(container.querySelector('li > div')).toHaveClass('border')
+    expect(lista).not.toHaveClass(LINEA_BORDE_BLOQUE_CLASE)
+    expect(container.querySelector('li > div')).toHaveClass(CLASES_BORDE_BLOQUE)
   })
 
   it('estilo_lista="linea_tiempo" usa la línea vertical con marcador por ítem', () => {
@@ -52,7 +53,7 @@ describe('BloqueLogros (Fase 3.4)', () => {
 
     expect(screen.getByText('Certificación AWS')).toBeInTheDocument()
     const lista = container.querySelector('ul')
-    expect(lista).toHaveClass('border-l-2')
+    expect(lista).toHaveClass(LINEA_BORDE_BLOQUE_CLASE)
   })
 })
 

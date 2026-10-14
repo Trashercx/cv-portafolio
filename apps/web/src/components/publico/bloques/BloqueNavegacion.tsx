@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { m, useScroll, useSpring } from 'motion/react'
 import { Download, Menu, X } from 'lucide-react'
 import type { PerfilPublico } from '@/features/publico/types'
@@ -7,6 +7,11 @@ import { API_BASE_URL } from '@/lib/api-client'
 import { useAnimacionesActivas } from '@/lib/animaciones'
 import { registrarEvento } from '@/lib/analitica'
 import { anclaSeccion, type EnlaceNavegacion } from '@/lib/navegacion'
+import {
+  BORDE_BLOQUE_VARIABLES,
+  CLASES_BORDE_BLOQUE,
+  CLASES_BORDE_INFERIOR_BLOQUE,
+} from '@/lib/escalas-bloque'
 import { cn } from '@/lib/utils'
 import { EnlaceBloque, useModoRenderizado } from '../contexto-renderizado'
 import { ToggleModoTema } from '../ToggleModoTema'
@@ -49,18 +54,19 @@ const POSICION_CLASE = {
 /** Contenedor externo por `estilo`: píldora flotante centrada o barra de ancho completo con borde inferior. */
 const CONTENEDOR_ESTILO_CLASE: Record<Estilo, string> = {
   flotante: 'pointer-events-none px-3 pt-3',
-  barra: 'border-b bg-background/80 backdrop-blur',
+  // Fase 7c (UC-12): contorno con las variables del bloque (`borde_bloque`).
+  barra: `${CLASES_BORDE_INFERIOR_BLOQUE} bg-background/80 backdrop-blur`,
 }
 
 const INTERIOR_ESTILO_CLASE: Record<Estilo, string> = {
   flotante:
-    'pointer-events-auto mx-auto w-fit max-w-full rounded-full border border-border/50 bg-card/60 px-3 shadow-lg backdrop-blur',
+    `pointer-events-auto mx-auto w-fit max-w-full rounded-full ${CLASES_BORDE_BLOQUE} bg-card/60 px-3 shadow-lg backdrop-blur`,
   barra: 'mx-auto max-w-7xl px-4 sm:px-6',
 }
 
 const PANEL_MOVIL_ESTILO_CLASE: Record<Estilo, string> = {
   flotante:
-    'pointer-events-auto mx-auto mt-2 w-full max-w-sm rounded-2xl border border-border/50 bg-card/90 p-2 shadow-lg backdrop-blur',
+    `pointer-events-auto mx-auto mt-2 w-full max-w-sm rounded-2xl ${CLASES_BORDE_BLOQUE} bg-card/90 p-2 shadow-lg backdrop-blur`,
   barra: 'mx-auto max-w-7xl px-4 pb-3 sm:px-6',
 }
 
@@ -237,6 +243,8 @@ export function BloqueNavegacion({
         aria-label="Navegación principal"
         data-estilo-navegacion={estilo}
         data-posicion={posicion}
+        // Fase 7c (UC-12): la barra va fuera de `EnvoltorioSeccion`, así que fija ella misma las variables del contorno.
+        style={BORDE_BLOQUE_VARIABLES[config.borde_bloque ?? 'sutil'] as CSSProperties}
         className={cn(
           POSICION_CLASE[posicion],
           CONTENEDOR_ESTILO_CLASE[estilo],
@@ -284,7 +292,7 @@ export function BloqueNavegacion({
                 aria-controls={idMenuMovil}
                 aria-label={abierto ? 'Cerrar menú' : 'Abrir menú'}
                 onClick={() => setAbierto((actual) => !actual)}
-                className="inline-flex size-9 items-center justify-center rounded-full border hover:bg-accent lg:hidden"
+                className={cn('inline-flex size-9 items-center justify-center rounded-full hover:bg-accent lg:hidden', CLASES_BORDE_BLOQUE)}
               >
                 {abierto ? (
                   <X className="size-4" aria-hidden="true" />

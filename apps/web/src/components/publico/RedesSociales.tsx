@@ -2,6 +2,7 @@ import type { Media } from '@/features/media/types'
 import { PlataformaIcono } from '@/features/redes-sociales/iconos-plataforma'
 import type { RedSocial } from '@/features/redes-sociales/types'
 import { API_BASE_URL } from '@/lib/api-client'
+import { CLASES_BORDE_BLOQUE } from '@/lib/escalas-bloque'
 import { registrarEvento } from '@/lib/analitica'
 import { cn } from '@/lib/utils'
 import { EnlaceBloque } from './contexto-renderizado'
@@ -73,10 +74,10 @@ export function RedesSociales({
                 className={cn(
                   'inline-flex items-center gap-2 rounded-md text-sm font-medium transition-colors',
                   compacto
-                    ? 'size-10 justify-center rounded-full border hover:bg-accent'
+                    ? `size-10 justify-center rounded-full ${CLASES_BORDE_BLOQUE} hover:bg-accent`
                     : esBotones
                       ? 'px-4 py-2.5 hover:opacity-90'
-                      : 'border px-3 py-2 hover:bg-accent',
+                      : `${CLASES_BORDE_BLOQUE} px-3 py-2 hover:bg-accent`,
                 )}
               >
                 <PlataformaIcono iconoDefecto={red.plataforma.icono_defecto} />

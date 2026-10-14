@@ -235,3 +235,30 @@ describe('puckConfig — resolveFields oculta lo que no aplica (Fase 7)', () => 
     ])
   })
 })
+
+describe('puckConfig — borde_bloque (Fase 7c, UC-12)', () => {
+  it('todos los bloques con campos base tienen el radio "Borde del bloque" con default sutil', () => {
+    for (const tipo of TIPOS_SECCION) {
+      if (tipo === 'navegacion') continue
+      const bloque = bloques[tipo]
+      expect(bloque.defaultProps.borde_bloque, tipo).toBe('sutil')
+      const campo = bloque.fields.borde_bloque
+      expect(campo.type, tipo).toBe('radio')
+      expect(campo.label).toBe('Borde del bloque')
+      expect(campo.options?.map((o) => o.value)).toEqual(['ninguno', 'sutil', 'marcado'])
+    }
+  })
+
+  it('el campo queda justo después de "Fondo del bloque"', () => {
+    const claves = Object.keys(bloques.proyectos.fields)
+    expect(claves.indexOf('borde_bloque')).toBe(claves.indexOf('fondo_bloque') + 1)
+  })
+
+  it('normalizarConfiguracion trata sutil como default de una sección guardada sin el campo', async () => {
+    const { normalizarConfiguracion } = await import('@/pages/admin/EditorSeccionesPage')
+    const normalizada = normalizarConfiguracion('proyectos', {})
+    expect(normalizada.borde_bloque).toBe('sutil')
+    const marcada = normalizarConfiguracion('proyectos', { borde_bloque: 'marcado' })
+    expect(marcada.borde_bloque).toBe('marcado')
+  })
+})

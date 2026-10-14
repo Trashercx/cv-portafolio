@@ -8,6 +8,7 @@ import { SIZES_POR_CONTEXTO } from '@/lib/imagenes'
 import { cn } from '@/lib/utils'
 import { ImagenResponsive } from '../ImagenResponsive'
 import { ItemAnimado } from '../ItemAnimado'
+import { CLASES_BORDE_BLOQUE, GROSOR_BORDE_X4_CLASE } from '@/lib/escalas-bloque'
 
 type BloqueSobreMiProps = {
   titulo: string
@@ -35,7 +36,7 @@ const ESTILO_FOTO_ENVOLTURA_CLASE: Record<EstiloFoto, string> = {
 /** Borde interior de la foto con `marco_degradado`, para separarla del anillo. */
 const ESTILO_FOTO_IMAGEN_CLASE: Record<EstiloFoto, string> = {
   simple: '',
-  marco_degradado: 'border-4 border-background',
+  marco_degradado: `${GROSOR_BORDE_X4_CLASE} border-background`,
   flotante: '',
 }
 
@@ -139,7 +140,7 @@ export function BloqueSobreMi({
           {estadisticas.map((estadistica, indice) => (
             <li key={`${estadistica.etiqueta}-${indice}`} className="min-w-0">
               <ItemAnimado indice={indice} className="h-full">
-                <div className="h-full rounded-xl border bg-card/60 p-4 text-center">
+                <div className={cn('h-full rounded-xl bg-card/60 p-4 text-center', CLASES_BORDE_BLOQUE)}>
                   <p
                     className="text-3xl font-bold"
                     style={{ color: 'var(--color-primario)' }}

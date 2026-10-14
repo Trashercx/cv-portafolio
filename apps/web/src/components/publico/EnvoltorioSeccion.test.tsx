@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { EnvoltorioSeccion } from './EnvoltorioSeccion'
+import { CLASES_BORDE_BLOQUE } from '@/lib/escalas-bloque'
 
 /**
  * Fase 3.4 (personalización visual por bloque): `EnvoltorioSeccion` es el
@@ -49,7 +50,7 @@ describe('EnvoltorioSeccion (Fase 3.4)', () => {
     )
 
     const section = document.getElementById('seccion-2') as HTMLElement
-    expect(section).toHaveClass('py-20', 'bg-card', 'border', 'rounded-xl')
+    expect(section).toHaveClass('py-20', 'bg-card', CLASES_BORDE_BLOQUE, 'rounded-xl')
 
     const divInterno = section.querySelector(':scope > div')
     expect(divInterno).toHaveClass('mx-auto', 'max-w-none')

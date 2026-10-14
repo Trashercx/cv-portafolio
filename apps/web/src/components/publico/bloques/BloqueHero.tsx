@@ -7,6 +7,7 @@ import type { HeroConfiguracion } from '@/features/secciones/types'
 import { useAnimacionesActivas } from '@/lib/animaciones'
 import { resolverEnlaceSeguro } from '@/lib/enlaces'
 import { fondoImagenSet, SIZES_POR_CONTEXTO } from '@/lib/imagenes'
+import { CLASES_BORDE_BLOQUE, GROSOR_BORDE_X2_CLASE, GROSOR_BORDE_X4_CLASE } from '@/lib/escalas-bloque'
 import { cn } from '@/lib/utils'
 import { EnlaceBloque, useModoRenderizado } from '../contexto-renderizado'
 import { ImagenResponsive } from '../ImagenResponsive'
@@ -313,7 +314,7 @@ export function BloqueHero({
 
   const claseFoto =
     config.estilo_foto === 'con_marco'
-      ? 'rounded-full border-4 object-cover'
+      ? `rounded-full ${GROSOR_BORDE_X4_CLASE} object-cover`
       : 'object-contain drop-shadow-lg'
 
   const fotoPerfil =
@@ -425,7 +426,7 @@ export function BloqueHero({
                 borderColor: 'var(--color-primario)',
                 color: 'var(--color-texto)',
               }}
-              className="rounded-md border-2 bg-transparent px-6 py-2.5 text-center text-sm font-medium transition-colors hover:bg-[var(--color-primario)]/10"
+              className={`rounded-md ${GROSOR_BORDE_X2_CLASE} bg-transparent px-6 py-2.5 text-center text-sm font-medium transition-colors hover:bg-[var(--color-primario)]/10`}
             >
               {config.texto_boton_secundario}
             </BotonEnlace>
@@ -489,7 +490,7 @@ export function BloqueHero({
           <div
             aria-hidden="true"
             data-visual-decorativo="true"
-            className="relative z-10 mx-auto aspect-square w-full max-w-xs rounded-[2rem] border bg-linear-to-br from-[var(--color-primario)]/30 to-[var(--color-secundario)]/30 shadow-xl"
+            className={`relative z-10 mx-auto aspect-square w-full max-w-xs rounded-[2rem] ${CLASES_BORDE_BLOQUE} bg-linear-to-br from-[var(--color-primario)]/30 to-[var(--color-secundario)]/30 shadow-xl`}
           />
         )
       ) : null}

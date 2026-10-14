@@ -104,6 +104,7 @@ export function RenderizadorSecciones({
             separador_inferior,
             animacion_entrada,
             separador_forma,
+            borde_bloque,
           } = seccion.configuracion as BloqueConfiguracionBase
 
           const anchoContenidoEfectivo =
@@ -124,6 +125,7 @@ export function RenderizadorSecciones({
               separador_inferior={separador_inferior}
               animacion_entrada={animacion_entrada}
               separador_forma={separador_forma}
+              borde_bloque={borde_bloque}
             >
               <BloqueSeccion
                 seccion={seccion}

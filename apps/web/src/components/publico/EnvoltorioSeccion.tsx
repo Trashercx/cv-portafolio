@@ -1,7 +1,8 @@
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import { m } from 'motion/react'
 import {
   ANCHO_CONTENIDO_CLASE,
+  BORDE_BLOQUE_VARIABLES,
   ESPACIADO_VERTICAL_CLASE,
   FONDO_BLOQUE_CLASE,
   SEPARADOR_FORMA_TRAZO,
@@ -14,6 +15,7 @@ import { cn } from '@/lib/utils'
 import type {
   AnchoContenidoBloque,
   AnimacionEntradaBloque,
+  BordeBloqueBloque,
   EspaciadoVerticalBloque,
   FondoBloqueBloque,
   SeparadorFormaBloque,
@@ -44,6 +46,8 @@ type EnvoltorioSeccionProps = {
   animacion_entrada?: AnimacionEntradaBloque
   /** Fase 7 (7.2, UC-12). `undefined` = `'ninguno'`. */
   separador_forma?: SeparadorFormaBloque
+  /** Fase 7c (UC-12). `undefined` = `'sutil'` (snapshots anteriores a la fase). */
+  borde_bloque?: BordeBloqueBloque
   children: ReactNode
 }
 
@@ -75,6 +79,7 @@ export function EnvoltorioSeccion({
   separador_inferior,
   animacion_entrada,
   separador_forma,
+  borde_bloque,
   children,
 }: EnvoltorioSeccionProps) {
   const vistaLimpia = useVistaLimpia()
@@ -95,6 +100,8 @@ export function EnvoltorioSeccion({
     <m.section
       id={id ? anclaSeccion(id) : undefined}
       aria-hidden={!visible}
+      // Fase 7c (UC-12): contorno opcional vía variables CSS que leen los contenedores y tarjetas del bloque.
+      style={BORDE_BLOQUE_VARIABLES[borde_bloque ?? 'sutil'] as CSSProperties}
       initial={variante?.initial}
       whileInView={variante?.whileInView}
       transition={variante?.transition}

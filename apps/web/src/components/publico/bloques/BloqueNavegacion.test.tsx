@@ -7,6 +7,7 @@ import type { NavegacionConfiguracion } from '@/features/secciones/types'
 import type { EnlaceNavegacion } from '@/lib/navegacion'
 import { ProveedorModoRenderizado } from '../contexto-renderizado'
 import { BloqueNavegacion } from './BloqueNavegacion'
+import { CLASES_BORDE_INFERIOR_BLOQUE } from '@/lib/escalas-bloque'
 
 /**
  * Fase 7 (7.3, UC-07 y UC-12): enlaces generados, sección activa
@@ -235,7 +236,7 @@ describe('BloqueNavegacion — estilo y posición (Fase 7)', () => {
     renderNav({ estilo: 'barra' })
     const nav = screen.getByRole('navigation')
     expect(nav).toHaveAttribute('data-estilo-navegacion', 'barra')
-    expect(nav).toHaveClass('border-b', 'bg-background/80')
+    expect(nav).toHaveClass(CLASES_BORDE_INFERIOR_BLOQUE, 'bg-background/80')
   })
 
   it('fijo (default) es position fixed en el sitio público', () => {

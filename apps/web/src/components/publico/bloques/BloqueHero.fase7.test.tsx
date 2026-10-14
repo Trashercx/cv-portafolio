@@ -7,6 +7,7 @@ import type { HeroConfiguracion } from '@/features/secciones/types'
 import { simularMovimientoReducido } from '@/test/movimiento'
 import { ProveedorModoRenderizado } from '../contexto-renderizado'
 import { BloqueHero } from './BloqueHero'
+import { GROSOR_BORDE_X2_CLASE } from '@/lib/escalas-bloque'
 
 /**
  * Fase 7 (7.3, UC-12): disposiciones, títulos rotativos, segundo botón,
@@ -136,7 +137,7 @@ describe('BloqueHero — botones, redes e indicador (Fase 7)', () => {
       enlace_boton_secundario: '#contacto',
     })
     const secundario = screen.getByRole('link', { name: 'Contáctame' })
-    expect(secundario).toHaveClass('border-2', 'bg-transparent')
+    expect(secundario).toHaveClass(GROSOR_BORDE_X2_CLASE, 'bg-transparent')
     expect(secundario).toHaveAttribute('href', '#contacto')
     expect(screen.getByRole('link', { name: 'Ver proyectos' })).toBeInTheDocument()
   })

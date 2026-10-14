@@ -1,6 +1,7 @@
 import type {
   AlineacionTextoBloque,
   AnchoContenidoBloque,
+  BordeBloqueBloque,
   EspaciadoVerticalBloque,
   FondoBloqueBloque,
   SeparadorFormaBloque,
@@ -42,15 +43,54 @@ export const ALINEACION_TEXTO_CLASE: Record<AlineacionTextoBloque, string> = {
   centro: 'text-center',
 }
 
+/**
+ * Fase 7c (UC-12): contornos opcionales. `EnvoltorioSeccion` fija en la
+ * sección las variables `--ancho-borde` y `--color-borde` según
+ * `borde_bloque` (`BORDE_BLOQUE_VARIABLES`) y TODO contenedor o tarjeta de
+ * bloque que lleve contorno usa `CLASES_BORDE_BLOQUE`, que las lee con el
+ * valor `sutil` como respaldo (así un componente fuera de un envoltorio se
+ * ve como siempre). Literales a propósito (Tailwind no ve clases armadas en
+ * runtime). `sutil` es el aspecto anterior a la fase.
+ */
+export const BORDE_BLOQUE_VARIABLES: Record<BordeBloqueBloque, Record<'--ancho-borde' | '--color-borde', string>> = {
+  ninguno: { '--ancho-borde': '0px', '--color-borde': 'transparent' },
+  sutil: { '--ancho-borde': '1px', '--color-borde': 'var(--border)' },
+  marcado: {
+    '--ancho-borde': '2px',
+    '--color-borde': 'color-mix(in oklab, var(--color-primario) 60%, transparent)',
+  },
+}
+
+/** Contorno de contenedores y tarjetas (todos los lados). */
+export const CLASES_BORDE_BLOQUE =
+  'border-[length:var(--ancho-borde,1px)] border-[color:var(--color-borde,var(--border))]'
+
+/** Solo el borde inferior (barra de navegación de ancho completo). */
+export const CLASES_BORDE_INFERIOR_BLOQUE =
+  'border-b-[length:var(--ancho-borde,1px)] border-b-[color:var(--color-borde,var(--border))]'
+
+/**
+ * Contornos con un grosor base mayor (anillo de la foto del hero, borde del
+ * botón secundario, marco de la foto de sobre-mi, línea de tiempo de logros):
+ * el grosor es un múltiplo de `--ancho-borde`, de modo que `sutil` conserva
+ * el aspecto previo (2 y 4 px), `ninguno` los quita y `marcado` los duplica.
+ */
+export const GROSOR_BORDE_X2_CLASE = 'border-[length:calc(var(--ancho-borde,1px)*2)]'
+export const GROSOR_BORDE_X4_CLASE = 'border-[length:calc(var(--ancho-borde,1px)*4)]'
+/** Línea de tiempo de logros: solo el lado izquierdo, grosor 2 px con `sutil`. */
+export const LINEA_BORDE_BLOQUE_CLASE =
+  'border-l-[length:calc(var(--ancho-borde,1px)*2)] border-l-[color:var(--color-borde,var(--border))]'
+
 export const FONDO_BLOQUE_CLASE: Record<FondoBloqueBloque, string> = {
   ninguno: '',
   sutil: 'bg-muted/30',
-  tarjeta: 'bg-card border rounded-xl',
+  // Fase 7c (UC-12): el contorno sale de `CLASES_BORDE_BLOQUE` (opcional por bloque).
+  tarjeta: `bg-card ${CLASES_BORDE_BLOQUE} rounded-xl`,
   // Fase 7 (7.2/7.3, UC-12): degradado suave primario -> secundario al 12 %
   // sobre el fondo del tema, y vidrio (tarjeta translúcida con desenfoque).
   degradado:
     'bg-linear-to-br from-[var(--color-primario)]/12 to-[var(--color-secundario)]/12',
-  vidrio: 'bg-card/60 backdrop-blur border border-border/50 rounded-2xl',
+  vidrio: `bg-card/60 backdrop-blur ${CLASES_BORDE_BLOQUE} rounded-2xl`,
 }
 
 /**

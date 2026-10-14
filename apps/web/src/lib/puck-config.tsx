@@ -188,6 +188,16 @@ const CAMPOS_BASE_BLOQUE = {
       { label: 'Vidrio', value: 'vidrio' },
     ],
   },
+  // Fase 7c (UC-12): contorno opcional de contenedores y tarjetas del bloque.
+  borde_bloque: {
+    type: 'radio',
+    label: 'Borde del bloque',
+    options: [
+      { label: 'Ninguno', value: 'ninguno' },
+      { label: 'Sutil', value: 'sutil' },
+      { label: 'Marcado', value: 'marcado' },
+    ],
+  },
   separador_inferior: {
     type: 'radio',
     label: 'Separador inferior',
@@ -228,6 +238,7 @@ const DEFAULT_PROPS_BASE_BLOQUE: Required<BloqueConfiguracionBase> = {
   separador_inferior: true,
   animacion_entrada: 'aparecer',
   separador_forma: 'ninguno',
+  borde_bloque: 'sutil',
 }
 
 /**
@@ -256,6 +267,7 @@ function propsEnvoltorio(
     separador_inferior: props.separador_inferior,
     animacion_entrada: props.animacion_entrada,
     separador_forma: props.separador_forma,
+    borde_bloque: props.borde_bloque,
   }
 }
 
