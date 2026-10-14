@@ -1,3 +1,4 @@
+import { INCLUDE_MEDIA_CON_VARIANTES } from '../media/media.select';
 import {
   ConflictException,
   Injectable,
@@ -144,6 +145,7 @@ export class VersionesSitioService {
     if (idsMedia.length > 0) {
       const medias = await this.prisma.media.findMany({
         where: { id: { in: idsMedia } },
+        include: INCLUDE_MEDIA_CON_VARIANTES,
       });
 
       medias.forEach((media) =>

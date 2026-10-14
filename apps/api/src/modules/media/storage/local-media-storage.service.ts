@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { promises as fs } from 'fs';
-import { extname, join } from 'path';
+import { dirname, extname, join } from 'path';
 import {
   MediaStorageService,
   UploadedMediaResult,
@@ -42,5 +42,29 @@ export class LocalMediaStorageService implements MediaStorageService {
       key,
       // width/height: no calculados aquí a propósito, ver nota de arriba (sharp).
     };
+  }
+
+  /** Fase 8 (UC-34): escribe el derivado en `uploads/<key>`. */
+  async subirDerivado(
+    buffer: Buffer,
+    key: string,
+  ): Promise<{ url: string; key: string }> {
+    const destino = join(this.uploadsDir, key);
+    await fs.mkdir(dirname(destino), { recursive: true });
+    await fs.writeFile(destino, buffer);
+    const baseUrl = process.env.PUBLIC_BASE_URL ?? 'http://localhost:3000';
+    return { url: `${baseUrl}/uploads/${key}`, key };
+  }
+
+  async descargar(key: string): Promise<Buffer> {
+    return fs.readFile(join(this.uploadsDir, key));
+  }
+
+  async eliminar(keys: string[]): Promise<void> {
+    await Promise.all(
+      keys.map((key) =>
+        fs.unlink(join(this.uploadsDir, key)).catch(() => undefined),
+      ),
+    );
   }
 }

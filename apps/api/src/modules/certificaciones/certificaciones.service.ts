@@ -1,3 +1,4 @@
+import { INCLUDE_MEDIA_CON_VARIANTES } from '../media/media.select';
 import {
   BadRequestException,
   Injectable,
@@ -40,7 +41,7 @@ export class CertificacionesService {
   async listarConLogo() {
     return this.prisma.certificacion.findMany({
       orderBy: ORDEN_CERTIFICACIONES,
-      include: { logo: true },
+      include: { logo: { include: INCLUDE_MEDIA_CON_VARIANTES } },
     });
   }
 

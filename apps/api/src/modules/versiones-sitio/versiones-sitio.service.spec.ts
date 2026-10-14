@@ -10,6 +10,7 @@ import { RedesSocialesService } from '../redes-sociales/redes-sociales.service';
 import { SeccionesService } from '../secciones/secciones.service';
 import { SkillsService } from '../skills/skills.service';
 import { TemaService } from '../tema/tema.service';
+import { INCLUDE_MEDIA_CON_VARIANTES } from '../media/media.select';
 import { SnapshotSitio } from './snapshot.types';
 import { VersionesSitioService } from './versiones-sitio.service';
 
@@ -172,6 +173,7 @@ describe('VersionesSitioService (UC-10 Previsualizar, UC-11 Publicar/revertir)',
 
       expect(prisma.media.findMany).toHaveBeenCalledWith({
         where: { id: { in: ['media-fondo-1'] } },
+        include: INCLUDE_MEDIA_CON_VARIANTES,
       });
       const configuracionResuelta = snapshot.secciones[0].configuracion;
       expect(configuracionResuelta.imagen_fondo).toEqual(mediaResuelta);
@@ -219,6 +221,7 @@ describe('VersionesSitioService (UC-10 Previsualizar, UC-11 Publicar/revertir)',
 
       expect(prisma.media.findMany).toHaveBeenCalledWith({
         where: { id: { in: ['media-inexistente'] } },
+        include: INCLUDE_MEDIA_CON_VARIANTES,
       });
       expect(snapshot.secciones[0].configuracion.imagen_fondo).toBeUndefined();
     });
@@ -317,6 +320,7 @@ describe('VersionesSitioService (UC-10 Previsualizar, UC-11 Publicar/revertir)',
 
       expect(prisma.media.findMany).toHaveBeenCalledWith({
         where: { id: { in: ['media-fondo-columnas-1'] } },
+        include: INCLUDE_MEDIA_CON_VARIANTES,
       });
 
       const configuracionColumnas = snapshot.secciones[0]
@@ -377,6 +381,7 @@ describe('VersionesSitioService (UC-10 Previsualizar, UC-11 Publicar/revertir)',
       expect(prisma.media.findMany).toHaveBeenCalledTimes(1);
       expect(prisma.media.findMany).toHaveBeenCalledWith({
         where: { id: { in: ['media-top', 'media-anidada'] } },
+        include: INCLUDE_MEDIA_CON_VARIANTES,
       });
     });
   });
@@ -425,6 +430,7 @@ describe('VersionesSitioService (UC-10 Previsualizar, UC-11 Publicar/revertir)',
 
       expect(prisma.media.findMany).toHaveBeenCalledWith({
         where: { id: { in: ['media-galeria-1', 'media-galeria-2'] } },
+        include: INCLUDE_MEDIA_CON_VARIANTES,
       });
       const fotos = snapshot.secciones[0].configuracion.fotos as Array<{
         media_id: string;
@@ -530,6 +536,7 @@ describe('VersionesSitioService (UC-10 Previsualizar, UC-11 Publicar/revertir)',
         where: {
           id: { in: ['media-top-2', 'media-galeria-anidada-1'] },
         },
+        include: INCLUDE_MEDIA_CON_VARIANTES,
       });
     });
   });

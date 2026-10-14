@@ -36,6 +36,22 @@ export interface MediaStorageService {
     file: Express.Multer.File,
     carpeta?: string,
   ): Promise<UploadedMediaResult>;
+
+  /**
+   * Fase 8 (UC-34): sube un derivado (variante webp/avif) con una key
+   * explícita y caché inmutable (la key lleva el ancho; nunca se reescribe).
+   */
+  subirDerivado(
+    buffer: Buffer,
+    key: string,
+    contentType: string,
+  ): Promise<{ url: string; key: string }>;
+
+  /** Fase 8: descarga el objeto (p. ej. el original para regenerar variantes). */
+  descargar(key: string): Promise<Buffer>;
+
+  /** Fase 8: borra objetos por key; una lista vacía no hace nada. */
+  eliminar(keys: string[]): Promise<void>;
 }
 
 /** Token de inyección: `MediaStorageService` es una interfaz, no una clase. */

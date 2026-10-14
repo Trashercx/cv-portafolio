@@ -18,6 +18,8 @@ export interface SnapshotMedia {
   ancho: number | null;
   alto: number | null;
   alt_text: string | null;
+  /** Fase 8 (UC-34): derivados webp/avif; ausente en snapshots anteriores. */
+  variantes?: { formato: string; ancho: number; alto: number; url: string }[];
   [key: string]: unknown;
 }
 
