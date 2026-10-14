@@ -125,12 +125,14 @@ export function esHeicPorContenido(buffer: Buffer): boolean {
     buffer.length,
     MAX_LECTURA_FTYP,
   );
-  if (MARCAS_HEIC.has(buffer.toString('latin1', 8, 12))) return true;
-  // Marcas compatibles: de 16 en adelante, de 4 en 4 bytes.
+  // Marca mayor y compatibles (de 16 en adelante, de 4 en 4 bytes). Si alguna
+  // es avif/avis el archivo es AVIF (aunque declare mif1): lo lee sharp.
+  const marcas = [buffer.toString('latin1', 8, 12)];
   for (let i = 16; i + 4 <= fin; i += 4) {
-    if (MARCAS_HEIC.has(buffer.toString('latin1', i, i + 4))) return true;
+    marcas.push(buffer.toString('latin1', i, i + 4));
   }
-  return false;
+  if (marcas.some((m) => m === 'avif' || m === 'avis')) return false;
+  return marcas.some((m) => MARCAS_HEIC.has(m));
 }
 
 /** Mensaje 400 segun el contenido rechazado (Fase 7g, UC-09). */
