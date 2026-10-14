@@ -249,7 +249,9 @@ export function PanelFondoEditor() {
   const guardando = crear.isPending || actualizar.isPending
 
   return (
-    <div className="grid gap-4 p-4">
+    // Décima ronda (UC-15): el plugin de Puck mide ~240 px; la galería se adapta
+    // al ancho del CONTENEDOR (container queries), no al del viewport.
+    <div className="@container grid gap-4 p-4">
       <h3 className="text-sm font-semibold">Fondo del sitio</h3>
 
       {isLoading ? (
@@ -263,7 +265,10 @@ export function PanelFondoEditor() {
         </p>
       ) : null}
 
-      <ul className="grid grid-cols-2 gap-3" aria-label="Fondos disponibles">
+      <ul
+        className="grid grid-cols-1 gap-3 @min-[20rem]:grid-cols-2"
+        aria-label="Fondos disponibles"
+      >
         {CATALOGO_FONDOS.map((entrada) => (
           <TarjetaFondo
             key={entrada.tipo}
@@ -460,10 +465,10 @@ function TarjetaFondo({
         </div>
         <p className="text-xs text-muted-foreground">{entrada.descripcion}</p>
       </div>
-      <div className="flex gap-1.5">
+      <div className="flex flex-wrap gap-1.5">
         <Button
           size="sm"
-          className="flex-1"
+          className="min-w-[5.5rem] flex-1"
           disabled={activo || ocupado}
           onClick={onActivar}
         >
@@ -472,7 +477,7 @@ function TarjetaFondo({
         <Button
           size="sm"
           variant={ajustando ? 'secondary' : 'outline'}
-          className="flex-1"
+          className="min-w-[5.5rem] flex-1"
           disabled={entrada.tipo === 'solido'}
           aria-pressed={ajustando}
           onClick={onAjustar}
