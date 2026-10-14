@@ -232,6 +232,50 @@ export function sanearConfiguracion(
   return configuracion
 }
 
+/**
+ * Normaliza la `configuracion` PERSISTIDA de una sección a la misma forma que
+ * produce el lienzo (octava ronda, UC-07): aplica los `defaultProps` del tipo
+ * (Puck los rellena al cargar, así que la configuración del lienzo nunca
+ * coincide con la guardada), el fallback conservador del `hero` legado, la
+ * reconstrucción de los hijos de `columnas` y el mismo saneo previo al PATCH.
+ * Solo se usa para decidir si hubo cambios; lo que se envía sigue siendo la
+ * configuración del lienzo.
+ */
+export function normalizarConfiguracion(
+  tipo: TipoSeccion,
+  configuracion: Record<string, unknown>,
+): Record<string, unknown> {
+  const defaults = separarProps({
+    ...(puckConfig.components[tipo]?.defaultProps ?? {}),
+  } as EditorContentItem['props']).configuracion
+  const fallbackLegado = tipo === 'hero' ? FALLBACK_HERO_LEGADO : {}
+  const base =
+    tipo === 'columnas'
+      ? (reconstruirConfiguracionColumnas(
+          configuracion as unknown as ColumnasConfiguracion,
+        ) as unknown as Record<string, unknown>)
+      : configuracion
+  return sanearConfiguracion(tipo, { ...defaults, ...fallbackLegado, ...base })
+}
+
+/** JSON con claves ordenadas y sin `undefined`: base de la igualdad profunda estable. */
+function serializarEstable(valor: unknown): string {
+  return JSON.stringify(valor, (_clave, v: unknown) =>
+    v && typeof v === 'object' && !Array.isArray(v)
+      ? Object.fromEntries(
+          Object.entries(v as Record<string, unknown>).sort(([a], [b]) =>
+            a < b ? -1 : a > b ? 1 : 0,
+          ),
+        )
+      : v,
+  )
+}
+
+/** Igualdad profunda estable (el orden de claves es irrelevante). */
+export function igualdadProfunda(a: unknown, b: unknown): boolean {
+  return serializarEstable(a) === serializarEstable(b)
+}
+
 export function sanearSlots(configuracion: Record<string, unknown>): ColumnasConfiguracion {
   const {
     espaciado_vertical,
@@ -503,8 +547,13 @@ export function EditorSeccionesPage() {
         const original = seccionesOriginales.find((s) => s.id === _seccionId)
         if (!original) continue
 
-        const configuracionCambio =
-          JSON.stringify(original.configuracion) !== JSON.stringify(configuracion)
+        // Octava ronda (UC-07): se compara la configuración persistida ya
+        // normalizada (defaults del tipo) contra la del lienzo, con igualdad
+        // profunda estable; así "Guardar" sin tocar nada no envía PATCH.
+        const configuracionCambio = !igualdadProfunda(
+          normalizarConfiguracion(tipo, original.configuracion),
+          configuracion,
+        )
         if (configuracionCambio) {
           await actualizarConfiguracion.mutateAsync({
             id: _seccionId,
@@ -547,7 +596,16 @@ export function EditorSeccionesPage() {
         .filter(
           (item): item is { id: string; orden: number } => Boolean(item.id),
         )
-      if (itemsOrden.length > 0) {
+      // Octava ronda (UC-07): `reordenar` solo si la secuencia de ids cambió
+      // (alta, baja o movimiento) respecto de la persistida.
+      const idsOriginales = [...seccionesOriginales]
+        .sort((a, b) => a.orden - b.orden)
+        .map((seccion) => seccion.id)
+      const ordenCambio = !igualdadProfunda(
+        idsOriginales,
+        itemsOrden.map((item) => item.id),
+      )
+      if (itemsOrden.length > 0 && ordenCambio) {
         await reordenarSecciones.mutateAsync(itemsOrden)
       }
 

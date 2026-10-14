@@ -1,6 +1,12 @@
-import { describe, expect, it } from 'vitest'
+import { render, screen } from '@testing-library/react'
+import type { ReactElement } from 'react'
+import { describe, expect, it, vi } from 'vitest'
 import { TIPOS_SECCION } from '@/features/secciones/types'
 import { puckConfig } from './puck-config'
+
+vi.mock('@/features/media/useMediaLibrary', () => ({
+  useMediaList: () => ({ data: [], isLoading: false }),
+}))
 
 /**
  * Fase 7 (7.2/7.3, UC-07): la configuración de Puck refleja el contrato del
@@ -125,6 +131,20 @@ describe('puckConfig — campos y etiquetas (Fase 7)', () => {
     expect(bloques.hero.fields.titulos_rotativos.label).toContain('6')
     expect(bloques['sobre-mi'].fields.estadisticas.type).toBe('array')
     expect(bloques['sobre-mi'].fields.estadisticas.max).toBe(4)
+  })
+
+  // Octava ronda (UC-07): Puck no pinta la etiqueta de los campos `custom`;
+  // su `render` debe envolverse en `FieldLabel`.
+  it.each([
+    ['titulos_rotativos', 'Títulos rotativos'],
+    ['imagen_fondo_media_id', 'Imagen (biblioteca de medios)'],
+  ])('el campo custom %s muestra su etiqueta', (clave, etiqueta) => {
+    const campo = bloques.hero.fields[clave] as unknown as {
+      render: (props: Record<string, unknown>) => ReactElement
+    }
+    const props = { field: bloques.hero.fields[clave], name: clave, onChange: vi.fn() }
+    render(campo.render({ ...props, value: undefined }))
+    expect(screen.getByText(etiqueta, { exact: false })).toBeInTheDocument()
   })
 
   it('las etiquetas de los campos nuevos están en español', () => {

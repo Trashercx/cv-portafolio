@@ -120,4 +120,25 @@ export class AuthService {
       expiresAt: calcularExpiracion(),
     };
   }
+
+  /**
+   * Octava ronda, UC-01: datos de la sesión vigente para rehidratar el panel
+   * al recargar. No emite token ni toca `intentos_fallidos`; la expiración es
+   * la del token actual (`exp` del JWT), no una nueva.
+   */
+  async sesionActual(
+    userId: string,
+    exp: number,
+  ): Promise<Omit<LoginResult, 'accessToken'>> {
+    const admin = await this.prisma.usuarioAdmin.findUnique({
+      where: { id: userId },
+    });
+    if (!admin) {
+      throw new UnauthorizedException('Credenciales inválidas');
+    }
+    return {
+      admin: { email: admin.email, nombre: admin.nombre },
+      expiresAt: new Date(exp * 1000),
+    };
+  }
 }

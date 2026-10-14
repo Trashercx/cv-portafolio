@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
   Post,
@@ -83,6 +84,23 @@ export class AuthController {
 
     this.setCookieAcceso(res, accessToken);
 
+    return { ...admin, expiresAt: expiresAt.toISOString() };
+  }
+
+  /**
+   * Octava ronda, UC-01: rehidrata la sesión del panel tras recargar la
+   * página (el store del frontend vive en memoria). Misma forma que el cuerpo
+   * de `POST /auth/refresh`, pero sin emitir cookie nueva: `expiresAt` es la
+   * del token vigente. Sin cookie o token vencido, el guard responde 401.
+   * Usa el límite global de throttling.
+   */
+  @Get('sesion')
+  @UseGuards(JwtAuthGuard)
+  async sesion(@Req() req: AuthenticatedRequest): Promise<SesionResponseBody> {
+    const { admin, expiresAt } = await this.authService.sesionActual(
+      req.user.sub,
+      req.user.exp as number,
+    );
     return { ...admin, expiresAt: expiresAt.toISOString() };
   }
 

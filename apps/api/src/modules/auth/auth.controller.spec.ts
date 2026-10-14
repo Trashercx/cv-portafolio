@@ -16,7 +16,11 @@ import { JwtStrategy } from './jwt.strategy';
  */
 describe('AuthController (UC-01: POST /auth/login y POST /auth/refresh)', () => {
   let app: INestApplication;
-  let authService: { login: jest.Mock; refrescar: jest.Mock };
+  let authService: {
+    login: jest.Mock;
+    refrescar: jest.Mock;
+    sesionActual: jest.Mock;
+  };
   let jwtServiceDePrueba: JwtService;
 
   const JWT_SECRET_DE_PRUEBA = 'secreto-de-pruebas-no-real';
@@ -29,6 +33,7 @@ describe('AuthController (UC-01: POST /auth/login y POST /auth/refresh)', () => 
     authService = {
       login: jest.fn(),
       refrescar: jest.fn(),
+      sesionActual: jest.fn(),
     };
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -159,5 +164,35 @@ describe('AuthController (UC-01: POST /auth/login y POST /auth/refresh)', () => 
         c.startsWith('access_token=token.de.refresh'),
       ),
     ).toBe(true);
+  });
+
+  it('GET /auth/sesion sin cookie responde 401 y no llama al servicio', async () => {
+    await request(app.getHttpServer()).get('/auth/sesion').expect(401);
+    expect(authService.sesionActual).not.toHaveBeenCalled();
+  });
+
+  it('GET /auth/sesion devuelve la misma forma que refresh, con la expiracion del token vigente y sin cookie nueva (octava ronda, UC-01)', async () => {
+    const tokenValido = await jwtServiceDePrueba.signAsync(
+      { sub: 'admin-uuid', email: 'admin@example.com' },
+      { expiresIn: '10m' },
+    );
+    const { exp } = jwtServiceDePrueba.decode(tokenValido) as { exp: number };
+    authService.sesionActual.mockResolvedValue({
+      admin: { email: 'admin@example.com', nombre: 'Admin' },
+      expiresAt: new Date(exp * 1000),
+    });
+
+    const response = await request(app.getHttpServer())
+      .get('/auth/sesion')
+      .set('Cookie', [`access_token=${tokenValido}`])
+      .expect(200);
+
+    expect(authService.sesionActual).toHaveBeenCalledWith('admin-uuid', exp);
+    expect(response.body).toEqual({
+      email: 'admin@example.com',
+      nombre: 'Admin',
+      expiresAt: new Date(exp * 1000).toISOString(),
+    });
+    expect(response.headers['set-cookie']).toBeUndefined();
   });
 });

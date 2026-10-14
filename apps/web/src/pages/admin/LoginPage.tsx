@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -27,6 +27,7 @@ export function LoginPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const setAdmin = useAuthStore((state) => state.setAdmin)
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const login = useLogin()
   const sesionExpirada = searchParams.get('sesion') === 'expirada'
 
@@ -43,6 +44,10 @@ export function LoginPage() {
       },
     })
   }
+
+  // Octava ronda (UC-01): con la sesión ya rehidratada (o iniciada) no tiene
+  // sentido mostrar el formulario.
+  if (isAuthenticated) return <Navigate to="/admin" replace />
 
   const errorMessage =
     login.error instanceof ApiError

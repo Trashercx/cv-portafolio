@@ -452,6 +452,15 @@ Pruebas y cierre: suites verdes en ambas apps, `code-reviewer` y `release-manage
 - Responsive comprobado con Chrome headless a 360/768/1280 en tres variantes del sitio: sin scroll horizontal. Bundle: `index` 712 kB (222 kB gzip; antes 578/176) porque la home es eager y arrastra `motion` y los bloques; `EditorSeccionesPage` 525 kB.
 - Pruebas: web 81 archivos / 543 tests; API 30 suites / 307 unit + 95 e2e.
 
+### Octava ronda — correcciones del QA de la Fase 7 en producción (UC-01, UC-07, UC-08)
+
+Disparada por el QA automatizado en producción del 2026-10-13 (10 comprobaciones OK, sin errores de consola ni CSP). Hallazgos:
+
+- **D1 (UC-07)**: los campos `custom` de Puck (`listaTextosField`, `selectorMediaField`) no muestran su `label`: Puck solo pinta la etiqueta de los campos nativos; el `render` del campo custom debe usar `<FieldLabel>`.
+- **D2 (UC-08, pre-existente desde la Fase 4.6)**: el sitio ignora `Tema.modo`; un tema de autoría oscura ("Monocromo") se muestra oscuro por defecto y el toggle lo invierte a gris claro. Corrección: `Tema.modo` es el modo base; la paleta se deriva (inversión de luminosidad) solo cuando el modo del visitante difiere del base. Mismo criterio en lienzo, vista previa y sitio. Salvaguarda (revisión): como `Tema.modo` era inerte hasta ahora, puede haber temas guardados con modo declarado y colores contradictorios; `modoBaseDelTema` decide el modo base por la luminosidad HSL del fondo (< 50 % = oscuro), no por la etiqueta, así ningún tema existente se invierte por sorpresa.
+- **O1 (UC-07)**: "Guardar cambios" hacía `PATCH` de todas las secciones y de `reordenar` aunque nada cambiara, materializando en el JSONB los defaults de Puck. Corrección: comparar la configuración normalizada (persistida + defaults del tipo) con la del lienzo y enviar solo lo que difiere; `reordenar` solo si cambia el orden. Consecuencia aceptada: los defaults de Puck ya no se materializan en el JSONB al guardar sin cambios; los componentes toleran la clave ausente (regla de CLAUDE.md) y los `defaultProps` del editor deben coincidir con los fallbacks de render de cada bloque.
+- **O2 (UC-01, pre-existente)**: el store de sesión vive en memoria y `RequireAuth` mandaba al login en cualquier recarga. Corrección: `GET /auth/sesion` (guard JWT, misma respuesta que `POST /auth/refresh`) y rehidratación al arrancar el panel con estado de carga.
+
 ### Roadmap propuesto — Fases 8 a 11 (pendientes de aprobación)
 
 Detalle y justificación en `docs/plan-portafolio.md` §7; aquí solo el desglose técnico orientativo por fase y subagente.
