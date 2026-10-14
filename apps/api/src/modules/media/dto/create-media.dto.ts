@@ -6,6 +6,7 @@ export const CARPETAS_MEDIA = [
   'proyectos',
   'certificaciones',
   'logros',
+  'insignias',
 ] as const;
 
 /**

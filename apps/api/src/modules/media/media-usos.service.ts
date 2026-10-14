@@ -29,17 +29,14 @@ type FuenteDeUso = () => Promise<{ mediaId: string; uso: UsoMedia }[]>;
 export class MediaUsosService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /**
-   * Fuentes de uso. TODO(Fase 7d.2): añadir aquí la fuente `insignia`
-   * (`insignia.imagen_media_id` → `{ tipo: 'insignia', id, nombre }`) cuando
-   * exista el módulo `insignias`.
-   */
+  /** Fuentes de uso (incluye `insignia`, Fase 7d.2, UC-35). */
   private fuentes(): FuenteDeUso[] {
     return [
       () => this.usosDePerfil(),
       () => this.usosDeProyectos(),
       () => this.usosDeCertificaciones(),
       () => this.usosDeSecciones(),
+      () => this.usosDeInsignias(),
     ];
   }
 
@@ -118,6 +115,16 @@ export class MediaUsosService {
     return filas.map((c) => ({
       mediaId: c.logo_media_id as string,
       uso: { tipo: 'certificacion' as const, id: c.id, nombre: c.nombre },
+    }));
+  }
+
+  private async usosDeInsignias() {
+    const filas = await this.prisma.insignia.findMany({
+      select: { id: true, nombre: true, imagen_media_id: true },
+    });
+    return filas.map((i) => ({
+      mediaId: i.imagen_media_id,
+      uso: { tipo: 'insignia' as const, id: i.id, nombre: i.nombre },
     }));
   }
 

@@ -105,6 +105,7 @@ Ambas se sustituyen al arrancar el contenedor (envsubst de la imagen `nginx:alpi
 | `THROTTLE_LIMIT` | `120` | Peticiones máximas por IP dentro de esa ventana (120/min). El login (UC-01) además conserva su bloqueo por intentos fallidos. |
 | `THROTTLE_LOGIN_LIMIT` | `5` | Intentos máximos de `POST /auth/login` por IP dentro de `THROTTLE_LOGIN_TTL_MS` (responde 429). Independiente del bloqueo de cuenta por 3 intentos fallidos. |
 | `THROTTLE_LOGIN_TTL_MS` | `60000` | Ventana del límite del login, en milisegundos. |
+| `THROTTLE_IMPORTAR_LIMIT` | `10` | Opcional. Peticiones máximas por IP y minuto a `POST /admin/insignias/importar` e `importar-archivo` (Fase 7d, UC-35; hacen peticiones salientes). Solo se sobrescribe en pruebas. |
 
 Todas van en el panel de variables de Dokploy/Coolify, igual que las de la sección 2.
 
