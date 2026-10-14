@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '../../../generated/prisma/client';
 import { sharp } from './sharp';
-import { validarImagen } from './validar-imagen';
+import { mensajeRechazoImagen, validarImagen } from './validar-imagen';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateMediaDto } from './dto/create-media.dto';
 import { ListarMediaQueryDto } from './dto/listar-media-query.dto';
@@ -40,9 +40,8 @@ async function normalizarImagen(file: Express.Multer.File): Promise<void> {
   if (!file.mimetype?.startsWith('image/')) return;
   const imagen = await validarImagen(file.buffer);
   if (!imagen) {
-    throw new BadRequestException(
-      'El archivo no es una imagen válida (PNG, JPEG, WebP, AVIF o SVG sin scripts)',
-    );
+    // Fase 7g, UC-09: HEIC/HEIF se explica aparte; el resto enumera formatos.
+    throw new BadRequestException(mensajeRechazoImagen(file.buffer));
   }
   file.mimetype = imagen.mime;
 }

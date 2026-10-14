@@ -1,5 +1,9 @@
 import { sharp } from './sharp';
-import { esSvgSeguro, validarImagen } from './validar-imagen';
+import {
+  esHeicPorContenido,
+  esSvgSeguro,
+  validarImagen,
+} from './validar-imagen';
 
 const svg = (cuerpo = '') =>
   Buffer.from(
@@ -62,5 +66,42 @@ describe('validarImagen (Fase 7d, UC-09/UC-35)', () => {
     expect(await validarImagen(Buffer.from('hola mundo'))).toBeNull();
     expect(await validarImagen(Buffer.from('<html><svg/></html>'))).toBeNull();
     expect(await validarImagen(Buffer.alloc(0))).toBeNull();
+  });
+});
+
+describe('esHeicPorContenido (Fase 7g, UC-09)', () => {
+  const heic = Buffer.from(
+    '00000018667479706865696300000000' + '6d6966316865' + '6963',
+    'hex',
+  );
+  it('detecta HEIC por marca mayor o compatible', () => {
+    expect(esHeicPorContenido(heic)).toBe(true);
+  });
+  it('detecta HEIC cuando solo una marca compatible lo es', () => {
+    const c = Buffer.concat([
+      Buffer.from([0, 0, 0, 20]),
+      Buffer.from('ftypisom'),
+      Buffer.alloc(4),
+      Buffer.from('heic'),
+    ]);
+    expect(esHeicPorContenido(c)).toBe(true);
+  });
+  it('AVIF no cuenta como HEIC', () => {
+    const avif = Buffer.concat([
+      Buffer.from([0, 0, 0, 16]),
+      Buffer.from('ftypavif'),
+      Buffer.alloc(4),
+    ]);
+    expect(esHeicPorContenido(avif)).toBe(false);
+  });
+  it('PNG, vacío y corto dan false', async () => {
+    const png = await sharp({
+      create: { width: 2, height: 2, channels: 3, background: '#fff' },
+    })
+      .png()
+      .toBuffer();
+    expect(esHeicPorContenido(png)).toBe(false);
+    expect(esHeicPorContenido(Buffer.alloc(0))).toBe(false);
+    expect(esHeicPorContenido(Buffer.from([0, 0, 0]))).toBe(false);
   });
 });

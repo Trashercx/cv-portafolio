@@ -6,7 +6,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { INCLUDE_MEDIA_CON_VARIANTES } from '../media/media.select';
 import { MediaService } from '../media/media.service';
-import { validarImagen } from '../media/validar-imagen';
+import { mensajeRechazoImagen, validarImagen } from '../media/validar-imagen';
 import { CreateInsigniaDto } from './dto/create-insignia.dto';
 import { UpdateInsigniaDto } from './dto/update-insignia.dto';
 import {
@@ -25,7 +25,14 @@ import { descargarRecursoSeguro, RedSeguraError } from './red-segura';
 const INCLUDE_IMAGEN = { imagen: { include: INCLUDE_MEDIA_CON_VARIANTES } };
 
 /** Formatos (por contenido) admitidos al importar un archivo de insignia. */
-const MIMES_ARCHIVO_INSIGNIA = ['image/png', 'image/svg+xml'];
+// Fase 7g, UC-35: JPEG y WebP entran como imagen simple (el Open Badges
+// horneado solo aplica a PNG/SVG; `leerOpenBadgesHorneado` devuelve null).
+const MIMES_ARCHIVO_INSIGNIA = [
+  'image/png',
+  'image/jpeg',
+  'image/webp',
+  'image/svg+xml',
+];
 
 function aFecha(valor: string | null | undefined): Date | null | undefined {
   if (valor === undefined) return undefined;
@@ -250,9 +257,13 @@ export class InsigniasService {
   ): Promise<VistaPreviaInsignia & { imagen_media_id: string }> {
     // Tipo por contenido (no por el MIME declarado) y SVG sin código activo.
     const real = await validarImagen(file.buffer);
-    if (!real || !MIMES_ARCHIVO_INSIGNIA.includes(real.mime)) {
+    if (!real) {
+      // Fase 7g, UC-09: HEIC/HEIF se explica aparte; el resto enumera formatos.
+      throw new BadRequestException(mensajeRechazoImagen(file.buffer));
+    }
+    if (!MIMES_ARCHIVO_INSIGNIA.includes(real.mime)) {
       throw new BadRequestException(
-        'Solo se admiten archivos PNG o SVG válidos (el SVG no puede contener scripts)',
+        'Solo se admiten imágenes PNG, JPEG, WebP o SVG válidas (el SVG no puede contener scripts)',
       );
     }
     file.mimetype = real.mime;
@@ -322,9 +333,7 @@ export class InsigniasService {
         // Tipo por contenido, no por el `Content-Type` del servidor remoto.
         const real = await validarImagen(recurso.buffer);
         if (!real) {
-          throw new BadRequestException(
-            'La imagen remota no es válida (PNG, JPEG, WebP, AVIF o SVG sin scripts)',
-          );
+          throw new BadRequestException(mensajeRechazoImagen(recurso.buffer));
         }
         const file = {
           fieldname: 'file',
