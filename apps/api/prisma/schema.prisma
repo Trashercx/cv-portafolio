@@ -81,8 +81,29 @@ model Media {
   perfiles_cv       Perfil[]         @relation("PerfilCvMedia")
   certificaciones   Certificacion[]  @relation("CertificacionLogo")
   proyecto_imagenes ProyectoImagen[]
+  variantes         MediaVariante[]
 
   @@map("media")
+}
+
+/// Variantes responsive derivadas de un Media (Fase 8, UC-34): una fila por
+/// formato y ancho. Se borran en cascada con su Media.
+model MediaVariante {
+  id         String   @id @default(uuid()) @db.Uuid
+  media_id   String   @db.Uuid
+  /// "webp" | "avif" ("jpeg" reservado)
+  formato    String
+  ancho      Int
+  alto       Int
+  url        String
+  s3_key     String
+  bytes      Int
+  created_at DateTime @default(now())
+
+  media Media @relation(fields: [media_id], references: [id], onDelete: Cascade)
+
+  @@unique([media_id, formato, ancho])
+  @@map("media_variante")
 }
 
 /// Proyectos del portafolio (UC-03).
