@@ -10,13 +10,13 @@ import { CABECERA_FRAGMENTO, RUIDO_GLSL } from './comun.glsl'
 export const FRAGMENTO_LIQUIDO = /* glsl */ `${CABECERA_FRAGMENTO}
 ${RUIDO_GLSL}
 void main() {
-  vec2 p = (gl_FragCoord.xy - 0.5 * uResolution) / uResolution.y * 1.6;
-  vec2 foco = (uPuntero - 0.5) * vec2(uResolution.x / uResolution.y, 1.0) * 1.6;
+  vec2 p = (gl_FragCoord.xy - 0.5 * uResolution) / uResolution.y * 0.64;
+  vec2 foco = (uPuntero - 0.5) * vec2(uResolution.x / uResolution.y, 1.0) * 0.64;
   float t = uTime * 0.12;
 
   // El cursor empuja el fluido.
   vec2 d = p - foco;
-  p += d * exp(-dot(d, d) * 3.2) * 0.45;
+  p += d * exp(-dot(d, d) * 1.2) * 0.12;
 
   vec2 q = vec2(fbm2(p + vec2(0.0, t)), fbm2(p + vec2(5.2, 1.3) - t));
   vec2 r = vec2(fbm2(p + 3.0 * q + vec2(1.7, 9.2) + t * 0.7), fbm2(p + 3.0 * q + vec2(8.3, 2.8) - t * 0.6));
@@ -24,7 +24,8 @@ void main() {
 
   vec3 fluido = mix(uColorA, uColorB, clamp(f * f * 1.6, 0.0, 1.0));
   float cuerpo = clamp((0.25 + 0.65 * smoothstep(0.2, 0.95, f)) * uIntensidad, 0.0, 1.0);
-  vec3 col = mix(uColorC, fluido, cuerpo);
+  // Contraste suave: el fluido se funde con el fondo del tema al ~60 %.
+  vec3 col = mix(uColorC, fluido, cuerpo * 0.6);
   // Borde de remolino: línea fina más clara donde q y r divergen.
   col = mix(col, uColorB, clamp(length(q - r) * 0.35, 0.0, 1.0) * 0.18 * uIntensidad);
 

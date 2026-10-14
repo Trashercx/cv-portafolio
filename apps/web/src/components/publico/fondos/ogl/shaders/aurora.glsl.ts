@@ -20,12 +20,12 @@ void main() {
     float fi = float(i);
     float x = uv.x * (1.5 + fi * 0.55) + par.x * (1.0 + fi * 0.8) + fi * 7.3;
     float curva = simplex(vec2(x, t * (1.0 + fi * 0.35)));
-    float centro = 0.62 - fi * 0.11 + curva * 0.16 + par.y * (0.6 + fi * 0.4);
+    float centro = 0.80 - fi * 0.17 + curva * 0.16 + par.y * (0.6 + fi * 0.4);
     float d = uv.y - centro;
     // Borde inferior nítido, fundido suave hacia arriba.
-    float forma = d > 0.0 ? exp(-d * 5.5) : exp(d * 30.0);
+    float forma = d > 0.0 ? exp(-d * 4.5) : exp(d * 22.0);
     float rayos = 0.55 + 0.45 * simplex(vec2(uv.x * 16.0 + fi * 3.1 + par.x * 4.0, t * 2.2 + fi));
-    float alfa = clamp(forma * rayos * 0.85 * uIntensidad, 0.0, 1.0);
+    float alfa = clamp(forma * rayos * 1.05 * uIntensidad, 0.0, 1.0);
     vec3 tinte = mix(uColorA, uColorB, clamp(fi * 0.4 + 0.3 + 0.35 * curva, 0.0, 1.0));
     col = mix(col, tinte, alfa * (0.8 + 0.2 * uClaro));
   }

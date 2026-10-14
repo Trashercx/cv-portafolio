@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { simularMovimientoReducido } from '@/test/movimiento'
 import { ProveedorModoRenderizado, ProveedorVistaLimpia } from './contexto-renderizado'
 import { EnvoltorioSeccion } from './EnvoltorioSeccion'
-import { CLASES_BORDE_BLOQUE } from '@/lib/escalas-bloque'
+import { CLASES_BORDE_VIDRIO_BLOQUE } from '@/lib/escalas-bloque'
 
 /**
  * Fase 7 (7.3, UC-12): ancla `#seccion-{id}`, `separador_forma`, fondos
@@ -85,7 +85,7 @@ describe('EnvoltorioSeccion (Fase 7)', () => {
     expect(document.getElementById('seccion-v')).toHaveClass(
       'bg-card/60',
       'backdrop-blur',
-      CLASES_BORDE_BLOQUE,
+      CLASES_BORDE_VIDRIO_BLOQUE,
       'rounded-2xl',
     )
   })

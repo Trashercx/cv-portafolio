@@ -7,7 +7,7 @@ import { ImagenResponsive } from '../ImagenResponsive'
 import { TarjetaClicable } from '../contexto-renderizado'
 import { ItemAnimado } from '../ItemAnimado'
 import { TarjetaInteractiva } from '../TarjetaInteractiva'
-import { CLASES_BORDE_BLOQUE } from '@/lib/escalas-bloque'
+import { CLASES_BORDE_BLOQUE, CLASES_BORDE_VIDRIO_BLOQUE } from '@/lib/escalas-bloque'
 
 type BloqueProyectosProps = {
   titulo: string
@@ -33,7 +33,7 @@ const ESTILO_TARJETA_CLASE: Record<
   // Fase 7c (UC-12): el contorno sale de `CLASES_BORDE_BLOQUE` (opcional por bloque).
   simple: CLASES_BORDE_BLOQUE,
   con_sombra: `${CLASES_BORDE_BLOQUE} shadow-md`,
-  vidrio: `${CLASES_BORDE_BLOQUE} bg-card/60 backdrop-blur-sm`,
+  vidrio: `${CLASES_BORDE_VIDRIO_BLOQUE} bg-card/60 backdrop-blur-sm`,
 }
 
 /**

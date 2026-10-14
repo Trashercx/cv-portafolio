@@ -67,6 +67,6 @@ if (typeof window !== 'undefined') {
 // Fase 7c (UC-15): jsdom no tiene canvas ni WebGL, así que los motores de los
 // fondos nuevos se sustituyen por dobles inertes en todos los tests. Los
 // registros (`registroParticulas`, `registroOgl`) permiten inspeccionarlos.
-vi.mock('@tsparticles/react', () => import('./mocks/tsparticles-react'))
+vi.mock('@tsparticles/engine', () => import('./mocks/tsparticles-engine'))
 vi.mock('@tsparticles/slim', () => import('./mocks/tsparticles-slim'))
 vi.mock('ogl', () => import('./mocks/ogl'))

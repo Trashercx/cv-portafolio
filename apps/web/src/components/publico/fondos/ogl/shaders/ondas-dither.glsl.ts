@@ -22,10 +22,10 @@ float bayer4(vec2 a) {
 void main() {
   vec2 p = (gl_FragCoord.xy - 0.5 * uResolution) / uResolution.y;
   vec2 foco = (uPuntero - 0.5) * vec2(uResolution.x / uResolution.y, 1.0);
-  float t = uTime * 0.35;
+  float t = uTime * 0.18;
 
-  float ola = sin(p.x * 5.0 + t + 1.6 * sin(p.y * 3.0 - t * 0.7));
-  ola += 0.6 * sin(p.y * 7.0 + 2.0 * simplex(vec2(p.x * 1.8, t * 0.4)));
+  float ola = sin(p.x * 2.2 + t + 1.2 * sin(p.y * 1.6 - t * 0.7));
+  ola += 0.6 * sin(p.y * 3.0 + 1.5 * simplex(vec2(p.x * 0.8, t * 0.4)));
   float v = 0.5 + 0.25 * ola;
 
   float d = length(p - foco);
@@ -33,9 +33,12 @@ void main() {
   v = clamp((v - 0.5) * uIntensidad + 0.5, 0.0, 1.0);
 
   float umbral = bayer4(gl_FragCoord.xy / 3.0);
-  vec3 col = uColorC;
-  col = mix(col, uColorA, step(umbral, v - 0.22));
-  col = mix(col, uColorB, step(umbral, v - 0.58));
+  // Degradado liso entre ondas; el tramado solo aporta ~40 % por encima.
+  vec3 base = mix(uColorC, mix(uColorA, uColorB, smoothstep(0.4, 0.9, v)), smoothstep(0.3, 0.8, v) * 0.45);
+  vec3 tramado = uColorC;
+  tramado = mix(tramado, uColorA, step(umbral, v - 0.3));
+  tramado = mix(tramado, uColorB, step(umbral, v - 0.65));
+  vec3 col = mix(base, tramado, 0.4 * smoothstep(0.35, 0.6, v));
 
   gl_FragColor = vec4(col, 1.0);
 }

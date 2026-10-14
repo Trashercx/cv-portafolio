@@ -54,6 +54,13 @@ export function LienzoShader({
 }: PropsLienzoShader) {
   const canvas = useRef<HTMLCanvasElement>(null)
   const puntero = useRef<{ x: number; y: number } | null>(null)
+  // Los parámetros que cambian desde el panel Fondo (velocidad, intensidad, estático, fps, modo) viajan por
+  // ref: el contexto WebGL se crea una sola vez por montaje y no se recrea al moverlos.
+  const parametros = useRef({ velocidad, intensidad, estatico, maxFps, modo })
+  parametros.current = { velocidad, intensidad, estatico, maxFps, modo }
+  const aplicarParametros = useRef<(() => void) | null>(null)
+  // Cuenta de montajes: distingue el desmontaje real del ciclo simulado de StrictMode al liberar el contexto.
+  const generacion = useRef(0)
 
   usePunteroRelativo(canvas, interactivo, (p) => {
     // El origen del shader está abajo a la izquierda.
@@ -63,9 +70,10 @@ export function LienzoShader({
   useEffect(() => {
     const el = canvas.current
     if (!el) return
+    generacion.current += 1
+    const miGeneracion = generacion.current
     const doc = el.ownerDocument
     const ventana = doc.defaultView ?? window
-    const miniatura = modo === 'miniatura'
 
     let renderer: Renderer | null = null
     try {
@@ -84,24 +92,25 @@ export function LienzoShader({
     if (!gl) return
 
     const sinHover = ventana.matchMedia?.('(hover: none)').matches ?? false
-    let dpr = miniatura ? 1 : Math.min(ventana.devicePixelRatio || 1, DPR_MAXIMO)
-    if (sinHover) dpr = Math.min(dpr, 0.5)
-    renderer.dpr = dpr
-
-    const factor = factorIntensidad(intensidad)
-    const velocidadTiempo = ritmo(velocidad)
+    const calcularDpr = () => {
+      let valor =
+        parametros.current.modo === 'miniatura' ? 1 : Math.min(ventana.devicePixelRatio || 1, DPR_MAXIMO)
+      if (sinHover) valor = Math.min(valor, 0.5)
+      return valor
+    }
+    renderer.dpr = calcularDpr()
 
     let colores = leerColoresTema(el)
     const programa = new Program(gl, {
       vertex: VERTICE_PANTALLA,
       fragment: fragmento,
       uniforms: {
-        uTime: { value: estatico ? TIEMPO_ESTATICO : 0 },
+        uTime: { value: parametros.current.estatico ? TIEMPO_ESTATICO : 0 },
         uResolution: { value: [1, 1] },
         uColorA: { value: aVec3(colores.primario) },
         uColorB: { value: aVec3(colores.secundario) },
         uColorC: { value: aVec3(colores.fondo) },
-        uIntensidad: { value: factor },
+        uIntensidad: { value: factorIntensidad(parametros.current.intensidad) },
         uPuntero: { value: [0.5, 0.5] },
         uClaro: { value: colores.claro ? 1 : 0 },
       },
@@ -111,15 +120,14 @@ export function LienzoShader({
     let activo = true
     let cuadroId = 0
     let visible = true
-    let tiempo = estatico ? TIEMPO_ESTATICO : 0
+    let tiempo = parametros.current.estatico ? TIEMPO_ESTATICO : 0
     let anterior = 0
     let ultimoDibujo = 0
-    const intervalo = 1000 / Math.max(1, maxFps)
     const suave = { x: 0.5, y: 0.5 }
 
     const dibujar = (dt: number) => {
       if (!activo || !renderer) return
-      tiempo += dt * velocidadTiempo
+      tiempo += dt * ritmo(parametros.current.velocidad)
       const objetivo = puntero.current ?? { x: 0.5, y: 0.5 }
       const k = 1 - Math.exp(-5 * dt)
       suave.x += (objetivo.x - suave.x) * k
@@ -145,6 +153,7 @@ export function LienzoShader({
 
     const paso = (ahora: number) => {
       cuadroId = ventana.requestAnimationFrame(paso)
+      const intervalo = 1000 / Math.max(1, parametros.current.maxFps)
       if (ahora - ultimoDibujo < intervalo - 1) return
       const dt = Math.min(0.1, (ahora - (anterior || ahora)) / 1000)
       anterior = ahora
@@ -153,7 +162,7 @@ export function LienzoShader({
     }
 
     const sincronizar = () => {
-      const debeCorrer = !estatico && visible && !doc.hidden
+      const debeCorrer = !parametros.current.estatico && visible && !doc.hidden
       if (debeCorrer && !cuadroId) {
         anterior = 0
         cuadroId = ventana.requestAnimationFrame(paso)
@@ -161,6 +170,16 @@ export function LienzoShader({
         ventana.cancelAnimationFrame(cuadroId)
         cuadroId = 0
       }
+    }
+
+    // Cambios de parámetros sin recrear el contexto: intensidad, DPR (modo), tiempo fijo y bucle.
+    aplicarParametros.current = () => {
+      const p = parametros.current
+      programa.uniforms.uIntensidad.value = factorIntensidad(p.intensidad)
+      if (renderer) renderer.dpr = calcularDpr()
+      if (p.estatico) tiempo = TIEMPO_ESTATICO
+      sincronizar()
+      redimensionar()
     }
 
     redimensionar()
@@ -204,7 +223,7 @@ export function LienzoShader({
         programa.uniforms.uColorB.value = aVec3(colores.secundario)
         programa.uniforms.uColorC.value = aVec3(colores.fondo)
         programa.uniforms.uClaro.value = colores.claro ? 1 : 0
-        if (estatico) dibujar(0)
+        if (parametros.current.estatico) dibujar(0)
       })
     })
     for (let nodo: Element | null = el; nodo; nodo = nodo.parentElement) {
@@ -213,15 +232,32 @@ export function LienzoShader({
 
     return () => {
       activo = false
+      aplicarParametros.current = null
       if (cuadroId) ventana.cancelAnimationFrame(cuadroId)
       observadorTamano?.disconnect()
       observadorVisibilidad?.disconnect()
       observadorTema.disconnect()
       doc.removeEventListener('visibilitychange', sincronizar)
-      // Libera la memoria de GPU y el contexto (el navegador limita los contextos WebGL vivos).
-      renderer?.gl.getExtension('WEBGL_lose_context')?.loseContext()
+      // Libera la memoria de GPU y el contexto (el navegador limita los contextos WebGL vivos), pero solo
+      // si no hubo un montaje nuevo sobre el mismo canvas (StrictMode): un contexto perdido no se recupera.
+      const glFinal = renderer?.gl
+      ventana.setTimeout(() => {
+        if (generacion.current === miGeneracion) glFinal?.getExtension('WEBGL_lose_context')?.loseContext()
+      }, 0)
     }
-  }, [fragmento, velocidad, intensidad, estatico, maxFps, modo])
+    // El fragmento es fijo por componente (cada fondo es un tipo distinto): un solo contexto por montaje.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const primeraAplicacion = useRef(true)
+  useEffect(() => {
+    // El montaje ya parte de los parámetros actuales: solo se aplican los cambios posteriores.
+    if (primeraAplicacion.current) {
+      primeraAplicacion.current = false
+      return
+    }
+    aplicarParametros.current?.()
+  }, [velocidad, intensidad, estatico, maxFps, modo])
 
   return (
     <CapaFondo ambito={ambito}>

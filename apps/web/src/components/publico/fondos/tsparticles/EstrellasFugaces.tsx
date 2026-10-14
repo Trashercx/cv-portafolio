@@ -14,32 +14,39 @@ import type { ConstructorCapas } from './tipos'
 const capas: ConstructorCapas = ({ colores, cantidad, ritmo }) => [
   {
     particulas: {
-      number: { value: cantidad(80) },
+      number: { value: cantidad(190) },
       paint: { color: { value: [colores.primario, colores.secundario] }, fill: { enable: true } },
       shape: { type: 'circle' },
-      size: { value: { min: 0.5, max: 1.7 } },
+      size: { value: { min: 0.8, max: 2.2 } },
       opacity: {
-        value: { min: 0.2, max: 0.95 },
-        animation: { enable: true, speed: 0.5 * ritmo, sync: false, startValue: 'random' },
+        value: { min: 0.1, max: 1 },
+        animation: { enable: true, speed: 0.9 * ritmo, sync: false, startValue: 'random' },
       },
       move: { enable: false },
     },
   },
   {
     particulas: {
-      number: { value: Math.max(2, cantidad(3)) },
+      number: { value: Math.max(3, cantidad(7)) },
       paint: {
         color: { value: colores.primario },
         fill: { enable: false },
         stroke: { width: 1.8, opacity: 0.95 },
       },
       shape: { type: 'line', options: { line: { cap: 'round' } } },
-      size: { value: { min: 28, max: 64 } },
-      opacity: { value: { min: 0.7, max: 1 } },
+      // `size` es el radio de la línea: longitud total de 40 a 120 px.
+      size: { value: { min: 20, max: 60 } },
+      opacity: {
+        // Desvanecimiento: la opacidad sube y baja durante la vida del trazo.
+        value: { min: 0.05, max: 1 },
+        animation: { enable: true, speed: 1.1, sync: false, startValue: 'random' },
+      },
       rotate: { value: 0, path: true, animation: { enable: false } },
       move: {
         enable: true,
         direction: 'bottomRight',
+        // Sin abanico angular: todos los trazos siguen la diagonal, y `rotate.path` orienta la línea con ella.
+        angle: { value: 0, offset: 0 },
         straight: true,
         random: false,
         speed: { min: 14 * ritmo, max: 24 * ritmo },
@@ -47,8 +54,8 @@ const capas: ConstructorCapas = ({ colores, cantidad, ritmo }) => [
       },
       life: {
         count: 0,
-        duration: { value: { min: 0.9, max: 1.6 } },
-        delay: { value: { min: 1.5, max: 6 } },
+        duration: { value: { min: 1.2, max: 2 }, sync: true },
+        delay: { value: { min: 0.3, max: 1.8 } },
       },
     },
   },

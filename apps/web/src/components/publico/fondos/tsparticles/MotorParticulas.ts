@@ -1,15 +1,20 @@
+import { tsParticles, type Engine } from '@tsparticles/engine'
 import { loadSlim } from '@tsparticles/slim'
-import type { ParticlesPluginRegistrar } from '@tsparticles/react'
 
 /**
- * Registro del motor de tsparticles (Fase 7c, UC-15). La versión 4 del
- * wrapper de React ya no expone `initParticlesEngine`: el motor se inicializa
- * con `<ParticlesProvider init={...}>`, que guarda una única promesa a nivel
- * de módulo y la comparte entre todas las instancias (galería con seis
- * miniaturas + vista previa + fondo del sitio = una sola carga de `loadSlim`).
- * El callback debe ser estable (por eso vive aquí, a nivel de módulo): el
- * proveedor lanza un error si cambia entre renders.
+ * Motor compartido de tsparticles (Fase 7c, UC-15). Una sola carga de
+ * `loadSlim` por página (promesa a nivel de módulo): la galería con seis
+ * miniaturas, la vista previa y el fondo del sitio reutilizan el mismo motor.
+ * Si la carga falla, la promesa se descarta para permitir reintentar.
  */
-export const registrarMotorParticulas: ParticlesPluginRegistrar = async (engine) => {
-  await loadSlim(engine)
+let promesaMotor: Promise<Engine> | null = null
+
+export function motorParticulasListo(): Promise<Engine> {
+  promesaMotor ??= loadSlim(tsParticles)
+    .then(() => tsParticles)
+    .catch((error: unknown) => {
+      promesaMotor = null
+      throw error
+    })
+  return promesaMotor
 }

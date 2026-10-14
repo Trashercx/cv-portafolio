@@ -5,7 +5,12 @@ import type { Logro } from '@/features/logros/types'
 import type { Proyecto } from '@/features/proyectos/types'
 import type { Skill } from '@/features/skills/types'
 import type { BordeBloqueBloque } from '@/features/secciones/types'
-import { BORDE_BLOQUE_VARIABLES, CLASES_BORDE_BLOQUE } from '@/lib/escalas-bloque'
+import {
+  BORDE_BLOQUE_VARIABLES,
+  CLASES_BORDE_BLOQUE,
+  CLASES_BORDE_CHIP_CONTORNO,
+  CLASES_BORDE_VIDRIO_BLOQUE,
+} from '@/lib/escalas-bloque'
 import { BloqueCertificaciones } from './bloques/BloqueCertificaciones'
 import { BloqueContacto } from './bloques/BloqueContacto'
 import { BloqueLogros } from './bloques/BloqueLogros'
@@ -106,7 +111,7 @@ describe('EnvoltorioSeccion: variables del contorno (Fase 7c)', () => {
         </EnvoltorioSeccion>,
       )
       const el = document.getElementById(`seccion-f-${fondo}`) as HTMLElement
-      expect(el).toHaveClass(CLASES_BORDE_BLOQUE)
+      expect(el).toHaveClass(fondo === 'vidrio' ? CLASES_BORDE_VIDRIO_BLOQUE : CLASES_BORDE_BLOQUE)
       unmount()
     }
   })
@@ -129,7 +134,9 @@ describe('tarjetas de los bloques: usan CLASES_BORDE_BLOQUE (Fase 7c)', () => {
           />
         </ProveedorDetallePublico>,
       )
-      expect(screen.getByRole('button', { name: 'Portafolio personal' })).toHaveClass(CLASES_BORDE_BLOQUE)
+      expect(screen.getByRole('button', { name: 'Portafolio personal' })).toHaveClass(
+        estilo === 'vidrio' ? CLASES_BORDE_VIDRIO_BLOQUE : CLASES_BORDE_BLOQUE,
+      )
       unmount()
     }
   })
@@ -159,9 +166,20 @@ describe('tarjetas de los bloques: usan CLASES_BORDE_BLOQUE (Fase 7c)', () => {
           skills={SKILLS}
         />,
       )
-      expect(container.querySelector(`[data-chip-skill="${estilo}"]`)).toHaveClass(CLASES_BORDE_BLOQUE)
+      expect(container.querySelector(`[data-chip-skill="${estilo}"]`)).toHaveClass(
+        estilo === 'vidrio' ? CLASES_BORDE_VIDRIO_BLOQUE : CLASES_BORDE_CHIP_CONTORNO,
+      )
       unmount()
     }
+  })
+
+  it('skills: el chip contorno usa grosor x2 y color primario (60 %)', () => {
+    expect(CLASES_BORDE_CHIP_CONTORNO).toContain('calc(var(--ancho-borde,1px)*2)')
+    expect(CLASES_BORDE_CHIP_CONTORNO).toContain('var(--color-primario)_60%')
+  })
+
+  it('vidrio: color del contorno al 50 %', () => {
+    expect(CLASES_BORDE_VIDRIO_BLOQUE).toContain('var(--color-borde,var(--border))_50%')
   })
 
   it('skills: el chip simple no lleva contorno', () => {

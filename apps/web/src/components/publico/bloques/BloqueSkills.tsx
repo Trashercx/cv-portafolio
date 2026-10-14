@@ -4,7 +4,7 @@ import type { Skill } from '@/features/skills/types'
 import type { SkillsConfiguracion } from '@/features/secciones/types'
 import { cn } from '@/lib/utils'
 import { ItemAnimado } from '../ItemAnimado'
-import { CLASES_BORDE_BLOQUE } from '@/lib/escalas-bloque'
+import { CLASES_BORDE_CHIP_CONTORNO, CLASES_BORDE_VIDRIO_BLOQUE } from '@/lib/escalas-bloque'
 
 type BloqueSkillsProps = {
   titulo: string
@@ -70,8 +70,8 @@ const DISPOSICION_LISTA_CLASE: Record<DisposicionEstatica, string> = {
 const ESTILO_CHIP_CLASE: Record<NonNullable<SkillsConfiguracion['estilo_chip']>, string> = {
   simple: 'bg-muted',
   // Fase 7c (UC-12): contorno con las variables del bloque; `contorno` sin borde (`ninguno`) quedaría invisible, es lo esperado.
-  vidrio: `${CLASES_BORDE_BLOQUE} bg-card/60 backdrop-blur-sm`,
-  contorno: `${CLASES_BORDE_BLOQUE} bg-transparent`,
+  vidrio: `${CLASES_BORDE_VIDRIO_BLOQUE} bg-card/60 backdrop-blur-sm`,
+  contorno: `${CLASES_BORDE_CHIP_CONTORNO} bg-transparent`,
 }
 
 /** Nube: tres tamaños de chip repartidos por posición (determinista, sin azar entre renders). */

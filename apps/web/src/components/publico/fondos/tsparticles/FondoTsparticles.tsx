@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
-import { Particles, ParticlesProvider } from '@tsparticles/react'
+import type { Container } from '@tsparticles/engine'
 import { CapaFondo } from '../CapaFondo'
 import {
   analizarColor,
@@ -7,7 +7,7 @@ import {
   oscurecerColor,
   type PropsFondoVisual,
 } from '../utilidades'
-import { registrarMotorParticulas } from './MotorParticulas'
+import { motorParticulasListo } from './MotorParticulas'
 import type {
   CapaParticulas,
   ColoresParticulas,
@@ -67,14 +67,15 @@ function congelar(capa: CapaParticulas): Record<string, unknown> {
 /**
  * Componente común de los fondos con tsparticles (Fase 7c, UC-15). Recibe un
  * constructor de capas y se ocupa de todo lo transversal: motor compartido
- * (`ParticlesProvider` + `loadSlim`, una sola inicialización por página),
+ * (`loadSlim` una sola vez por página, ver `MotorParticulas`),
  * `fpsLimit` por modo (60/30/20), pausa fuera de pantalla y con pestaña oculta,
  * DPR ≤ 1,5 (`detectRetina` solo si el dispositivo no lo supera), colores del
  * tema resueltos con `getComputedStyle`, cantidad escalada por intensidad,
  * modo y área, puntero solo con `interactivo` (modo `sitio`, sin
  * `(hover: none)`) y movimiento reducido (partículas quietas tras el primer
- * cuadro). Las opciones se memorizan: el wrapper recrea el contenedor si el
- * objeto cambia de identidad.
+ * cuadro). Las opciones se memorizan: el efecto recrea los contenedores si
+ * el objeto cambia de identidad (`tsParticles.load` directo sobre el
+ * elemento real, válido también dentro del iframe del lienzo de Puck).
  */
 export function FondoTsparticles({
   velocidad,
@@ -155,20 +156,44 @@ export function FondoTsparticles({
     })
   }, [colores, puntero, ambito, areaVentana, intensidad, miniatura, capas, velocidad, estatico, maxFps])
 
-  return (
-    <CapaFondo ambito={ambito} capaRef={raiz}>
-      {listaOpciones.length > 0 && (
-        <ParticlesProvider init={registrarMotorParticulas}>
-          {listaOpciones.map((opciones, i) => (
-            <Particles
-              key={`${idBase}-${i}`}
-              id={`tsp-${idBase}-${i}`}
-              options={opciones}
-              className="absolute inset-0 size-full"
-            />
-          ))}
-        </ParticlesProvider>
-      )}
-    </CapaFondo>
-  )
+  // Carga cada capa con el motor directamente sobre un `<canvas>` propio dentro de la capa (nada de ids ni
+  // `document` global: el lienzo de Puck vive en un iframe y `getElementById` del admin no lo vería).
+  useEffect(() => {
+    const capa = raiz.current
+    if (!capa || listaOpciones.length === 0) return
+    let cancelado = false
+    const contenedores: Container[] = []
+    // El canvas se crea con el `document` global a propósito: el motor comprueba `instanceof HTMLElement`
+    // contra la ventana principal, y un elemento nacido en el iframe del editor no lo cumpliría. Un nodo
+    // creado aquí y añadido a la capa del iframe se adopta solo y se dibuja con normalidad.
+    const lienzos = listaOpciones.map((_, i) => {
+      const lienzo = document.createElement('canvas')
+      lienzo.id = `tsp-${idBase}-${i}`
+      lienzo.className = 'absolute inset-0 size-full'
+      capa.appendChild(lienzo)
+      return lienzo
+    })
+
+    void motorParticulasListo()
+      .then(async (motor) => {
+        for (const [i, opciones] of listaOpciones.entries()) {
+          if (cancelado) return
+          const contenedor = await motor.load({ element: lienzos[i], options: opciones })
+          if (!contenedor) continue
+          if (cancelado) contenedor.destroy()
+          else contenedores.push(contenedor)
+        }
+      })
+      .catch(() => {
+        // Sin motor no se pinta nada: queda el `--color-fondo` de la capa.
+      })
+
+    return () => {
+      cancelado = true
+      for (const contenedor of contenedores) contenedor.destroy()
+      for (const lienzo of lienzos) lienzo.remove()
+    }
+  }, [listaOpciones, idBase])
+
+  return <CapaFondo ambito={ambito} capaRef={raiz}>{null}</CapaFondo>
 }

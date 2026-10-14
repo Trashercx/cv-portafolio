@@ -65,6 +65,20 @@ export const BORDE_BLOQUE_VARIABLES: Record<BordeBloqueBloque, Record<'--ancho-b
 export const CLASES_BORDE_BLOQUE =
   'border-[length:var(--ancho-borde,1px)] border-[color:var(--color-borde,var(--border))]'
 
+/**
+ * Contorno de las superficies de vidrio: mismo grosor variable, pero el color
+ * (`--color-borde`) al 50 % para conservar el aspecto translúcido previo a 7c.
+ */
+export const CLASES_BORDE_VIDRIO_BLOQUE =
+  'border-[length:var(--ancho-borde,1px)] border-[color:color-mix(in_oklab,var(--color-borde,var(--border))_50%,transparent)]'
+
+/**
+ * Chip `contorno` de skills: grosor doble del contorno del bloque (2 px con
+ * `sutil`, como antes de 7c; `ninguno` lo quita) y color primario al 60 %.
+ */
+export const CLASES_BORDE_CHIP_CONTORNO =
+  'border-[length:calc(var(--ancho-borde,1px)*2)] border-[color:color-mix(in_oklab,var(--color-primario)_60%,transparent)]'
+
 /** Solo el borde inferior (barra de navegación de ancho completo). */
 export const CLASES_BORDE_INFERIOR_BLOQUE =
   'border-b-[length:var(--ancho-borde,1px)] border-b-[color:var(--color-borde,var(--border))]'
@@ -90,7 +104,7 @@ export const FONDO_BLOQUE_CLASE: Record<FondoBloqueBloque, string> = {
   // sobre el fondo del tema, y vidrio (tarjeta translúcida con desenfoque).
   degradado:
     'bg-linear-to-br from-[var(--color-primario)]/12 to-[var(--color-secundario)]/12',
-  vidrio: `bg-card/60 backdrop-blur ${CLASES_BORDE_BLOQUE} rounded-2xl`,
+  vidrio: `bg-card/60 backdrop-blur ${CLASES_BORDE_VIDRIO_BLOQUE} rounded-2xl`,
 }
 
 /**

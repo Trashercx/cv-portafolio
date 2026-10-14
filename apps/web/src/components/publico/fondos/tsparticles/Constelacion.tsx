@@ -11,7 +11,7 @@ import type { ConstructorCapas } from './tipos'
 const capas: ConstructorCapas = ({ colores, cantidad, ritmo }) => [
   {
     particulas: {
-      number: { value: cantidad(64) },
+      number: { value: cantidad(100) },
       paint: { color: { value: colores.primario }, fill: { enable: true } },
       shape: { type: 'circle' },
       opacity: { value: { min: 0.5, max: 0.95 } },
@@ -26,9 +26,9 @@ const capas: ConstructorCapas = ({ colores, cantidad, ritmo }) => [
       },
       links: {
         enable: true,
-        distance: 135,
+        distance: 140,
         color: { value: colores.secundario },
-        opacity: colores.claro ? 0.7 : 0.45,
+        opacity: colores.claro ? 0.5 : 0.35,
         width: 1,
       },
     },

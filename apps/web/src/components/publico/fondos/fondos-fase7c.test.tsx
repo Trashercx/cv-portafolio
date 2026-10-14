@@ -2,14 +2,13 @@ import { act, render, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CATALOGO_FONDOS, type TipoFondo } from '@/features/fondo-sitio/catalogo-fondos'
 import { registroOgl } from '@/test/mocks/ogl'
-import { registroParticulas } from '@/test/mocks/tsparticles-react'
+import { registroParticulas } from '@/test/mocks/tsparticles-engine'
 import { FondoAnimado, type ModoFondo } from '../FondoAnimado'
 import { FRAGMENTO_AURORA } from './ogl/shaders/aurora.glsl'
 import { FRAGMENTO_LIQUIDO } from './ogl/shaders/liquido.glsl'
 import { FRAGMENTO_ONDAS_DITHER } from './ogl/shaders/ondas-dither.glsl'
 import { FRAGMENTO_PLASMA } from './ogl/shaders/plasma.glsl'
 import { FRAGMENTO_SEDA } from './ogl/shaders/seda.glsl'
-import { registrarMotorParticulas } from './tsparticles/MotorParticulas'
 
 /**
  * Fase 7c (UC-15): los 11 fondos nuevos (6 con tsparticles, 5 shaders con
@@ -46,7 +45,9 @@ function montar(
   return render(<FondoAnimado fondo={{ tipo, configuracion }} modo={modo} />)
 }
 
-beforeEach(() => {
+beforeEach(async () => {
+  // El desmontaje del test anterior libera el contexto con un setTimeout(0): se deja pasar antes de reiniciar.
+  await new Promise((resolver) => setTimeout(resolver, 5))
   registroParticulas.reiniciar()
   registroOgl.reiniciar()
 })
@@ -71,12 +72,16 @@ describe.each(TSPARTICLES)('fondo tsparticles %s', (tipo) => {
   it('monta con el motor compartido y desmonta sin fugas', async () => {
     const { container, unmount } = montar(tipo)
     await waitFor(() => expect(registroParticulas.montadas).toBeGreaterThan(0))
-    expect(container.querySelector('[data-testid="particulas-mock"]')).not.toBeNull()
-    // Siempre el mismo registrador estable (el proveedor guarda una única promesa).
-    expect(registroParticulas.inits.every((init) => init === registrarMotorParticulas)).toBe(true)
+    // `load` recibe el elemento real, ya dentro del nodo renderizado (no un id global).
+    expect(registroParticulas.elementos.length).toBeGreaterThan(0)
+    for (const el of registroParticulas.elementos) {
+      expect(el).toBeInstanceOf(HTMLCanvasElement)
+      expect(container.contains(el as Node)).toBe(true)
+    }
 
     unmount()
-    expect(registroParticulas.desmontadas).toBe(registroParticulas.montadas)
+    await waitFor(() => expect(registroParticulas.desmontadas).toBe(registroParticulas.montadas))
+    expect(registroParticulas.destroy).toHaveBeenCalled()
   })
 
   it('en el sitio activa el puntero y fija los fps y la pausa fuera de pantalla', async () => {
@@ -202,7 +207,27 @@ describe.each(OGL)('fondo ogl %s', (tipo) => {
     }
     expect(registroOgl.loseContext).not.toHaveBeenCalled()
     unmount()
-    expect(registroOgl.loseContext).toHaveBeenCalledTimes(1)
+    await waitFor(() => expect(registroOgl.loseContext).toHaveBeenCalledTimes(1))
+  })
+
+  it('cambiar velocidad o intensidad no recrea el contexto (un solo Renderer); desmontar lo libera una vez', async () => {
+    simularMedia(() => false)
+    const montado = (velocidad: 'lenta' | 'media' | 'rapida', intensidad: 'sutil' | 'media' | 'alta') => (
+      <FondoAnimado
+        fondo={{ tipo, configuracion: { ...CONFIG, velocidad, intensidad } }}
+        modo="sitio"
+      />
+    )
+    const { rerender, unmount } = render(montado('media', 'media'))
+    await waitFor(() => expect(registroOgl.renderers).toHaveLength(1))
+    rerender(montado('rapida', 'media'))
+    rerender(montado('rapida', 'alta'))
+    await act(async () => {})
+    expect(registroOgl.renderers).toHaveLength(1)
+    expect(registroOgl.programas).toHaveLength(1)
+    expect(registroOgl.loseContext).not.toHaveBeenCalled()
+    unmount()
+    await waitFor(() => expect(registroOgl.loseContext).toHaveBeenCalledTimes(1))
   })
 
   it('en miniatura usa DPR 1; con (hover: none) renderiza a media resolución', async () => {
