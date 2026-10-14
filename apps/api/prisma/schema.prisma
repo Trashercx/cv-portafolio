@@ -33,6 +33,8 @@ model UsuarioAdmin {
   medias          Media[]
   proyectos       Proyecto[]
   certificaciones Certificacion[]
+  /// Fase 7d, UC-35
+  insignias       Insignia[]
   logros          Logro[]
   redes_sociales  RedSocial[]
   secciones       Seccion[]
@@ -82,6 +84,8 @@ model Media {
   certificaciones   Certificacion[]  @relation("CertificacionLogo")
   proyecto_imagenes ProyectoImagen[]
   variantes         MediaVariante[]
+  /// Fase 7d, UC-35
+  insignias         Insignia[]       @relation("InsigniaImagen")
 
   @@map("media")
 }
@@ -339,4 +343,34 @@ model VersionSitio {
 
   @@index([usuario_admin_id, estado, publicado_en])
   @@map("version_sitio")
+}
+
+/// Badges importados de Credly/Open Badges u otros (Fase 7d, UC-35).
+/// Independiente de Certificacion: la insignia es la imagen oficial emitida por un tercero.
+model Insignia {
+  id               String    @id @default(uuid()) @db.Uuid
+  usuario_admin_id String    @db.Uuid
+  nombre           String
+  emisor           String
+  descripcion      String?   @db.Text
+  /// credly | open_badges | generico | manual
+  proveedor        String
+  id_externo       String?
+  url_verificacion String?
+  url_origen       String?
+  imagen_media_id  String    @db.Uuid
+  fecha_emision    DateTime? @db.Date
+  fecha_expiracion DateTime? @db.Date
+  /// Etiquetas planas: array nativo de Postgres, no JSONB.
+  habilidades      String[]  @default([])
+  orden            Int
+  visible          Boolean   @default(true)
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+
+  usuario_admin UsuarioAdmin @relation(fields: [usuario_admin_id], references: [id])
+  imagen        Media        @relation("InsigniaImagen", fields: [imagen_media_id], references: [id], onDelete: Restrict)
+
+  @@index([usuario_admin_id, orden])
+  @@map("insignia")
 }
