@@ -113,12 +113,6 @@ server {
     try_files $uri $uri/ /index.html;
   }
 
-  # Los archivos con hash en el nombre (los que genera `vite build` para
-  # JS/CSS/assets) son inmutables: un cambio de contenido siempre produce
-  # un nombre de archivo distinto, así que se pueden cachear de forma
-  # agresiva sin riesgo de servir una versión vieja.
-  # (Fase 6: antes había `expires 30d` + `add_header Cache-Control`, que
-  # emitían dos cabeceras Cache-Control; ahora una sola con el max-age.)
   # Fase 7e (UC-35): nginx 1.31 no incluye `mjs` en mime.types y lo serviría
   # como application/octet-stream; el worker de pdfjs-dist es un módulo ES
   # (.mjs) y el navegador exige un MIME de JavaScript para módulos y workers.
@@ -132,6 +126,12 @@ server {
     include /etc/nginx/snippets/cabeceras-seguridad.conf;
   }
 
+  # Los archivos con hash en el nombre (los que genera `vite build` para
+  # JS/CSS/assets) son inmutables: un cambio de contenido siempre produce
+  # un nombre de archivo distinto, así que se pueden cachear de forma
+  # agresiva sin riesgo de servir una versión vieja.
+  # (Fase 6: antes había `expires 30d` + `add_header Cache-Control`, que
+  # emitían dos cabeceras Cache-Control; ahora una sola con el max-age.)
   location ~* \.(?:js|mjs|css|svg|png|jpg|jpeg|gif|ico|webp|avif|woff2?)$ {
     access_log off;
     add_header Cache-Control "public, max-age=2592000, immutable";

@@ -13,6 +13,10 @@ export type OpcionesPdfAImagen = {
   anchoMinimo?: number
 }
 
+/** Topes del lienzo (Fase 7e): un MediaBox enorme no debe agotar la memoria del navegador. */
+const LADO_MAXIMO_PX = 4000
+const AREA_MAXIMA_PX = 16_000_000
+
 export type ImagenDePdf = { blob: Blob; ancho: number; alto: number }
 
 export async function pdfAImagenPng(
@@ -25,16 +29,23 @@ export async function pdfAImagenPng(
   ])
   pdfjs.GlobalWorkerOptions.workerSrc = urlWorker
 
-  const documento = await pdfjs.getDocument({ data: await file.arrayBuffer() }).promise
+  const documento = await pdfjs.getDocument({ data: await file.arrayBuffer(), isEvalSupported: false }).promise
   try {
     const pagina = await documento.getPage(1)
     const base = pagina.getViewport({ scale: 1 })
-    const escalaFinal = Math.max(escala, anchoMinimo / base.width)
+    const escalaDeseada = Math.max(escala, anchoMinimo / base.width)
+    // Se reduce la escala si el resultado pasaría de 4000 px por lado o de 16 MP.
+    const escalaMaxima = Math.min(
+      LADO_MAXIMO_PX / Math.max(base.width, base.height),
+      Math.sqrt(AREA_MAXIMA_PX / (base.width * base.height)),
+    )
+    const escalaFinal =
+      escalaDeseada > escalaMaxima ? escalaMaxima * 0.999 : escalaDeseada
     const viewport = pagina.getViewport({ scale: escalaFinal })
 
     const canvas = document.createElement('canvas')
-    canvas.width = Math.ceil(viewport.width)
-    canvas.height = Math.ceil(viewport.height)
+    canvas.width = Math.min(Math.ceil(viewport.width), LADO_MAXIMO_PX)
+    canvas.height = Math.min(Math.ceil(viewport.height), LADO_MAXIMO_PX)
     const contexto = canvas.getContext('2d')
     if (!contexto) throw new Error('No se pudo preparar el lienzo para convertir el PDF.')
 

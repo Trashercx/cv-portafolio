@@ -18,6 +18,7 @@ vi.mock('./useInsignias', () => ({
 
 // Fase 7e: proveedores reconocidos, subida del PDF original y conversión PDF → PNG.
 const subirMutate = vi.fn()
+let carpetasMock: { id: string; nombre: string }[] = []
 const pdfAImagenPngMock = vi.fn()
 
 vi.mock('./useProveedoresInsignia', () => ({
@@ -30,7 +31,11 @@ vi.mock('./useProveedoresInsignia', () => ({
 }))
 
 vi.mock('@/features/media/useUploadMedia', () => ({
-  useUploadMedia: () => ({ mutate: subirMutate, reset: vi.fn(), isPending: false, error: null }),
+  useUploadMedia: () => ({ mutateAsync: subirMutate, reset: vi.fn(), isPending: false, error: null }),
+}))
+
+vi.mock('@/features/media/useCarpetasMedia', () => ({
+  useCarpetasMedia: () => ({ data: carpetasMock }),
 }))
 
 vi.mock('./pdf-a-imagen', () => ({
@@ -75,6 +80,7 @@ describe('ImportarInsigniaDialog (Fase 7d, UC-35)', () => {
     archivoMutate.mockReset()
     crearMutate.mockReset()
     subirMutate.mockReset()
+    carpetasMock = []
     pdfAImagenPngMock.mockReset()
   })
 
@@ -242,9 +248,8 @@ describe('ImportarInsigniaDialog (Fase 7d, UC-35)', () => {
     archivoMutate.mockImplementation((_f: File, o: { onSuccess: (v: VistaPreviaInsignia) => void }) =>
       o.onSuccess({ ...VISTA_CREDLY, nombre: '', url_origen: null, imagen_media_id: 'media-pdf', avisos: [] }),
     )
-    subirMutate.mockImplementation((_p: unknown, o: { onSuccess: (m: { url: string }) => void }) =>
-      o.onSuccess({ url: 'https://cdn.example.com/certificado.pdf' }),
-    )
+    subirMutate.mockResolvedValue({ url: 'https://cdn.example.com/certificado.pdf' })
+    carpetasMock = [{ id: 'c-cert', nombre: 'CERTIFICADOS' }]
     const { user } = renderDialog()
 
     await user.click(screen.getByRole('tab', { name: 'Subir archivo' }))
@@ -256,17 +261,41 @@ describe('ImportarInsigniaDialog (Fase 7d, UC-35)', () => {
     const enviado = archivoMutate.mock.calls[0][0] as File
     expect(enviado.name).toBe('Mi Certificado.png')
     expect(enviado.type).toBe('image/png')
-    expect(subirMutate.mock.calls[0][0]).toMatchObject({ file: pdf, carpeta: 'certificaciones' })
+    // El PDF no se sube al elegirlo, solo al confirmar.
+    expect(subirMutate).not.toHaveBeenCalled()
 
     // Nombre sugerido: el del archivo sin extensión.
     expect(await screen.findByDisplayValue('Mi Certificado')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Guardar' }))
 
     await waitFor(() => expect(crearMutate).toHaveBeenCalledTimes(1))
+    expect(subirMutate).toHaveBeenCalledTimes(1)
+    expect(subirMutate.mock.calls[0][0]).toEqual({ file: pdf, carpeta_id: 'c-cert' })
     expect(crearMutate.mock.calls[0][0]).toMatchObject({
       imagen_media_id: 'media-pdf',
       url_origen: 'https://cdn.example.com/certificado.pdf',
     })
+  })
+
+  it('Fase 7e: si falla la subida del PDF original muestra el error y no crea la insignia', async () => {
+    URL.createObjectURL = vi.fn(() => 'blob:previa')
+    URL.revokeObjectURL = vi.fn()
+    pdfAImagenPngMock.mockResolvedValue({ blob: new Blob(['png'], { type: 'image/png' }), ancho: 1600, alto: 1130 })
+    archivoMutate.mockImplementation((_f: File, o: { onSuccess: (v: VistaPreviaInsignia) => void }) =>
+      o.onSuccess({ ...VISTA_CREDLY, nombre: '', url_origen: null, imagen_media_id: 'media-pdf', avisos: [] }),
+    )
+    subirMutate.mockRejectedValue(new Error('fallo'))
+    const { user } = renderDialog()
+
+    await user.click(screen.getByRole('tab', { name: 'Subir archivo' }))
+    await user.upload(
+      screen.getByLabelText(/Archivo PNG, SVG o PDF/),
+      new File(['%PDF'], 'Mi Certificado.pdf', { type: 'application/pdf' }),
+    )
+    await user.click(await screen.findByRole('button', { name: 'Guardar' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('No se pudo guardar el PDF original')
+    expect(crearMutate).not.toHaveBeenCalled()
   })
 
   it('Fase 7e: muestra "Convirtiendo…" mientras se renderiza el PDF y avisa si falla', async () => {

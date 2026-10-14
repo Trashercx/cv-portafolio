@@ -51,6 +51,26 @@ describe('pdfAImagenPng (Fase 7e)', () => {
     expect(resultado.ancho).toBe(Math.ceil(595 * 4))
   })
 
+  it('desactiva eval en pdfjs y acota el lienzo de un PDF con MediaBox enorme', async () => {
+    getViewport.mockImplementation(({ scale }: { scale: number }) => ({
+      width: 20000 * scale,
+      height: 15000 * scale,
+    }))
+    const archivo = new File(['%PDF'], 'enorme.pdf', { type: 'application/pdf' })
+    archivo.arrayBuffer = async () => new ArrayBuffer(4)
+
+    const resultado = await pdfAImagenPng(archivo)
+
+    expect(getDocument).toHaveBeenCalledWith(expect.objectContaining({ isEvalSupported: false }))
+    expect(resultado.ancho).toBeLessThanOrEqual(4000)
+    expect(resultado.alto).toBeLessThanOrEqual(4000)
+    expect(resultado.ancho * resultado.alto).toBeLessThanOrEqual(16_000_000)
+    getViewport.mockImplementation(({ scale }: { scale: number }) => ({
+      width: 595 * scale,
+      height: 842 * scale,
+    }))
+  })
+
   it('falla con un mensaje claro si no hay contexto 2D', async () => {
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null)
     const archivo = new File(['%PDF'], 'cert.pdf', { type: 'application/pdf' })

@@ -116,7 +116,7 @@ function NombreCarpetaDialog({
             <Input
               id="nombre-carpeta"
               autoFocus
-              maxLength={80}
+              maxLength={60}
               aria-invalid={errors.nombre ? true : undefined}
               {...register('nombre')}
             />
@@ -202,7 +202,13 @@ export function BarraCarpetas({
       } catch {
         return
       }
-      if (!Array.isArray(ids) || ids.length === 0) return
+      if (
+        !Array.isArray(ids) ||
+        ids.length === 0 ||
+        !ids.every((id) => typeof id === 'string' && id.length > 0)
+      ) {
+        return
+      }
       mover.mutate(
         { ids: ids as string[], carpeta_id: valor === 'ninguna' ? null : valor },
         { onSuccess: () => onMovidos?.() },

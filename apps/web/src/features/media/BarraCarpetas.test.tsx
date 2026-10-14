@@ -232,4 +232,15 @@ describe('BarraCarpetas (UC-09, Fase 7e)', () => {
     })
     expect(llamadas('POST', '/admin/media/mover')).toHaveLength(0)
   })
+
+  it('ignora un arrastre cuyos ids no son todos cadenas no vacías', () => {
+    renderBarra()
+    const destino = screen.getByRole('button', { name: /^Imágenes/ }).parentElement as HTMLElement
+    for (const ids of [[1, 2], ['m1', ''], ['m1', null], [{ id: 'm1' }]]) {
+      fireEvent.drop(destino, {
+        dataTransfer: { types: ['application/x-media-ids'], getData: () => JSON.stringify(ids) },
+      })
+    }
+    expect(llamadas('POST', '/admin/media/mover')).toHaveLength(0)
+  })
 })
