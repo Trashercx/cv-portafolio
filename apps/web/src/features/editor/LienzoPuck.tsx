@@ -6,13 +6,16 @@ import {
   type PuckAction,
   type UiState,
 } from '@puckeditor/core'
+import { Eye, EyeOff } from 'lucide-react'
 import { createContext, useContext, useEffect, type ReactNode } from 'react'
+import { Button } from '@/components/ui/button'
 import { puckConfig, type PuckSeccionesComponents } from '@/lib/puck-config'
 import { useEditorPanelStore } from '@/store/editor-panel-store'
 import type { MetadataEditor } from './useDatosEditor'
 import { PUCK_DICCIONARIO } from './puck-diccionario'
 import { PUCK_UI_INICIAL, PUCK_VIEWPORTS } from './puck-viewports'
 import { PLUGINS_EDITOR } from './plugins-editor'
+import { esAtajoVistaLimpia } from './atajos'
 import { usePuckEditor } from './usePuckEditor'
 
 type EditorData = Data<PuckSeccionesComponents>
@@ -86,6 +89,47 @@ function SincronizadorPlugin() {
 }
 
 /**
+ * Traduce `vistaLimpia` (store) a `ui.previewMode` de Puck 0.23 (Fase 7c,
+ * UC-07): activa = `'interactive'` (sin overlays ni recuadros al pasar el
+ * puntero o seleccionar), desactiva = `'edit'`. Solo despacha si el modo
+ * actual difiere, y también tras un remount de `<Puck>` (que arranca en
+ * `'edit'`) para recuperar el estado. Vive dentro del header porque necesita
+ * el contexto de Puck.
+ */
+function SincronizadorVistaLimpia() {
+  const vistaLimpia = useEditorPanelStore((state) => state.vistaLimpia)
+  const dispatch = usePuckEditor((state) => state.dispatch)
+  const previewMode = usePuckEditor((state) => state.appState.ui.previewMode)
+  useEffect(() => {
+    const deseado = vistaLimpia ? 'interactive' : 'edit'
+    if (previewMode !== deseado) {
+      dispatch({ type: 'setUi', ui: { previewMode: deseado } })
+    }
+  }, [vistaLimpia, previewMode, dispatch])
+  return null
+}
+
+/** Botón-toggle "Vista limpia" del toolbar (Fase 7c, UC-07). */
+function BotonVistaLimpia() {
+  const vistaLimpia = useEditorPanelStore((state) => state.vistaLimpia)
+  const alternar = useEditorPanelStore((state) => state.alternarVistaLimpia)
+  const Icono = vistaLimpia ? EyeOff : Eye
+  return (
+    <Button
+      type="button"
+      variant={vistaLimpia ? 'secondary' : 'outline'}
+      size="sm"
+      aria-pressed={vistaLimpia}
+      title="Vista limpia: ver el sitio sin recuadros del editor (Ctrl+Shift+L)"
+      onClick={alternar}
+    >
+      <Icono className="size-4" aria-hidden="true" />
+      Vista limpia
+    </Button>
+  )
+}
+
+/**
  * `overrides.headerActions` (Fase 7, UC-07): reemplaza los `children` por
  * defecto de Puck (su botón "Publicar", que aquí sería ambiguo con el
  * "Publicar" real de UC-11) por el toolbar propio, que ya incluye "Guardar
@@ -96,6 +140,8 @@ function AccionesCabecera() {
   return (
     <>
       <SincronizadorPlugin />
+      <SincronizadorVistaLimpia />
+      <BotonVistaLimpia />
       {toolbar}
     </>
   )
@@ -115,6 +161,15 @@ function CamposBloque({
   children: ReactNode
   itemSelector?: unknown
 }) {
+  // Fase 7c (UC-07): con Vista limpia no hay selección posible en el lienzo.
+  const vistaLimpia = useEditorPanelStore((state) => state.vistaLimpia)
+  if (vistaLimpia) {
+    return (
+      <p role="status" className="p-4 text-sm text-muted-foreground">
+        Vista limpia: desactívala para seleccionar bloques
+      </p>
+    )
+  }
   if (!itemSelector) {
     return (
       <p className="p-4 text-sm text-muted-foreground">
@@ -155,6 +210,21 @@ export function LienzoPuck({
 }: LienzoPuckProps) {
   // Se lee en render (no con hook reactivo): solo importa el valor al montar
   // `<Puck>` (`?panel=` o plugin previo antes de un remount por guardado).
+  // Vista limpia (Fase 7c, UC-07): atajo `Ctrl/Cmd+Shift+L` con el foco en el
+  // panel (dentro del iframe lo captura `PuckRoot`) y apagado al salir del editor.
+  useEffect(() => {
+    const alPresionar = (event: KeyboardEvent) => {
+      if (!esAtajoVistaLimpia(event)) return
+      event.preventDefault()
+      useEditorPanelStore.getState().alternarVistaLimpia()
+    }
+    document.addEventListener('keydown', alPresionar)
+    return () => {
+      document.removeEventListener('keydown', alPresionar)
+      useEditorPanelStore.getState().setVistaLimpia(false)
+    }
+  }, [])
+
   const { pluginActivo: pluginInicial, viewportActual } =
     useEditorPanelStore.getState()
   const uiInicial: Partial<UiState> = {

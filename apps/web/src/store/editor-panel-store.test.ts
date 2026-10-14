@@ -92,3 +92,15 @@ describe('editor-panel-store (Fase 7, UC-08)', () => {
     expect(useEditorPanelStore.getState().fondoEnEdicion).toBeNull()
   })
 })
+
+describe('vistaLimpia (Fase 7c, UC-07)', () => {
+  it('parte en false, alterna y no se persiste en localStorage', () => {
+    useEditorPanelStore.setState({ vistaLimpia: false })
+    expect(useEditorPanelStore.getState().vistaLimpia).toBe(false)
+    useEditorPanelStore.getState().alternarVistaLimpia()
+    expect(useEditorPanelStore.getState().vistaLimpia).toBe(true)
+    useEditorPanelStore.getState().setVistaLimpia(false)
+    expect(useEditorPanelStore.getState().vistaLimpia).toBe(false)
+    expect(Object.keys(window.localStorage)).not.toContain('vistaLimpia')
+  })
+})

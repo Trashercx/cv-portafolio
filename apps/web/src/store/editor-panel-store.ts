@@ -72,6 +72,17 @@ type EditorPanelState = {
    */
   modoVistaPrevia: ModoVistaPrevia
   setModoVistaPrevia: (modo: ModoVistaPrevia) => void
+  /**
+   * "Vista limpia" (Fase 7c, UC-07): `true` = el lienzo se ve como el sitio
+   * publicado (Puck en `ui.previewMode = 'interactive'`, sin overlays ni
+   * recuadros, y las secciones ocultas no se pintan). NO persistido:
+   * `LienzoPuck` lo vuelve a `false` al desmontarse (cambio de ruta). La
+   * traducción a `previewMode` la hace `SincronizadorVistaLimpia`, que vive
+   * dentro del contexto de Puck.
+   */
+  vistaLimpia: boolean
+  setVistaLimpia: (activa: boolean) => void
+  alternarVistaLimpia: () => void
 }
 
 export const useEditorPanelStore = create<EditorPanelState>((set) => ({
@@ -92,4 +103,7 @@ export const useEditorPanelStore = create<EditorPanelState>((set) => ({
     guardarModoVistaPrevia(modoVistaPrevia)
     set({ modoVistaPrevia })
   },
+  vistaLimpia: false,
+  setVistaLimpia: (vistaLimpia) => set({ vistaLimpia }),
+  alternarVistaLimpia: () => set((estado) => ({ vistaLimpia: !estado.vistaLimpia })),
 }))

@@ -1,7 +1,10 @@
 import { useEffect, useRef, type MouseEvent, type ReactNode } from 'react'
 import type { PuckContext } from '@puckeditor/core'
 import { FondoAnimado } from '@/components/publico/FondoAnimado'
-import { ProveedorModoRenderizado } from '@/components/publico/contexto-renderizado'
+import {
+  ProveedorModoRenderizado,
+  ProveedorVistaLimpia,
+} from '@/components/publico/contexto-renderizado'
 import { ProveedorMotion } from '@/components/publico/ProveedorMotion'
 import { useTheme } from '@/components/theme/ThemeProvider'
 import { temaComoVariablesCss } from '@/lib/tema-css'
@@ -10,6 +13,7 @@ import { cn } from '@/lib/utils'
 import { useFuenteTema } from '@/features/tema/useFuenteTema'
 import { useEditorPanelStore } from '@/store/editor-panel-store'
 import { useEditorSeccionesStore } from '@/store/editor-secciones-store'
+import { esAtajoVistaLimpia } from './atajos'
 import { leerMetadata } from './useDatosEditor'
 
 /**
@@ -77,6 +81,8 @@ export function PuckRoot({ children, puck }: PuckRootProps) {
   // Fase 7b (UC-15): el fondo que se está ajustando en el panel Fondo (sin guardar) manda sobre el guardado.
   const fondoEnEdicion = useEditorPanelStore((state) => state.fondoEnEdicion)
   const fondo = fondoEnEdicion ?? datos.fondo
+  // Fase 7c (UC-07): en Vista limpia las secciones ocultas no se pintan (como en el sitio).
+  const vistaLimpia = useEditorPanelStore((state) => state.vistaLimpia)
   const modo: ModoTema = modoVistaPrevia ?? modoDelPanel
   // Fase 7 (UC-08): fuente variable del tema, bajo demanda.
   useFuenteTema(datos.tema?.fuente_principal)
@@ -117,6 +123,10 @@ export function PuckRoot({ children, puck }: PuckRootProps) {
       if (event.key.toLowerCase() === 's' && (event.ctrlKey || event.metaKey)) {
         event.preventDefault()
         useEditorSeccionesStore.getState().accionGuardar?.()
+      } else if (esAtajoVistaLimpia(event)) {
+        // Fase 7c (UC-07): mismo atajo que en el panel, con el foco dentro del iframe.
+        event.preventDefault()
+        useEditorPanelStore.getState().alternarVistaLimpia()
       }
     }
     doc.addEventListener('keydown', alPresionar)
@@ -141,7 +151,9 @@ export function PuckRoot({ children, puck }: PuckRootProps) {
       <div className="relative z-10">
         <ProveedorModoRenderizado modo="editor">
           {/* Fase 7 (7.3): `motion` para el hover `inclinar`; las animaciones de entrada están apagadas en modo editor. */}
-          <ProveedorMotion>{children}</ProveedorMotion>
+          <ProveedorMotion>
+            <ProveedorVistaLimpia activa={vistaLimpia}>{children}</ProveedorVistaLimpia>
+          </ProveedorMotion>
         </ProveedorModoRenderizado>
       </div>
     </div>

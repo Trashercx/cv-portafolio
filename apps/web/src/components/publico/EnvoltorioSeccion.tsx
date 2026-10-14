@@ -8,6 +8,7 @@ import {
   SEPARADOR_RELLENO_CLASE,
 } from '@/lib/escalas-bloque'
 import { VARIANTES_ENTRADA, VIEWPORT_ENTRADA, useAnimacionesActivas } from '@/lib/animaciones'
+import { useVistaLimpia } from './contexto-renderizado'
 import { anclaSeccion } from '@/lib/navegacion'
 import { cn } from '@/lib/utils'
 import type {
@@ -76,6 +77,7 @@ export function EnvoltorioSeccion({
   separador_forma,
   children,
 }: EnvoltorioSeccionProps) {
+  const vistaLimpia = useVistaLimpia()
   const forma = separador_forma ?? 'ninguno'
   // Con una forma decorativa al pie, la línea recta del borde sobraría.
   const separador = (separador_inferior ?? true) && forma === 'ninguno'
@@ -85,6 +87,9 @@ export function EnvoltorioSeccion({
   // opacidad inline la pisaría, así que solo se anima lo visible.
   const variante =
     animacionActiva && visible && entrada !== 'ninguna' ? VARIANTES_ENTRADA[entrada] : null
+
+  // Vista limpia (Fase 7c, UC-07): lo oculto desaparece del todo, como en el sitio público.
+  if (!visible && vistaLimpia) return null
 
   return (
     <m.section
