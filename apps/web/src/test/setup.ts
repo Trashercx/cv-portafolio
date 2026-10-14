@@ -70,3 +70,4 @@ if (typeof window !== 'undefined') {
 vi.mock('@tsparticles/engine', () => import('./mocks/tsparticles-engine'))
 vi.mock('@tsparticles/slim', () => import('./mocks/tsparticles-slim'))
 vi.mock('ogl', () => import('./mocks/ogl'))
+vi.mock('heic-to/csp', () => import('./mocks/heic-to'))
