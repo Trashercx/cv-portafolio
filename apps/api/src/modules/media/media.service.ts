@@ -4,10 +4,13 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '../../../generated/prisma/client';
 import { sharp } from './sharp';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateMediaDto } from './dto/create-media.dto';
 import { ListarMediaQueryDto } from './dto/listar-media-query.dto';
+import { EliminarLoteDto } from './dto/eliminar-lote.dto';
+import { MediaUsosService } from './media-usos.service';
 import { UpdateMediaDto } from './dto/update-media.dto';
 import { INCLUDE_MEDIA_CON_VARIANTES } from './media.select';
 import {
@@ -33,6 +36,7 @@ export class MediaService {
     @Inject(MEDIA_STORAGE_SERVICE)
     private readonly storage: MediaStorageService,
     private readonly variantes: VariantesImagenService,
+    private readonly usos: MediaUsosService,
   ) {}
 
   async create(
@@ -69,11 +73,34 @@ export class MediaService {
   // UC-09: biblioteca multimedia completa
   // ---------------------------------------------------------------------
 
-  /** `GET /admin/media`: lista completa, con filtro opcional por `tipo`. */
+  /**
+   * `GET /admin/media`: lista con filtro `tipo`, búsqueda `q` y `orden`
+   * (Fase 7d). `q` busca sin distinguir mayúsculas en `alt_text` y en
+   * `s3_key`. Matiz: para `s3_key` es un `contains` sobre la clave completa
+   * (incluye el prefijo de carpeta), no solo el segmento tras la última `/`;
+   * Prisma no expresa ese recorte y en la práctica basta para buscar nombres.
+   */
   async listar(query: ListarMediaQueryDto) {
+    const where: Prisma.MediaWhereInput = {};
+    if (query.tipo) where.tipo = query.tipo;
+    const q = query.q?.trim();
+    if (q) {
+      where.OR = [
+        { alt_text: { contains: q, mode: 'insensitive' } },
+        { s3_key: { contains: q, mode: 'insensitive' } },
+      ];
+    }
+
+    const orderBy: Prisma.MediaOrderByWithRelationInput[] =
+      query.orden === 'antiguo'
+        ? [{ created_at: 'asc' }]
+        : query.orden === 'nombre'
+          ? [{ alt_text: 'asc' }, { s3_key: 'asc' }]
+          : [{ created_at: 'desc' }];
+
     return this.prisma.media.findMany({
-      where: query.tipo ? { tipo: query.tipo } : undefined,
-      orderBy: { created_at: 'desc' },
+      where,
+      orderBy,
       include: INCLUDE_MEDIA_CON_VARIANTES,
     });
   }
@@ -115,6 +142,47 @@ export class MediaService {
     // Fase 8: borra los objetos de las variantes (las filas caen en cascada).
     await this.variantes.eliminarDe(id);
     await this.prisma.media.delete({ where: { id } });
+  }
+
+  /**
+   * `POST /admin/media/eliminar-lote` (UC-09, Fase 7d): borra cada id que
+   * exista y no esté en uso; el resto se reporta en `omitidos`. Nunca 409.
+   */
+  async eliminarLote(dto: EliminarLoteDto) {
+    const ids = [...new Set(dto.ids)];
+    const existentes = await this.prisma.media.findMany({
+      where: { id: { in: ids } },
+      select: { id: true },
+    });
+    const existe = new Set(existentes.map((m) => m.id));
+    const usos = await this.usos.calcular();
+
+    const eliminados: string[] = [];
+    const omitidos: { id: string; motivo: string }[] = [];
+
+    for (const id of ids) {
+      if (!existe.has(id)) {
+        omitidos.push({ id, motivo: 'no existe' });
+      } else if (usos[id]?.length) {
+        omitidos.push({
+          id,
+          motivo: `en uso: ${this.usos.describir(usos[id])}`,
+        });
+      } else {
+        try {
+          await this.variantes.eliminarDe(id);
+          await this.prisma.media.delete({ where: { id } });
+          eliminados.push(id);
+        } catch (error) {
+          omitidos.push({
+            id,
+            motivo: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+    }
+
+    return { eliminados, omitidos };
   }
 
   /**
@@ -228,25 +296,12 @@ export class MediaService {
     }
   }
 
+  /** 409 si el archivo está en uso (perfil, cv, proyecto, certificación, hero, galería). */
   private async asegurarNoEstaEnUso(mediaId: string) {
-    const [enProyectoImagen, comoLogoDeCertificacion, enPerfil] =
-      await Promise.all([
-        this.prisma.proyectoImagen.findFirst({
-          where: { media_id: mediaId },
-        }),
-        this.prisma.certificacion.findFirst({
-          where: { logo_media_id: mediaId },
-        }),
-        this.prisma.perfil.findFirst({
-          where: {
-            OR: [{ imagen_perfil_id: mediaId }, { cv_media_id: mediaId }],
-          },
-        }),
-      ]);
-
-    if (enProyectoImagen || comoLogoDeCertificacion || enPerfil) {
+    const usos = (await this.usos.calcular())[mediaId];
+    if (usos?.length) {
       throw new ConflictException(
-        'No se puede eliminar: este archivo está en uso (proyecto, certificación o perfil). Reemplázalo en vez de borrarlo.',
+        `No se puede eliminar: este archivo está en uso (${this.usos.describir(usos)}). Reemplázalo en vez de borrarlo.`,
       );
     }
   }

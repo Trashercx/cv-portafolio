@@ -19,6 +19,8 @@ import { memoryStorage } from 'multer';
 import { AuthenticatedRequest } from '../../common/authenticated-request';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateMediaDto } from './dto/create-media.dto';
+import { EliminarLoteDto } from './dto/eliminar-lote.dto';
+import { MediaUsosService } from './media-usos.service';
 import { ListarMediaQueryDto } from './dto/listar-media-query.dto';
 import { ReemplazarMediaDto } from './dto/reemplazar-media.dto';
 import { UpdateMediaDto } from './dto/update-media.dto';
@@ -38,7 +40,10 @@ const FILE_INTERCEPTOR_OPTIONS = {
 @UseGuards(JwtAuthGuard)
 @Controller('admin/media')
 export class MediaController {
-  constructor(private readonly mediaService: MediaService) {}
+  constructor(
+    private readonly mediaService: MediaService,
+    private readonly usosService: MediaUsosService,
+  ) {}
 
   @Post()
   @UseInterceptors(FileInterceptor('file', FILE_INTERCEPTOR_OPTIONS))
@@ -70,6 +75,17 @@ export class MediaController {
   @Get()
   async listar(@Query() query: ListarMediaQueryDto) {
     return this.mediaService.listar(query);
+  }
+
+  /** Fase 7d (UC-09): ruta literal ANTES de `:id`. */
+  @Get('usos')
+  async usos() {
+    return this.usosService.calcular();
+  }
+
+  @Post('eliminar-lote')
+  async eliminarLote(@Body() dto: EliminarLoteDto) {
+    return this.mediaService.eliminarLote(dto);
   }
 
   @Get(':id')

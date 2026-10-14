@@ -390,4 +390,129 @@ describe('Media admin (e2e, UC-02/UC-03/UC-04 + biblioteca UC-09)', () => {
       ).toBe(0);
     });
   });
+
+  describe('búsqueda, usos y borrado en lote (Fase 7d, UC-09)', () => {
+    const subir = async (alt: string, nombre: string) => {
+      const r = await agent
+        .post('/admin/media')
+        .field('alt_text', alt)
+        .attach('file', Buffer.from(`contenido ${nombre}`), nombre)
+        .expect(201);
+      idsCreados.push(r.body.id);
+      keysCreadas.push(r.body.s3_key);
+      return r.body as { id: string; s3_key: string };
+    };
+
+    it('GET /admin/media?q= busca sin distinguir mayúsculas y ?orden= se valida', async () => {
+      const marca = `zq${Date.now()}`;
+      const a = await subir(`Alfa ${marca.toUpperCase()}`, 'lote-a.png');
+      const b = await subir(`Beta ${marca}`, 'lote-b.png');
+
+      const res = await agent.get(`/admin/media?q=${marca}`).expect(200);
+      expect(res.body.map((m: { id: string }) => m.id).sort()).toEqual(
+        [a.id, b.id].sort(),
+      );
+      expect(res.body[0]).toHaveProperty('variantes');
+
+      const nombre = await agent
+        .get(`/admin/media?q=${marca}&orden=nombre`)
+        .expect(200);
+      expect(nombre.body.map((m: { id: string }) => m.id)).toEqual([
+        a.id,
+        b.id,
+      ]);
+
+      const antiguo = await agent
+        .get(`/admin/media?q=${marca}&orden=antiguo`)
+        .expect(200);
+      expect(antiguo.body[0].id).toBe(a.id);
+
+      await agent.get('/admin/media?orden=raro').expect(400);
+    });
+
+    it('GET /admin/media/usos refleja el logo de una certificación y omite la libre', async () => {
+      const admin = await prisma.usuarioAdmin.findUniqueOrThrow({
+        where: { email: process.env.ADMIN_EMAIL },
+      });
+      const usada = await subir('logo usos', 'usos-a.png');
+      const libre = await subir('libre usos', 'usos-b.png');
+      const cert = await prisma.certificacion.create({
+        data: {
+          usuario_admin_id: admin.id,
+          nombre: `Cert usos ${Date.now()}`,
+          institucion: 'Inst',
+          fecha_emision: new Date('2024-01-01'),
+          url_verificacion: 'https://example.com/v',
+          logo_media_id: usada.id,
+          orden: 9999,
+        },
+      });
+
+      try {
+        await request(app.getHttpServer()).get('/admin/media/usos').expect(401);
+        const res = await agent.get('/admin/media/usos').expect(200);
+        expect(res.body[usada.id]).toEqual([
+          { tipo: 'certificacion', id: cert.id, nombre: cert.nombre },
+        ]);
+        expect(res.body[libre.id]).toBeUndefined();
+      } finally {
+        await prisma.certificacion.delete({ where: { id: cert.id } });
+      }
+    });
+
+    it('POST /admin/media/eliminar-lote elimina libres y omite en uso e inexistentes', async () => {
+      const admin = await prisma.usuarioAdmin.findUniqueOrThrow({
+        where: { email: process.env.ADMIN_EMAIL },
+      });
+      const enUso = await subir('lote en uso', 'lote-uso.png');
+      const libre = await subir('lote libre', 'lote-libre.png');
+      const fantasma = '00000000-0000-4000-8000-000000000001';
+      const cert = await prisma.certificacion.create({
+        data: {
+          usuario_admin_id: admin.id,
+          nombre: `Cert lote ${Date.now()}`,
+          institucion: 'Inst',
+          fecha_emision: new Date('2024-01-01'),
+          url_verificacion: 'https://example.com/v',
+          logo_media_id: enUso.id,
+          orden: 9999,
+        },
+      });
+
+      try {
+        await agent
+          .post('/admin/media/eliminar-lote')
+          .send({ ids: [] })
+          .expect(400);
+        await agent
+          .post('/admin/media/eliminar-lote')
+          .send({ ids: ['no-uuid'] })
+          .expect(400);
+
+        const res = await agent
+          .post('/admin/media/eliminar-lote')
+          .send({ ids: [enUso.id, libre.id, fantasma] })
+          .expect(201);
+
+        expect(res.body.eliminados).toEqual([libre.id]);
+        expect(res.body.omitidos).toHaveLength(2);
+        expect(
+          res.body.omitidos.find((o: { id: string }) => o.id === enUso.id)
+            .motivo,
+        ).toContain(cert.nombre);
+        expect(
+          res.body.omitidos.find((o: { id: string }) => o.id === fantasma)
+            .motivo,
+        ).toBe('no existe');
+        expect(
+          await prisma.media.findUnique({ where: { id: libre.id } }),
+        ).toBeNull();
+        expect(
+          await prisma.media.findUnique({ where: { id: enUso.id } }),
+        ).not.toBeNull();
+      } finally {
+        await prisma.certificacion.delete({ where: { id: cert.id } });
+      }
+    });
+  });
 });

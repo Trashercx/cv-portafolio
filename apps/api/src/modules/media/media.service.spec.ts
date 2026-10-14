@@ -4,6 +4,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { sharp } from './sharp';
 import { MediaService } from './media.service';
 import { INCLUDE_MEDIA_CON_VARIANTES } from './media.select';
+import { MediaUsosService } from './media-usos.service';
 import { VariantesImagenService } from './variantes-imagen.service';
 import { MEDIA_STORAGE_SERVICE } from './storage/media-storage.interface';
 
@@ -22,10 +23,8 @@ describe('MediaService (UC-02/03/04 + biblioteca UC-09)', () => {
       update: jest.Mock;
       delete: jest.Mock;
     };
-    proyectoImagen: { findFirst: jest.Mock };
-    certificacion: { findFirst: jest.Mock };
-    perfil: { findFirst: jest.Mock };
   };
+  let usos: { calcular: jest.Mock; describir: jest.Mock };
   let storage: {
     upload: jest.Mock;
     subirDerivado: jest.Mock;
@@ -56,14 +55,15 @@ describe('MediaService (UC-02/03/04 + biblioteca UC-09)', () => {
         update: jest.fn(),
         delete: jest.fn(),
       },
-      proyectoImagen: { findFirst: jest.fn() },
-      certificacion: { findFirst: jest.fn() },
-      perfil: { findFirst: jest.fn() },
     };
     variantes = {
       generar: jest.fn().mockResolvedValue({ generadas: 0, omitida: false }),
       eliminarDe: jest.fn().mockResolvedValue(undefined),
       esRasterizable: jest.fn().mockReturnValue(true),
+    };
+    usos = {
+      calcular: jest.fn().mockResolvedValue({}),
+      describir: jest.fn().mockReturnValue('proyecto «P»'),
     };
     prisma.media.findUnique.mockResolvedValue({ id: 'media-uuid' });
     storage = {
@@ -82,6 +82,7 @@ describe('MediaService (UC-02/03/04 + biblioteca UC-09)', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: MEDIA_STORAGE_SERVICE, useValue: storage },
         { provide: VariantesImagenService, useValue: variantes },
+        { provide: MediaUsosService, useValue: usos },
       ],
     }).compile();
 
@@ -165,8 +166,8 @@ describe('MediaService (UC-02/03/04 + biblioteca UC-09)', () => {
       await service.listar({});
 
       expect(prisma.media.findMany).toHaveBeenCalledWith({
-        where: undefined,
-        orderBy: { created_at: 'desc' },
+        where: {},
+        orderBy: [{ created_at: 'desc' }],
         include: INCLUDE_MEDIA_CON_VARIANTES,
       });
     });
@@ -178,7 +179,7 @@ describe('MediaService (UC-02/03/04 + biblioteca UC-09)', () => {
 
       expect(prisma.media.findMany).toHaveBeenCalledWith({
         where: { tipo: 'imagen' },
-        orderBy: { created_at: 'desc' },
+        orderBy: [{ created_at: 'desc' }],
         include: INCLUDE_MEDIA_CON_VARIANTES,
       });
     });
@@ -219,10 +220,6 @@ describe('MediaService (UC-02/03/04 + biblioteca UC-09)', () => {
     });
 
     it('borra el registro cuando no está referenciado en ningún lado', async () => {
-      prisma.proyectoImagen.findFirst.mockResolvedValue(null);
-      prisma.certificacion.findFirst.mockResolvedValue(null);
-      prisma.perfil.findFirst.mockResolvedValue(null);
-
       await service.eliminar('media-uuid');
 
       expect(variantes.eliminarDe).toHaveBeenCalledWith('media-uuid');
@@ -231,40 +228,87 @@ describe('MediaService (UC-02/03/04 + biblioteca UC-09)', () => {
       });
     });
 
-    it('lanza ConflictException (409) si está referenciado en proyecto_imagen', async () => {
-      prisma.proyectoImagen.findFirst.mockResolvedValue({
-        proyecto_id: 'p1',
-        media_id: 'media-uuid',
+    it('lanza ConflictException (409) listando los usos si el archivo está en uso', async () => {
+      usos.calcular.mockResolvedValue({
+        'media-uuid': [{ tipo: 'hero', id: 's1', nombre: 'Inicio' }],
       });
-      prisma.certificacion.findFirst.mockResolvedValue(null);
-      prisma.perfil.findFirst.mockResolvedValue(null);
 
+      await expect(service.eliminar('media-uuid')).rejects.toThrow(
+        /proyecto «P»/,
+      );
       await expect(service.eliminar('media-uuid')).rejects.toThrow(
         ConflictException,
       );
       expect(prisma.media.delete).not.toHaveBeenCalled();
     });
+  });
 
-    it('lanza ConflictException (409) si es el logo de una certificación', async () => {
-      prisma.proyectoImagen.findFirst.mockResolvedValue(null);
-      prisma.certificacion.findFirst.mockResolvedValue({ id: 'cert1' });
-      prisma.perfil.findFirst.mockResolvedValue(null);
-
-      await expect(service.eliminar('media-uuid')).rejects.toThrow(
-        ConflictException,
-      );
-      expect(prisma.media.delete).not.toHaveBeenCalled();
+  describe('listar (búsqueda y orden, Fase 7d)', () => {
+    it('por defecto ordena por reciente y no filtra', async () => {
+      prisma.media.findMany.mockResolvedValue([]);
+      await service.listar({});
+      expect(prisma.media.findMany).toHaveBeenCalledWith({
+        where: {},
+        orderBy: [{ created_at: 'desc' }],
+        include: INCLUDE_MEDIA_CON_VARIANTES,
+      });
     });
 
-    it('lanza ConflictException (409) si es la imagen o el CV de un perfil', async () => {
-      prisma.proyectoImagen.findFirst.mockResolvedValue(null);
-      prisma.certificacion.findFirst.mockResolvedValue(null);
-      prisma.perfil.findFirst.mockResolvedValue({ id: 'perfil1' });
-
-      await expect(service.eliminar('media-uuid')).rejects.toThrow(
-        ConflictException,
+    it('q busca sin distinguir mayúsculas en alt_text y s3_key, junto con tipo', async () => {
+      prisma.media.findMany.mockResolvedValue([]);
+      await service.listar({ tipo: 'imagen', q: ' Logo ' });
+      expect(prisma.media.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            tipo: 'imagen',
+            OR: [
+              { alt_text: { contains: 'Logo', mode: 'insensitive' } },
+              { s3_key: { contains: 'Logo', mode: 'insensitive' } },
+            ],
+          },
+        }),
       );
-      expect(prisma.media.delete).not.toHaveBeenCalled();
+    });
+
+    it('orden antiguo y nombre', async () => {
+      prisma.media.findMany.mockResolvedValue([]);
+      await service.listar({ orden: 'antiguo' });
+      expect(prisma.media.findMany).toHaveBeenLastCalledWith(
+        expect.objectContaining({ orderBy: [{ created_at: 'asc' }] }),
+      );
+      await service.listar({ orden: 'nombre' });
+      expect(prisma.media.findMany).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          orderBy: [{ alt_text: 'asc' }, { s3_key: 'asc' }],
+        }),
+      );
+    });
+  });
+
+  describe('eliminarLote (Fase 7d)', () => {
+    it('elimina los libres y omite los que están en uso o no existen, sin 409', async () => {
+      prisma.media.findMany.mockResolvedValue([
+        { id: 'libre' },
+        { id: 'usada' },
+      ]);
+      usos.calcular.mockResolvedValue({
+        usada: [{ tipo: 'certificacion', id: 'c1', nombre: 'AWS' }],
+      });
+
+      const r = await service.eliminarLote({
+        ids: ['libre', 'usada', 'fantasma'],
+      });
+
+      expect(r.eliminados).toEqual(['libre']);
+      expect(r.omitidos).toEqual([
+        { id: 'usada', motivo: 'en uso: proyecto «P»' },
+        { id: 'fantasma', motivo: 'no existe' },
+      ]);
+      expect(variantes.eliminarDe).toHaveBeenCalledWith('libre');
+      expect(prisma.media.delete).toHaveBeenCalledTimes(1);
+      expect(prisma.media.delete).toHaveBeenCalledWith({
+        where: { id: 'libre' },
+      });
     });
   });
 
