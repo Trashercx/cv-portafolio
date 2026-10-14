@@ -63,6 +63,7 @@ export class MediaService {
     usuarioAdminId: string,
   ) {
     await normalizarImagen(file);
+    await this.asegurarCarpeta(usuarioAdminId, dto.carpeta_id);
     const resultado = await this.storage.upload(file, dto.carpeta);
 
     const creada = await this.prisma.media.create({
@@ -74,6 +75,7 @@ export class MediaService {
         ancho: resultado.width,
         alto: resultado.height,
         alt_text: dto.alt_text,
+        carpeta_id: dto.carpeta_id,
       },
     });
 
@@ -102,6 +104,9 @@ export class MediaService {
   async listar(query: ListarMediaQueryDto) {
     const where: Prisma.MediaWhereInput = {};
     if (query.tipo) where.tipo = query.tipo;
+    // Fase 7e (UC-09): uuid filtra por carpeta; `ninguna` = sin carpeta.
+    if (query.carpeta_id === 'ninguna') where.carpeta_id = null;
+    else if (query.carpeta_id) where.carpeta_id = query.carpeta_id;
     const q = query.q?.trim();
     if (q) {
       where.OR = [
@@ -211,9 +216,16 @@ export class MediaService {
    * (`imagen_perfil_id`, `logo_media_id`, `proyecto_imagen.media_id`, etc.)
    * siga apuntando al mismo `id` sin romperse.
    */
-  async reemplazar(id: string, file: Express.Multer.File, carpeta?: string) {
+  async reemplazar(
+    id: string,
+    file: Express.Multer.File,
+    carpeta: string | undefined,
+    carpetaId: string | null | undefined,
+    usuarioAdminId: string,
+  ) {
     await this.obtener(id);
     await normalizarImagen(file);
+    await this.asegurarCarpeta(usuarioAdminId, carpetaId);
 
     const resultado = await this.storage.upload(file, carpeta);
 
@@ -225,6 +237,8 @@ export class MediaService {
         tipo: inferirTipo(file.mimetype),
         ancho: resultado.width,
         alto: resultado.height,
+        // null = dejar sin carpeta; undefined = no tocar
+        ...(carpetaId !== undefined ? { carpeta_id: carpetaId } : {}),
       },
     });
 
@@ -296,6 +310,21 @@ export class MediaService {
     }
 
     return { procesadas, omitidas, errores };
+  }
+
+  /** Fase 7e (UC-09): 404 si la carpeta indicada no existe. */
+  private async asegurarCarpeta(
+    usuarioAdminId: string,
+    carpetaId?: string | null,
+  ) {
+    if (!carpetaId) return;
+    const carpeta = await this.prisma.carpetaMedia.findFirst({
+      where: { id: carpetaId, usuario_admin_id: usuarioAdminId },
+      select: { id: true },
+    });
+    if (!carpeta) {
+      throw new NotFoundException(`No existe la carpeta con id ${carpetaId}`);
+    }
   }
 
   /** Deduce el mimetype real del buffer con sharp (la fila no lo guarda). */

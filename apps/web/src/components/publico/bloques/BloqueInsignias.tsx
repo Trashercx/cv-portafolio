@@ -54,7 +54,11 @@ const CLASE_TARJETA = cn('relative overflow-hidden rounded-xl bg-card p-4', CLAS
 function textoFechas(insignia: InsigniaPublica): string | null {
   const emision = formatearFecha(insignia.fecha_emision)
   const expira = formatearFecha(insignia.fecha_expiracion)
-  const partes = [emision ? `Emitida ${emision}` : null, expira ? `Expira ${expira}` : null]
+  // Fase 7e, UC-35: sin fecha de expiración se indica "Sin vencimiento".
+  const partes = [
+    emision ? `Emitida ${emision}` : null,
+    expira ? `Expira ${expira}` : 'Sin vencimiento',
+  ]
   const texto = partes.filter(Boolean).join(' · ')
   return texto || null
 }

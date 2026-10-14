@@ -28,7 +28,8 @@ export type CertificacionPayload = {
   nombre: string
   institucion: string
   fecha_emision: string
-  fecha_expiracion?: string
+  /** `null` solo en `PATCH`: borra la expiración ("No expira", Fase 7e). */
+  fecha_expiracion?: string | null
   url_verificacion: string
   credencial_id?: string
   logo_media_id?: string

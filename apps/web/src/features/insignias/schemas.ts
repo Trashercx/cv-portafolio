@@ -15,6 +15,8 @@ export const insigniaSchema = z
     descripcion: z.string().optional(),
     fecha_emision: z.iso.date({ error: MENSAJE_FECHA_INVALIDA }).optional().or(z.literal('')),
     fecha_expiracion: z.iso.date({ error: MENSAJE_FECHA_INVALIDA }).optional().or(z.literal('')),
+    // Fase 7e, UC-35: casilla "No expira"; desmarcada, la fecha de expiración es obligatoria.
+    no_expira: z.boolean(),
     habilidades: z.array(z.string().trim().min(1)).max(50),
     url_verificacion: z.string().url('URL inválida').optional().or(z.literal('')),
     imagen_media_id: z.string().min(1).optional(),
@@ -33,7 +35,15 @@ export const insigniaSchema = z
         message: 'La imagen es obligatoria.',
       })
     }
+    if (!values.no_expira && !values.fecha_expiracion) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['fecha_expiracion'],
+        message: 'La fecha de expiración es obligatoria.',
+      })
+    }
     if (
+      !values.no_expira &&
       values.fecha_emision &&
       values.fecha_expiracion &&
       values.fecha_expiracion <= values.fecha_emision
@@ -54,6 +64,7 @@ export const INSIGNIA_VALORES_VACIOS: InsigniaFormValues = {
   descripcion: '',
   fecha_emision: '',
   fecha_expiracion: '',
+  no_expira: true,
   habilidades: [],
   url_verificacion: '',
   imagen_media_id: undefined,

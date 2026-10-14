@@ -1,5 +1,5 @@
 import { Copy, Pencil } from 'lucide-react'
-import { useRef, useState } from 'react'
+import { useRef, useState, type DragEvent } from 'react'
 import { toast } from 'sonner'
 import { IconoDocumento } from '@/components/media/IconoDocumento'
 import { ImagenResponsive } from '@/components/publico/ImagenResponsive'
@@ -9,6 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
+import { MIME_IDS_MEDIA } from './BarraCarpetas'
 import type { Media, UsoMedia } from './types'
 import { useActualizarMedia } from './useMediaLibrary'
 import { nombreArchivo, textoUso } from './utilidades-media'
@@ -101,6 +102,13 @@ type TarjetaMediaProps = {
   seleccionado: boolean
   onAlternar: (id: string) => void
   onAbrir: (id: string) => void
+  /** Fase 7e (UC-09): nombre de la carpeta, visible en la vista lista. */
+  nombreCarpeta?: string
+  /**
+   * Fase 7e (UC-09): ids que viajan al arrastrar esta tarjeta (la tarjeta sola,
+   * o toda la selección si forma parte de ella). Sin esta prop no es arrastrable.
+   */
+  idsAlArrastrar?: (id: string) => string[]
 }
 
 /** Tarjeta (cuadrícula) o fila (lista) de un archivo de la biblioteca (Fase 7d, UC-09). */
@@ -112,10 +120,23 @@ export function TarjetaMedia({
   seleccionado,
   onAlternar,
   onAbrir,
+  nombreCarpeta,
+  idsAlArrastrar,
 }: TarjetaMediaProps) {
   const nombre = nombreArchivo(media)
   const variantes = textoVariantes(media)
   const enLista = vista === 'lista'
+
+  // Fase 7e (UC-09): arrastre HTML5 nativo hacia una carpeta de la barra.
+  const propsArrastre = idsAlArrastrar
+    ? {
+        draggable: true,
+        onDragStart: (evento: DragEvent) => {
+          evento.dataTransfer.setData(MIME_IDS_MEDIA, JSON.stringify(idsAlArrastrar(media.id)))
+          evento.dataTransfer.effectAllowed = 'move'
+        },
+      }
+    : {}
 
   const copiarUrl = async () => {
     try {
@@ -180,6 +201,7 @@ export function TarjetaMedia({
           media.ancho && media.alto ? `${media.ancho}×${media.alto} px` : null,
           variantes,
           media.tipo !== 'imagen' ? media.tipo : null,
+          enLista && nombreCarpeta ? `Carpeta: ${nombreCarpeta}` : null,
         ]
           .filter(Boolean)
           .join(' · ')}
@@ -213,6 +235,7 @@ export function TarjetaMedia({
   if (enLista) {
     return (
       <li
+        {...propsArrastre}
         className={cn(
           'flex items-center gap-3 rounded-lg border bg-card p-2',
           seleccionado ? 'ring-2 ring-primary' : '',
@@ -227,6 +250,7 @@ export function TarjetaMedia({
 
   return (
     <li
+      {...propsArrastre}
       className={cn(
         'relative flex flex-col overflow-hidden rounded-xl border bg-card text-card-foreground shadow-sm transition-shadow hover:shadow-md',
         seleccionado ? 'ring-2 ring-primary' : '',

@@ -113,6 +113,19 @@ server {
     try_files $uri $uri/ /index.html;
   }
 
+  # Fase 7e (UC-35): nginx 1.31 no incluye `mjs` en mime.types y lo serviría
+  # como application/octet-stream; el worker de pdfjs-dist es un módulo ES
+  # (.mjs) y el navegador exige un MIME de JavaScript para módulos y workers.
+  # Va ANTES de la location genérica de assets: nginx aplica la primera regex
+  # que coincide.
+  location ~* \.mjs$ {
+    types {}
+    default_type text/javascript;
+    access_log off;
+    add_header Cache-Control "public, max-age=2592000, immutable";
+    include /etc/nginx/snippets/cabeceras-seguridad.conf;
+  }
+
   # Los archivos con hash en el nombre (los que genera `vite build` para
   # JS/CSS/assets) son inmutables: un cambio de contenido siempre produce
   # un nombre de archivo distinto, así que se pueden cachear de forma

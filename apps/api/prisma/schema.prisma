@@ -31,6 +31,8 @@ model UsuarioAdmin {
 
   perfil          Perfil?
   medias          Media[]
+  /// Fase 7e, UC-09
+  carpetas_media  CarpetaMedia[]
   proyectos       Proyecto[]
   certificaciones Certificacion[]
   /// Fase 7d, UC-35
@@ -70,6 +72,8 @@ model Perfil {
 model Media {
   id               String   @id @default(uuid()) @db.Uuid
   usuario_admin_id String   @db.Uuid
+  /// Fase 7e, UC-09: carpeta opcional; al borrarla el archivo queda sin carpeta
+  carpeta_id       String?  @db.Uuid
   url              String
   s3_key           String
   tipo             String
@@ -79,6 +83,7 @@ model Media {
   created_at       DateTime @default(now())
 
   usuario_admin     UsuarioAdmin     @relation(fields: [usuario_admin_id], references: [id])
+  carpeta           CarpetaMedia?    @relation(fields: [carpeta_id], references: [id], onDelete: SetNull)
   perfiles_imagen   Perfil[]         @relation("PerfilImagenPerfil")
   perfiles_cv       Perfil[]         @relation("PerfilCvMedia")
   certificaciones   Certificacion[]  @relation("CertificacionLogo")
@@ -88,6 +93,24 @@ model Media {
   insignias         Insignia[]       @relation("InsigniaImagen")
 
   @@map("media")
+}
+
+/// Carpetas planas de la biblioteca multimedia (Fase 7e, UC-09). No altera la clave
+/// de S3. La unicidad por (usuario_admin_id, lower(nombre)) la impone un índice
+/// funcional editado a mano en la migración (carpeta_media_admin_nombre_unico), mismo
+/// patrón que skill_admin_nombre_unico.
+model CarpetaMedia {
+  id               String   @id @default(uuid()) @db.Uuid
+  usuario_admin_id String   @db.Uuid
+  nombre           String
+  orden            Int
+  created_at       DateTime @default(now())
+
+  usuario_admin UsuarioAdmin @relation(fields: [usuario_admin_id], references: [id])
+  medias        Media[]
+
+  @@index([usuario_admin_id, orden])
+  @@map("carpeta_media")
 }
 
 /// Variantes responsive derivadas de un Media (Fase 8, UC-34): una fila por

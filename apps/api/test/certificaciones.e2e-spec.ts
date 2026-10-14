@@ -167,4 +167,29 @@ describe('Certificaciones (e2e, UC-04)', () => {
     expect(idsRestantes).not.toContain(certB.body.id);
     expect(idsRestantes).toContain(certA.body.id);
   });
+
+  it('PATCH con fecha_expiracion null limpia la expiración (No expira, Fase 7e)', async () => {
+    const creada = await agent
+      .post('/admin/certificaciones')
+      .send({
+        ...dtoBase,
+        nombre: 'Cert expira e2e',
+        orden: 98,
+        fecha_expiracion: '2030-01-01',
+      })
+      .expect(201);
+    idsCreados.push(creada.body.id);
+    expect(creada.body.fecha_expiracion).not.toBeNull();
+
+    await agent
+      .patch(`/admin/certificaciones/${creada.body.id}`)
+      .send({ fecha_expiracion: null })
+      .expect(200);
+
+    const lista = await agent.get('/admin/certificaciones').expect(200);
+    const cert = lista.body.find(
+      (c: { id: string }) => c.id === creada.body.id,
+    );
+    expect(cert.fecha_expiracion).toBeNull();
+  });
 });

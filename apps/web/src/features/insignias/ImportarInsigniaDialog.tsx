@@ -2,6 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { MediaField } from '@/components/media/MediaField'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -17,8 +18,12 @@ import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { useCarpetasMedia } from '@/features/media/useCarpetasMedia'
+import { useUploadMedia } from '@/features/media/useUploadMedia'
 import { ApiError } from '@/lib/api-client'
 import { CamposInsignia, construirPayloadInsignia } from './CamposInsignia'
+import { pdfAImagenPng } from './pdf-a-imagen'
 import {
   INSIGNIA_VALORES_VACIOS,
   insigniaSchema,
@@ -30,6 +35,7 @@ import {
   useImportarArchivoInsignia,
   useImportarInsignia,
 } from './useInsignias'
+import { useProveedoresInsignia } from './useProveedoresInsignia'
 
 type Pestana = 'enlace' | 'archivo' | 'manual'
 
@@ -46,11 +52,38 @@ function valoresDesdeVista(vista: VistaPreviaInsignia): InsigniaFormValues {
     descripcion: vista.descripcion ?? '',
     fecha_emision: vista.fecha_emision?.slice(0, 10) ?? '',
     fecha_expiracion: vista.fecha_expiracion?.slice(0, 10) ?? '',
+    // Fase 7e: sin expiración detectada, la casilla "No expira" llega marcada.
+    no_expira: !vista.fecha_expiracion,
     habilidades: vista.habilidades ?? [],
     url_verificacion: vista.url_verificacion ?? '',
     // Con archivo, la media ya existe en la biblioteca; con enlace, el servidor la descarga al guardar.
     imagen_media_id: vista.imagen_media_id,
     imagen_url_remota: vista.imagen_media_id ? '' : (vista.imagen?.url ?? ''),
+  }
+}
+
+/** Nombre del archivo sin su extensión (nombre sugerido al importar un PDF, Fase 7e). */
+function nombreSinExtension(nombre: string): string {
+  const punto = nombre.lastIndexOf('.')
+  return punto > 0 ? nombre.slice(0, punto) : nombre
+}
+
+/**
+ * Fase 7e, UC-35: une lo ya detectado por un proveedor de modo `archivo` (DataCamp)
+ * con lo que devuelve `importar-archivo`: se conservan proveedor, emisor,
+ * `url_verificacion` e `id_externo`, y los avisos de ambos.
+ */
+function fusionarConBase(base: VistaPreviaInsignia, nueva: VistaPreviaInsignia): VistaPreviaInsignia {
+  return {
+    ...nueva,
+    proveedor: base.proveedor,
+    nombre: nueva.nombre || base.nombre,
+    emisor: nueva.emisor || base.emisor,
+    url_verificacion: nueva.url_verificacion ?? base.url_verificacion,
+    id_externo: nueva.id_externo ?? base.id_externo,
+    url_origen: nueva.url_origen ?? base.url_origen,
+    avisos: [...new Set([...base.avisos, ...nueva.avisos])],
+    modo_proveedor: undefined,
   }
 }
 
@@ -66,10 +99,19 @@ export function ImportarInsigniaDialog({ open, onOpenChange }: ImportarInsigniaD
   const [entrada, setEntrada] = useState('')
   const [vista, setVista] = useState<VistaPreviaInsignia | null>(null)
   const [urlImagenManual, setUrlImagenManual] = useState<string | null>(null)
+  // Fase 7e: conversión PDF → PNG en el navegador, vista previa local y PDF original en la biblioteca.
+  const [convirtiendo, setConvirtiendo] = useState(false)
+  const [urlPreviaPdf, setUrlPreviaPdf] = useState<string | null>(null)
+  // El PDF original se sube al confirmar (no al elegirlo: evita Media huérfanos si se cancela).
+  const [archivoPdf, setArchivoPdf] = useState<File | null>(null)
+  const [errorPdf, setErrorPdf] = useState<string | null>(null)
 
   const importar = useImportarInsignia()
   const importarArchivo = useImportarArchivoInsignia()
   const crear = useCrearInsignia()
+  const subirPdf = useUploadMedia()
+  const { data: proveedores } = useProveedoresInsignia()
+  const { data: carpetas } = useCarpetasMedia()
 
   const form = useForm<InsigniaFormValues>({
     resolver: zodResolver(insigniaSchema),
@@ -80,7 +122,15 @@ export function ImportarInsigniaDialog({ open, onOpenChange }: ImportarInsigniaD
     setEntrada('')
     setVista(null)
     setUrlImagenManual(null)
+    setConvirtiendo(false)
+    setUrlPreviaPdf((previa) => {
+      if (previa) URL.revokeObjectURL(previa)
+      return null
+    })
+    setArchivoPdf(null)
+    setErrorPdf(null)
     form.reset(INSIGNIA_VALORES_VACIOS)
+    subirPdf.reset()
     importar.reset()
     importarArchivo.reset()
     crear.reset()
@@ -103,12 +153,52 @@ export function ImportarInsigniaDialog({ open, onOpenChange }: ImportarInsigniaD
   const analizar = () => {
     const texto = entrada.trim()
     if (!texto) return
-    importar.mutate(texto, { onSuccess: aplicarVista })
+    importar.mutate(texto, {
+      onSuccess: (resultado) => {
+        aplicarVista(resultado)
+        // Fase 7e: proveedor que no se puede leer desde el servidor (DataCamp) → "Subir archivo"
+        // con los campos ya rellenos y los avisos a la vista.
+        if (resultado.modo_proveedor === 'archivo') setPestana('archivo')
+      },
+    })
   }
 
-  const alElegirArchivo = (archivo: File | undefined) => {
+  const alElegirArchivo = async (archivo: File | undefined) => {
     if (!archivo) return
-    importarArchivo.mutate(archivo, { onSuccess: aplicarVista })
+    // Si venimos de un proveedor de modo `archivo`, se conservan los datos ya detectados.
+    const base = vista?.modo_proveedor === 'archivo' ? vista : null
+    const combinar = (resultado: VistaPreviaInsignia) =>
+      base ? fusionarConBase(base, resultado) : resultado
+
+    const esPdf = archivo.type === 'application/pdf'
+    if (!esPdf) {
+      importarArchivo.mutate(archivo, { onSuccess: (resultado) => aplicarVista(combinar(resultado)) })
+      return
+    }
+
+    setErrorPdf(null)
+    setConvirtiendo(true)
+    try {
+      const { blob } = await pdfAImagenPng(archivo)
+      const nombreBase = nombreSinExtension(archivo.name)
+      const png = new File([blob], `${nombreBase}.png`, { type: 'image/png' })
+      setUrlPreviaPdf((previa) => {
+        if (previa) URL.revokeObjectURL(previa)
+        return URL.createObjectURL(blob)
+      })
+      setConvirtiendo(false)
+      importarArchivo.mutate(png, {
+        onSuccess: (resultado) => {
+          const unida = combinar(resultado)
+          aplicarVista({ ...unida, nombre: unida.nombre || nombreBase })
+        },
+      })
+      // El PDF original se sube al confirmar (`onSubmit`) y sirve de `url_origen` si no hay otra.
+      setArchivoPdf(archivo)
+    } catch {
+      setConvirtiendo(false)
+      setErrorPdf('No se pudo convertir el PDF a imagen. Prueba con una captura PNG del certificado.')
+    }
   }
 
   const cambiarPestana = (valor: string) => {
@@ -116,12 +206,28 @@ export function ImportarInsigniaDialog({ open, onOpenChange }: ImportarInsigniaD
     reiniciar()
   }
 
-  const onSubmit = (values: InsigniaFormValues) => {
+  const onSubmit = async (values: InsigniaFormValues) => {
+    let urlPdfOriginal: string | undefined
+    if (archivoPdf) {
+      // Va a la carpeta "Certificados" de la biblioteca si existe (sin distinguir mayúsculas).
+      const carpeta = carpetas?.find((c) => c.nombre.trim().toLowerCase() === 'certificados')
+      setErrorPdf(null)
+      try {
+        const media = await subirPdf.mutateAsync({
+          file: archivoPdf,
+          ...(carpeta ? { carpeta_id: carpeta.id } : {}),
+        })
+        urlPdfOriginal = media.url
+      } catch {
+        setErrorPdf('No se pudo guardar el PDF original en la biblioteca. La insignia no se creó.')
+        return
+      }
+    }
     const extra = vista
       ? {
           proveedor: vista.proveedor,
           id_externo: vista.id_externo ?? undefined,
-          url_origen: vista.url_origen ?? undefined,
+          url_origen: vista.url_origen ?? urlPdfOriginal,
         }
       : { proveedor: 'manual' as const }
     crear.mutate(construirPayloadInsignia(values, extra), {
@@ -130,7 +236,7 @@ export function ImportarInsigniaDialog({ open, onOpenChange }: ImportarInsigniaD
   }
 
   const mostrarFormulario = pestana === 'manual' || vista !== null
-  const urlImagen = vista?.imagen?.url ?? urlImagenManual
+  const urlImagen = vista?.imagen?.url ?? urlPreviaPdf ?? urlImagenManual
   const errorAnalisis = importar.error ?? importarArchivo.error
   const mensajeError = (error: unknown, porDefecto: string) =>
     error instanceof ApiError ? error.message : porDefecto
@@ -146,6 +252,28 @@ export function ImportarInsigniaDialog({ open, onOpenChange }: ImportarInsigniaD
         </DialogHeader>
         <ScrollArea className="max-h-[70vh] pr-4">
           <div className="grid gap-4">
+            {proveedores && proveedores.length > 0 ? (
+              <section aria-label="Proveedores reconocidos" className="grid gap-2">
+                <h3 className="text-sm font-medium">Proveedores reconocidos</h3>
+                <TooltipProvider delayDuration={150}>
+                  <ul className="flex flex-wrap gap-2">
+                    {proveedores.map((proveedor) => (
+                      <li key={proveedor.clave}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Badge variant="secondary" tabIndex={0}>
+                              {proveedor.nombre}
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">{proveedor.ayuda}</TooltipContent>
+                        </Tooltip>
+                      </li>
+                    ))}
+                  </ul>
+                </TooltipProvider>
+              </section>
+            ) : null}
+
             <Tabs value={pestana} onValueChange={cambiarPestana}>
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="enlace">Enlace o código</TabsTrigger>
@@ -173,16 +301,29 @@ export function ImportarInsigniaDialog({ open, onOpenChange }: ImportarInsigniaD
                 </div>
               </TabsContent>
               <TabsContent value="archivo" className="grid gap-2">
-                <Label htmlFor="archivo-insignia">Archivo PNG o SVG (hasta 10 MB)</Label>
+                <Label htmlFor="archivo-insignia">Archivo PNG, SVG o PDF (hasta 10 MB)</Label>
                 <Input
                   id="archivo-insignia"
                   type="file"
-                  accept="image/png,image/svg+xml"
-                  disabled={importarArchivo.isPending}
-                  onChange={(event) => alElegirArchivo(event.target.files?.[0])}
+                  accept="image/png,image/svg+xml,application/pdf"
+                  disabled={importarArchivo.isPending || convirtiendo}
+                  onChange={(event) => void alElegirArchivo(event.target.files?.[0])}
                 />
+                {convirtiendo ? (
+                  <p role="status" className="text-sm text-muted-foreground">Convirtiendo…</p>
+                ) : null}
+                {urlPreviaPdf && !mostrarFormulario ? (
+                  <img
+                    src={urlPreviaPdf}
+                    alt="Vista previa del PDF"
+                    className="mx-auto max-h-48 object-contain"
+                  />
+                ) : null}
                 {importarArchivo.isPending ? (
                   <p className="text-sm text-muted-foreground">Procesando archivo…</p>
+                ) : null}
+                {errorPdf && !mostrarFormulario ? (
+                  <p role="alert" className="text-sm text-destructive">{errorPdf}</p>
                 ) : null}
               </TabsContent>
               <TabsContent value="manual" className="grid gap-2">
@@ -241,14 +382,17 @@ export function ImportarInsigniaDialog({ open, onOpenChange }: ImportarInsigniaD
                     </p>
                   ) : null}
                   <CamposInsignia form={form} />
+                  {errorPdf && mostrarFormulario ? (
+                    <p role="alert" className="text-sm text-destructive">{errorPdf}</p>
+                  ) : null}
                   {crear.error ? (
                     <p role="alert" className="text-sm text-destructive">
                       {mensajeError(crear.error, 'No se pudo guardar la insignia. Intenta de nuevo.')}
                     </p>
                   ) : null}
                   <DialogFooter>
-                    <Button type="submit" disabled={crear.isPending}>
-                      {crear.isPending ? 'Guardando…' : 'Guardar'}
+                    <Button type="submit" disabled={crear.isPending || subirPdf.isPending}>
+                      {crear.isPending || subirPdf.isPending ? 'Guardando…' : 'Guardar'}
                     </Button>
                   </DialogFooter>
                 </form>

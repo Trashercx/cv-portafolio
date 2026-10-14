@@ -26,7 +26,8 @@ export type InsigniaPayload = {
   imagen_media_id?: string
   imagen_url_remota?: string
   fecha_emision?: string
-  fecha_expiracion?: string
+  /** `null` solo en `PATCH`: borra la expiración ("No expira", Fase 7e). */
+  fecha_expiracion?: string | null
   habilidades?: string[]
   visible?: boolean
 }

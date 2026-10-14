@@ -50,6 +50,7 @@ export function InsigniaFormDialog({ insignia, open, onOpenChange }: InsigniaFor
       descripcion: insignia.descripcion ?? '',
       fecha_emision: insignia.fecha_emision?.slice(0, 10) ?? '',
       fecha_expiracion: insignia.fecha_expiracion?.slice(0, 10) ?? '',
+      no_expira: !insignia.fecha_expiracion,
       habilidades: insignia.habilidades ?? [],
       url_verificacion: insignia.url_verificacion ?? '',
       imagen_media_id: insignia.imagen_media_id,
@@ -61,7 +62,7 @@ export function InsigniaFormDialog({ insignia, open, onOpenChange }: InsigniaFor
   const onSubmit = (values: InsigniaFormValues) => {
     if (!insignia) return
     actualizar.mutate(
-      { id: insignia.id, payload: construirPayloadInsignia(values) },
+      { id: insignia.id, payload: construirPayloadInsignia(values, {}, { edicion: true }) },
       { onSuccess: () => onOpenChange(false) },
     )
   }

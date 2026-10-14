@@ -12,7 +12,12 @@ export const mediaUsosQueryKey = [...MEDIA_QUERY_KEY, 'usos'] as const
 
 function normalizarFiltros(filtros?: string | FiltrosMedia): Required<FiltrosMedia> {
   const f: FiltrosMedia = typeof filtros === 'string' ? { tipo: filtros } : (filtros ?? {})
-  return { tipo: f.tipo ?? '', q: f.q?.trim() ?? '', orden: f.orden ?? 'reciente' }
+  return {
+    tipo: f.tipo ?? '',
+    q: f.q?.trim() ?? '',
+    orden: f.orden ?? 'reciente',
+    carpeta_id: f.carpeta_id ?? '',
+  }
 }
 
 export const mediaListQueryKey = (filtros?: string | FiltrosMedia) =>
@@ -25,7 +30,7 @@ export const mediaListQueryKey = (filtros?: string | FiltrosMedia) =>
  * resto de consumidores (`useDatosEditor`, `puck-config`).
  */
 export function useMediaList(filtros?: string | FiltrosMedia) {
-  const { tipo, q, orden } = normalizarFiltros(filtros)
+  const { tipo, q, orden, carpeta_id } = normalizarFiltros(filtros)
   return useQuery({
     queryKey: mediaListQueryKey(filtros),
     queryFn: () => {
@@ -33,6 +38,8 @@ export function useMediaList(filtros?: string | FiltrosMedia) {
       if (tipo) params.set('tipo', tipo)
       if (q) params.set('q', q)
       if (orden !== 'reciente') params.set('orden', orden)
+      // Fase 7e (UC-09): `carpeta_id=<uuid>` o `ninguna`.
+      if (carpeta_id) params.set('carpeta_id', carpeta_id)
       const query = params.toString()
       return apiFetch<Media[]>(`/admin/media${query ? `?${query}` : ''}`)
     },

@@ -37,6 +37,13 @@ describe('subirMedia (Fase 7d, UC-09)', () => {
     expect(onProgress).toHaveBeenLastCalledWith(100)
   })
 
+  it('envía carpeta_id solo cuando se indica (Fase 7e, UC-09)', () => {
+    void subirMedia({ file: archivo(), carpeta_id: 'c1' })
+    void subirMedia({ file: archivo() })
+    expect((XhrFalso.instancias[0].body as FormData).get('carpeta_id')).toBe('c1')
+    expect((XhrFalso.instancias[1].body as FormData).has('carpeta_id')).toBe(false)
+  })
+
   it('rechaza con ApiError y el mensaje del servidor', async () => {
     const promesa = subirMedia({ file: archivo() })
     XhrFalso.instancias[0].responder(413, { message: 'Archivo demasiado grande' })

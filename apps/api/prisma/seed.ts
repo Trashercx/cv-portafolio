@@ -40,6 +40,9 @@ const PLATAFORMAS_RED_SEMILLA = [
   { nombre: 'Sitio personal', icono_defecto: 'link' },
 ];
 
+/** Fase 7e (UC-09): carpetas iniciales de la biblioteca de media. */
+const CARPETAS_MEDIA_SEMILLA = ['Certificados', 'Imágenes'];
+
 async function main() {
   const email = process.env.ADMIN_EMAIL;
   const passwordSeed = process.env.ADMIN_PASSWORD_SEED;
@@ -93,6 +96,20 @@ async function main() {
     console.log(
       `Catálogo de plataformas de red listo (${PLATAFORMAS_RED_SEMILLA.length}).`,
     );
+
+    // Fase 7e (UC-09): carpetas iniciales de la biblioteca si el admin no tiene
+    // ninguna (idempotente: si ya tiene alguna, no se toca nada).
+    const totalCarpetas = await prisma.carpetaMedia.count({
+      where: { usuario_admin_id: admin.id },
+    });
+    if (totalCarpetas === 0) {
+      for (const [orden, nombre] of CARPETAS_MEDIA_SEMILLA.entries()) {
+        await prisma.carpetaMedia.create({
+          data: { usuario_admin_id: admin.id, nombre, orden },
+        });
+      }
+      console.log('Carpetas de la biblioteca creadas.');
+    }
   } finally {
     await prisma.$disconnect();
   }

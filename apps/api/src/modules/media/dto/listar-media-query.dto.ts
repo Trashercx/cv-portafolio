@@ -1,4 +1,11 @@
-import { IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsIn,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+  ValidateIf,
+} from 'class-validator';
 
 export const ORDENES_MEDIA = ['reciente', 'antiguo', 'nombre'] as const;
 
@@ -19,4 +26,10 @@ export class ListarMediaQueryDto {
   @IsOptional()
   @IsIn(ORDENES_MEDIA)
   orden?: (typeof ORDENES_MEDIA)[number];
+
+  /** Fase 7e: uuid de carpeta, o el literal `ninguna` (carpeta_id IS NULL). */
+  @IsOptional()
+  @ValidateIf((o: ListarMediaQueryDto) => o.carpeta_id !== 'ninguna')
+  @IsUUID('4')
+  carpeta_id?: string;
 }

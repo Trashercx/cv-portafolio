@@ -174,6 +174,16 @@ Pedida por el usuario tras cerrar la Fase 7c. Agrega la entidad `INSIGNIA` (ver 
 | UC-09 | Biblioteca con arrastrar y soltar y subida en lote con progreso, búsqueda, orden, vista cuadrícula/lista, selección múltiple con borrado en lote, indicador "en uso" (perfil, CV, proyecto, certificación, hero, galería, insignia), copiar URL y texto alternativo en línea | Se pueden soltar varias imágenes a la vez y ver el progreso de cada una; un archivo en uso no se borra en lote y el diálogo indica dónde se usa; la búsqueda y los filtros se conservan en la URL. |
 | UC-35 | Gestionar insignias (badges) importadas | enlace público, código de embed o archivo del badge; nombre, emisor, descripción, fechas, habilidades, URL de verificación, imagen, orden, visible | Pegar un enlace de Credly, un enlace de verificación Open Badges o un código de embed muestra una vista previa con los datos y la imagen original en alta resolución; al guardar, la imagen queda en la biblioteca con variantes y la insignia aparece en el bloque "Insignias" del sitio con animación al pasar el puntero y enlace de verificación; si el proveedor no se reconoce, se importa la imagen y el título de la página y los demás datos se completan a mano. |
 
+### Extensiones de UC-04, UC-09 y UC-35 — Fase 7e, vencimiento opcional, más proveedores y carpetas (2026-10-14)
+
+Pedida por el usuario tras probar la Fase 7d en producción. Agrega la entidad `CARPETA_MEDIA` (ver diagrama ER) y `MEDIA.carpeta_id`. Contrato en `docs/plan-tecnico.md`, "Fase 7e".
+
+| UC | Extensión | Criterio de aceptación |
+|---|---|---|
+| UC-04, UC-35 | Casilla "No expira" en certificaciones e insignias; "Sin vencimiento" en los bloques | Una credencial sin fecha de expiración se guarda y se muestra como "Sin vencimiento"; al desmarcar la casilla la fecha vuelve a ser obligatoria y posterior a la emisión. |
+| UC-35 | Proveedores ampliables: registro visible en el diálogo ("Proveedores reconocidos"), extractor de Anthropic/Skilljar automático, DataCamp por archivo (su web bloquea la lectura automática) y certificados en PDF convertidos a imagen en el navegador | Pegar un enlace `verify.skilljar.com` rellena nombre, emisor, fechas e imagen; pegar un enlace de DataCamp reconoce el proveedor y guía a subir el PDF o la imagen; un PDF subido se convierte en PNG de alta resolución y se importa como insignia. |
+| UC-09 | Carpetas planas en la biblioteca (crear, renombrar, reordenar, eliminar), filtro por carpeta en la URL y en el selector de los formularios, subida a la carpeta activa, mover archivos por menú o arrastrándolos | Eliminar una carpeta no borra archivos (quedan "Sin carpeta"); los nombres son únicos por administrador sin distinguir mayúsculas; la clave de S3 no cambia al mover. |
+
 ### Casos de uso propuestos — roadmap de profesionalización (2026-10-13, pendientes de aprobación)
 
 Los UC-19 a UC-34 nacen de la propuesta de la Sección 7 (roadmap). Se listan aquí para que el índice de casos de uso siga siendo la única fuente de verdad. **Solo UC-27 y UC-34 están aprobados e implementados** (Fase 8, 2026-10-14) y UC-35 (insignias, Fase 7d, definido en la sección anterior); el resto sigue pendiente: cada fase del roadmap se aprueba por separado y recién entonces se agregan sus entidades al diagrama ER (vía `db-schema`) y se codifica. La Fase 6 (fundamentos de producción) no agrega casos de uso: refuerza UC-01 (cierre de sesión real, límite de intentos por IP) y UC-12/13 (metadatos SEO, accesibilidad, rendimiento).
@@ -234,12 +244,20 @@ erDiagram
     MEDIA {
         uuid id PK
         uuid usuario_admin_id FK
+        uuid carpeta_id FK
         string url
         string s3_key
         string tipo
         int ancho
         int alto
         string alt_text
+        timestamp created_at
+    }
+    CARPETA_MEDIA {
+        uuid id PK
+        uuid usuario_admin_id FK
+        string nombre
+        int orden
         timestamp created_at
     }
     MEDIA_VARIANTE {
@@ -379,6 +397,8 @@ erDiagram
 
     USUARIO_ADMIN ||--o| PERFIL : tiene
     USUARIO_ADMIN ||--o{ MEDIA : sube
+    USUARIO_ADMIN ||--o{ CARPETA_MEDIA : organiza
+    CARPETA_MEDIA ||--o{ MEDIA : contiene
     USUARIO_ADMIN ||--o{ PROYECTO : gestiona
     USUARIO_ADMIN ||--o{ CERTIFICACION : gestiona
     USUARIO_ADMIN ||--o{ INSIGNIA : gestiona
@@ -401,7 +421,7 @@ erDiagram
     PLATAFORMA_RED ||--o{ RED_SOCIAL : clasifica
 ```
 
-Dieciocho entidades: el administrador es el dueño de todo el contenido; `MEDIA`, `TECNOLOGIA` y `PLATAFORMA_RED` son catálogos compartidos en vez de campos de texto libre repetidos; `SECCION`, `TEMA`, `FONDO_SITIO` y `VERSION_SITIO` sostienen el editor visual y la publicación por versiones. `SKILL` sigue el mismo patrón que `LOGRO`: contenido propio del administrador (no un catálogo compartido) — a diferencia de `TECNOLOGIA`, que solo clasifica proyectos, `SKILL` es lo que se muestra en el carrusel de habilidades del sitio público, así que no tendría sentido reutilizar aquel catálogo para este propósito distinto. `FONDO_SITIO` sigue el mismo patrón de "configuración visual exclusiva" que `TEMA`, pero es deliberadamente independiente de él: `TEMA` solo maneja color y tipografía, `FONDO_SITIO` maneja el fondo animado del landing.
+Diecinueve entidades: el administrador es el dueño de todo el contenido; `MEDIA`, `TECNOLOGIA` y `PLATAFORMA_RED` son catálogos compartidos en vez de campos de texto libre repetidos; `SECCION`, `TEMA`, `FONDO_SITIO` y `VERSION_SITIO` sostienen el editor visual y la publicación por versiones. `SKILL` sigue el mismo patrón que `LOGRO`: contenido propio del administrador (no un catálogo compartido) — a diferencia de `TECNOLOGIA`, que solo clasifica proyectos, `SKILL` es lo que se muestra en el carrusel de habilidades del sitio público, así que no tendría sentido reutilizar aquel catálogo para este propósito distinto. `FONDO_SITIO` sigue el mismo patrón de "configuración visual exclusiva" que `TEMA`, pero es deliberadamente independiente de él: `TEMA` solo maneja color y tipografía, `FONDO_SITIO` maneja el fondo animado del landing. `CARPETA_MEDIA` organiza la biblioteca del panel en carpetas planas (Fase 7e, UC-09); no cambia la clave de S3 y al borrar una carpeta sus archivos quedan sin carpeta (`ON DELETE SET NULL`); nombre único por administrador sin distinguir mayúsculas.
 
 `INSIGNIA` guarda badges importados de Credly/Open Badges u otros (Fase 7d, UC-35); es independiente de `CERTIFICACION` porque la insignia es la imagen oficial emitida por un tercero con proveedor e id externo, mientras que la certificación es un registro propio con logo de institución; `habilidades` es un array nativo de Postgres (no JSONB) porque son etiquetas planas sin estructura.
 

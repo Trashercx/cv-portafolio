@@ -113,11 +113,18 @@ export class MediaController {
     @Param('id', ParseUUIDPipe) id: string,
     @UploadedFile() file: Express.Multer.File,
     @Body() dto: ReemplazarMediaDto,
+    @Req() req: AuthenticatedRequest,
   ) {
     if (!file) {
       throw new BadRequestException('Falta el archivo (campo "file")');
     }
 
-    return this.mediaService.reemplazar(id, file, dto.carpeta);
+    return this.mediaService.reemplazar(
+      id,
+      file,
+      dto.carpeta,
+      dto.carpeta_id,
+      req.user.sub,
+    );
   }
 }

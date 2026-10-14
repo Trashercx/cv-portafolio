@@ -1,4 +1,4 @@
-import { IsIn, IsOptional, IsString } from 'class-validator';
+import { IsIn, IsOptional, IsString, IsUUID } from 'class-validator';
 
 /** Prefijos de carpeta válidos del bucket S3 (docs/plan-tecnico.md sección 5). */
 export const CARPETAS_MEDIA = [
@@ -29,4 +29,9 @@ export class CreateMediaDto {
   @IsOptional()
   @IsIn(CARPETAS_MEDIA)
   carpeta?: (typeof CARPETAS_MEDIA)[number];
+
+  /** Fase 7e (UC-09): carpeta de la biblioteca donde se crea el archivo. */
+  @IsOptional()
+  @IsUUID('4')
+  carpeta_id?: string;
 }
