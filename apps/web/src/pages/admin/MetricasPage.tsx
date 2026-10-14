@@ -148,10 +148,11 @@ export function MetricasPage() {
     <div className="grid gap-4">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="font-heading text-xl font-semibold">Métricas</h1>
-        <Tabs value={String(periodo)} onValueChange={(v) => setPeriodo(Number(v) as PeriodoMetricas)}>
-          <TabsList aria-label="Periodo">
+        <Tabs className="w-full sm:w-auto" value={String(periodo)} onValueChange={(v) => setPeriodo(Number(v) as PeriodoMetricas)}>
+          {/* Novena ronda (UC-27): en móvil la lista ocupa todo el ancho con reparto uniforme. */}
+          <TabsList aria-label="Periodo" className="grid w-full grid-cols-3 sm:inline-flex sm:w-fit">
             {PERIODOS.map((p) => (
-              <TabsTrigger key={p} value={String(p)}>
+              <TabsTrigger key={p} value={String(p)} className="w-full sm:w-auto">
                 {p} días
               </TabsTrigger>
             ))}

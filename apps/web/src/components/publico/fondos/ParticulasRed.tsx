@@ -27,8 +27,9 @@ const RADIO_CURSOR = 170
  * impulso que los aparta (repulsión con decaimiento exponencial) y el cursor
  * dibuja hilos finos hacia los más próximos. Colores: nodos
  * `--color-primario`, enlaces `--color-secundario` (leídos con
- * `getComputedStyle` por `useBucleCanvas`). Estático (miniatura/movimiento
- * reducido): un solo fotograma de la distribución inicial.
+ * `getComputedStyle` por `useBucleCanvas`). Estático (solo movimiento
+ * reducido): un solo fotograma de la distribución inicial. En miniatura (novena
+ * ronda) corre a 20 fps, intensidad sutil y sin puntero.
  */
 export function ParticulasRed({
   velocidad,

@@ -22,7 +22,8 @@ const CAPAS = [
  * con interpolación exponencial), deriva muy despacio y parpadea con un
  * seno de fase propia; las estrellas cercanas llevan un halo. Colores:
  * `--color-secundario` (lejanas) y `--color-primario`. Estático
- * (miniatura/movimiento reducido): un fotograma con el parpadeo congelado.
+ * (solo movimiento reducido): un fotograma con el parpadeo congelado. En
+ * miniatura (novena ronda) corre a 20 fps, intensidad sutil y sin puntero/scroll.
  */
 export function CampoEstrellas({
   velocidad,

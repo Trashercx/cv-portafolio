@@ -195,21 +195,12 @@ describe('FondoAnimado (Fase 7b, UC-15)', () => {
     expect(container.firstElementChild).toHaveClass('fondo-miniatura')
     expect(container.querySelector('.fixed')).toBeNull()
 
-    // jsdom no calcula la cascada: se comprueba que la hoja pausa con !important
-    // (el shorthand `animation` inline de los fondos restablece play-state a running).
-    const css = readFileSync(resolve(__dirname, '../../index.css'), 'utf-8')
-    expect(css).toMatch(
-      /\.fondo-miniatura,\s*\.fondo-miniatura \*\s*\{\s*animation-play-state:\s*paused\s*!important;/,
-    )
   })
 
-  it('index.css reanuda las miniaturas solo con hover/focus y sin movimiento reducido', () => {
+  it('index.css ya no pausa las miniaturas (novena ronda): corren siempre', () => {
     const css = readFileSync(resolve(__dirname, '../../index.css'), 'utf-8')
-    const inicio = css.indexOf('@media (prefers-reduced-motion: no-preference) {\n    .tarjeta-fondo:hover')
-    expect(inicio).toBeGreaterThan(-1)
-    const bloque = css.slice(inicio, css.indexOf('}\n  }', inicio))
-    expect(bloque).toContain('.tarjeta-fondo:focus-within .fondo-miniatura *')
-    expect(bloque).toMatch(/animation-play-state:\s*running\s*!important/)
+    expect(css).not.toContain('.fondo-miniatura')
+    expect(css).not.toContain('.tarjeta-fondo:hover')
   })
 
   it('en sitio y editor la capa se ancla al viewport (fixed)', async () => {
