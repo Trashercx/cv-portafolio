@@ -3,6 +3,8 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import type { GaleriaFoto } from '@/features/secciones/types'
+import { SIZES_POR_CONTEXTO } from '@/lib/imagenes'
+import { ImagenResponsive } from './ImagenResponsive'
 
 type LightboxProps = {
   fotos: GaleriaFoto[]
@@ -72,10 +74,10 @@ export function Lightbox({ fotos, indiceInicial, open, onOpenChange }: LightboxP
               <ChevronLeft className="size-6" />
             </Button>
           ) : null}
-          <img
-            src={foto.media?.url}
+          <ImagenResponsive
+            media={foto.media}
             alt={foto.titulo || foto.media?.alt_text || ''}
-            decoding="async"
+            sizes={SIZES_POR_CONTEXTO.lightbox}
             className="max-h-full max-w-full object-contain"
           />
           {total > 1 ? (

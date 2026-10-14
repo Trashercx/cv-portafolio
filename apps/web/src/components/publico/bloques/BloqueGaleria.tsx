@@ -5,7 +5,9 @@ import type { GaleriaConfiguracion } from '@/features/secciones/types'
 import { usePrefiereMovimientoReducido } from '@/lib/animaciones'
 import { EFECTO_HOVER_GALERIA_CLASE } from '@/lib/efectos-hover'
 import { COLUMNAS_GRID_CLASE } from '@/lib/escalas-bloque'
+import { SIZES_POR_CONTEXTO } from '@/lib/imagenes'
 import { cn } from '@/lib/utils'
+import { ImagenResponsive } from '../ImagenResponsive'
 import { Lightbox } from '../Lightbox'
 import { TarjetaClicable } from '../contexto-renderizado'
 
@@ -46,11 +48,10 @@ export function BloqueGaleria({ titulo, config, alineacionTitulo }: BloqueGaleri
               aria-label={foto.titulo || 'Ver foto'}
               className={cn('overflow-hidden rounded-lg', efecto.tarjeta)}
             >
-              <img
-                src={foto.media?.url}
+              <ImagenResponsive
+                media={foto.media}
                 alt={foto.titulo || foto.media?.alt_text || ''}
-                loading="lazy"
-                decoding="async"
+                sizes={SIZES_POR_CONTEXTO.galeria}
                 className={cn('aspect-square w-full object-cover', efecto.imagen)}
               />
             </TarjetaClicable>
@@ -153,11 +154,10 @@ function CarouselGaleria({ fotos, onAbrirFoto, efecto }: CarouselGaleriaProps) {
               aria-label={foto.titulo || 'Ver foto'}
               className={cn('block w-full overflow-hidden rounded-lg', efecto.tarjeta)}
             >
-              <img
-                src={foto.media?.url}
+              <ImagenResponsive
+                media={foto.media}
                 alt={foto.titulo || foto.media?.alt_text || ''}
-                loading="lazy"
-                decoding="async"
+                sizes={SIZES_POR_CONTEXTO.galeria}
                 className={cn('aspect-video w-full object-cover', efecto.imagen)}
               />
             </TarjetaClicable>

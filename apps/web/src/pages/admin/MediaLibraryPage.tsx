@@ -1,5 +1,7 @@
-import { FileIcon } from 'lucide-react'
+import { FileIcon, ImagePlus, Loader2 } from 'lucide-react'
 import { useState } from 'react'
+import { toast } from 'sonner'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import {
   Select,
@@ -9,7 +11,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { MediaDetailDialog } from '@/features/media/MediaDetailDialog'
-import { useMediaList } from '@/features/media/useMediaLibrary'
+import { useMediaList, useRegenerarVariantes } from '@/features/media/useMediaLibrary'
 import type { Media } from '@/features/media/types'
 import { ApiError } from '@/lib/api-client'
 
@@ -24,6 +26,8 @@ const TIPOS_FILTRO = [
 export function MediaLibraryPage() {
   const [tipo, setTipo] = useState('todos')
   const [seleccionadoId, setSeleccionadoId] = useState<string | null>(null)
+
+  const regenerar = useRegenerarVariantes()
 
   const { data: media, isLoading, error } = useMediaList(
     tipo === 'todos' ? undefined : tipo,
@@ -41,18 +45,37 @@ export function MediaLibraryPage() {
         <h1 className="font-heading text-xl font-semibold">
           Biblioteca de medios
         </h1>
-        <Select value={tipo} onValueChange={setTipo}>
-          <SelectTrigger className="w-full sm:w-48">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {TIPOS_FILTRO.map((opcion) => (
-              <SelectItem key={opcion.value} value={opcion.value}>
-                {opcion.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={regenerar.isPending}
+            onClick={() =>
+              regenerar.mutate(undefined, {
+                // Fase 8 (8.2, UC-09): resumen del relleno de variantes.
+                onSuccess: (r) =>
+                  toast.success(
+                    `Variantes generadas: ${r.procesadas} procesadas, ${r.omitidas} omitidas, ${r.errores.length} con error.`,
+                  ),
+              })
+            }
+          >
+            {regenerar.isPending ? <Loader2 className="animate-spin" /> : <ImagePlus />}
+            Generar variantes faltantes
+          </Button>
+          <Select value={tipo} onValueChange={setTipo}>
+            <SelectTrigger className="w-full sm:w-48">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {TIPOS_FILTRO.map((opcion) => (
+                <SelectItem key={opcion.value} value={opcion.value}>
+                  {opcion.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {isLoading ? (

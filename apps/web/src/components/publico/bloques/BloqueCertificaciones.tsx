@@ -3,7 +3,9 @@ import { useAbrirDetalle } from '@/components/publico/contexto-detalle'
 import type { CertificacionPublica } from '@/features/publico/types'
 import type { CertificacionesConfiguracion } from '@/features/secciones/types'
 import { formatearFecha } from '@/lib/formato'
+import { SIZES_POR_CONTEXTO } from '@/lib/imagenes'
 import { cn } from '@/lib/utils'
+import { ImagenResponsive } from '../ImagenResponsive'
 import { TarjetaClicable } from '../contexto-renderizado'
 import { ItemAnimado } from '../ItemAnimado'
 import { TarjetaInteractiva } from '../TarjetaInteractiva'
@@ -79,11 +81,10 @@ export function BloqueCertificaciones({
                     // logo es un PDF (feedback externo, UC-04) se muestra un
                     // ícono en vez de un `<img>` roto.
                     certificacion.logo.tipo === 'imagen' ? (
-                      <img
-                        src={certificacion.logo.url}
+                      <ImagenResponsive
+                        media={certificacion.logo}
                         alt={certificacion.logo.alt_text ?? certificacion.nombre}
-                        loading="lazy"
-                        decoding="async"
+                        sizes={SIZES_POR_CONTEXTO.certificacion_logo}
                         className={cn(
                           'object-contain',
                           esVidrio ? 'size-12 shrink-0' : 'size-12',

@@ -6,8 +6,10 @@ import type { RedSocial } from '@/features/redes-sociales/types'
 import type { HeroConfiguracion } from '@/features/secciones/types'
 import { useAnimacionesActivas } from '@/lib/animaciones'
 import { resolverEnlaceSeguro } from '@/lib/enlaces'
+import { fondoImagenSet, SIZES_POR_CONTEXTO } from '@/lib/imagenes'
 import { cn } from '@/lib/utils'
 import { EnlaceBloque, useModoRenderizado } from '../contexto-renderizado'
+import { ImagenResponsive } from '../ImagenResponsive'
 import { RedesSociales } from '../RedesSociales'
 
 type BloqueHeroProps = {
@@ -316,13 +318,13 @@ export function BloqueHero({
 
   const fotoPerfil =
     mostrarFoto && perfil?.imagen_perfil ? (
-      <img
-        src={perfil.imagen_perfil.url}
+      <ImagenResponsive
+        media={perfil.imagen_perfil}
         alt={perfil.imagen_perfil.alt_text ?? perfil.nombre_completo}
-        // Fase 6: la foto del hero está above-the-fold (LCP): prioridad alta,
-        // sin lazy.
-        fetchPriority="high"
-        decoding="async"
+        sizes={SIZES_POR_CONTEXTO.hero_foto}
+        // Fase 6/8 (UC-34): la foto del hero está above-the-fold (LCP):
+        // `prioridad` = eager + fetchPriority alta, sin lazy.
+        prioridad
         style={{
           ...(config.estilo_foto === 'con_marco'
             ? { borderColor: 'var(--color-primario)' }
@@ -449,7 +451,9 @@ export function BloqueHero({
       style={
         config.imagen_fondo
           ? {
-              backgroundImage: `url(${config.imagen_fondo.url})`,
+              // Fase 8 (8.2, UC-34): `image-set()` AVIF/WebP con el original
+              // como respaldo dentro de la propia lista.
+              backgroundImage: fondoImagenSet(config.imagen_fondo),
               backgroundSize: 'cover',
               backgroundPosition: 'center',
             }
