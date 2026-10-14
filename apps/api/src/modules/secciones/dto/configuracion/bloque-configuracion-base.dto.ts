@@ -64,8 +64,10 @@ export class BloqueConfiguracionBaseDto {
 
   /**
    * Fase 7c (7c.3, UC-07/UC-12): contorno de los contenedores y tarjetas del
-   * bloque. Sin default persistido: el frontend trata la clave ausente como
-   * 'sutil' (aspecto previo), por lo que las filas viejas siguen válidas.
+   * bloque. El API no impone default: la clave ausente (filas y snapshots
+   * anteriores a la fase) se interpreta como 'sutil' (aspecto previo) en el
+   * render; el editor, como con los demás campos base, persiste el valor
+   * elegido ('sutil' por defecto) en los bloques nuevos.
    */
   @IsOptional()
   @IsIn(['ninguno', 'sutil', 'marcado'])
