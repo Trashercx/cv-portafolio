@@ -202,6 +202,17 @@ erDiagram
         string alt_text
         timestamp created_at
     }
+    MEDIA_VARIANTE {
+        uuid id PK
+        uuid media_id FK
+        string formato
+        int ancho
+        int alto
+        string url
+        string s3_key
+        int bytes
+        timestamp created_at
+    }
     PROYECTO {
         uuid id PK
         uuid usuario_admin_id FK
@@ -321,13 +332,16 @@ erDiagram
     PERFIL }o--o| MEDIA : "cv en pdf"
     PROYECTO ||--o{ PROYECTO_IMAGEN : contiene
     MEDIA ||--o{ PROYECTO_IMAGEN : "usado en"
+    MEDIA ||--o{ MEDIA_VARIANTE : "derivadas"
     PROYECTO ||--o{ PROYECTO_TECNOLOGIA : usa
     TECNOLOGIA ||--o{ PROYECTO_TECNOLOGIA : "aplicada en"
     CERTIFICACION }o--o| MEDIA : logo
     PLATAFORMA_RED ||--o{ RED_SOCIAL : clasifica
 ```
 
-Dieciséis entidades: el administrador es el dueño de todo el contenido; `MEDIA`, `TECNOLOGIA` y `PLATAFORMA_RED` son catálogos compartidos en vez de campos de texto libre repetidos; `SECCION`, `TEMA`, `FONDO_SITIO` y `VERSION_SITIO` sostienen el editor visual y la publicación por versiones. `SKILL` sigue el mismo patrón que `LOGRO`: contenido propio del administrador (no un catálogo compartido) — a diferencia de `TECNOLOGIA`, que solo clasifica proyectos, `SKILL` es lo que se muestra en el carrusel de habilidades del sitio público, así que no tendría sentido reutilizar aquel catálogo para este propósito distinto. `FONDO_SITIO` sigue el mismo patrón de "configuración visual exclusiva" que `TEMA`, pero es deliberadamente independiente de él: `TEMA` solo maneja color y tipografía, `FONDO_SITIO` maneja el fondo animado del landing.
+Diecisiete entidades: el administrador es el dueño de todo el contenido; `MEDIA`, `TECNOLOGIA` y `PLATAFORMA_RED` son catálogos compartidos en vez de campos de texto libre repetidos; `SECCION`, `TEMA`, `FONDO_SITIO` y `VERSION_SITIO` sostienen el editor visual y la publicación por versiones. `SKILL` sigue el mismo patrón que `LOGRO`: contenido propio del administrador (no un catálogo compartido) — a diferencia de `TECNOLOGIA`, que solo clasifica proyectos, `SKILL` es lo que se muestra en el carrusel de habilidades del sitio público, así que no tendría sentido reutilizar aquel catálogo para este propósito distinto. `FONDO_SITIO` sigue el mismo patrón de "configuración visual exclusiva" que `TEMA`, pero es deliberadamente independiente de él: `TEMA` solo maneja color y tipografía, `FONDO_SITIO` maneja el fondo animado del landing.
+
+`MEDIA_VARIANTE` guarda las variantes responsive (WebP/AVIF por ancho) derivadas de cada `MEDIA` (Fase 8, UC-34), en tabla propia y no como JSON dentro de `MEDIA`, para respetar 3FN y poder borrarlas en cascada.
 
 `USUARIO_ADMIN.intentos_fallidos` (int, default 0) y `USUARIO_ADMIN.bloqueado_hasta` (timestamp, nullable) se agregan porque el criterio de aceptación de UC-01 exige bloqueo temporal tras 3 intentos fallidos de login, y el esquema original no tenía dónde contar esos intentos ni hasta cuándo dura el bloqueo.
 
