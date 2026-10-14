@@ -89,3 +89,17 @@ describe('MetricasPage (Fase 8, UC-27)', () => {
     expect(useMetricasMock).toHaveBeenLastCalledWith(90)
   })
 })
+
+describe('MetricasPage, pestañas responsive (novena ronda, UC-27)', () => {
+  it('la lista de periodos reparte el ancho en móvil y se compacta desde sm', () => {
+    useMetricasMock.mockReturnValue({ data: DISPONIBLE, isLoading: false, error: null })
+    render(<MetricasPage />)
+    const lista = screen.getByRole('tablist', { name: 'Periodo' })
+    for (const clase of ['grid', 'grid-cols-3', 'w-full', 'sm:inline-flex', 'sm:w-fit', 'max-w-full', 'overflow-x-auto', 'scrollbar-fina']) {
+      expect(lista).toHaveClass(clase)
+    }
+    for (const pestana of screen.getAllByRole('tab')) {
+      expect(pestana).toHaveClass('w-full', 'sm:w-auto', 'shrink-0', 'whitespace-nowrap')
+    }
+  })
+})

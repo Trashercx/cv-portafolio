@@ -76,7 +76,7 @@ function ControlSegmentado<T extends string>({
             aria-checked={valor === opcion.valor}
             onClick={() => onChange(opcion.valor)}
             className={cn(
-              'rounded-sm px-2 py-1 text-xs font-medium transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
+              'min-w-0 truncate rounded-sm px-2 py-1 text-xs font-medium transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
               valor === opcion.valor
                 ? 'bg-background text-foreground shadow-xs'
                 : 'text-muted-foreground hover:text-foreground',

@@ -74,7 +74,7 @@ export function MediaField({
   return (
     <div className="grid gap-2">
       <Tabs defaultValue="subir">
-        <TabsList>
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="subir">Subir nuevo</TabsTrigger>
           <TabsTrigger value="biblioteca">Elegir de biblioteca</TabsTrigger>
         </TabsList>
