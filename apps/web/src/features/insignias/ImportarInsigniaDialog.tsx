@@ -24,6 +24,8 @@ import { useUploadMedia } from '@/features/media/useUploadMedia'
 import { ApiError } from '@/lib/api-client'
 import { CamposInsignia, construirPayloadInsignia } from './CamposInsignia'
 import { pdfAImagenPng } from './pdf-a-imagen'
+import { ACCEPT_INSIGNIAS } from '@/features/media/formatos-imagen'
+import { prepararArchivoParaSubir } from '@/features/media/heic-a-jpeg'
 import {
   INSIGNIA_VALORES_VACIOS,
   insigniaSchema,
@@ -170,14 +172,22 @@ export function ImportarInsigniaDialog({ open, onOpenChange }: ImportarInsigniaD
     const combinar = (resultado: VistaPreviaInsignia) =>
       base ? fusionarConBase(base, resultado) : resultado
 
-    const esPdf = archivo.type === 'application/pdf'
-    if (!esPdf) {
-      importarArchivo.mutate(archivo, { onSuccess: (resultado) => aplicarVista(combinar(resultado)) })
+    // Fase 7g, UC-35: criterio único de formato y tamaño (`prepararArchivoParaSubir`):
+    // un HEIC se convierte primero a JPEG y se mide el resultado.
+    setErrorPdf(null)
+    setConvirtiendo(true)
+    const preparado = await prepararArchivoParaSubir(archivo)
+    if ('error' in preparado) {
+      setConvirtiendo(false)
+      setErrorPdf(preparado.error)
+      return
+    }
+    if (preparado.formato !== 'pdf') {
+      setConvirtiendo(false)
+      importarArchivo.mutate(preparado.file, { onSuccess: (resultado) => aplicarVista(combinar(resultado)) })
       return
     }
 
-    setErrorPdf(null)
-    setConvirtiendo(true)
     try {
       const { blob } = await pdfAImagenPng(archivo)
       const nombreBase = nombreSinExtension(archivo.name)
@@ -301,11 +311,11 @@ export function ImportarInsigniaDialog({ open, onOpenChange }: ImportarInsigniaD
                 </div>
               </TabsContent>
               <TabsContent value="archivo" className="grid gap-2">
-                <Label htmlFor="archivo-insignia">Archivo PNG, SVG o PDF (hasta 10 MB)</Label>
+                <Label htmlFor="archivo-insignia">Archivo PNG, JPG, WebP, SVG, HEIC o PDF (hasta 10 MB)</Label>
                 <Input
                   id="archivo-insignia"
                   type="file"
-                  accept="image/png,image/svg+xml,application/pdf"
+                  accept={ACCEPT_INSIGNIAS}
                   disabled={importarArchivo.isPending || convirtiendo}
                   onChange={(event) => void alElegirArchivo(event.target.files?.[0])}
                 />

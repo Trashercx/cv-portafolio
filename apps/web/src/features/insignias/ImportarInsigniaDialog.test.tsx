@@ -1,6 +1,7 @@
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { ACCEPT_INSIGNIAS } from '@/features/media/formatos-imagen'
 import { ImportarInsigniaDialog } from './ImportarInsigniaDialog'
 import type { VistaPreviaInsignia } from './types'
 
@@ -217,7 +218,7 @@ describe('ImportarInsigniaDialog (Fase 7d, UC-35)', () => {
     await user.type(screen.getByLabelText(/Enlace, código de embed/), vistaDataCamp.url_verificacion!)
     await user.click(screen.getByRole('button', { name: 'Analizar' }))
 
-    expect(await screen.findByLabelText(/Archivo PNG, SVG o PDF/)).toBeInTheDocument()
+    expect(await screen.findByLabelText(/Archivo PNG, JPG/)).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'Subir archivo' })).toHaveAttribute('data-state', 'active')
     expect(screen.getByDisplayValue('DataCamp')).toBeInTheDocument()
     expect(screen.getByRole('status', { name: 'Avisos de la importación' })).toHaveTextContent(
@@ -225,7 +226,7 @@ describe('ImportarInsigniaDialog (Fase 7d, UC-35)', () => {
     )
 
     await user.upload(
-      screen.getByLabelText(/Archivo PNG, SVG o PDF/),
+      screen.getByLabelText(/Archivo PNG, JPG/),
       new File(['png'], 'cert.png', { type: 'image/png' }),
     )
     await user.click(await screen.findByRole('button', { name: 'Guardar' }))
@@ -254,7 +255,7 @@ describe('ImportarInsigniaDialog (Fase 7d, UC-35)', () => {
 
     await user.click(screen.getByRole('tab', { name: 'Subir archivo' }))
     const pdf = new File(['%PDF'], 'Mi Certificado.pdf', { type: 'application/pdf' })
-    await user.upload(screen.getByLabelText(/Archivo PNG, SVG o PDF/), pdf)
+    await user.upload(screen.getByLabelText(/Archivo PNG, JPG/), pdf)
 
     expect(pdfAImagenPngMock).toHaveBeenCalledWith(pdf)
     await waitFor(() => expect(archivoMutate).toHaveBeenCalledTimes(1))
@@ -289,7 +290,7 @@ describe('ImportarInsigniaDialog (Fase 7d, UC-35)', () => {
 
     await user.click(screen.getByRole('tab', { name: 'Subir archivo' }))
     await user.upload(
-      screen.getByLabelText(/Archivo PNG, SVG o PDF/),
+      screen.getByLabelText(/Archivo PNG, JPG/),
       new File(['%PDF'], 'Mi Certificado.pdf', { type: 'application/pdf' }),
     )
     await user.click(await screen.findByRole('button', { name: 'Guardar' }))
@@ -309,7 +310,7 @@ describe('ImportarInsigniaDialog (Fase 7d, UC-35)', () => {
 
     await user.click(screen.getByRole('tab', { name: 'Subir archivo' }))
     await user.upload(
-      screen.getByLabelText(/Archivo PNG, SVG o PDF/),
+      screen.getByLabelText(/Archivo PNG, JPG/),
       new File(['%PDF'], 'roto.pdf', { type: 'application/pdf' }),
     )
     expect(await screen.findByText('Convirtiendo…')).toBeInTheDocument()
@@ -345,7 +346,7 @@ describe('ImportarInsigniaDialog (Fase 7d, UC-35)', () => {
 
     await user.click(screen.getByRole('tab', { name: 'Subir archivo' }))
     const archivo = new File(['png'], 'insignia.png', { type: 'image/png' })
-    await user.upload(screen.getByLabelText(/Archivo PNG, SVG o PDF/), archivo)
+    await user.upload(screen.getByLabelText(/Archivo PNG, JPG/), archivo)
 
     expect(archivoMutate).toHaveBeenCalledWith(archivo, expect.any(Object))
     expect(await screen.findByDisplayValue('AWS Cloud Practitioner')).toBeInTheDocument()
@@ -402,5 +403,12 @@ describe('ImportarInsigniaDialog (Fase 7d, UC-35)', () => {
 
     expect(await screen.findByText('URL inválida')).toBeInTheDocument()
     expect(crearMutate).not.toHaveBeenCalled()
+  })
+
+  it('Fase 7g: el input de "Subir archivo" usa ACCEPT_INSIGNIAS (incluye HEIC)', async () => {
+    const { user } = renderDialog()
+    await user.click(screen.getByRole('tab', { name: 'Subir archivo' }))
+    expect(screen.getByLabelText(/Archivo PNG, JPG/)).toHaveAttribute('accept', ACCEPT_INSIGNIAS)
+    expect(ACCEPT_INSIGNIAS).toContain('.heic')
   })
 })

@@ -5,6 +5,7 @@
  * solo se descarga al elegir un PDF. El worker sale del propio bundle (`?url`
  * de Vite), nunca de un CDN: la CSP no lo permite.
  */
+import { AREA_MAXIMA_PX, LADO_MAXIMO_PX } from '@/features/media/limites-lienzo'
 
 export type OpcionesPdfAImagen = {
   /** Escala mínima de render (por defecto 2). */
@@ -12,10 +13,6 @@ export type OpcionesPdfAImagen = {
   /** Ancho mínimo del PNG en píxeles; si la escala no alcanza, se sube (por defecto 1600). */
   anchoMinimo?: number
 }
-
-/** Topes del lienzo (Fase 7e): un MediaBox enorme no debe agotar la memoria del navegador. */
-const LADO_MAXIMO_PX = 4000
-const AREA_MAXIMA_PX = 16_000_000
 
 export type ImagenDePdf = { blob: Blob; ancho: number; alto: number }
 
