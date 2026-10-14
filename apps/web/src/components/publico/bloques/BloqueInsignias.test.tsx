@@ -41,6 +41,27 @@ function crearInsignia(n: number, extra: Partial<InsigniaPublica> = {}): Insigni
 
 const INSIGNIAS = [crearInsignia(1), crearInsignia(2), crearInsignia(3)]
 
+describe('BloqueInsignias (Fase 7e, UC-35: sin vencimiento)', () => {
+  it('muestra "Sin vencimiento" sin fecha de expiración y "Expira" cuando la hay', () => {
+    render(
+      <BloqueInsignias
+        titulo="Insignias"
+        config={{ mostrar_fecha: true }}
+        insignias={[crearInsignia(1), crearInsignia(2, { fecha_expiracion: '2030-05-01' })]}
+      />,
+    )
+    expect(screen.getAllByText(/Sin vencimiento/)).toHaveLength(1)
+    expect(screen.getAllByText(/Expira/)).toHaveLength(1)
+  })
+
+  it('con mostrar_fecha en false no lo muestra', () => {
+    render(
+      <BloqueInsignias titulo="Insignias" config={{ mostrar_fecha: false }} insignias={[crearInsignia(1)]} />,
+    )
+    expect(screen.queryByText(/Sin vencimiento/)).not.toBeInTheDocument()
+  })
+})
+
 describe('BloqueInsignias (Fase 7d, UC-35)', () => {
   it('pinta nombre, emisor y fecha por defecto y no muestra las habilidades', () => {
     render(<BloqueInsignias titulo="Insignias" config={{}} insignias={INSIGNIAS} />)

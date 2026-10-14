@@ -1,7 +1,23 @@
 import type { Media } from '@/features/media/types'
 
 /** Fase 7d, UC-35: origen de una insignia (columna `proveedor`). */
-export type ProveedorInsignia = 'credly' | 'open_badges' | 'generico' | 'manual'
+export type ProveedorInsignia =
+  | 'credly'
+  | 'open_badges'
+  | 'generico'
+  | 'manual'
+  | 'skilljar'
+  | 'datacamp'
+
+/** Fase 7e, UC-35: cómo se lee un proveedor (`GET /admin/insignias/proveedores`). */
+export type ModoProveedorInsignia = 'automatico' | 'archivo' | 'mixto'
+
+export type InfoProveedorInsignia = {
+  clave: string
+  nombre: string
+  modo: ModoProveedorInsignia
+  ayuda: string
+}
 
 /** Forma de `GET /admin/insignias` (Fase 7d, UC-35). `imagen` puede venir resuelta o no. */
 export type Insignia = {
@@ -60,6 +76,8 @@ export type VistaPreviaInsignia = {
   id_externo: string | null
   url_origen: string | null
   imagen: { url: string; ancho?: number; alto?: number; formato?: string } | null
+  /** Fase 7e: modo del proveedor detectado; con `archivo` el diálogo pasa a "Subir archivo". */
+  modo_proveedor?: ModoProveedorInsignia
   avisos: string[]
   imagen_media_id?: string
 }

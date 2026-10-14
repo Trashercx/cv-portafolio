@@ -107,6 +107,8 @@ export function BloqueCertificaciones({
                     {mostrarFecha ? (
                       <p className="text-xs text-muted-foreground">
                         {formatearFecha(certificacion.fecha_emision)}
+                        {/* Fase 7e, UC-04: sin fecha de expiración se indica explícitamente. */}
+                        {certificacion.fecha_expiracion ? null : ' · Sin vencimiento'}
                       </p>
                     ) : null}
                   </div>
