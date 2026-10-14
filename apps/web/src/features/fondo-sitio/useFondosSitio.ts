@@ -13,15 +13,19 @@ export function useFondosSitio() {
   })
 }
 
-/** `POST /admin/fondos` — siempre se crea inactivo (regla de negocio del backend). */
-export function useCrearFondoSitio() {
+/**
+ * `POST /admin/fondos` — siempre se crea inactivo (regla de negocio del
+ * backend). `silencioso` omite el toast de éxito: el panel Fondo encadena la
+ * activación (Fase 7b, UC-15) y solo avisa de esta última.
+ */
+export function useCrearFondoSitio({ silencioso = false } = {}) {
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: (payload: FondoSitioFormValues) =>
       apiFetch<FondoSitio>('/admin/fondos', { method: 'POST', body: payload }),
     meta: {
-      mensajeExito: 'Fondo creado correctamente.',
+      mensajeExito: silencioso ? undefined : 'Fondo creado correctamente.',
       mensajeError: 'No se pudo crear el fondo. Intenta de nuevo.',
     },
     onSuccess: () => {

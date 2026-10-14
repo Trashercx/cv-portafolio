@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import type { PuckContext } from '@puckeditor/core'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { ThemeProvider } from '@/components/theme/ThemeProvider'
@@ -130,5 +130,55 @@ describe('PuckRoot — modo de la vista previa (Fase 7, UC-08)', () => {
     )
 
     expect(llamadas).toBe(0)
+  })
+})
+
+describe('PuckRoot — fondo en edición (Fase 7b, UC-15)', () => {
+  const FONDO_GUARDADO = {
+    id: 'f1',
+    usuario_admin_id: 'a1',
+    tipo: 'aurora_mesh' as const,
+    configuracion: { velocidad: 'media' as const, opacidad: 0.5 },
+    activo: true,
+  }
+  const puckConFondo = {
+    metadata: { datos: { ...(puck.metadata as { datos: object }).datos, fondo: FONDO_GUARDADO } },
+  } as unknown as PuckContext
+
+  function renderConFondo() {
+    return render(
+      <ThemeProvider>
+        <PuckRoot puck={puckConFondo}>
+          <p>Contenido del lienzo</p>
+        </PuckRoot>
+      </ThemeProvider>,
+    )
+  }
+
+  beforeEach(() => {
+    window.localStorage.clear()
+    useEditorPanelStore.setState({ modoVistaPrevia: null, fondoEnEdicion: null })
+  })
+
+  it('sin ajuste en curso muestra el fondo guardado en modo editor', () => {
+    const { container } = renderConFondo()
+    const fondo = container.querySelector('[data-fondo-tipo]')
+    expect(fondo).toHaveAttribute('data-fondo-tipo', 'aurora_mesh')
+    expect(fondo).toHaveAttribute('data-fondo-modo', 'editor')
+  })
+
+  it('el fondo en edición del store tiene prioridad sobre el guardado y se retira al limpiarlo', () => {
+    const { container } = renderConFondo()
+    act(() => {
+      useEditorPanelStore.getState().setFondoEnEdicion({
+        ...FONDO_GUARDADO,
+        id: '',
+        tipo: 'haces_luz',
+      })
+    })
+    expect(container.querySelector('[data-fondo-tipo]')).toHaveAttribute('data-fondo-tipo', 'haces_luz')
+
+    act(() => useEditorPanelStore.getState().setFondoEnEdicion(null))
+    expect(container.querySelector('[data-fondo-tipo]')).toHaveAttribute('data-fondo-tipo', 'aurora_mesh')
   })
 })

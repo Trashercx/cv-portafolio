@@ -7,7 +7,11 @@ import {
 describe('editor-panel-store (Fase 7, UC-08)', () => {
   beforeEach(() => {
     window.localStorage.clear()
-    useEditorPanelStore.setState({ pluginActivo: null, modoVistaPrevia: null })
+    useEditorPanelStore.setState({
+      pluginActivo: null,
+      modoVistaPrevia: null,
+      fondoEnEdicion: null,
+    })
   })
 
   afterEach(() => {
@@ -56,5 +60,35 @@ describe('editor-panel-store (Fase 7, UC-08)', () => {
   it('setPluginActivo guarda el plugin del rail', () => {
     useEditorPanelStore.getState().setPluginActivo('tema')
     expect(useEditorPanelStore.getState().pluginActivo).toBe('tema')
+  })
+
+  it('fondoEnEdicion arranca en null y se guarda con setFondoEnEdicion (Fase 7b, UC-15)', () => {
+    expect(useEditorPanelStore.getState().fondoEnEdicion).toBeNull()
+    const fondo = {
+      id: 'f1',
+      usuario_admin_id: 'a1',
+      tipo: 'haces_luz' as const,
+      configuracion: { velocidad: 'media' as const, opacidad: 0.4 },
+      activo: false,
+    }
+    useEditorPanelStore.getState().setFondoEnEdicion(fondo)
+    expect(useEditorPanelStore.getState().fondoEnEdicion).toEqual(fondo)
+  })
+
+  it('cambiar de plugin limpia fondoEnEdicion, pero repetir el mismo no (Fase 7b, UC-15)', () => {
+    useEditorPanelStore.setState({ pluginActivo: 'fondo' })
+    useEditorPanelStore.getState().setFondoEnEdicion({
+      id: '',
+      usuario_admin_id: '',
+      tipo: 'aurora_mesh',
+      configuracion: { velocidad: 'lenta', opacidad: 0.5 },
+      activo: false,
+    })
+
+    useEditorPanelStore.getState().setPluginActivo('fondo')
+    expect(useEditorPanelStore.getState().fondoEnEdicion).not.toBeNull()
+
+    useEditorPanelStore.getState().setPluginActivo('tema')
+    expect(useEditorPanelStore.getState().fondoEnEdicion).toBeNull()
   })
 })
