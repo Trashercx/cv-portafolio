@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+
+# Fase 8 (UC-34): este archivo es solo el RESPALDO de /robots.txt. nginx hace
+# proxy de /robots.txt a `GET /robots.txt` del API, que ademas emite la linea
+# `Sitemap: <FRONTEND_ORIGIN>/sitemap.xml`. Si el API no responde, nginx sirve
+# este archivo estatico en su lugar (error_page en nginx/default.conf.template).

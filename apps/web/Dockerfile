@@ -62,7 +62,25 @@ COPY apps/web/src ./apps/web/src
 ARG VITE_API_URL=http://localhost:3000
 ENV VITE_API_URL=${VITE_API_URL}
 
+# Fase 8 (UC-27) — analítica con Umami, OPCIONAL. Igual que VITE_API_URL,
+# se incrustan en el JS en tiempo de build. Si cualquiera de las dos queda
+# vacía (el default), `components/publico/Analitica.tsx` no inyecta ningún
+# script y el sitio sale sin tracker. Al activarlas también hay que poner
+# ANALITICA_ORIGIN en runtime (CSP), ver docs/despliegue.md §7.
+ARG VITE_UMAMI_URL=
+ARG VITE_UMAMI_WEBSITE_ID=
+ENV VITE_UMAMI_URL=${VITE_UMAMI_URL}
+ENV VITE_UMAMI_WEBSITE_ID=${VITE_UMAMI_WEBSITE_ID}
+
 RUN npm run build --workspace apps/web
+
+# Fase 8 (UC-34) — la inyección de metadatos en servidor depende de que la
+# directiva SSI `<!--# include virtual="/_seo/metadatos" -->` de
+# apps/web/index.html llegue intacta a dist/index.html. Vite conserva los
+# comentarios de index.html hoy, pero una minificación futura (plugin de
+# HTML, cambio de versión) podría quitarla en silencio y el sitio seguiría
+# funcionando... sin SEO para bots. Mejor que el build falle aquí.
+RUN grep -q 'include virtual="/_seo/metadatos"' apps/web/dist/index.html
 
 # ---------------------------------------------------------------------------
 # Stage final: nginx sirviendo los estáticos generados por Vite
@@ -82,17 +100,20 @@ COPY apps/web/nginx/default.conf.template /etc/nginx/templates/default.conf.temp
 # plantilla incluye en cada location; no pasa por envsubst.
 COPY apps/web/nginx/cabeceras-seguridad.conf /etc/nginx/snippets/cabeceras-seguridad.conf
 
-# Defaults seguros para API_ORIGIN / MEDIA_ORIGIN si no vienen del entorno
-# (envsubst no soporta ${VAR:-default}). Es un `.envsh`: la imagen lo
-# carga con `source` para que sus exports lleguen al paso de envsubst.
+# Defaults seguros para API_ORIGIN / MEDIA_ORIGIN / SEO_UPSTREAM /
+# ANALITICA_ORIGIN si no vienen del entorno (envsubst no soporta
+# ${VAR:-default}). Es un `.envsh`: la imagen lo carga con `source` para
+# que sus exports lleguen al paso de envsubst.
 COPY apps/web/docker-entrypoint.d/10-defaults.envsh /docker-entrypoint.d/10-defaults.envsh
 RUN chmod +x /docker-entrypoint.d/10-defaults.envsh
 
-# envsubst SOLO toca estas dos variables: cualquier otro `$nombre` de la
-# plantilla ($uri, $host, $csp_api_origin...) es sintaxis de nginx y debe
-# llegar intacto. Sin este filtro, una variable de entorno llamada
-# casualmente `uri` o `host` corrompería la config.
-ENV NGINX_ENVSUBST_FILTER="^(API_ORIGIN|MEDIA_ORIGIN)$"
+# envsubst SOLO toca estas variables: cualquier otro `$nombre` de la
+# plantilla ($uri, $host, $csp_api_origin, $seo_upstream...) es sintaxis de
+# nginx y debe llegar intacto. Sin este filtro, una variable de entorno
+# llamada casualmente `uri` o `host` corrompería la config. Fase 8 añade
+# SEO_UPSTREAM (proxy interno al API para SSI/sitemap/robots) y
+# ANALITICA_ORIGIN (origen de Umami en la CSP).
+ENV NGINX_ENVSUBST_FILTER="^(API_ORIGIN|MEDIA_ORIGIN|SEO_UPSTREAM|ANALITICA_ORIGIN)$"
 
 COPY --from=build /repo/apps/web/dist /usr/share/nginx/html
 

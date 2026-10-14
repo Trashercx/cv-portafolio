@@ -5,15 +5,22 @@
 # corre `envsubst` sobre /etc/nginx/templates/*.template al arrancar el
 # contenedor y deja el resultado en /etc/nginx/conf.d/default.conf. Solo se
 # sustituyen las variables de entorno listadas en NGINX_ENVSUBST_FILTER
-# (API_ORIGIN y MEDIA_ORIGIN, ver Dockerfile); cualquier otro `$algo` de
-# este archivo ($uri, $host, $csp_api_origin...) llega intacto a nginx.
-# Los valores por defecto de esas dos variables los fija
+# (API_ORIGIN, MEDIA_ORIGIN, SEO_UPSTREAM y ANALITICA_ORIGIN, ver Dockerfile);
+# cualquier otro `$algo` de este archivo ($uri, $host, $csp_api_origin...)
+# llega intacto a nginx. Los valores por defecto de esas variables los fija
 # apps/web/docker-entrypoint.d/10-defaults.envsh antes del envsubst.
 #
-# No hace proxy inverso a apps/api: eso se resuelve a nivel de
-# Dokploy/Coolify o de un reverse proxy externo al contenedor. La URL de
-# la API ya quedó incrustada en el JS en tiempo de build (VITE_API_URL),
-# así que este servidor solo necesita entregar archivos estáticos.
+# Fase 8 (UC-34): este servidor SÍ habla con apps/api, pero solo para tres
+# cosas de SEO y únicamente por la red interna de Docker (SEO_UPSTREAM,
+# default http://api:3000):
+#   1. el fragmento de metadatos que se inyecta en index.html por SSI
+#      (`<!--# include virtual="/_seo/metadatos" -->` → GET /seo/metadatos),
+#   2. /sitemap.xml  → GET /sitemap.xml del API,
+#   3. /robots.txt   → GET /robots.txt del API (respaldo: robots.estatico.txt).
+# Todo lo demás (fetch() del panel y del sitio público) sigue yendo directo
+# del navegador al API por la URL pública incrustada en el JS en tiempo de
+# build (VITE_API_URL); el proxy inverso público del API lo resuelve
+# Dokploy/Coolify (Traefik), no este contenedor.
 
 server {
   listen 80;
@@ -21,6 +28,23 @@ server {
 
   root /usr/share/nginx/html;
   index index.html;
+
+  # Fase 8 — `proxy_pass` con una VARIABLE (ver $seo_upstream) obliga a nginx
+  # a resolver el nombre del upstream en runtime, y para eso necesita un
+  # `resolver` explícito. 127.0.0.11 es el DNS embebido de Docker, el único
+  # que conoce los nombres de servicio del compose (`api`). `valid=10s`
+  # re-resuelve cada 10 s (si el contenedor `api` cambia de IP al
+  # redesplegarse, nginx lo sigue sin reiniciar); `ipv6=off` evita consultas
+  # AAAA inútiles en la red interna; `resolver_timeout` acota la espera si el
+  # DNS no responde: el DNS de Docker NO contesta NXDOMAIN para un contenedor
+  # detenido, simplemente no responde (comprobado), así que mientras `api`
+  # está caído cada index.html tarda ~1 s más antes de caer al respaldo.
+  # Fuera de Docker (p. ej. `--network host`) no existe 127.0.0.11: mismo
+  # efecto, el subrequest falla y cae al respaldo, no cuelga la página. Si
+  # SEO_UPSTREAM lleva una IP literal (http://10.0.0.5:3000) el resolver no
+  # se usa y puede quedarse tal cual.
+  resolver 127.0.0.11 valid=10s ipv6=off;
+  resolver_timeout 1s;
 
   # Fase 6 — orígenes externos que la Content-Security-Policy debe permitir.
   # Se exponen como variables de nginx para que el snippet de cabeceras
@@ -30,8 +54,18 @@ server {
   #                 con el VITE_API_URL con que se construyó la imagen.
   #   MEDIA_ORIGIN: origen de S3/CloudFront desde donde se incrustan los PDF
   #                 (object-src / frame-src).
+  #   ANALITICA_ORIGIN (Fase 8, UC-27): origen del tracker de Umami
+  #                 (script-src / connect-src). Vacío si no hay analítica:
+  #                 nginx interpola una cadena vacía y la CSP sigue válida.
   set $csp_api_origin "${API_ORIGIN}";
   set $csp_media_origin "${MEDIA_ORIGIN}";
+  set $csp_analitica_origin "${ANALITICA_ORIGIN}";
+
+  # Fase 8 (UC-34) — URL base interna del API para el SSI de metadatos, el
+  # sitemap y robots (con esquema y puerto, sin barra final; el envsh la
+  # recorta). Al ser variable, `proxy_pass` no la resuelve al arrancar: si el
+  # servicio `api` todavía no existe, nginx igual levanta y sirve el sitio.
+  set $seo_upstream "${SEO_UPSTREAM}";
 
   # Cabeceras de seguridad para TODAS las respuestas del server. OJO: en
   # nginx `add_header` no se hereda si el location declara su propio
@@ -64,7 +98,18 @@ server {
   # el servidor. Sin este fallback, refrescar el navegador en cualquiera
   # de esas rutas devolvería 404 en vez de dejar que React Router la
   # resuelva del lado del cliente.
+  #
+  # Fase 8 (UC-34) — `ssi on` SOLO aquí y en `location = /index.html`: son
+  # las dos respuestas que entregan index.html (try_files redirige
+  # internamente a /index.html, así que en la práctica la segunda es la que
+  # sirve). SSI solo procesa `text/html` (ssi_types por defecto), así que
+  # los .txt/.svg que caigan en este location no se tocan. Los assets con
+  # hash tienen su propio location sin SSI. `ssi_silent_errors` sustituye un
+  # include fallido por una cadena vacía en vez del texto
+  # "[an error occurred while processing this directive]".
   location / {
+    ssi on;
+    ssi_silent_errors on;
     try_files $uri $uri/ /index.html;
   }
 
@@ -82,18 +127,100 @@ server {
 
   # index.html sí cambia de contenido sin cambiar de nombre (referencia
   # los assets con hash actualizado en cada build): nunca debe quedar en
-  # caché de navegador/CDN.
+  # caché de navegador/CDN. Fase 8: con SSI, además, su contenido depende
+  # de la ruta pedida (metadatos por página), otra razón para `no-cache`.
   location = /index.html {
+    ssi on;
+    ssi_silent_errors on;
     add_header Cache-Control "no-cache";
     include /etc/nginx/snippets/cabeceras-seguridad.conf;
   }
 
-  # Fase 6 — robots.txt (apps/web/public/robots.txt) con caché corta: no
-  # lleva hash, así que un cambio debe propagarse en horas, no en 30 días.
-  # Sin try_files: si el archivo no existe responde 404 y no el index.html
-  # del fallback de SPA (un robots.txt con HTML confunde a los rastreadores).
-  # `expires` ya emite `Cache-Control: max-age=3600` por sí solo.
+  # Fase 8 (UC-34) — destino del `<!--# include virtual="/_seo/metadatos" -->`
+  # de index.html. `internal`: solo se alcanza por el subrequest del SSI,
+  # nunca desde fuera (una petición directa produce un 404 que el error_page
+  # de abajo convierte en 200 con cuerpo vacío: no expone nada). En un subrequest
+  # `$request_uri` sigue siendo la URI ORIGINAL del visitante (p. ej.
+  # /proyecto/<id>?x=1), que viaja al API en X-Ruta-Publica para que decida
+  # qué metadatos devolver. Timeouts cortos: un API lento no debe retrasar
+  # el HTML más de ~3 s. Si el API no responde o responde error, el include
+  # se resuelve con /_seo/vacio (200 y cuerpo vacío) y el HTML sale igual
+  # con los metadatos estáticos de respaldo. El 404 también cae ahí
+  # (defensivo: un cuerpo de error nunca debe terminar inyectado en <head>).
+  # `proxy_intercept_errors` hace que los 5xx devueltos POR el API pasen por
+  # error_page; los que genera nginx solo (502/504 por conexión fallida)
+  # pasan siempre.
+  location = /_seo/metadatos {
+    internal;
+    proxy_pass $seo_upstream/seo/metadatos;
+    proxy_http_version 1.1;
+    proxy_set_header X-Ruta-Publica $request_uri;
+    proxy_set_header Host $host;
+    proxy_set_header Connection "";
+    # Por si SEO_UPSTREAM apunta a un https:// externo (SNI); inocuo con http.
+    proxy_ssl_server_name on;
+    proxy_connect_timeout 1s;
+    proxy_read_timeout 2s;
+    proxy_send_timeout 2s;
+    proxy_intercept_errors on;
+    error_page 404 500 502 503 504 =200 /_seo/vacio;
+  }
+
+  # Fase 8 — respuesta vacía con 200 para el respaldo del include anterior.
+  location = /_seo/vacio {
+    internal;
+    return 200 "";
+  }
+
+  # Fase 8 (UC-34) — sitemap generado por el API desde la versión publicada.
+  # Si el API no responde, se devuelve 503 en texto plano (nunca el
+  # index.html del fallback de SPA: un sitemap con HTML lo descarta Google
+  # y un 503 le dice "vuelve luego" sin desindexar nada).
+  location = /sitemap.xml {
+    access_log off;
+    proxy_pass $seo_upstream/sitemap.xml;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header Connection "";
+    proxy_ssl_server_name on;
+    proxy_connect_timeout 1s;
+    proxy_read_timeout 2s;
+    proxy_send_timeout 2s;
+    proxy_intercept_errors on;
+    error_page 500 502 503 504 = /_seo/sitemap-no-disponible;
+  }
+
+  location = /_seo/sitemap-no-disponible {
+    internal;
+    default_type text/plain;
+    return 503 "Sitemap temporalmente no disponible\n";
+  }
+
+  # Fase 8 (UC-34) — robots.txt lo genera el API (añade la línea `Sitemap:`
+  # con FRONTEND_ORIGIN). Si el API no responde, nginx sirve el respaldo
+  # estático apps/web/public/robots.estatico.txt (mismo contenido sin la
+  # línea Sitemap) con 200: los rastreadores nunca ven un error aquí.
+  # (Fase 6: antes se servía el archivo estático directamente con caché de 1 h;
+  # ahora la caché la decide el API con su Cache-Control.)
   location = /robots.txt {
+    access_log off;
+    proxy_pass $seo_upstream/robots.txt;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header Connection "";
+    proxy_ssl_server_name on;
+    proxy_connect_timeout 1s;
+    proxy_read_timeout 2s;
+    proxy_send_timeout 2s;
+    proxy_intercept_errors on;
+    error_page 500 502 503 504 = /robots.estatico.txt;
+  }
+
+  # Fase 8 — respaldo estático de robots.txt. Solo se alcanza por el
+  # error_page de arriba. Caché corta: si el API vuelve, el robots real (con
+  # Sitemap) debe propagarse en horas, no en 30 días.
+  location = /robots.estatico.txt {
+    internal;
     expires 1h;
     access_log off;
     include /etc/nginx/snippets/cabeceras-seguridad.conf;
