@@ -25,9 +25,10 @@ export type FondoAnimadoProps = {
   }
   /**
    * `sitio` (default): todo activo. `editor` (iframe del lienzo): animación CSS
-   * sí, interactividad no, canvas a 30 fps como máximo. `miniatura`: sin
-   * `requestAnimationFrame` ni interactividad, animación CSS solo al pasar el
-   * puntero por la tarjeta (`.tarjeta-fondo`, ver `index.css`).
+   * sí, interactividad no, canvas a 30 fps como máximo. `miniatura` (novena
+   * ronda, UC-15): animación CSS siempre activa y canvas a 20 fps como máximo
+   * (pausados fuera de pantalla o con la pestaña oculta), con intensidad
+   * `sutil` implícita en los canvas y sin puntero ni scroll.
    */
   modo?: ModoFondo
   /** Anclaje de la capa visual; por defecto `pagina` (sitio/editor) y `caja` (miniatura). */
@@ -52,6 +53,11 @@ const FONDOS: Record<Exclude<TipoFondo, 'solido'>, FondoLazy> = {
   degradado_grano: lazy(() => import('./fondos/DegradadoGrano').then((m) => ({ default: m.DegradadoGrano }))),
   campo_estrellas: lazy(() => import('./fondos/CampoEstrellas').then((m) => ({ default: m.CampoEstrellas }))),
 }
+
+/** Tipos con canvas (los que más cuestan en miniatura). */
+const INTENSIDAD_SUTIL_EN_MINIATURA: ReadonlySet<string> = new Set(['particulas_red', 'campo_estrellas'])
+
+const MAX_FPS_POR_MODO: Record<ModoFondo, number> = { sitio: 60, editor: 30, miniatura: 20 }
 
 const VELOCIDADES: readonly VelocidadFondo[] = ['lenta', 'media', 'rapida']
 const INTENSIDADES: readonly IntensidadFondo[] = ['sutil', 'media', 'alta']
@@ -114,7 +120,7 @@ function useFondoListo(diferir: boolean): boolean {
  * solo existe en `sitio`, con `configuracion.interactivo !== false`, sin
  * `prefers-reduced-motion` y en un tipo interactivo; con movimiento reducido
  * los canvas dibujan un único fotograma y las animaciones CSS se pausan
- * (regla `.fondo-animado *` de `index.css`). Los colores salen de las
+ * (regla `.fondo-animado *` de `index.css`, también en miniatura). Los colores salen de las
  * variables del tema (`--color-primario/--color-secundario/--color-fondo`).
  */
 export function FondoAnimado({ fondo, modo = 'sitio', ambito }: FondoAnimadoProps) {
@@ -130,7 +136,11 @@ export function FondoAnimado({ fondo, modo = 'sitio', ambito }: FondoAnimadoProp
 
   const { configuracion } = fondo
   const velocidad = VELOCIDADES.find((v) => v === configuracion.velocidad) ?? 'media'
-  const intensidad = INTENSIDADES.find((i) => i === configuracion.intensidad) ?? 'media'
+  const intensidadConfigurada = INTENSIDADES.find((i) => i === configuracion.intensidad) ?? 'media'
+  // Novena ronda (UC-15): nueve miniaturas animando a la vez; los canvas bajan a
+  // la intensidad `sutil` (menos partículas/estrellas) para que sigan siendo baratos.
+  const intensidad =
+    modo === 'miniatura' && INTENSIDAD_SUTIL_EN_MINIATURA.has(tipo) ? 'sutil' : intensidadConfigurada
   const opacidad = configuracion.opacidad ?? 0.5
   const Visual = FONDOS[tipo]
 
@@ -142,8 +152,9 @@ export function FondoAnimado({ fondo, modo = 'sitio', ambito }: FondoAnimadoProp
       configuracion.interactivo !== false &&
       !reducido &&
       entradaCatalogo(tipo).interactivo,
-    estatico: modo === 'miniatura' || reducido,
-    maxFps: modo === 'editor' ? 30 : 60,
+    // Novena ronda (UC-15): la miniatura ya no es estática; solo el movimiento reducido congela.
+    estatico: reducido,
+    maxFps: MAX_FPS_POR_MODO[modo],
     ambito: ambito ?? (modo === 'miniatura' ? 'caja' : 'pagina'),
   }
 

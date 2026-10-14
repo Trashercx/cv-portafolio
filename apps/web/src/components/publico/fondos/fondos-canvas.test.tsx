@@ -139,9 +139,19 @@ describe.each(CANVAS)('canvas %s', (tipo) => {
     for (const o of observadoresTamano) expect(o.disconnect).toHaveBeenCalled()
   })
 
-  it('en miniatura no usa requestAnimationFrame (fotograma estático)', async () => {
-    await montar(tipo, 'miniatura')
-    expect(rafSpy).not.toHaveBeenCalled()
+  it('en miniatura corre a 20 fps como máximo y sin listeners de puntero', async () => {
+    const alta = vi.spyOn(window, 'addEventListener')
+    const { unmount } = await montar(tipo, 'miniatura')
+    await waitFor(() => expect(rafSpy).toHaveBeenCalled())
+    // A 20 fps (50 ms) un cuadro a 10 ms del anterior no dibuja, pero sigue agendando.
+    ejecutarCuadro(1000)
+    ejecutarCuadro(1010)
+    expect(cuadros.size).toBeGreaterThan(0)
+    const tipos = alta.mock.calls.map((c) => c[0])
+    expect(tipos).not.toContain('pointermove')
+    expect(tipos).not.toContain('scroll')
+    unmount()
+    expect(cuadros.size).toBe(0)
   })
 
   it('con prefers-reduced-motion no usa requestAnimationFrame', async () => {

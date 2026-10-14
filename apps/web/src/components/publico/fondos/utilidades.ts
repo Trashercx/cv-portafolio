@@ -15,9 +15,9 @@ export type PropsFondoVisual = {
   intensidad: IntensidadFondo
   /** Ya resuelto: solo `true` en modo `sitio`, con `interactivo` y sin movimiento reducido. */
   interactivo: boolean
-  /** `true` en miniatura o con movimiento reducido: sin `requestAnimationFrame`, fotograma fijo. */
+  /** `true` solo con movimiento reducido: sin `requestAnimationFrame`, fotograma fijo (en miniatura ya no, novena ronda). */
   estatico: boolean
-  /** Tope de fotogramas por segundo de los canvas (30 en el lienzo del editor, 60 en el sitio). */
+  /** Tope de fotogramas por segundo de los canvas (20 en miniatura, 30 en el lienzo del editor, 60 en el sitio). */
   maxFps: number
   /**
    * `pagina`: la capa se ancla al viewport (`fixed`, sitio y lienzo);
