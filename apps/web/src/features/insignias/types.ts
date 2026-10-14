@@ -25,8 +25,24 @@ export type Insignia = {
   imagen?: Media | null
 }
 
-/** Insignia tal como llega en el snapshot: solo visibles y con `imagen` resuelta. */
-export type InsigniaPublica = Omit<Insignia, 'imagen'> & { imagen: Media }
+/**
+ * Insignia tal como llega en el snapshot (Fase 7d, UC-35): solo las visibles, con
+ * `imagen` resuelta y SIN campos internos (`usuario_admin_id`, `url_origen`,
+ * `id_externo`, `visible`, timestamps): el API las omite con `select`.
+ */
+export type InsigniaPublica = Pick<
+  Insignia,
+  | 'id'
+  | 'nombre'
+  | 'emisor'
+  | 'descripcion'
+  | 'proveedor'
+  | 'url_verificacion'
+  | 'fecha_emision'
+  | 'fecha_expiracion'
+  | 'habilidades'
+  | 'orden'
+> & { imagen: Media }
 
 /**
  * Respuesta de `POST /admin/insignias/importar` (vista previa sin persistir) y de

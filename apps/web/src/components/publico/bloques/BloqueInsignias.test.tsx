@@ -12,22 +12,15 @@ import { DespachoBloqueSeccion } from './DespachoBloqueSeccion'
 function crearInsignia(n: number, extra: Partial<InsigniaPublica> = {}): InsigniaPublica {
   return {
     id: `ins-${n}`,
-    usuario_admin_id: 'admin-1',
     nombre: `Insignia ${n}`,
     emisor: `Emisor ${n}`,
     descripcion: null,
     proveedor: 'credly',
-    id_externo: null,
     url_verificacion: `https://www.credly.com/badges/${n}`,
-    url_origen: null,
-    imagen_media_id: `media-${n}`,
     fecha_emision: '2025-03-10',
     fecha_expiracion: null,
     habilidades: ['AWS', 'Cloud'],
     orden: n,
-    visible: true,
-    created_at: '2026-01-01T00:00:00.000Z',
-    updated_at: '2026-01-01T00:00:00.000Z',
     imagen: {
       id: `media-${n}`,
       url: `https://cdn.example.com/insignia-${n}.png`,

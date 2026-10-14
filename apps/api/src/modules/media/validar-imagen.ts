@@ -14,7 +14,7 @@ import { sharp } from './sharp';
 export interface ImagenValidada {
   /** MIME derivado del contenido (el que se guarda como `ContentType`). */
   mime: string;
-  formato: 'png' | 'jpeg' | 'webp' | 'avif' | 'svg';
+  formato: 'png' | 'jpeg' | 'webp' | 'avif' | 'gif' | 'svg';
   ancho?: number;
   alto?: number;
 }
@@ -24,6 +24,9 @@ const MIME_POR_FORMATO: Record<ImagenValidada['formato'], string> = {
   jpeg: 'image/jpeg',
   webp: 'image/webp',
   avif: 'image/avif',
+  // Revisión Fase 7d: el GIF ya se admitía antes de validar por contenido; se
+  // conserva (sharp lo identifica; no genera variantes, como hasta ahora).
+  gif: 'image/gif',
   svg: 'image/svg+xml',
 };
 
@@ -74,7 +77,8 @@ export async function validarImagen(
       formato === 'png' ||
       formato === 'jpeg' ||
       formato === 'webp' ||
-      formato === 'avif'
+      formato === 'avif' ||
+      formato === 'gif'
     ) {
       if (!meta.width || !meta.height) return null;
       return {
