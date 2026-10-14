@@ -27,3 +27,35 @@ export type Media = {
   /** Fase 8 (8.2): ausente en snapshots antiguos o en imágenes sin procesar. */
   variantes?: VarianteMedia[]
 }
+
+/** Dónde se usa un archivo (Fase 7d, UC-09): elemento de `GET /admin/media/usos`. */
+export type UsoMedia = {
+  tipo:
+    | 'perfil'
+    | 'cv'
+    | 'proyecto'
+    | 'certificacion'
+    | 'hero'
+    | 'galeria'
+    | 'insignia'
+  id: string
+  nombre: string
+}
+
+/** `GET /admin/media/usos` (Fase 7d, UC-09): usos agrupados por `mediaId`. */
+export type UsosPorMedia = Record<string, UsoMedia[]>
+
+/** Resultado de `POST /admin/media/eliminar-lote` (Fase 7d, UC-09). */
+export type ResultadoEliminarLote = {
+  eliminados: string[]
+  omitidos: { id: string; motivo: string }[]
+}
+
+export type OrdenMedia = 'reciente' | 'antiguo' | 'nombre'
+
+/** Filtros de `GET /admin/media?tipo=&q=&orden=` (Fase 7d, UC-09). */
+export type FiltrosMedia = {
+  tipo?: string
+  q?: string
+  orden?: OrdenMedia
+}
