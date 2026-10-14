@@ -432,6 +432,97 @@ describe('Media admin (e2e, UC-02/UC-03/UC-04 + biblioteca UC-09)', () => {
     expect(JSON.stringify(r.body.message)).toContain('HEIC/HEIF');
   });
 
+  describe('validación por contenido (Undécima ronda, UC-09)', () => {
+    const HEIC = Buffer.from(
+      '00000018667479706865696300000000' + '6d6966316865' + '6963',
+      'hex',
+    );
+    const octet = (filename: string) => ({
+      filename,
+      contentType: 'application/octet-stream',
+    });
+
+    it('HEIC como application/octet-stream: 400 con HEIC/HEIF', async () => {
+      const r = await agent
+        .post('/admin/media')
+        .attach('file', HEIC, octet('foto.heic'))
+        .expect(400);
+      expect(JSON.stringify(r.body.message)).toContain('HEIC/HEIF');
+    });
+
+    it('PNG como application/octet-stream: 201 con tipo imagen', async () => {
+      const png = await sharp({
+        create: { width: 8, height: 8, channels: 3, background: '#09f' },
+      })
+        .png()
+        .toBuffer();
+      const r = await agent
+        .post('/admin/media')
+        .attach('file', png, octet('foto.png'))
+        .expect(201);
+      idsCreados.push(r.body.id);
+      keysCreadas.push(r.body.s3_key);
+      expect(r.body.tipo).toBe('imagen');
+    });
+
+    it('PDF real como application/octet-stream: 201 tipo pdf', async () => {
+      const r = await agent
+        .post('/admin/media')
+        .attach('file', Buffer.from('%PDF-1.4 prueba'), octet('cv.pdf'))
+        .expect(201);
+      idsCreados.push(r.body.id);
+      keysCreadas.push(r.body.s3_key);
+      expect(r.body.tipo).toBe('pdf');
+    });
+
+    it('tipo=pdf con un PNG: 400', async () => {
+      await agent
+        .post('/admin/media')
+        .field('tipo', 'pdf')
+        .attach('file', PNG_1X1, 'foto.png')
+        .expect(400);
+    });
+
+    it('PATCH :id/reemplazar de una imagen con un PDF: 400', async () => {
+      const subida = await agent
+        .post('/admin/media')
+        .attach('file', PNG_1X1, 'original.png')
+        .expect(201);
+      idsCreados.push(subida.body.id);
+      keysCreadas.push(subida.body.s3_key);
+      const r = await agent
+        .patch(`/admin/media/${subida.body.id}/reemplazar`)
+        .attach('file', Buffer.from('%PDF-1.4 prueba'), 'doc.pdf')
+        .expect(400);
+      expect(JSON.stringify(r.body.message)).toContain('esperado (imagen)');
+    });
+
+    it('buffer aleatorio .bin: 400', async () => {
+      await agent
+        .post('/admin/media')
+        .attach(
+          'file',
+          Buffer.from([9, 8, 7, 6, 5, 4, 3, 2, 1, 0, 1, 2, 3]),
+          octet('x.bin'),
+        )
+        .expect(400);
+    });
+
+    it('PATCH :id/reemplazar con HEIC octet-stream: 400', async () => {
+      const subida = await agent
+        .post('/admin/media')
+        .attach('file', PNG_1X1, 'original.png')
+        .expect(201);
+      idsCreados.push(subida.body.id);
+      keysCreadas.push(subida.body.s3_key);
+      const r = await agent
+        .patch(`/admin/media/${subida.body.id}/reemplazar`)
+        .attach('file', HEIC, octet('nueva.heic'))
+        .expect(400);
+      expect(JSON.stringify(r.body.message)).toContain('HEIC/HEIF');
+    });
+  });
+
   describe('búsqueda, usos y borrado en lote (Fase 7d, UC-09)', () => {
     const subir = async (alt: string, nombre: string) => {
       const r = await agent

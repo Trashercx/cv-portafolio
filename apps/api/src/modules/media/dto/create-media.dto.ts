@@ -12,7 +12,9 @@ export const CARPETAS_MEDIA = [
 /**
  * Metadata que acompaña al archivo en `POST /admin/media` (el archivo en sí
  * viaja en el campo multipart `file`, no en este DTO). `tipo` es opcional:
- * si no se manda, `MediaService` lo infiere del `mimetype` del archivo.
+ * si no se manda, `MediaService` lo infiere del MIME REAL (por contenido, no
+ * el declarado); si es `imagen` o `pdf` se contrasta con el contenido y un
+ * desajuste es 400 (Undécima ronda, UC-09).
  * `carpeta` es opcional: indica en qué prefijo del bucket S3 se guarda el
  * archivo cuando el cliente ya sabe para qué entidad lo está subiendo; si no
  * se indica, `S3MediaStorageService` usa un prefijo genérico.

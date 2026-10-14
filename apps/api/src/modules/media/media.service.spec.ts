@@ -13,6 +13,12 @@ const PNG_1X1 = Buffer.from(
   'base64',
 );
 
+const PDF_MINIMO = Buffer.from('%PDF-1.4 contenido de prueba');
+const HEIC_SINTETICO = Buffer.from(
+  '00000018667479706865696300000000' + '6d6966316865' + '6963',
+  'hex',
+);
+
 const pngReal = () =>
   sharp({ create: { width: 10, height: 10, channels: 3, background: '#fff' } })
     .png()
@@ -139,7 +145,11 @@ describe('MediaService (UC-02/03/04 + biblioteca UC-09)', () => {
       prisma.media.create.mockResolvedValue({ id: 'media-uuid' });
 
       await service.create(
-        buildFile({ mimetype: 'application/pdf', originalname: 'cv.pdf' }),
+        buildFile({
+          mimetype: 'application/pdf',
+          originalname: 'cv.pdf',
+          buffer: PDF_MINIMO,
+        }),
         {},
         'admin-uuid',
       );
@@ -149,6 +159,142 @@ describe('MediaService (UC-02/03/04 + biblioteca UC-09)', () => {
           data: expect.objectContaining({ tipo: 'pdf' }),
         }),
       );
+    });
+
+    describe('validación por contenido (Undécima ronda, UC-09)', () => {
+      it('HEIC declarado application/octet-stream: 400 con HEIC/HEIF', async () => {
+        const file = buildFile({
+          mimetype: 'application/octet-stream',
+          originalname: 'foto.heic',
+          buffer: HEIC_SINTETICO,
+        });
+        await expect(service.create(file, {}, 'admin-uuid')).rejects.toThrow(
+          /HEIC\/HEIF/,
+        );
+        expect(storage.upload).not.toHaveBeenCalled();
+      });
+
+      it('PNG declarado application/octet-stream: se guarda como imagen/png y genera variantes', async () => {
+        prisma.media.create.mockResolvedValue({ id: 'media-uuid' });
+        const file = buildFile({
+          mimetype: 'application/octet-stream',
+          buffer: await pngReal(),
+        });
+        await service.create(file, {}, 'admin-uuid');
+
+        expect(prisma.media.create).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({ tipo: 'imagen' }),
+          }),
+        );
+        expect(storage.upload).toHaveBeenCalledWith(
+          expect.objectContaining({ mimetype: 'image/png' }),
+          undefined,
+        );
+        expect(variantes.generar).toHaveBeenCalledWith(
+          'media-uuid',
+          expect.any(Buffer),
+          'biblioteca/abc.png',
+          'image/png',
+        );
+      });
+
+      it('bytes aleatorios: 400 genérico', async () => {
+        const file = buildFile({
+          mimetype: 'application/octet-stream',
+          originalname: 'x.bin',
+          buffer: Buffer.from([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]),
+        });
+        await expect(service.create(file, {}, 'admin-uuid')).rejects.toThrow(
+          /no es una imagen/i,
+        );
+      });
+
+      it('PDF real declarado application/octet-stream: application/pdf y tipo pdf', async () => {
+        prisma.media.create.mockResolvedValue({ id: 'media-uuid' });
+        const file = buildFile({
+          mimetype: 'application/octet-stream',
+          originalname: 'cv.pdf',
+          buffer: PDF_MINIMO,
+        });
+        await service.create(file, {}, 'admin-uuid');
+
+        expect(file.mimetype).toBe('application/pdf');
+        expect(prisma.media.create).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({ tipo: 'pdf' }),
+          }),
+        );
+      });
+
+      it('tipo "pdf" con un PNG: 400 de tipo no coincidente', async () => {
+        await expect(
+          service.create(buildFile(), { tipo: 'pdf' }, 'admin-uuid'),
+        ).rejects.toThrow(/no coincide con el tipo esperado \(pdf\)/);
+      });
+
+      it('tipo "imagen" con un PDF: 400 de tipo no coincidente', async () => {
+        await expect(
+          service.create(
+            buildFile({ buffer: PDF_MINIMO, mimetype: 'application/pdf' }),
+            { tipo: 'imagen' },
+            'admin-uuid',
+          ),
+        ).rejects.toThrow(/no coincide con el tipo esperado \(imagen\)/);
+      });
+
+      it('SVG con script declarado octet-stream: 400', async () => {
+        const file = buildFile({
+          mimetype: 'application/octet-stream',
+          buffer: Buffer.from('<svg xmlns="x"><script>alert(1)</script></svg>'),
+        });
+        await expect(service.create(file, {}, 'admin-uuid')).rejects.toThrow(
+          /ni un PDF admitidos/,
+        );
+      });
+
+      it('reemplazar una imagen por un PDF: 400 tipo esperado (imagen)', async () => {
+        prisma.media.findUnique.mockResolvedValue({
+          id: 'media-uuid',
+          tipo: 'imagen',
+        });
+        await expect(
+          service.reemplazar(
+            'media-uuid',
+            buildFile({ buffer: PDF_MINIMO, mimetype: 'application/pdf' }),
+            undefined,
+            undefined,
+            'a',
+          ),
+        ).rejects.toThrow(/esperado \(imagen\)/);
+        expect(storage.upload).not.toHaveBeenCalled();
+      });
+
+      it('reemplazar un PDF por una imagen: 400 tipo esperado (pdf)', async () => {
+        prisma.media.findUnique.mockResolvedValue({
+          id: 'media-uuid',
+          tipo: 'pdf',
+        });
+        await expect(
+          service.reemplazar(
+            'media-uuid',
+            buildFile(),
+            undefined,
+            undefined,
+            'a',
+          ),
+        ).rejects.toThrow(/esperado \(pdf\)/);
+      });
+
+      it('reemplazar con HEIC octet-stream: 400', async () => {
+        const file = buildFile({
+          mimetype: 'application/octet-stream',
+          buffer: HEIC_SINTETICO,
+        });
+        await expect(
+          service.reemplazar('media-uuid', file, undefined, undefined, 'a'),
+        ).rejects.toThrow(/HEIC\/HEIF/);
+      });
     });
 
     it('respeta el tipo explícito del DTO en vez de inferirlo', async () => {

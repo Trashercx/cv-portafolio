@@ -7,7 +7,11 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '../../../generated/prisma/client';
 import { sharp } from './sharp';
-import { mensajeRechazoImagen, validarImagen } from './validar-imagen';
+import {
+  esHeicPorContenido,
+  MENSAJE_HEIC_NO_ADMITIDO,
+  validarImagen,
+} from './validar-imagen';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateMediaDto } from './dto/create-media.dto';
 import { ListarMediaQueryDto } from './dto/listar-media-query.dto';
@@ -24,7 +28,11 @@ import {
   MediaStorageService,
 } from './storage/media-storage.interface';
 
-/** Deriva un `tipo` razonable cuando el admin no lo especifica en el DTO. */
+/**
+ * Deriva el `tipo` del MIME REAL (ya normalizado por contenido en
+ * `normalizarArchivo`, nunca el declarado). Si el DTO trae `imagen`/`pdf`, se
+ * contrasta con este valor (Undécima ronda, UC-09).
+ */
 function inferirTipo(mimetype: string): string {
   if (mimetype.startsWith('image/')) return 'imagen';
   if (mimetype === 'application/pdf') return 'pdf';
@@ -32,18 +40,46 @@ function inferirTipo(mimetype: string): string {
 }
 
 /**
- * Fase 7d (UC-09): si el archivo se declara imagen, el tipo se decide por
- * CONTENIDO (`validarImagen`) y se usa el MIME real; contenido no admitido
- * o SVG con codigo activo es 400. Otros tipos (PDF) pasan sin cambios.
+ * Undécima ronda, UC-09 (antes Fase 7d/7g): el tipo del archivo se decide
+ * SIEMPRE por CONTENIDO y se ignora el MIME declarado. Motivo: Windows declara
+ * `application/octet-stream` para `.heic`, y al validar solo lo declarado como
+ * `image/*` ese HEIC se guardó como `archivo` sin validar, miniatura ni
+ * variantes. Reglas: imagen admitida (`validarImagen`) -> su MIME real; HEIC/HEIF
+ * -> 400 explicativo; cabecera `%PDF-` -> `application/pdf`; otra cosa -> 400.
+ * Deja el MIME real en `file.mimetype`.
  */
-async function normalizarImagen(file: Express.Multer.File): Promise<void> {
-  if (!file.mimetype?.startsWith('image/')) return;
+/** Undécima ronda, UC-09: rechazo final de media (imagen o PDF); insignias usa el suyo. */
+export const MENSAJE_ARCHIVO_NO_ADMITIDO =
+  'El archivo no es una imagen ni un PDF admitidos. Formatos aceptados: PNG, JPEG, WebP, AVIF, GIF, SVG (sin contenido activo) y PDF.';
+
+async function normalizarArchivo(file: Express.Multer.File): Promise<void> {
   const imagen = await validarImagen(file.buffer);
-  if (!imagen) {
-    // Fase 7g, UC-09: HEIC/HEIF se explica aparte; el resto enumera formatos.
-    throw new BadRequestException(mensajeRechazoImagen(file.buffer));
+  if (imagen) {
+    file.mimetype = imagen.mime;
+    return;
   }
-  file.mimetype = imagen.mime;
+  if (esHeicPorContenido(file.buffer)) {
+    throw new BadRequestException(MENSAJE_HEIC_NO_ADMITIDO);
+  }
+  // Solo en el byte 0: se rechaza de más antes que ampliar la superficie de polyglots.
+  if (file.buffer?.toString('latin1', 0, 5) === '%PDF-') {
+    file.mimetype = 'application/pdf';
+    return;
+  }
+  throw new BadRequestException(MENSAJE_ARCHIVO_NO_ADMITIDO);
+}
+
+/**
+ * Undécima ronda, UC-09: `dto.tipo` es texto libre, pero `imagen` y `pdf` son
+ * afirmaciones sobre el contenido y deben coincidir con el tipo inferido; otros
+ * valores (p. ej. `documento`) se respetan sin comprobar.
+ */
+function asegurarTipoCoincide(esperado: string | undefined, real: string) {
+  if ((esperado === 'imagen' || esperado === 'pdf') && esperado !== real) {
+    throw new BadRequestException(
+      `El contenido del archivo no coincide con el tipo esperado (${esperado}).`,
+    );
+  }
 }
 
 @Injectable()
@@ -61,7 +97,8 @@ export class MediaService {
     dto: CreateMediaDto,
     usuarioAdminId: string,
   ) {
-    await normalizarImagen(file);
+    await normalizarArchivo(file);
+    asegurarTipoCoincide(dto.tipo, inferirTipo(file.mimetype));
     await this.asegurarCarpeta(usuarioAdminId, dto.carpeta_id);
     const resultado = await this.storage.upload(file, dto.carpeta);
 
@@ -222,8 +259,10 @@ export class MediaService {
     carpetaId: string | null | undefined,
     usuarioAdminId: string,
   ) {
-    await this.obtener(id);
-    await normalizarImagen(file);
+    const existente = await this.obtener(id);
+    await normalizarArchivo(file);
+    // Undécima ronda, UC-09: reemplazar no cambia el tipo (las referencias exigen imagen).
+    asegurarTipoCoincide(existente.tipo, inferirTipo(file.mimetype));
     await this.asegurarCarpeta(usuarioAdminId, carpetaId);
 
     const resultado = await this.storage.upload(file, carpeta);
