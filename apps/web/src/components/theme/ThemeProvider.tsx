@@ -27,8 +27,9 @@ function leerThemeGuardado(): Theme {
 /**
  * Tema visual del *chrome* del panel admin (shadcn, clase `.dark` en
  * `<html>`), independiente del módulo de negocio "Tema" (`features/tema/`,
- * tabla `tema`) que solo afecta al sitio público vía `lib/tema-css.ts`. Solo
- * envuelve `<AdminLayout>` en `App.tsx`, nunca las páginas públicas.
+ * tabla `tema`) que solo afecta al sitio público vía `lib/tema-css.ts`. Lo
+ * montan `<AdminLayout>` (en `App.tsx`) y, desde la Fase 7f (UC-01), la propia
+ * `LoginPage`, que vive fuera del layout; nunca las páginas públicas.
  */
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => leerThemeGuardado())
@@ -38,8 +39,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     window.localStorage.setItem(STORAGE_KEY, theme)
   }, [theme])
 
-  // `ThemeProvider` solo envuelve `AdminLayout`: se monta/desmonta al
-  // entrar/salir de `/admin/*`. Sin este cleanup, si el admin activa modo
+  // `ThemeProvider` se monta/desmonta al entrar/salir de `/admin/*` (en
+  // `AdminLayout` y en `LoginPage`). Sin este cleanup, si el admin activa modo
   // oscuro y navega al sitio público, `.dark` queda pegado en `<html>`
   // indefinidamente y se filtra a los componentes shadcn compartidos
   // (botones, inputs, etc.) que sí tienen variantes `dark:`.

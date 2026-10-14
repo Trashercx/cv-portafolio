@@ -184,6 +184,14 @@ Pedida por el usuario tras probar la Fase 7d en producción. Agrega la entidad `
 | UC-35 | Proveedores ampliables: registro visible en el diálogo ("Proveedores reconocidos"), extractor de Anthropic/Skilljar automático, DataCamp por archivo (su web bloquea la lectura automática) y certificados en PDF convertidos a imagen en el navegador | Pegar un enlace `verify.skilljar.com` rellena nombre, emisor, fechas e imagen; pegar un enlace de DataCamp reconoce el proveedor y guía a subir el PDF o la imagen; un PDF subido se convierte en PNG de alta resolución y se importa como insignia. |
 | UC-09 | Carpetas planas en la biblioteca (crear, renombrar, reordenar, eliminar), filtro por carpeta en la URL y en el selector de los formularios, subida a la carpeta activa, mover archivos por menú o arrastrándolos | Eliminar una carpeta no borra archivos (quedan "Sin carpeta"); los nombres son únicos por administrador sin distinguir mayúsculas; la clave de S3 no cambia al mover. |
 
+### Extensión de UC-01 — Fase 7f, pantalla de inicio de sesión (2026-10-14)
+
+Solo frontend. Contrato en `docs/plan-tecnico.md`, "Fase 7f".
+
+| UC | Extensión | Criterio de aceptación |
+|---|---|---|
+| UC-01 | Pantalla de login con panel de marca (fondo y tema del sitio publicado, nombre y título del perfil), contraseña con mostrar/ocultar y aviso de Bloq Mayús, recordar email, mensajes claros por tipo de error (credenciales, bloqueo, demasiados intentos, red, sesión expirada) y animación de entrada | En móvil cabe en una columna sin scroll horizontal; tras un error el foco vuelve a la contraseña; la contraseña nunca se guarda en el navegador; con `prefers-reduced-motion` no hay animación. |
+
 ### Casos de uso propuestos — roadmap de profesionalización (2026-10-13, pendientes de aprobación)
 
 Los UC-19 a UC-34 nacen de la propuesta de la Sección 7 (roadmap). Se listan aquí para que el índice de casos de uso siga siendo la única fuente de verdad. **Solo UC-27 y UC-34 están aprobados e implementados** (Fase 8, 2026-10-14) y UC-35 (insignias, Fase 7d, definido en la sección anterior); el resto sigue pendiente: cada fase del roadmap se aprueba por separado y recién entonces se agregan sus entidades al diagrama ER (vía `db-schema`) y se codifica. La Fase 6 (fundamentos de producción) no agrega casos de uso: refuerza UC-01 (cierre de sesión real, límite de intentos por IP) y UC-12/13 (metadatos SEO, accesibilidad, rendimiento).
