@@ -157,6 +157,11 @@ server {
     proxy_set_header X-Ruta-Publica $request_uri;
     proxy_set_header Host $host;
     proxy_set_header Connection "";
+    # Novena ronda (UC-34): el subrequest NO debe pedir compresión. El API
+    # comprime las respuestas de más de 1 KB (compression()), y nginx no puede
+    # incrustar en el SSI un cuerpo gzip: la home (JSON-LD incluido) llegaba
+    # vacía mientras los fragmentos cortos (panel, 404) sí se inyectaban.
+    proxy_set_header Accept-Encoding "";
     # Por si SEO_UPSTREAM apunta a un https:// externo (SNI); inocuo con http.
     proxy_ssl_server_name on;
     proxy_connect_timeout 1s;
