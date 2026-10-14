@@ -74,6 +74,9 @@ export function PuckRoot({ children, puck }: PuckRootProps) {
   // Fase 7 (UC-08): el toggle "Vista previa en oscuro" del header del editor
   // fuerza el modo SOLO de este lienzo; `null` sigue al panel.
   const modoVistaPrevia = useEditorPanelStore((state) => state.modoVistaPrevia)
+  // Fase 7b (UC-15): el fondo que se está ajustando en el panel Fondo (sin guardar) manda sobre el guardado.
+  const fondoEnEdicion = useEditorPanelStore((state) => state.fondoEnEdicion)
+  const fondo = fondoEnEdicion ?? datos.fondo
   const modo: ModoTema = modoVistaPrevia ?? modoDelPanel
   // Fase 7 (UC-08): fuente variable del tema, bajo demanda.
   useFuenteTema(datos.tema?.fuente_principal)
@@ -134,7 +137,7 @@ export function PuckRoot({ children, puck }: PuckRootProps) {
       onClickCapture={handleClickCapture}
     >
       <style>{ESTILO_SCROLLBAR_IFRAME}</style>
-      {datos.fondo ? <FondoAnimado fondo={datos.fondo} /> : null}
+      {fondo ? <FondoAnimado fondo={fondo} modo="editor" /> : null}
       <div className="relative z-10">
         <ProveedorModoRenderizado modo="editor">
           {/* Fase 7 (7.3): `motion` para el hover `inclinar`; las animaciones de entrada están apagadas en modo editor. */}

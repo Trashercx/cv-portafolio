@@ -125,7 +125,7 @@ export function PublicHomePage() {
           imagen={imagenSeo}
         />
       ) : null}
-      {snapshot.fondo ? <FondoAnimado fondo={snapshot.fondo} /> : null}
+      {snapshot.fondo ? <FondoAnimado fondo={snapshot.fondo} modo="sitio" /> : null}
       <div className="relative z-10">
         <ProveedorDetallePublico container={nodoRaiz}>
           <ContenidoPrincipal>

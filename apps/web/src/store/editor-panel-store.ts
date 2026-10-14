@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import type { FondoSitio } from '@/features/fondo-sitio/types'
 import type { ModoTema } from '@/lib/tema-oscuro'
 
 /** Nombres de los plugins propios del rail de Puck (Fase 7, UC-07/UC-08). */
@@ -46,6 +47,14 @@ type EditorPanelState = {
   pluginActivo: string | null
   setPluginActivo: (plugin: string | null) => void
   /**
+   * Fondo que el admin está ajustando en el panel Fondo (Fase 7b, UC-15): el
+   * lienzo (`PuckRoot`) lo prioriza sobre el fondo activo del servidor para
+   * mostrar el cambio antes de guardarlo. Estado de edición en curso, nunca
+   * del servidor; se limpia al guardar, cancelar o cambiar de plugin.
+   */
+  fondoEnEdicion: FondoSitio | null
+  setFondoEnEdicion: (fondo: FondoSitio | null) => void
+  /**
    * Viewport actual del lienzo (`ui.viewports.current`), recordado para el
    * remount de `<Puck>` tras guardar (Fase 7, UC-07). Solo en memoria, no en
    * `localStorage`: es preferencia de la sesión de edición en curso. La
@@ -67,7 +76,15 @@ type EditorPanelState = {
 
 export const useEditorPanelStore = create<EditorPanelState>((set) => ({
   pluginActivo: null,
-  setPluginActivo: (pluginActivo) => set({ pluginActivo }),
+  // Cambiar de plugin descarta el ajuste de fondo sin guardar (Fase 7b, UC-15).
+  setPluginActivo: (pluginActivo) =>
+    set((estado) =>
+      estado.pluginActivo === pluginActivo
+        ? { pluginActivo }
+        : { pluginActivo, fondoEnEdicion: null },
+    ),
+  fondoEnEdicion: null,
+  setFondoEnEdicion: (fondoEnEdicion) => set({ fondoEnEdicion }),
   viewportActual: null,
   setViewportActual: (viewportActual) => set({ viewportActual }),
   modoVistaPrevia: leerModoVistaPreviaGuardado(),

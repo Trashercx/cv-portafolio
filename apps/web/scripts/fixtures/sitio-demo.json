@@ -603,8 +603,8 @@
   "fondo": {
     "id": "00000000-0000-4000-8000-000000000030",
     "usuario_admin_id": "00000000-0000-4000-8000-000000000001",
-    "tipo": "degradado_animado",
-    "configuracion": { "velocidad": "lenta", "opacidad": 0.3 },
+    "tipo": "aurora_mesh",
+    "configuracion": { "velocidad": "lenta", "opacidad": 0.3, "intensidad": "media", "interactivo": true },
     "activo": true
   }
 }
