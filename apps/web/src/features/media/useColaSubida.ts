@@ -47,6 +47,16 @@ export function useColaSubida(concurrencia = 3) {
   const iniciados = useRef(new Set<string>())
   const controladores = useRef(new Map<string, AbortController>())
 
+  // Revisión Fase 7d: al desmontar la página se abortan las subidas en vuelo
+  // para no dejar peticiones huérfanas ni actualizaciones de estado tardías.
+  useEffect(() => {
+    const activos = controladores.current
+    return () => {
+      activos.forEach((controlador) => controlador.abort())
+      activos.clear()
+    }
+  }, [])
+
   const actualizar = useCallback((id: string, cambios: Partial<ItemCola>) => {
     setItems((actuales) =>
       actuales.map((item) => (item.id === id ? { ...item, ...cambios } : item)),
