@@ -60,3 +60,26 @@ export function useCertificacionPublica(id: string | undefined) {
     retry: false,
   })
 }
+
+/**
+ * Fase 7f, UC-01: `GET /sitio` ligero para la marca de la pantalla de login.
+ * Sin reintentos ni toasts, caché larga y 404/errores traducidos a `null`: la
+ * pantalla usa entonces el tema por defecto y el texto "Portafolio". Clave
+ * propia para no heredar las opciones de `useSitio`.
+ */
+export function useSitioPublicado() {
+  return useQuery({
+    queryKey: ['sitio-publico', 'login'] as const,
+    queryFn: async () => {
+      try {
+        return await apiFetch<SnapshotSitio>('/sitio', {
+          conCredenciales: false,
+        })
+      } catch {
+        return null
+      }
+    },
+    retry: false,
+    staleTime: 10 * 60 * 1000,
+  })
+}
