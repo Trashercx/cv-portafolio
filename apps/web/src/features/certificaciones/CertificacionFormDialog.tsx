@@ -14,6 +14,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Dialog,
   DialogContent,
@@ -50,6 +51,7 @@ const DEFAULT_VALUES: CertificacionFormValues = {
   institucion: '',
   fecha_emision: '',
   fecha_expiracion: '',
+  no_expira: true,
   url_verificacion: '',
   credencial_id: '',
   logo_media_id: undefined,
@@ -109,6 +111,7 @@ export function CertificacionFormDialog({
             fecha_expiracion: certificacion.fecha_expiracion
               ? certificacion.fecha_expiracion.slice(0, 10)
               : '',
+            no_expira: !certificacion.fecha_expiracion,
             url_verificacion: certificacion.url_verificacion,
             credencial_id: certificacion.credencial_id ?? '',
             logo_media_id: certificacion.logo_media_id ?? undefined,
@@ -128,13 +131,19 @@ export function CertificacionFormDialog({
     useConfirmarDescarte(form.formState.isDirty, onOpenChange)
 
   const mutacionActiva = esNuevo ? crear : actualizar
+  const noExpira = form.watch('no_expira')
 
   const onSubmit = (values: CertificacionFormValues) => {
     const payload = {
       nombre: values.nombre,
       institucion: values.institucion,
       fecha_emision: values.fecha_emision,
-      fecha_expiracion: values.fecha_expiracion || undefined,
+      // Fase 7e, UC-04: "No expira" envía `null` al editar (PATCH) y omite el campo al crear.
+      fecha_expiracion: values.no_expira
+        ? esNuevo
+          ? undefined
+          : null
+        : values.fecha_expiracion || undefined,
       url_verificacion: values.url_verificacion,
       credencial_id: values.credencial_id || undefined,
       logo_media_id: values.logo_media_id || undefined,
@@ -224,12 +233,13 @@ export function CertificacionFormDialog({
                   name="fecha_expiracion"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Fecha de expiración (opcional)</FormLabel>
+                      <FormLabel>Fecha de expiración</FormLabel>
                       <div className="flex gap-2">
                         <FormControl>
                           <Input
                             type="date"
                             min={form.watch('fecha_emision') || undefined}
+                            disabled={noExpira}
                             {...field}
                           />
                         </FormControl>
@@ -238,8 +248,27 @@ export function CertificacionFormDialog({
                           onChange={field.onChange}
                           min={form.watch('fecha_emision') || undefined}
                           triggerAriaLabel="Abrir calendario para elegir la expiración"
+                          disabled={noExpira}
                         />
                       </div>
+                      <FormField
+                        control={form.control}
+                        name="no_expira"
+                        render={({ field: casilla }) => (
+                          <FormItem className="flex items-center gap-2 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={casilla.value}
+                                onCheckedChange={(marcada) => {
+                                  casilla.onChange(marcada === true)
+                                  if (marcada === true) form.setValue('fecha_expiracion', '')
+                                }}
+                              />
+                            </FormControl>
+                            <FormLabel className="font-normal">No expira</FormLabel>
+                          </FormItem>
+                        )}
+                      />
                       <FormMessage />
                     </FormItem>
                   )}

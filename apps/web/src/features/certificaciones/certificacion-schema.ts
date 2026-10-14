@@ -19,6 +19,8 @@ export const certificacionSchema = z
       .iso.date({ error: MENSAJE_FECHA_INVALIDA })
       .optional()
       .or(z.literal('')),
+    // Fase 7e, UC-04: casilla "No expira"; desmarcada, la fecha de expiración es obligatoria.
+    no_expira: z.boolean(),
     url_verificacion: z
       .string()
       .min(1, 'La URL de verificación es obligatoria')
@@ -28,6 +30,15 @@ export const certificacionSchema = z
     orden: z.number().int('El orden debe ser un número entero'),
   })
   .superRefine((values, ctx) => {
+    if (values.no_expira) return
+    if (!values.fecha_expiracion) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['fecha_expiracion'],
+        message: 'La fecha de expiración es obligatoria.',
+      })
+      return
+    }
     // Solo cuando ambas fechas están presentes: la expiración es opcional,
     // así que no hay nada que comparar si todavía no se cargó.
     if (!values.fecha_emision || !values.fecha_expiracion) return

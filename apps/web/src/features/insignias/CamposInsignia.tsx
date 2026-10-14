@@ -2,6 +2,7 @@ import { X } from 'lucide-react'
 import { useState } from 'react'
 import type { UseFormReturn } from 'react-hook-form'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   FormControl,
   FormField,
@@ -14,18 +15,24 @@ import { Textarea } from '@/components/ui/textarea'
 import type { InsigniaFormValues } from './schemas'
 import type { InsigniaPayload } from './useInsignias'
 
-/** Fase 7d, UC-35: arma el cuerpo de `POST/PATCH` omitiendo los vacíos; la imagen es una de las dos vías. */
+/**
+ * Fase 7d, UC-35: arma el cuerpo de `POST/PATCH` omitiendo los vacíos; la imagen es una de las dos vías.
+ * Fase 7e: con "No expira" marcada, `PATCH` (`edicion`) envía `fecha_expiracion: null` y `POST` la omite.
+ */
 export function construirPayloadInsignia(
   values: InsigniaFormValues,
   extra: Pick<InsigniaPayload, 'proveedor' | 'id_externo' | 'url_origen'> = {},
+  { edicion = false }: { edicion?: boolean } = {},
 ): InsigniaPayload {
+  let fechaExpiracion: string | null | undefined = values.fecha_expiracion || undefined
+  if (values.no_expira) fechaExpiracion = edicion ? null : undefined
   const payload: InsigniaPayload = {
     nombre: values.nombre.trim(),
     emisor: values.emisor.trim(),
     descripcion: values.descripcion?.trim() || undefined,
     url_verificacion: values.url_verificacion || undefined,
     fecha_emision: values.fecha_emision || undefined,
-    fecha_expiracion: values.fecha_expiracion || undefined,
+    fecha_expiracion: fechaExpiracion,
     habilidades: values.habilidades,
     ...extra,
   }
@@ -99,6 +106,7 @@ function ChipsHabilidades({
  * `<Form {...form}>`; la imagen la resuelve cada contenedor.
  */
 export function CamposInsignia({ form }: { form: UseFormReturn<InsigniaFormValues> }) {
+  const noExpira = form.watch('no_expira')
   return (
     <>
       <FormField
@@ -161,8 +169,26 @@ export function CamposInsignia({ form }: { form: UseFormReturn<InsigniaFormValue
             <FormItem>
               <FormLabel>Fecha de expiración</FormLabel>
               <FormControl>
-                <Input type="date" {...field} value={field.value ?? ''} />
+                <Input type="date" {...field} value={field.value ?? ''} disabled={noExpira} />
               </FormControl>
+              <FormField
+                control={form.control}
+                name="no_expira"
+                render={({ field: casilla }) => (
+                  <FormItem className="flex items-center gap-2 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={casilla.value}
+                        onCheckedChange={(marcada) => {
+                          casilla.onChange(marcada === true)
+                          if (marcada === true) form.setValue('fecha_expiracion', '')
+                        }}
+                      />
+                    </FormControl>
+                    <FormLabel className="font-normal">No expira</FormLabel>
+                  </FormItem>
+                )}
+              />
               <FormMessage />
             </FormItem>
           )}

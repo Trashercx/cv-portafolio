@@ -27,6 +27,39 @@ const CERTIFICACION: CertificacionPublica = {
   logo: null,
 }
 
+describe('BloqueCertificaciones (Fase 7e, UC-04: sin vencimiento)', () => {
+  it('con mostrar_fecha indica "Sin vencimiento" si no hay fecha de expiración', () => {
+    render(
+      <BloqueCertificaciones
+        titulo="Certificaciones"
+        config={{ orden: 'manual', mostrar_fecha: true }}
+        certificaciones={[CERTIFICACION]}
+      />,
+    )
+    expect(screen.getByText(/Sin vencimiento/)).toBeInTheDocument()
+  })
+
+  it('no lo indica si la certificación tiene expiración ni si mostrar_fecha es false', () => {
+    const { rerender } = render(
+      <BloqueCertificaciones
+        titulo="Certificaciones"
+        config={{ orden: 'manual', mostrar_fecha: true }}
+        certificaciones={[{ ...CERTIFICACION, fecha_expiracion: '2030-01-01' }]}
+      />,
+    )
+    expect(screen.queryByText(/Sin vencimiento/)).not.toBeInTheDocument()
+
+    rerender(
+      <BloqueCertificaciones
+        titulo="Certificaciones"
+        config={{ orden: 'manual', mostrar_fecha: false }}
+        certificaciones={[CERTIFICACION]}
+      />,
+    )
+    expect(screen.queryByText(/Sin vencimiento/)).not.toBeInTheDocument()
+  })
+})
+
 describe('BloqueCertificaciones (Fase 4.3, detalle en modal)', () => {
   it('click en la tarjeta abre el modal con el detalle de la certificación', async () => {
     const user = userEvent.setup()

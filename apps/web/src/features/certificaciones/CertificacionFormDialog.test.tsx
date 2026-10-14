@@ -153,6 +153,7 @@ describe('CertificacionFormDialog (nueva)', () => {
     fireEvent.change(screen.getByLabelText(/fecha de emisión/i), {
       target: { value: '2024-06-01' },
     })
+    await user.click(screen.getByRole('checkbox', { name: /no expira/i }))
     fireEvent.change(screen.getByLabelText(/fecha de expiración/i), {
       target: { value: '2024-06-01' },
     })
@@ -169,6 +170,53 @@ describe('CertificacionFormDialog (nueva)', () => {
       ),
     ).toBeInTheDocument()
     expect(crearMutateMock).not.toHaveBeenCalled()
+  })
+
+  it('Fase 7e: "No expira" deshabilita la fecha y desmarcarla la vuelve obligatoria', async () => {
+    const user = userEvent.setup()
+    renderDialog()
+
+    const casilla = screen.getByRole('checkbox', { name: /no expira/i })
+    expect(casilla).toBeChecked()
+    expect(screen.getByLabelText(/fecha de expiración/i)).toBeDisabled()
+
+    await user.type(screen.getByLabelText(/^nombre$/i), 'AWS Certified')
+    await user.type(screen.getByLabelText(/institución/i), 'Amazon')
+    fireEvent.change(screen.getByLabelText(/fecha de emisión/i), {
+      target: { value: '2024-01-01' },
+    })
+    await user.type(
+      screen.getByLabelText(/url de verificación/i),
+      'https://aws.amazon.com/verify/123',
+    )
+
+    await user.click(casilla)
+    expect(screen.getByLabelText(/fecha de expiración/i)).toBeEnabled()
+    await user.click(screen.getByRole('button', { name: /guardar/i }))
+    expect(await screen.findByText(/la fecha de expiración es obligatoria/i)).toBeInTheDocument()
+    expect(crearMutateMock).not.toHaveBeenCalled()
+  })
+
+  it('Fase 7e: al editar con fecha la casilla está desmarcada; al marcarla se envía null', async () => {
+    const user = userEvent.setup()
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <CertificacionFormDialog
+          certificacion={{ ...CERTIFICACION_EXISTENTE, fecha_expiracion: '2026-02-15T00:00:00.000Z' }}
+          open
+          onOpenChange={vi.fn()}
+        />
+      </QueryClientProvider>,
+    )
+    const casilla = screen.getByRole('checkbox', { name: /no expira/i })
+    expect(casilla).not.toBeChecked()
+    expect(screen.getByLabelText(/fecha de expiración/i)).toHaveValue('2026-02-15')
+
+    await user.click(casilla)
+    await user.click(screen.getByRole('button', { name: /guardar/i }))
+
+    await waitFor(() => expect(actualizarMutateMock).toHaveBeenCalled())
+    expect(actualizarMutateMock.mock.calls.at(-1)?.[0]).toMatchObject({ fecha_expiracion: null })
   })
 
   it('modo edición: precarga la certificación existente y llama a actualizar, no a crear', async () => {
@@ -195,7 +243,8 @@ describe('CertificacionFormDialog (nueva)', () => {
         nombre: 'Azure Fundamentals',
         institucion: 'Microsoft',
         fecha_emision: '2023-02-15',
-        fecha_expiracion: undefined,
+        // Fase 7e: "No expira" marcada al editar envía `null` (PATCH).
+        fecha_expiracion: null,
         url_verificacion: 'https://microsoft.com/verify/456',
         credencial_id: undefined,
         logo_media_id: undefined,
