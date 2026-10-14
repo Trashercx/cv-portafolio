@@ -19,6 +19,7 @@ import { memoryStorage } from 'multer';
 import { AuthenticatedRequest } from '../../common/authenticated-request';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateInsigniaDto } from './dto/create-insignia.dto';
+import { listarProveedores } from './extractores/proveedores';
 import { ImportarInsigniaDto } from './dto/importar-insignia.dto';
 import { ReordenarInsigniasDto } from './dto/reordenar-insignias.dto';
 import { UpdateInsigniaDto } from './dto/update-insignia.dto';
@@ -50,6 +51,12 @@ export class InsigniasAdminController {
     @Body() dto: CreateInsigniaDto,
   ) {
     return this.insigniasService.crear(req.user.sub, dto);
+  }
+
+  /** Fase 7e: proveedores reconocidos (sin regex) para el diálogo de importación. */
+  @Get('proveedores')
+  proveedores() {
+    return listarProveedores();
   }
 
   @Patch('reordenar')

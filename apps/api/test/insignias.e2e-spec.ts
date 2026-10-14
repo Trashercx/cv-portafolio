@@ -39,12 +39,16 @@ describe('Insignias (e2e, UC-35)', () => {
 
   /** `fetch` falso por URL exacta; lo demás es 404. */
   function interceptarFetch(
-    rutas: Record<string, { cuerpo: string | Buffer; tipo: string }>,
+    rutas: Record<
+      string,
+      { cuerpo: string | Buffer; tipo: string; status?: number }
+    >,
   ) {
     const mock = jest.fn(async (url: string) => {
       const ruta = rutas[url];
       if (!ruta) return new Response('no', { status: 404 });
       return new Response(ruta.cuerpo as BodyInit, {
+        status: ruta.status ?? 200,
         headers: { 'content-type': ruta.tipo },
       });
     });
@@ -100,6 +104,7 @@ describe('Insignias (e2e, UC-35)', () => {
 
   it.each([
     ['get', '/admin/insignias'],
+    ['get', '/admin/insignias/proveedores'],
     ['post', '/admin/insignias'],
     ['patch', '/admin/insignias/reordenar'],
     ['post', '/admin/insignias/importar'],
@@ -288,6 +293,65 @@ describe('Insignias (e2e, UC-35)', () => {
   // -----------------------------------------------------------------------
 
   describe('importar', () => {
+    it('GET proveedores devuelve la lista sin regex', async () => {
+      const res = await agent.get('/admin/insignias/proveedores').expect(200);
+      const lista = res.body as { clave: string }[];
+      expect(lista.map((p) => p.clave)).toEqual(
+        expect.arrayContaining(['credly', 'skilljar', 'datacamp', 'manual']),
+      );
+      expect(Object.keys(lista[0]).sort()).toEqual([
+        'ayuda',
+        'clave',
+        'modo',
+        'nombre',
+      ]);
+    });
+
+    it('Skilljar ficticio: nombre, emisor y fechas', async () => {
+      const url = 'https://verify.skilljar.com/c/e2eabc';
+      interceptarFetch({
+        [url]: {
+          cuerpo:
+            '<meta property="og:title" content="Certificate for Curso Ficticio"><meta property="og:image" content="https://cdn.test/c.jpg?a=1&amp;b=2">Completion Date Sept. 3, 2025 Offered By Academia Ficticia Certificate Expires Nov. 27, 2026',
+          tipo: 'text/html',
+        },
+      });
+      const res = await agent
+        .post('/admin/insignias/importar')
+        .send({ entrada: url })
+        .expect(201);
+      expect(res.body).toMatchObject({
+        proveedor: 'skilljar',
+        modo_proveedor: 'automatico',
+        nombre: 'Curso Ficticio',
+        emisor: 'Academia Ficticia',
+        fecha_emision: '2025-09-03',
+        fecha_expiracion: '2026-11-27',
+        id_externo: 'e2eabc',
+        imagen: { url: 'https://cdn.test/c.jpg?a=1&b=2' },
+      });
+    });
+
+    it('DataCamp 403: aviso y modo_proveedor archivo', async () => {
+      const url = `https://www.datacamp.com/statement-of-accomplishment/course/${'b'.repeat(40)}`;
+      interceptarFetch({
+        [url]: { cuerpo: 'Just a moment', tipo: 'text/html', status: 403 },
+      });
+      const res = await agent
+        .post('/admin/insignias/importar')
+        .send({ entrada: url })
+        .expect(201);
+      expect(res.body).toMatchObject({
+        proveedor: 'datacamp',
+        modo_proveedor: 'archivo',
+        emisor: 'DataCamp',
+        nombre: '',
+      });
+      expect((res.body as { avisos: string[] }).avisos[0]).toMatch(
+        /Subir archivo/,
+      );
+    });
+
     it('Credly ficticio: página + badges.json -> vista previa sin persistir', async () => {
       const antes = await prisma.insignia.count();
       interceptarFetch({
@@ -328,6 +392,7 @@ describe('Insignias (e2e, UC-35)', () => {
 
       expect(res.body).toEqual({
         proveedor: 'credly',
+        modo_proveedor: 'automatico',
         nombre: 'Badge Ficticio',
         emisor: 'Org Ficticia',
         descripcion: 'Desc',

@@ -15,12 +15,10 @@ import {
 } from 'class-validator';
 import { NoJuntoCon } from './no-junto-con.decorator';
 
-export const PROVEEDORES_INSIGNIA = [
-  'credly',
-  'open_badges',
-  'generico',
-  'manual',
-] as const;
+import {
+  CLAVES_PROVEEDOR,
+  ProveedorInsignia,
+} from '../extractores/proveedores';
 
 /**
  * `POST /admin/insignias` (UC-35, Fase 7d): campos de la entidad salvo
@@ -46,8 +44,8 @@ export class CreateInsigniaDto {
   descripcion?: string;
 
   @IsOptional()
-  @IsIn(PROVEEDORES_INSIGNIA)
-  proveedor?: (typeof PROVEEDORES_INSIGNIA)[number];
+  @IsIn(CLAVES_PROVEEDOR)
+  proveedor?: ProveedorInsignia;
 
   @IsOptional()
   @IsString()

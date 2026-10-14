@@ -1,4 +1,5 @@
-import { ProveedorInsignia, VistaPreviaInsignia } from './tipos';
+import { modoDeProveedor, ProveedorInsignia } from './proveedores';
+import { VistaPreviaInsignia } from './tipos';
 
 /** Vista previa vacía (los fallos de red nunca son 5xx: solo `avisos`). */
 export function vistaVacia(
@@ -8,6 +9,7 @@ export function vistaVacia(
 ): VistaPreviaInsignia {
   return {
     proveedor,
+    modo_proveedor: modoDeProveedor(proveedor),
     nombre: '',
     emisor: '',
     descripcion: null,
@@ -41,6 +43,19 @@ const ENTIDADES: Record<string, string> = {
   quot: '"',
   apos: "'",
   nbsp: ' ',
+  ndash: '–',
+  mdash: '—',
+  hellip: '…',
+  oacute: 'ó',
+  aacute: 'á',
+  eacute: 'é',
+  iacute: 'í',
+  uacute: 'ú',
+  ntilde: 'ñ',
+  rsquo: '’',
+  lsquo: '‘',
+  ldquo: '“',
+  rdquo: '”',
 };
 
 export function decodificarEntidades(texto: string): string {

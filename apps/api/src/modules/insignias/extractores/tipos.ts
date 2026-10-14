@@ -1,11 +1,11 @@
+import { ModoProveedor, ProveedorInsignia } from './proveedores';
 import {
   descargarRecursoSeguro,
   OpcionesDescarga,
   RecursoDescargado,
 } from '../red-segura';
 
-export type ProveedorInsignia =
-  'credly' | 'open_badges' | 'generico' | 'manual';
+export type { ProveedorInsignia } from './proveedores';
 
 /** Imagen candidata de la vista previa (sin descargar al servidor todavía). */
 export interface ImagenVistaPrevia {
@@ -22,6 +22,8 @@ export interface ImagenVistaPrevia {
  */
 export interface VistaPreviaInsignia {
   proveedor: ProveedorInsignia;
+  /** Fase 7e: cómo se importa este proveedor (el diálogo cambia de pestaña si es 'archivo'). */
+  modo_proveedor: ModoProveedor;
   nombre: string;
   emisor: string;
   descripcion: string | null;
