@@ -1,4 +1,4 @@
-import { lazy, Suspense, type ComponentType, type LazyExoticComponent } from 'react'
+import { lazy, Suspense, useEffect, useState, type ComponentType, type LazyExoticComponent } from 'react'
 import {
   entradaCatalogo,
   normalizarTipoFondo,
@@ -57,6 +57,50 @@ const VELOCIDADES: readonly VelocidadFondo[] = ['lenta', 'media', 'rapida']
 const INTENSIDADES: readonly IntensidadFondo[] = ['sutil', 'media', 'alta']
 
 /**
+ * Fase 7b, UC-15: en `modo="sitio"` el fondo se monta solo después de la carga
+ * de la página (`load`) y del primer hueco de inactividad. Presupuesto de
+ * Lighthouse: el chunk lazy y las capas con blur/conic a pantalla completa no
+ * deben competir con el LCP ni el TBT; mientras tanto el `--color-fondo` del
+ * contenedor ya da el color base. `editor` y `miniatura` montan de inmediato.
+ */
+function useFondoListo(diferir: boolean): boolean {
+  const [listo, setListo] = useState(false)
+
+  useEffect(() => {
+    if (!diferir) return
+    let cancelado = false
+    let idleId: number | undefined
+    let timerId: ReturnType<typeof setTimeout> | undefined
+
+    const programar = () => {
+      if (cancelado) return
+      if (typeof window.requestIdleCallback === 'function') {
+        idleId = window.requestIdleCallback(() => !cancelado && setListo(true), { timeout: 1500 })
+      } else {
+        timerId = setTimeout(() => !cancelado && setListo(true), 300)
+      }
+    }
+
+    if (document.readyState === 'complete') {
+      programar()
+    } else {
+      window.addEventListener('load', programar, { once: true })
+    }
+
+    return () => {
+      cancelado = true
+      window.removeEventListener('load', programar)
+      if (idleId !== undefined && typeof window.cancelIdleCallback === 'function') {
+        window.cancelIdleCallback(idleId)
+      }
+      if (timerId !== undefined) clearTimeout(timerId)
+    }
+  }, [diferir])
+
+  return !diferir || listo
+}
+
+/**
  * Fondo animado del sitio (UC-15, Fase 7b): despachador compartido entre
  * `PublicHomePage` (`modo="sitio"`), el lienzo de Puck (`PuckRoot`,
  * `modo="editor"`) y el panel Fondo (miniaturas y vista previa), de modo que
@@ -76,8 +120,9 @@ const INTENSIDADES: readonly IntensidadFondo[] = ['sutil', 'media', 'alta']
 export function FondoAnimado({ fondo, modo = 'sitio', ambito }: FondoAnimadoProps) {
   const reducido = usePrefiereMovimientoReducido()
   const tipo = normalizarTipoFondo(fondo.tipo)
+  const listo = useFondoListo(modo === 'sitio')
 
-  if (tipo === 'solido') {
+  if (tipo === 'solido' || !listo) {
     // El color de fondo ya lo aporta `--color-fondo` sobre el contenedor
     // raíz (ver `temaComoVariablesCss`): no hay nada animado que dibujar.
     return null

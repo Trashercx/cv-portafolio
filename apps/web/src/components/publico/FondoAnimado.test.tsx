@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { render, waitFor } from '@testing-library/react'
+import { act, render, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { TIPOS_FONDO } from '@/features/fondo-sitio/catalogo-fondos'
 import { FondoAnimado, type ModoFondo } from './FondoAnimado'
@@ -57,12 +57,13 @@ describe('FondoAnimado (Fase 7b, UC-15)', () => {
     expect(container).toBeEmptyDOMElement()
   })
 
-  it('el contenedor es decorativo, no recibe puntero y aplica la opacidad', () => {
+  it('el contenedor es decorativo, no recibe puntero y aplica la opacidad', async () => {
     const { container } = render(
       <FondoAnimado
         fondo={{ tipo: 'aurora_mesh', configuracion: { ...CONFIG, opacidad: 0.3 } }}
       />,
     )
+    await waitFor(() => expect(container.firstElementChild).not.toBeNull())
     const raiz = container.firstElementChild as HTMLElement
     expect(raiz).toHaveAttribute('aria-hidden', 'true')
     expect(raiz).toHaveClass(
@@ -76,18 +77,96 @@ describe('FondoAnimado (Fase 7b, UC-15)', () => {
     expect(raiz.style.opacity).toBe('0.3')
   })
 
-  it('normaliza los tipos antiguos de un snapshot ya publicado', () => {
+  it('normaliza los tipos antiguos de un snapshot ya publicado', async () => {
     const { container } = render(
       <FondoAnimado fondo={{ tipo: 'aurora_animada', configuracion: CONFIG }} />,
     )
+    await waitFor(() => expect(container.firstElementChild).not.toBeNull())
     expect(container.firstElementChild).toHaveAttribute('data-fondo-tipo', 'aurora_mesh')
   })
 
-  it('tolera una configuración sin intensidad ni interactivo', () => {
+  it('tolera una configuración sin intensidad ni interactivo', async () => {
     const { container } = render(
       <FondoAnimado fondo={{ tipo: 'haces_luz', configuracion: {} }} />,
     )
+    await waitFor(() => expect(container.firstElementChild).not.toBeNull())
     expect((container.firstElementChild as HTMLElement).style.opacity).toBe('0.5')
+  })
+
+  describe('montaje diferido (Fase 7b, presupuesto de Lighthouse)', () => {
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('en sitio no monta antes del idle y sí después', () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+      const { container } = render(
+        <FondoAnimado fondo={{ tipo: 'aurora_mesh', configuracion: CONFIG }} />,
+      )
+      expect(container).toBeEmptyDOMElement()
+      act(() => {
+        vi.advanceTimersByTime(10)
+      })
+      expect(container.firstElementChild).toHaveAttribute('data-fondo-modo', 'sitio')
+    })
+
+    it('en sitio espera al evento load si el documento aún carga', () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+      const estado = vi.spyOn(document, 'readyState', 'get').mockReturnValue('loading')
+      const { container } = render(
+        <FondoAnimado fondo={{ tipo: 'aurora_mesh', configuracion: CONFIG }} />,
+      )
+      act(() => {
+        vi.advanceTimersByTime(5000)
+      })
+      expect(container).toBeEmptyDOMElement()
+      act(() => {
+        window.dispatchEvent(new Event('load'))
+        vi.advanceTimersByTime(10)
+      })
+      expect(container.firstElementChild).not.toBeNull()
+      estado.mockRestore()
+    })
+
+    it('sin requestIdleCallback usa el fallback de 300 ms y limpia al desmontar', () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+      const original = window.requestIdleCallback
+      // @ts-expect-error simula un navegador sin la API
+      window.requestIdleCallback = undefined
+      try {
+        const { container, unmount } = render(
+          <FondoAnimado fondo={{ tipo: 'aurora_mesh', configuracion: CONFIG }} />,
+        )
+        act(() => {
+          vi.advanceTimersByTime(299)
+        })
+        expect(container).toBeEmptyDOMElement()
+        act(() => {
+          vi.advanceTimersByTime(2)
+        })
+        expect(container.firstElementChild).not.toBeNull()
+        unmount()
+      } finally {
+        window.requestIdleCallback = original
+      }
+    })
+
+    it('desmontar antes del idle cancela el montaje', () => {
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+      const { unmount } = render(
+        <FondoAnimado fondo={{ tipo: 'aurora_mesh', configuracion: CONFIG }} />,
+      )
+      unmount()
+      expect(() => vi.advanceTimersByTime(2000)).not.toThrow()
+      expect(vi.getTimerCount()).toBe(0)
+    })
+
+    it.each(['editor', 'miniatura'] as const)('en %s monta de inmediato', (modo) => {
+      const { container } = render(
+        <FondoAnimado fondo={{ tipo: 'aurora_mesh', configuracion: CONFIG }} modo={modo} />,
+      )
+      expect(container.firstElementChild).toHaveAttribute('data-fondo-modo', modo)
+    })
   })
 
   describe.each(TIPOS_VISUALES)('%s', (tipo) => {

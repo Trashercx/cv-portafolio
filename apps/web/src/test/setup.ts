@@ -50,4 +50,15 @@ if (typeof window !== 'undefined') {
       dispatchEvent: () => false,
     }) as unknown as MediaQueryList
   }
+  // jsdom no trae `requestIdleCallback`: `FondoAnimado` (modo sitio) difiere su
+  // montaje hasta el idle (Fase 7b). Stub que lo resuelve en el siguiente tick.
+  if (!window.requestIdleCallback) {
+    window.requestIdleCallback = ((cb: IdleRequestCallback) =>
+      window.setTimeout(
+        () => cb({ didTimeout: false, timeRemaining: () => 50 }),
+        0,
+      )) as typeof window.requestIdleCallback
+    window.cancelIdleCallback = ((id: number) =>
+      window.clearTimeout(id)) as typeof window.cancelIdleCallback
+  }
 }
