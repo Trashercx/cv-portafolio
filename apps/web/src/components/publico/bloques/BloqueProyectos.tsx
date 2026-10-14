@@ -1,7 +1,9 @@
 import { useAbrirDetalle } from '@/components/publico/contexto-detalle'
 import type { Proyecto } from '@/features/proyectos/types'
 import type { ProyectosConfiguracion } from '@/features/secciones/types'
+import { SIZES_POR_CONTEXTO } from '@/lib/imagenes'
 import { cn } from '@/lib/utils'
+import { ImagenResponsive } from '../ImagenResponsive'
 import { TarjetaClicable } from '../contexto-renderizado'
 import { ItemAnimado } from '../ItemAnimado'
 import { TarjetaInteractiva } from '../TarjetaInteractiva'
@@ -140,11 +142,10 @@ export function BloqueProyectos({
                     )}
                   >
                     {imagen ? (
-                      <img
-                        src={imagen.media.url}
+                      <ImagenResponsive
+                        media={imagen.media}
                         alt={imagen.media.alt_text ?? proyecto.titulo}
-                        loading="lazy"
-                        decoding="async"
+                        sizes={SIZES_POR_CONTEXTO.proyecto_tarjeta}
                         className={cn(
                           'rounded-md object-cover',
                           esLista

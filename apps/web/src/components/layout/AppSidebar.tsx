@@ -1,5 +1,6 @@
 import {
   BadgeCheck,
+  BarChart3,
   ExternalLink,
   Image,
   LayoutGrid,
@@ -63,6 +64,11 @@ const GRUPOS_NAV: Array<{ label: string; items: NavItem[] }> = [
   {
     label: 'Recursos',
     items: [{ to: '/admin/media', label: 'Biblioteca de medios', icon: Image }],
+  },
+  // Fase 8 (8.4, UC-27): métricas de visitas (Umami).
+  {
+    label: 'Analítica',
+    items: [{ to: '/admin/metricas', label: 'Métricas', icon: BarChart3 }],
   },
 ]
 

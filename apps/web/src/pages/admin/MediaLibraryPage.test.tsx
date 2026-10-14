@@ -29,6 +29,7 @@ const PDF: Media = {
 
 const useMediaListMock = vi.fn()
 const eliminarMutateMock = vi.fn()
+const regenerarMutateMock = vi.fn()
 const eliminarState: { isPending: boolean; error: unknown } = {
   isPending: false,
   error: null,
@@ -43,7 +44,10 @@ vi.mock('@/features/media/useMediaLibrary', () => ({
     error: eliminarState.error,
   }),
   useReemplazarMedia: () => ({ mutate: vi.fn(), isPending: false, error: null }),
+  useRegenerarVariantes: () => ({ mutate: regenerarMutateMock, isPending: false }),
 }))
+
+vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
 function renderMediaLibraryPage() {
   return render(<MediaLibraryPage />)
@@ -77,6 +81,22 @@ describe('MediaLibraryPage (UC-09)', () => {
 
     await waitFor(() =>
       expect(useMediaListMock).toHaveBeenCalledWith('imagen'),
+    )
+  })
+
+  it('"Generar variantes faltantes" dispara la mutación y avisa con procesadas/omitidas/errores (Fase 8, UC-09)', async () => {
+    const user = userEvent.setup()
+    regenerarMutateMock.mockImplementation((_v, opciones) =>
+      opciones.onSuccess({ procesadas: 3, omitidas: 2, errores: [{ id: 'x', motivo: 'fallo' }] }),
+    )
+    renderMediaLibraryPage()
+
+    await user.click(screen.getByRole('button', { name: /generar variantes faltantes/i }))
+
+    expect(regenerarMutateMock).toHaveBeenCalledTimes(1)
+    const { toast } = await import('sonner')
+    expect(toast.success).toHaveBeenCalledWith(
+      'Variantes generadas: 3 procesadas, 2 omitidas, 1 con error.',
     )
   })
 

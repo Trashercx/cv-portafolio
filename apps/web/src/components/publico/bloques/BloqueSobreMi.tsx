@@ -4,7 +4,9 @@ import type { PerfilPublico } from '@/features/publico/types'
 import type { Estadistica, SobreMiConfiguracion } from '@/features/secciones/types'
 import { useAnimacionesActivas } from '@/lib/animaciones'
 import { analizarValorEstadistica } from '@/lib/estadisticas'
+import { SIZES_POR_CONTEXTO } from '@/lib/imagenes'
 import { cn } from '@/lib/utils'
+import { ImagenResponsive } from '../ImagenResponsive'
 import { ItemAnimado } from '../ItemAnimado'
 
 type BloqueSobreMiProps = {
@@ -103,11 +105,10 @@ export function BloqueSobreMi({
           ESTILO_FOTO_ENVOLTURA_CLASE[estiloFoto],
         )}
       >
-        <img
-          src={perfil.imagen_perfil.url}
+        <ImagenResponsive
+          media={perfil.imagen_perfil}
           alt={perfil.imagen_perfil.alt_text ?? perfil.nombre_completo}
-          loading="lazy"
-          decoding="async"
+          sizes={SIZES_POR_CONTEXTO.sobre_mi}
           className={cn('size-32 object-cover', claseForma, ESTILO_FOTO_IMAGEN_CLASE[estiloFoto])}
         />
       </div>
