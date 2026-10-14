@@ -237,93 +237,106 @@ html.dark {
     }
   }
 
-  @keyframes aurora-drift-1 {
+  /*
+   * Fase 7b (UC-15): keyframes de los fondos (`components/publico/fondos/`).
+   * Los de los tipos anteriores (aurora-drift-*, particles-float, grid-drift,
+   * wave-drift, malla-drift-*, diagonal-drift) se eliminaron junto con ellos.
+   */
+  @keyframes aurora-deriva-a {
     from {
-      transform: translate(0, 0) scale(1);
+      transform: translate3d(0, 0, 0) scale(1);
     }
     to {
-      transform: translate(10%, 15%) scale(1.15);
+      transform: translate3d(9%, 12%, 0) scale(1.18);
     }
   }
 
-  @keyframes aurora-drift-2 {
+  @keyframes aurora-deriva-b {
     from {
-      transform: translate(0, 0) scale(1);
+      transform: translate3d(0, 0, 0) scale(1.05) rotate(0deg);
     }
     to {
-      transform: translate(-15%, 10%) scale(1.1);
+      transform: translate3d(-12%, 8%, 0) scale(0.92) rotate(14deg);
     }
   }
 
-  @keyframes aurora-drift-3 {
+  @keyframes aurora-deriva-c {
     from {
-      transform: translate(0, 0) scale(1);
+      transform: translate3d(0, 0, 0) scale(0.95);
     }
     to {
-      transform: translate(5%, -15%) scale(1.2);
+      transform: translate3d(7%, -14%, 0) scale(1.2);
     }
   }
 
-  @keyframes particles-float {
-    from {
-      background-position: 0 0, 24px 36px;
-    }
+  @keyframes aurora-giro {
     to {
-      background-position: 48px 48px, 72px 108px;
+      transform: rotate(360deg);
     }
   }
 
-  @keyframes grid-drift {
+  @keyframes malla-respirar {
     from {
-      background-position: 0 0;
+      opacity: 0.7;
     }
     to {
-      background-position: 40px 40px;
+      opacity: 1;
     }
   }
 
-  @keyframes wave-drift {
+  /* Un paso exacto de la rejilla fuerte (256 px, múltiplo de la fina de 64 px): bucle sin salto. */
+  @keyframes rejilla-avance {
     from {
-      background-position: 0 0, 0 0;
+      background-position: 0 0, 0 0, 0 0, 0 0;
     }
     to {
-      background-position: 0 72px, 0 112px;
+      background-position: 0 256px, 0 256px, 0 256px, 0 256px;
     }
   }
 
-  @keyframes malla-drift-1 {
+  /* La onda se dibuja dos periodos seguidos en un SVG de 200 % de ancho. */
+  @keyframes onda-desplazar {
     from {
-      transform: translate(0, 0) scale(1);
+      transform: translate3d(0, 0, 0);
     }
     to {
-      transform: translate(4%, 3%) scale(1.06);
+      transform: translate3d(-50%, 0, 0);
     }
   }
 
-  @keyframes malla-drift-2 {
+  @keyframes onda-respirar {
     from {
-      transform: translate(0, 0) scale(1);
+      transform: scaleY(0.82);
     }
     to {
-      transform: translate(-3%, 4%) scale(1.05);
+      transform: scaleY(1.12);
     }
   }
 
-  @keyframes malla-drift-3 {
+  @keyframes haz-oscilar {
     from {
-      transform: translate(0, 0) scale(1);
+      transform: rotate(calc(var(--ang) - 7deg)) scaleX(0.9);
     }
     to {
-      transform: translate(3%, -4%) scale(1.07);
+      transform: rotate(calc(var(--ang) + 7deg)) scaleX(1.15);
     }
   }
 
-  @keyframes diagonal-drift {
-    from {
-      background-position: 0 0;
-    }
-    to {
-      background-position: 80px 80px;
+  /*
+   * Fase 7b (UC-15): las miniaturas de la galería del panel Fondo nacen
+   * pausadas (nueve fondos con degradados animando a la vez cuestan) y solo
+   * se mueven al pasar el puntero por su tarjeta. `prefers-reduced-motion`
+   * las deja pausadas (la hover-regla solo existe bajo `no-preference`).
+   */
+  .fondo-miniatura,
+  .fondo-miniatura * {
+    animation-play-state: paused;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .tarjeta-fondo:hover .fondo-miniatura *,
+    .tarjeta-fondo:focus-within .fondo-miniatura * {
+      animation-play-state: running;
     }
   }
 }

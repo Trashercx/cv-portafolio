@@ -1,44 +1,81 @@
+import { lazy, Suspense, type ComponentType, type LazyExoticComponent } from 'react'
+import {
+  entradaCatalogo,
+  normalizarTipoFondo,
+  type TipoFondo,
+} from '@/features/fondo-sitio/catalogo-fondos'
+import type { IntensidadFondo, VelocidadFondo } from '@/features/fondo-sitio/types'
+import { usePrefiereMovimientoReducido } from '@/lib/animaciones'
+import { cn } from '@/lib/utils'
+import type { PropsFondoVisual } from './fondos/utilidades'
+
+/** Dónde se dibuja el fondo (Fase 7b, UC-15). */
+export type ModoFondo = 'sitio' | 'editor' | 'miniatura'
+
 export type FondoAnimadoProps = {
+  /** Estructuralmente compatible con `FondoSitio` y con el `fondo` del snapshot (que puede traer tipos antiguos ya publicados). */
   fondo: {
     tipo: string
     configuracion: {
-      velocidad: string
-      opacidad: number
+      velocidad?: string
+      opacidad?: number
+      intensidad?: string
+      interactivo?: boolean
     }
   }
+  /**
+   * `sitio` (default): todo activo. `editor` (iframe del lienzo): animación CSS
+   * sí, interactividad no, canvas a 30 fps como máximo. `miniatura`: sin
+   * `requestAnimationFrame` ni interactividad, animación CSS solo al pasar el
+   * puntero por la tarjeta (`.tarjeta-fondo`, ver `index.css`).
+   */
+  modo?: ModoFondo
+  /** Anclaje de la capa visual; por defecto `pagina` (sitio/editor) y `caja` (miniatura). */
+  ambito?: PropsFondoVisual['ambito']
 }
 
-/** Duraciones por velocidad, distintas por tipo (aurora es visualmente más lenta que la cuadrícula a igual "velocidad" nominal). */
-const DURACIONES: Record<string, Record<string, string>> = {
-  degradado_animado: { lenta: '18s', media: '10s', rapida: '5s' },
-  aurora_animada: { lenta: '40s', media: '24s', rapida: '14s' },
-  particulas: { lenta: '30s', media: '18s', rapida: '9s' },
-  cuadricula_animada: { lenta: '24s', media: '14s', rapida: '7s' },
-  ondas: { lenta: '22s', media: '13s', rapida: '7s' },
-  malla_difusa: { lenta: '36s', media: '22s', rapida: '12s' },
-  lineas_diagonales: { lenta: '16s', media: '9s', rapida: '4s' },
-}
-
-function duracion(tipo: string, velocidad: string): string {
-  return DURACIONES[tipo]?.[velocidad] ?? '20s'
-}
+type FondoLazy = LazyExoticComponent<ComponentType<PropsFondoVisual>>
 
 /**
- * Fondo animado del sitio público (UC-15), compartido entre `PublicHomePage`
- * y la vista previa de `PanelFondoEditor` (pestaña "Fondo" del panel lateral
- * del editor, antes la extinta `FondoSitioPage`) para que ambos se vean
- * exactamente igual. Se posiciona `absolute inset-0` detrás del contenido (`z-index: 0`,
- * `pointer-events: none`): el padre debe ser `position: relative` (o
- * equivalente) y el contenido real debe ir en un hermano con `z-index`
- * mayor, como ya hace `PublicHomePage`.
- *
- * Usa las variables CSS de Tema ya inyectadas por `temaComoVariablesCss`
- * (`--color-primario`/`--color-secundario`/`--color-fondo`) en vez de
- * colores hardcodeados, para que el fondo combine con la paleta activa.
+ * Un chunk por tipo (Fase 7b, UC-15): ni los canvas ni el CSS de cada fondo
+ * engordan el bundle inicial; solo se descarga el del fondo activo.
  */
-export function FondoAnimado({ fondo }: FondoAnimadoProps) {
-  const { tipo, configuracion } = fondo
-  const dur = duracion(tipo, configuracion.velocidad)
+const FONDOS: Record<Exclude<TipoFondo, 'solido'>, FondoLazy> = {
+  aurora_mesh: lazy(() => import('./fondos/AuroraMesh').then((m) => ({ default: m.AuroraMesh }))),
+  malla_puntos: lazy(() => import('./fondos/MallaPuntos').then((m) => ({ default: m.MallaPuntos }))),
+  rejilla_perspectiva: lazy(() =>
+    import('./fondos/RejillaPerspectiva').then((m) => ({ default: m.RejillaPerspectiva })),
+  ),
+  particulas_red: lazy(() => import('./fondos/ParticulasRed').then((m) => ({ default: m.ParticulasRed }))),
+  ondas_fluidas: lazy(() => import('./fondos/OndasFluidas').then((m) => ({ default: m.OndasFluidas }))),
+  haces_luz: lazy(() => import('./fondos/HacesLuz').then((m) => ({ default: m.HacesLuz }))),
+  degradado_grano: lazy(() => import('./fondos/DegradadoGrano').then((m) => ({ default: m.DegradadoGrano }))),
+  campo_estrellas: lazy(() => import('./fondos/CampoEstrellas').then((m) => ({ default: m.CampoEstrellas }))),
+}
+
+const VELOCIDADES: readonly VelocidadFondo[] = ['lenta', 'media', 'rapida']
+const INTENSIDADES: readonly IntensidadFondo[] = ['sutil', 'media', 'alta']
+
+/**
+ * Fondo animado del sitio (UC-15, Fase 7b): despachador compartido entre
+ * `PublicHomePage` (`modo="sitio"`), el lienzo de Puck (`PuckRoot`,
+ * `modo="editor"`) y el panel Fondo (miniaturas y vista previa), de modo que
+ * todos se vean igual. Se posiciona `absolute inset-0` detrás del contenido
+ * (`z-index: 0`, `pointer-events: none`): el padre debe ser `position:
+ * relative` y el contenido real va en un hermano con `z-index` mayor.
+ *
+ * Normaliza el tipo (`normalizarTipoFondo`: los tipos anteriores de un
+ * snapshot ya publicado se muestran como su reemplazo), aplica `opacidad` al
+ * contenedor y decide qué hace cada fondo según el modo: la interactividad
+ * solo existe en `sitio`, con `configuracion.interactivo !== false`, sin
+ * `prefers-reduced-motion` y en un tipo interactivo; con movimiento reducido
+ * los canvas dibujan un único fotograma y las animaciones CSS se pausan
+ * (regla `.fondo-animado *` de `index.css`). Los colores salen de las
+ * variables del tema (`--color-primario/--color-secundario/--color-fondo`).
+ */
+export function FondoAnimado({ fondo, modo = 'sitio', ambito }: FondoAnimadoProps) {
+  const reducido = usePrefiereMovimientoReducido()
+  const tipo = normalizarTipoFondo(fondo.tipo)
 
   if (tipo === 'solido') {
     // El color de fondo ya lo aporta `--color-fondo` sobre el contenedor
@@ -46,165 +83,39 @@ export function FondoAnimado({ fondo }: FondoAnimadoProps) {
     return null
   }
 
+  const { configuracion } = fondo
+  const velocidad = VELOCIDADES.find((v) => v === configuracion.velocidad) ?? 'media'
+  const intensidad = INTENSIDADES.find((i) => i === configuracion.intensidad) ?? 'media'
+  const opacidad = configuracion.opacidad ?? 0.5
+  const Visual = FONDOS[tipo]
+
+  const props: PropsFondoVisual = {
+    velocidad,
+    intensidad,
+    interactivo:
+      modo === 'sitio' &&
+      configuracion.interactivo !== false &&
+      !reducido &&
+      entradaCatalogo(tipo).interactivo,
+    estatico: modo === 'miniatura' || reducido,
+    maxFps: modo === 'editor' ? 30 : 60,
+    ambito: ambito ?? (modo === 'miniatura' ? 'caja' : 'pagina'),
+  }
+
   return (
     <div
       aria-hidden="true"
-      style={{ opacity: configuracion.opacidad }}
-      className="fondo-animado pointer-events-none absolute inset-0 z-0 overflow-hidden"
+      data-fondo-tipo={tipo}
+      data-fondo-modo={modo}
+      style={{ opacity: opacidad }}
+      className={cn(
+        'fondo-animado pointer-events-none absolute inset-0 z-0 overflow-hidden',
+        modo === 'miniatura' && 'fondo-miniatura',
+      )}
     >
-      {tipo === 'degradado_animado' ? (
-        <div
-          className="size-full"
-          style={{
-            backgroundImage:
-              'linear-gradient(120deg, var(--color-primario), var(--color-secundario), var(--color-fondo))',
-            backgroundSize: '200% 200%',
-            animation: `gradient-shift ${dur} ease infinite`,
-          }}
-        />
-      ) : null}
-
-      {tipo === 'aurora_animada' ? (
-        <>
-          <div
-            className="absolute -top-1/4 -left-1/4 size-[70%] rounded-full"
-            style={{
-              backgroundColor: 'var(--color-primario)',
-              filter: 'blur(80px)',
-              animation: `aurora-drift-1 ${dur} ease-in-out infinite alternate`,
-            }}
-          />
-          <div
-            className="absolute -right-1/4 top-1/4 size-[60%] rounded-full"
-            style={{
-              backgroundColor: 'var(--color-secundario)',
-              filter: 'blur(90px)',
-              animation: `aurora-drift-2 ${dur} ease-in-out infinite alternate`,
-            }}
-          />
-          <div
-            className="absolute bottom-0 left-1/3 size-[50%] rounded-full"
-            style={{
-              backgroundColor: 'var(--color-fondo)',
-              filter: 'blur(70px)',
-              animation: `aurora-drift-3 ${dur} ease-in-out infinite alternate`,
-            }}
-          />
-        </>
-      ) : null}
-
-      {tipo === 'particulas' ? (
-        <div
-          className="size-full"
-          style={{
-            backgroundImage:
-              'radial-gradient(var(--color-primario) 1.5px, transparent 1.5px), radial-gradient(var(--color-secundario) 1.5px, transparent 1.5px)',
-            backgroundSize: '48px 48px, 72px 72px',
-            backgroundPosition: '0 0, 24px 36px',
-            animation: `particles-float ${dur} linear infinite`,
-          }}
-        />
-      ) : null}
-
-      {tipo === 'cuadricula_animada' ? (
-        <div
-          className="size-full"
-          style={{
-            backgroundImage:
-              'linear-gradient(var(--color-primario) 1px, transparent 1px), linear-gradient(90deg, var(--color-primario) 1px, transparent 1px)',
-            backgroundSize: '40px 40px',
-            animation: `grid-drift ${dur} linear infinite`,
-          }}
-        />
-      ) : null}
-
-      {tipo === 'ondas' ? (
-        <div
-          className="size-full"
-          style={{
-            backgroundImage:
-              'repeating-linear-gradient(0deg, var(--color-primario) 0 2px, transparent 2px 36px), repeating-linear-gradient(0deg, var(--color-secundario) 0 2px, transparent 2px 56px)',
-            backgroundSize: '100% 36px, 100% 56px',
-            animation: `wave-drift ${dur} linear infinite`,
-          }}
-        />
-      ) : null}
-
-      {tipo === 'malla_difusa' ? (
-        <>
-          <div
-            className="absolute size-[32%] rounded-full"
-            style={{
-              top: '4%',
-              left: '6%',
-              backgroundColor: 'var(--color-primario)',
-              filter: 'blur(60px)',
-              animation: `malla-drift-1 ${dur} ease-in-out infinite alternate`,
-            }}
-          />
-          <div
-            className="absolute size-[28%] rounded-full"
-            style={{
-              top: '8%',
-              left: '58%',
-              backgroundColor: 'var(--color-secundario)',
-              filter: 'blur(60px)',
-              animation: `malla-drift-2 ${dur} ease-in-out infinite alternate`,
-            }}
-          />
-          <div
-            className="absolute size-[30%] rounded-full"
-            style={{
-              top: '38%',
-              left: '22%',
-              backgroundColor: 'var(--color-fondo)',
-              filter: 'blur(60px)',
-              animation: `malla-drift-3 ${dur} ease-in-out infinite alternate`,
-            }}
-          />
-          <div
-            className="absolute size-[30%] rounded-full"
-            style={{
-              top: '42%',
-              left: '68%',
-              backgroundColor: 'var(--color-primario)',
-              filter: 'blur(60px)',
-              animation: `malla-drift-2 ${dur} ease-in-out infinite alternate`,
-            }}
-          />
-          <div
-            className="absolute size-[28%] rounded-full"
-            style={{
-              top: '70%',
-              left: '10%',
-              backgroundColor: 'var(--color-secundario)',
-              filter: 'blur(60px)',
-              animation: `malla-drift-1 ${dur} ease-in-out infinite alternate`,
-            }}
-          />
-          <div
-            className="absolute size-[30%] rounded-full"
-            style={{
-              top: '66%',
-              left: '58%',
-              backgroundColor: 'var(--color-fondo)',
-              filter: 'blur(60px)',
-              animation: `malla-drift-3 ${dur} ease-in-out infinite alternate`,
-            }}
-          />
-        </>
-      ) : null}
-
-      {tipo === 'lineas_diagonales' ? (
-        <div
-          className="size-full"
-          style={{
-            backgroundImage:
-              'repeating-linear-gradient(45deg, var(--color-primario) 0 2px, transparent 2px 40px), repeating-linear-gradient(45deg, var(--color-secundario) 0 1px, transparent 1px 24px)',
-            animation: `diagonal-drift ${dur} linear infinite`,
-          }}
-        />
-      ) : null}
+      <Suspense fallback={null}>
+        <Visual {...props} />
+      </Suspense>
     </div>
   )
 }
