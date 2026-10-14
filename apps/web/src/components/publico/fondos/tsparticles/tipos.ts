@@ -1,8 +1,7 @@
-import type { ComponentProps } from 'react'
-import type { Particles } from '@tsparticles/react'
+import type { ISourceOptions } from '@tsparticles/engine'
 
-/** Opciones de tsparticles sin depender de `@tsparticles/engine` (solo es dependencia par del wrapper). */
-export type OpcionesParticulas = NonNullable<ComponentProps<typeof Particles>['options']>
+/** Opciones de tsparticles (Fase 7c, UC-15): el motor es dependencia directa desde que se carga con `tsParticles.load`. */
+export type OpcionesParticulas = ISourceOptions
 
 /** Colores del tema ya normalizados a `rgb()`; sobre fondo claro vienen oscurecidos. */
 export type ColoresParticulas = {
