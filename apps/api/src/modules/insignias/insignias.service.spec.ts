@@ -148,7 +148,7 @@ describe('InsigniasService (Fase 7d, UC-35)', () => {
           emisor: 'y',
           imagen_url_remota: 'https://ejemplo.test/a',
         }),
-      ).rejects.toThrow(/no es válida/i);
+      ).rejects.toThrow(/no es una imagen admitida/i);
       expect(prisma.insignia.create).not.toHaveBeenCalled();
     });
 
