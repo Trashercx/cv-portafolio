@@ -121,7 +121,9 @@ describe.each(CANVAS)('canvas %s', (tipo) => {
   it('arranca el bucle rAF en el sitio y lo limpia por completo al desmontar', async () => {
     const { unmount } = await montar(tipo)
 
-    expect(rafSpy).toHaveBeenCalled()
+    // El bucle arranca en un efecto posterior al montaje del canvas: se espera
+    // (bajo carga, la corrida completa de vitest fallaba al afirmar de inmediato).
+    await waitFor(() => expect(rafSpy).toHaveBeenCalled())
     expect(observadoresInterseccion.length).toBeGreaterThan(0)
     expect(observadoresTamano.length).toBeGreaterThan(0)
 
@@ -150,7 +152,7 @@ describe.each(CANVAS)('canvas %s', (tipo) => {
 
   it('en el editor corre el bucle (animación sí, a 30 fps como máximo)', async () => {
     const { unmount } = await montar(tipo, 'editor')
-    expect(rafSpy).toHaveBeenCalled()
+    await waitFor(() => expect(rafSpy).toHaveBeenCalled())
     // Con tope de 30 fps un cuadro a 10 ms del anterior no dibuja, pero sigue agendando.
     ejecutarCuadro(1000)
     ejecutarCuadro(1010)
