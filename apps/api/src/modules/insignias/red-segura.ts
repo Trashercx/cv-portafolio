@@ -293,6 +293,9 @@ export async function descargarRecursoSeguro(
       const agente = crearAgenteFijo(direcciones);
       agentes.push(agente);
 
+      // CodeQL marca aquí js/request-forgery: la URL viene del admin por diseño
+      // (importar insignia). La alerta está aceptada con justificación en
+      // .github/codeql/alertas-aceptadas.json; las mitigaciones son las de arriba.
       const respuesta = await fetch(actual.toString(), {
         method: 'GET',
         redirect: 'manual',

@@ -1,0 +1,7 @@
+[
+  {
+    "ruleId": "js/request-forgery",
+    "uri": "apps/api/src/modules/insignias/red-segura.ts",
+    "motivo": "Fase 7d (UC-35): la URL es del admin autenticado por diseño (importar insignia). Mitigado en descargarRecursoSeguro: solo https:443, DNS resuelto y rangos privados/metadata rechazados, redirecciones revalidadas, IP fijada con un Agent de undici, 10 MB y 8 s, sin cookies, @Throttle."
+  }
+]

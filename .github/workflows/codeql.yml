@@ -69,4 +69,11 @@ jobs:
           total=$(jq '[.runs[].results[]] | length' "$sarif")
           echo "Alertas de CodeQL: $total"
           jq -r '.runs[].results[] | [(.level // "warning"), .ruleId, (.locations[0].physicalLocation.artifactLocation.uri + ":" + (.locations[0].physicalLocation.region.startLine | tostring)), .message.text] | @tsv' "$sarif"
-          test "$total" -eq 0
+          # Fase 7d: alertas aceptadas con justificación (regla + archivo) en
+          # .github/codeql/alertas-aceptadas.json. Se listan aparte y no fallan
+          # el job; cualquier otra alerta sigue bloqueando.
+          aceptadas=.github/codeql/alertas-aceptadas.json
+          pendientes=$(jq --slurpfile ok "$aceptadas" '[.runs[].results[] | select((.ruleId as $r | .locations[0].physicalLocation.artifactLocation.uri as $u | ($ok[0] | map(select(.ruleId == $r and .uri == $u)) | length) == 0))] | length' "$sarif")
+          echo "Alertas aceptadas con justificación: $((total - pendientes)) (ver $aceptadas)"
+          echo "Alertas pendientes: $pendientes"
+          test "$pendientes" -eq 0
