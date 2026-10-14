@@ -1,4 +1,3 @@
-import { INCLUDE_MEDIA_CON_VARIANTES } from '../media/media.select';
 import {
   ConflictException,
   Injectable,
@@ -22,6 +21,7 @@ import {
   SnapshotSeccion,
   SnapshotSitio,
 } from './snapshot.types';
+import { INCLUDE_MEDIA_CON_VARIANTES } from '../media/media.select';
 
 /**
  * UC-10 (Previsualizar cambios) y UC-11 (Publicar o revertir una versión).

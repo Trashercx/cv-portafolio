@@ -176,4 +176,67 @@ describe('SeoService (Fase 8, UC-34)', () => {
     expect(txt).toContain('Disallow: /admin');
     expect(txt).toContain('Sitemap: https://ana.dev/sitemap.xml');
   });
+
+  describe('caché de la versión publicada', () => {
+    const version = () => ({
+      snapshot: snapshotBase(),
+      publicado_en: new Date('2026-10-01T10:00:00.000Z'),
+    });
+
+    it('lee una sola vez para metadatos y sitemap dentro del TTL', async () => {
+      const versiones = {
+        obtenerUltimaPublicada: jest.fn().mockResolvedValue(version()),
+      };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const servicio = new SeoService(versiones as any);
+      await servicio.generarFragmento('/');
+      await servicio.generarFragmento('/');
+      await servicio.generarSitemap();
+      expect(versiones.obtenerUltimaPublicada).toHaveBeenCalledTimes(1);
+
+      servicio.invalidarCache();
+      await servicio.generarSitemap();
+      expect(versiones.obtenerUltimaPublicada).toHaveBeenCalledTimes(2);
+    });
+
+    it('peticiones concurrentes comparten una sola promesa en vuelo', async () => {
+      const versiones = {
+        obtenerUltimaPublicada: jest.fn(
+          () => new Promise((r) => setTimeout(() => r(version()), 10)),
+        ),
+      };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const servicio = new SeoService(versiones as any);
+      await Promise.all([
+        servicio.generarFragmento('/'),
+        servicio.generarFragmento('/'),
+        servicio.generarSitemap(),
+      ]);
+      expect(versiones.obtenerUltimaPublicada).toHaveBeenCalledTimes(1);
+    });
+
+    it('vuelve a leer al vencer el TTL y no cachea los fallos', async () => {
+      const ahora = jest.spyOn(Date, 'now');
+      ahora.mockReturnValue(1_000);
+      const versiones = {
+        obtenerUltimaPublicada: jest
+          .fn()
+          .mockRejectedValueOnce(new Error('bd'))
+          .mockResolvedValue(version()),
+      };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const servicio = new SeoService(versiones as any);
+      await expect(servicio.generarSitemap()).rejects.toThrow('bd');
+      await servicio.generarSitemap();
+      expect(versiones.obtenerUltimaPublicada).toHaveBeenCalledTimes(2);
+
+      ahora.mockReturnValue(1_000 + 29_000);
+      await servicio.generarSitemap();
+      expect(versiones.obtenerUltimaPublicada).toHaveBeenCalledTimes(2);
+      ahora.mockReturnValue(1_000 + 31_000);
+      await servicio.generarSitemap();
+      expect(versiones.obtenerUltimaPublicada).toHaveBeenCalledTimes(3);
+      ahora.mockRestore();
+    });
+  });
 });

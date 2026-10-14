@@ -61,7 +61,7 @@ describe('VariantesImagenService (Fase 8, UC-34)', () => {
       'image/png',
     );
 
-    expect(total).toBe(4);
+    expect(total).toEqual({ generadas: 4, omitida: false });
     expect([...objetos.keys()].sort()).toEqual([
       'perfil/abc-1024.avif',
       'perfil/abc-1024.webp',
@@ -107,18 +107,42 @@ describe('VariantesImagenService (Fase 8, UC-34)', () => {
       'image/gif',
     );
 
-    expect(svg).toBe(0);
-    expect(gif).toBe(0);
+    expect(svg).toEqual({ generadas: 0, omitida: true });
+    expect(gif).toEqual({ generadas: 0, omitida: true });
     expect(storage.subirDerivado).not.toHaveBeenCalled();
   });
 
-  it('no lanza si el storage falla', async () => {
-    storage.subirDerivado.mockRejectedValue(new Error('S3 caído'));
+  it('no lanza si el storage falla: devuelve el error y limpia lo subido', async () => {
+    let n = 0;
+    storage.subirDerivado.mockImplementation(
+      async (buf: Buffer, key: string) => {
+        if (++n === 3) throw new Error('S3 caído');
+        objetos.set(key, buf);
+        return { url: `https://cdn/${key}`, key };
+      },
+    );
 
     await expect(
       service.generar('m4', await png(1300, 800), 'a.png', 'image/png'),
-    ).resolves.toBe(0);
+    ).resolves.toEqual({ generadas: 0, omitida: false, error: 'S3 caído' });
     expect(prisma.mediaVariante.createMany).not.toHaveBeenCalled();
+    expect(storage.eliminar).toHaveBeenCalledWith(['a-640.webp', 'a-640.avif']);
+    expect(objetos.size).toBe(0);
+  });
+
+  it('si falla createMany borra todas las claves subidas y devuelve el error', async () => {
+    prisma.mediaVariante.createMany.mockRejectedValue(new Error('BD caída'));
+
+    const r = await service.generar(
+      'm6',
+      await png(700, 400),
+      'a.png',
+      'image/png',
+    );
+
+    expect(r).toEqual({ generadas: 0, omitida: false, error: 'BD caída' });
+    expect(storage.eliminar).toHaveBeenCalledWith(['a-640.webp', 'a-640.avif']);
+    expect(objetos.size).toBe(0);
   });
 
   it('eliminarDe borra objetos y filas, y tampoco lanza si falla', async () => {

@@ -20,6 +20,13 @@ interface MetadatosRuta {
 
 const MARCA = 'data-meta-estatico';
 
+/** TTL de la caché en memoria de la versión publicada (Fase 8, UC-34). */
+const TTL_CACHE_MS = 30_000;
+
+type VersionPublicada = Awaited<
+  ReturnType<VersionesSitioService['obtenerUltimaPublicada']>
+>;
+
 /**
  * Fase 8, UC-34: genera, a partir de la última versión publicada, el
  * fragmento de metadatos que nginx inyecta por SSI en `index.html`, el
@@ -28,7 +35,37 @@ const MARCA = 'data-meta-estatico';
  */
 @Injectable()
 export class SeoService {
+  private cache: { valor: VersionPublicada; expira: number } | null = null;
+  private enVuelo: Promise<VersionPublicada> | null = null;
+
   constructor(private readonly versionesSitioService: VersionesSitioService) {}
+
+  /**
+   * Fase 8, UC-34: nginx hace un subrequest a `/seo/metadatos` por cada
+   * `index.html` y las rutas van con `@SkipThrottle()`; leer el JSONB completo
+   * del snapshot en cada una sería un vector de carga. Se cachea en memoria
+   * 30 s y las lecturas concurrentes comparten una sola promesa (sin
+   * estampida). Un fallo no se cachea. Publicar tarda hasta 30 s en reflejarse.
+   */
+  private async versionPublicada(): Promise<VersionPublicada> {
+    if (this.cache && Date.now() < this.cache.expira) return this.cache.valor;
+    this.enVuelo ??= this.versionesSitioService
+      .obtenerUltimaPublicada()
+      .then((valor) => {
+        this.cache = { valor, expira: Date.now() + TTL_CACHE_MS };
+        return valor;
+      })
+      .finally(() => {
+        this.enVuelo = null;
+      });
+    return this.enVuelo;
+  }
+
+  /** Descarta la caché de la versión publicada (tests). */
+  invalidarCache(): void {
+    this.cache = null;
+    this.enVuelo = null;
+  }
 
   private origen(): string {
     return (process.env.FRONTEND_ORIGIN ?? 'http://localhost:5173').replace(
@@ -68,7 +105,7 @@ export class SeoService {
       });
     }
 
-    const version = await this.versionesSitioService.obtenerUltimaPublicada();
+    const version = await this.versionPublicada();
     if (!version) {
       return `<title ${MARCA}>Portafolio</title>`;
     }
@@ -226,7 +263,7 @@ export class SeoService {
 
   /** `GET /sitemap.xml`: home + proyectos, certificaciones y logros publicados. */
   async generarSitemap(): Promise<string> {
-    const version = await this.versionesSitioService.obtenerUltimaPublicada();
+    const version = await this.versionPublicada();
     const snapshot = version?.snapshot as unknown as SnapshotSitio | undefined;
     const e = escaparHtml;
     const lastmod = version?.publicado_en

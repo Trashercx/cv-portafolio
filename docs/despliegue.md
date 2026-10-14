@@ -162,7 +162,7 @@ nginx (`web`) mantiene el formato de acceso por defecto; los assets con hash y `
 
 - `api` corre como el usuario `node` (uid 1000) de la imagen base; `/app` (incluido `uploads/`, solo para el fallback local sin S3) le pertenece. `prisma migrate deploy` del entrypoint y `scripts/backup-db.sh` (escribe en `/tmp`) siguen funcionando sin privilegios. Si se monta un volumen sobre `/app/uploads`, debe pertenecer al uid 1000.
 - `web` sigue arrancando nginx como root (el master abre el puerto 80 y cede los workers al usuario `nginx`, comportamiento estándar de la imagen oficial). Pasar a `nginxinc/nginx-unprivileged` (puerto 8080) queda como mejora opcional.
-- nginx comprime con gzip (`text/css`, JS, JSON, SVG, XML; mínimo 1 KB). Los assets con hash de Vite se cachean 30 días como `immutable`; `index.html` sigue en `no-cache`; `robots.txt` (`apps/web/public/robots.txt`, bloquea `/admin` a los rastreadores) se cachea 1 hora.
+- nginx comprime con gzip (`text/css`, JS, JSON, SVG, XML; mínimo 1 KB). Los assets con hash de Vite se cachean 30 días como `immutable`; `index.html` sigue en `no-cache`; `robots.txt` (desde la Fase 8 lo genera el API y nginx lo proxea; `apps/web/public/robots.estatico.txt` es el respaldo si el API no responde; bloquea `/admin` a los rastreadores) se cachea 1 hora.
 
 ### 6.6 CI
 

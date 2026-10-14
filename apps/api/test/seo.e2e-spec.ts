@@ -1,6 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import * as request from 'supertest';
+import { SeoService } from '../src/modules/seo/seo.service';
 import { VersionesSitioService } from '../src/modules/versiones-sitio/versiones-sitio.service';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { agenteAutenticado, crearAppDePrueba } from './utils/test-app';
@@ -68,6 +69,9 @@ describe('SEO en servidor (e2e, Fase 8, UC-34)', () => {
   });
 
   it('sin versión publicada: 200 con solo <title>Portafolio</title>', async () => {
+    // `SeoService` cachea la versión publicada 30 s (Fase 8): se invalida
+    // antes y después para no depender del orden de los casos.
+    app.get(SeoService).invalidarCache();
     const espia = jest
       .spyOn(app.get(VersionesSitioService), 'obtenerUltimaPublicada')
       .mockResolvedValue(null);
@@ -81,6 +85,7 @@ describe('SEO en servidor (e2e, Fase 8, UC-34)', () => {
       expect(res.text).toBe('<title data-meta-estatico>Portafolio</title>');
     } finally {
       espia.mockRestore();
+      app.get(SeoService).invalidarCache();
     }
   });
 
@@ -110,6 +115,7 @@ describe('SEO en servidor (e2e, Fase 8, UC-34)', () => {
 
     const version = await agent.post('/admin/versiones/publicar').expect(201);
     versionId = version.body.id;
+    app.get(SeoService).invalidarCache();
 
     // Home (con query y hash en la cabecera: solo cuenta el pathname).
     const home = await request(app.getHttpServer())

@@ -18,6 +18,12 @@ export const MIMES_RASTER = [
   'image/tiff',
 ];
 
+export interface ResultadoGeneracion {
+  generadas: number;
+  omitida: boolean;
+  error?: string;
+}
+
 const FORMATOS = ['webp', 'avif'] as const;
 
 /**
@@ -39,18 +45,23 @@ export class VariantesImagenService {
     return MIMES_RASTER.includes(mimetype);
   }
 
-  /** Devuelve cuántas variantes se crearon (0 si se omitió o falló). */
+  /**
+   * Devuelve cuántas variantes se crearon, si se omitió (no rasterizable) o el
+   * error ocurrido. Nunca lanza; ante un fallo a mitad de camino borra los
+   * objetos ya subidos para no dejar huérfanos (Fase 8, UC-34).
+   */
   async generar(
     mediaId: string,
     buffer: Buffer,
     keyOriginal: string,
     mimetype: string,
-  ): Promise<number> {
-    if (!this.esRasterizable(mimetype)) return 0;
+  ): Promise<ResultadoGeneracion> {
+    if (!this.esRasterizable(mimetype)) return { generadas: 0, omitida: true };
 
+    const subidas: string[] = [];
     try {
       const { width } = await sharp(buffer).metadata();
-      if (!width) return 0;
+      if (!width) return { generadas: 0, omitida: true };
 
       const anchos =
         width < ANCHOS_VARIANTE[0]
@@ -90,6 +101,7 @@ export class VariantesImagenService {
             `${base}-${ancho}.${formato}`,
             `image/${formato}`,
           );
+          subidas.push(subido.key);
           filas.push({
             media_id: mediaId,
             formato,
@@ -103,14 +115,24 @@ export class VariantesImagenService {
       }
 
       await this.prisma.mediaVariante.createMany({ data: filas });
-      return filas.length;
+      return { generadas: filas.length, omitida: false };
     } catch (error) {
+      const motivo = error instanceof Error ? error.message : String(error);
       this.logger.error(
-        `No se pudieron generar variantes de la media ${mediaId}: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
+        `No se pudieron generar variantes de la media ${mediaId}: ${motivo}`,
       );
-      return 0;
+      if (subidas.length > 0) {
+        try {
+          await this.storage.eliminar(subidas);
+        } catch (limpieza) {
+          this.logger.error(
+            `No se pudieron limpiar ${subidas.length} variantes huérfanas de la media ${mediaId}: ${
+              limpieza instanceof Error ? limpieza.message : String(limpieza)
+            }`,
+          );
+        }
+      }
+      return { generadas: 0, omitida: false, error: motivo };
     }
   }
 

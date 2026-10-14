@@ -1,10 +1,16 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../../prisma/prisma.service';
+import { sharp } from './sharp';
 import { MediaService } from './media.service';
 import { INCLUDE_MEDIA_CON_VARIANTES } from './media.select';
 import { VariantesImagenService } from './variantes-imagen.service';
 import { MEDIA_STORAGE_SERVICE } from './storage/media-storage.interface';
+
+const pngReal = () =>
+  sharp({ create: { width: 10, height: 10, channels: 3, background: '#fff' } })
+    .png()
+    .toBuffer();
 
 describe('MediaService (UC-02/03/04 + biblioteca UC-09)', () => {
   let service: MediaService;
@@ -55,7 +61,7 @@ describe('MediaService (UC-02/03/04 + biblioteca UC-09)', () => {
       perfil: { findFirst: jest.fn() },
     };
     variantes = {
-      generar: jest.fn().mockResolvedValue(0),
+      generar: jest.fn().mockResolvedValue({ generadas: 0, omitida: false }),
       eliminarDe: jest.fn().mockResolvedValue(undefined),
       esRasterizable: jest.fn().mockReturnValue(true),
     };
@@ -339,12 +345,58 @@ describe('MediaService (UC-02/03/04 + biblioteca UC-09)', () => {
       expect(variantes.generar).not.toHaveBeenCalled();
     });
 
-    it('regenerarFaltantes devuelve procesadas, omitidas y errores', async () => {
-      prisma.media.findMany.mockResolvedValue([{ id: 'a' }, { id: 'b' }]);
+    it('regenerarVariantes incluye el error si generar falla', async () => {
+      prisma.media.findUnique.mockResolvedValue({
+        id: 'm',
+        tipo: 'imagen',
+        s3_key: 'a.png',
+      });
+      storage.descargar.mockResolvedValue(await pngReal());
+      variantes.generar.mockResolvedValue({
+        generadas: 0,
+        omitida: false,
+        error: 'S3 caído',
+      });
+
+      await expect(service.regenerarVariantes('m')).resolves.toEqual({
+        generadas: 0,
+        omitida: false,
+        error: 'S3 caído',
+      });
+    });
+
+    it('regenerarVariantes responde generadas y omitida en el caso feliz', async () => {
+      prisma.media.findUnique.mockResolvedValue({
+        id: 'm',
+        tipo: 'imagen',
+        s3_key: 'a.png',
+      });
+      storage.descargar.mockResolvedValue(await pngReal());
+      variantes.generar.mockResolvedValue({ generadas: 4, omitida: false });
+
+      await expect(service.regenerarVariantes('m')).resolves.toEqual({
+        generadas: 4,
+        omitida: false,
+      });
+    });
+
+    it('regenerarFaltantes cuenta procesadas, omitidas y errores reales', async () => {
+      prisma.media.findMany.mockResolvedValue([
+        { id: 'a' },
+        { id: 'b' },
+        { id: 'c' },
+        { id: 'd' },
+      ]);
       const espia = jest
         .spyOn(service, 'regenerarVariantes')
         .mockResolvedValueOnce({ generadas: 4, omitida: false })
-        .mockRejectedValueOnce(new Error('sin objeto'));
+        .mockRejectedValueOnce(new Error('sin objeto'))
+        .mockResolvedValueOnce({ generadas: 0, omitida: true })
+        .mockResolvedValueOnce({
+          generadas: 0,
+          omitida: false,
+          error: 'fallo al generar',
+        });
 
       const resultado = await service.regenerarFaltantes();
 
@@ -355,8 +407,11 @@ describe('MediaService (UC-02/03/04 + biblioteca UC-09)', () => {
       );
       expect(resultado).toEqual({
         procesadas: 1,
-        omitidas: 0,
-        errores: [{ id: 'b', motivo: 'sin objeto' }],
+        omitidas: 1,
+        errores: [
+          { id: 'b', motivo: 'sin objeto' },
+          { id: 'd', motivo: 'fallo al generar' },
+        ],
       });
       espia.mockRestore();
     });

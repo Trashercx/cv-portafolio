@@ -1,7 +1,7 @@
-import { INCLUDE_MEDIA_CON_VARIANTES } from '../media/media.select';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UpsertPerfilDto } from './dto/upsert-perfil.dto';
+import { INCLUDE_MEDIA_CON_VARIANTES } from '../media/media.select';
 
 @Injectable()
 export class PerfilService {

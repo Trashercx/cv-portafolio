@@ -47,7 +47,7 @@ vi.mock('@/features/media/useMediaLibrary', () => ({
   useRegenerarVariantes: () => ({ mutate: regenerarMutateMock, isPending: false }),
 }))
 
-vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
+vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn(), warning: vi.fn() } }))
 
 function renderMediaLibraryPage() {
   return render(<MediaLibraryPage />)
@@ -95,7 +95,8 @@ describe('MediaLibraryPage (UC-09)', () => {
 
     expect(regenerarMutateMock).toHaveBeenCalledTimes(1)
     const { toast } = await import('sonner')
-    expect(toast.success).toHaveBeenCalledWith(
+    // Revisión Fase 8: con errores el aviso es de advertencia, no de éxito.
+    expect(toast.warning).toHaveBeenCalledWith(
       'Variantes generadas: 3 procesadas, 2 omitidas, 1 con error.',
     )
   })

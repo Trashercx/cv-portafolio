@@ -1,4 +1,3 @@
-import { INCLUDE_MEDIA_CON_VARIANTES } from '../media/media.select';
 import {
   BadRequestException,
   Injectable,
@@ -7,6 +6,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateCertificacionDto } from './dto/create-certificacion.dto';
 import { UpdateCertificacionDto } from './dto/update-certificacion.dto';
+import { INCLUDE_MEDIA_CON_VARIANTES } from '../media/media.select';
 
 /**
  * Criterio de orden (UC-04, docs/plan-portafolio.md: "ordenadas por fecha o

@@ -41,6 +41,8 @@ const TIMEOUT_MS = 5000;
 export class UmamiClient {
   private readonly logger = new Logger(UmamiClient.name);
   private tokenSesion: string | null = null;
+  /** Login en vuelo: peticiones concurrentes comparten un solo login. */
+  private loginEnCurso: Promise<string> | null = null;
 
   private get apiUrl(): string {
     return (process.env.UMAMI_API_URL ?? '').trim().replace(/\/+$/, '');
@@ -62,6 +64,7 @@ export class UmamiClient {
   /** Olvida el token de sesión cacheado (tests). */
   reiniciarSesion(): void {
     this.tokenSesion = null;
+    this.loginEnCurso = null;
   }
 
   async obtenerStats(desde: number, hasta: number): Promise<UmamiStats> {
@@ -117,33 +120,49 @@ export class UmamiClient {
 
     for (let intento = 0; intento < 2; intento++) {
       const token = tokenFijo || (await this.obtenerTokenSesion());
-      const respuesta = await this.fetchConTimeout(url, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: 'application/json',
+      const resultado = await this.solicitar(
+        url,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
         },
-      });
+        async (respuesta) => {
+          if (respuesta.status === 401 || respuesta.status === 403) {
+            return { rechazo: respuesta.status } as const;
+          }
+          return { datos: await this.leerJson<T>(respuesta) } as const;
+        },
+      );
 
-      if (respuesta.status === 401 || respuesta.status === 403) {
+      if ('rechazo' in resultado) {
         // Token fijo: no hay forma de renovarlo. Sesión: un reintento.
         if (tokenFijo || intento === 1) {
           throw new UmamiError(
             'no_autorizado',
-            `Umami respondió ${respuesta.status}`,
+            `Umami respondió ${resultado.rechazo}`,
           );
         }
         this.tokenSesion = null;
         continue;
       }
-      return this.leerJson<T>(respuesta);
+      return resultado.datos;
     }
     throw new UmamiError('no_autorizado', 'Umami rechazó la sesión');
   }
 
-  private async obtenerTokenSesion(): Promise<string> {
-    if (this.tokenSesion) return this.tokenSesion;
+  private obtenerTokenSesion(): Promise<string> {
+    if (this.tokenSesion) return Promise.resolve(this.tokenSesion);
+    // Con varias peticiones en paralelo (Promise.all) solo debe haber un login.
+    this.loginEnCurso ??= this.iniciarSesion().finally(() => {
+      this.loginEnCurso = null;
+    });
+    return this.loginEnCurso;
+  }
 
-    const respuesta = await this.fetchConTimeout(
+  private async iniciarSesion(): Promise<string> {
+    const token = await this.solicitar(
       `${this.apiUrl}/api/auth/login`,
       {
         method: 'POST',
@@ -156,16 +175,22 @@ export class UmamiClient {
           password: process.env.UMAMI_CONTRASENA,
         }),
       },
+      async (respuesta) => {
+        if (respuesta.status === 401 || respuesta.status === 403) {
+          throw new UmamiError(
+            'no_autorizado',
+            'Credenciales de Umami inválidas',
+          );
+        }
+        const cuerpo = await this.leerJson<{ token?: string }>(respuesta);
+        if (!cuerpo?.token) {
+          throw new UmamiError('sin_respuesta', 'Login de Umami sin token');
+        }
+        return cuerpo.token;
+      },
     );
-    if (respuesta.status === 401 || respuesta.status === 403) {
-      throw new UmamiError('no_autorizado', 'Credenciales de Umami inválidas');
-    }
-    const cuerpo = await this.leerJson<{ token?: string }>(respuesta);
-    if (!cuerpo?.token) {
-      throw new UmamiError('sin_respuesta', 'Login de Umami sin token');
-    }
-    this.tokenSesion = cuerpo.token;
-    return cuerpo.token;
+    this.tokenSesion = token;
+    return token;
   }
 
   private async leerJson<T>(respuesta: Response): Promise<T> {
@@ -185,15 +210,26 @@ export class UmamiClient {
     }
   }
 
-  private async fetchConTimeout(
+  /**
+   * Ejecuta la petición y el procesado de su cuerpo bajo un mismo timeout: el
+   * temporizador solo se limpia al terminar de leer, así un cuerpo que nunca
+   * llega también aborta (Fase 8, UC-27).
+   */
+  private async solicitar<T>(
     url: string,
     init: RequestInit,
-  ): Promise<Response> {
+    procesar: (respuesta: Response) => Promise<T>,
+  ): Promise<T> {
     const controlador = new AbortController();
     const temporizador = setTimeout(() => controlador.abort(), TIMEOUT_MS);
     try {
-      return await fetch(url, { ...init, signal: controlador.signal });
+      const respuesta = await fetch(url, {
+        ...init,
+        signal: controlador.signal,
+      });
+      return await procesar(respuesta);
     } catch (error) {
+      if (error instanceof UmamiError) throw error;
       const motivo = error instanceof Error ? error.message : String(error);
       this.logger.warn(`Umami no respondió: ${motivo}`);
       throw new UmamiError('sin_respuesta', motivo);

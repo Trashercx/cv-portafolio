@@ -10,7 +10,10 @@ import { CreateMediaDto } from './dto/create-media.dto';
 import { ListarMediaQueryDto } from './dto/listar-media-query.dto';
 import { UpdateMediaDto } from './dto/update-media.dto';
 import { INCLUDE_MEDIA_CON_VARIANTES } from './media.select';
-import { VariantesImagenService } from './variantes-imagen.service';
+import {
+  ResultadoGeneracion,
+  VariantesImagenService,
+} from './variantes-imagen.service';
 import {
   MEDIA_STORAGE_SERVICE,
   MediaStorageService,
@@ -148,7 +151,7 @@ export class MediaService {
    * `POST /admin/media/:id/variantes` (Fase 8, UC-34): regenera las variantes
    * de una media descargando su original.
    */
-  async regenerarVariantes(id: string) {
+  async regenerarVariantes(id: string): Promise<ResultadoGeneracion> {
     const media = await this.obtener(id);
 
     if (media.tipo !== 'imagen') {
@@ -162,13 +165,15 @@ export class MediaService {
     }
 
     await this.variantes.eliminarDe(id);
-    const generadas = await this.variantes.generar(
+    const { generadas, omitida, error } = await this.variantes.generar(
       id,
       buffer,
       media.s3_key,
       mimetype,
     );
-    return { generadas, omitida: false };
+    return error
+      ? { generadas: 0, omitida: false, error }
+      : { generadas, omitida };
   }
 
   /**
@@ -190,7 +195,10 @@ export class MediaService {
       try {
         const resultado = await this.regenerarVariantes(id);
         if (resultado.omitida) omitidas++;
-        else procesadas++;
+        else if (resultado.error) {
+          errores.push({ id, motivo: resultado.error });
+        } else if (resultado.generadas > 0) procesadas++;
+        else errores.push({ id, motivo: 'No se generó ninguna variante' });
       } catch (error) {
         errores.push({
           id,

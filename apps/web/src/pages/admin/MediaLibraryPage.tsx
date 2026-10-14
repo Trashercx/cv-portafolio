@@ -53,10 +53,13 @@ export function MediaLibraryPage() {
             onClick={() =>
               regenerar.mutate(undefined, {
                 // Fase 8 (8.2, UC-09): resumen del relleno de variantes.
-                onSuccess: (r) =>
-                  toast.success(
+                onSuccess: (r) => {
+                  // Revisión Fase 8: con errores el aviso es de advertencia, no de éxito.
+                  const avisar = r.errores.length > 0 ? toast.warning : toast.success
+                  avisar(
                     `Variantes generadas: ${r.procesadas} procesadas, ${r.omitidas} omitidas, ${r.errores.length} con error.`,
-                  ),
+                  )
+                },
               })
             }
           >

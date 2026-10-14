@@ -160,6 +160,52 @@ describe('MetricasService (Fase 8, UC-27)', () => {
     });
   });
 
+  it('timeout cubre también la lectura del cuerpo -> sin_respuesta', async () => {
+    jest.useFakeTimers();
+    fetchSpy.mockImplementation((_url: unknown, init?: RequestInit) => {
+      // Cabeceras llegan, pero el cuerpo nunca; se corta solo al abortar.
+      const cuerpo = new ReadableStream({
+        start(controlador) {
+          init?.signal?.addEventListener('abort', () =>
+            controlador.error(new DOMException('aborted', 'AbortError')),
+          );
+        },
+      });
+      return Promise.resolve(new Response(cuerpo, { status: 200 }));
+    });
+    const promesa = servicio.obtener(30);
+    await jest.advanceTimersByTimeAsync(5000);
+    expect(await promesa).toEqual({
+      disponible: false,
+      motivo: 'sin_respuesta',
+    });
+  });
+
+  it('usuario/contraseña: 5 peticiones concurrentes hacen un solo login', async () => {
+    delete process.env.UMAMI_API_TOKEN;
+    process.env.UMAMI_USUARIO = 'admin';
+    process.env.UMAMI_CONTRASENA = 'secreto';
+    const normal = umamiSimulado({
+      pageviews: 1,
+      visits: 1,
+      visitors: 1,
+      bounces: 0,
+      totaltime: 9,
+    });
+    let logins = 0;
+    fetchSpy.mockImplementation(async (entrada: unknown) => {
+      if (String(entrada).endsWith('/api/auth/login')) {
+        logins++;
+        await new Promise((r) => setTimeout(r, 10));
+        return json({ token: 'unico' });
+      }
+      return normal(entrada);
+    });
+    const r = await servicio.obtener(30);
+    expect(r.disponible).toBe(true);
+    expect(logins).toBe(1);
+  });
+
   it('error de red o 5xx -> sin_respuesta', async () => {
     fetchSpy.mockRejectedValue(new TypeError('fetch failed'));
     expect(await servicio.obtener(30)).toEqual({
