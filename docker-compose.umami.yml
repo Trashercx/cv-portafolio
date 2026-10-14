@@ -1,0 +1,93 @@
+# Fase 8 (UC-27) — Umami autoalojado: analítica web sin cookies ni banner.
+#
+# Stack APARTE y OPCIONAL de docker-compose.prod.yml: quien no quiera
+# analítica simplemente no lo despliega y no gasta los ~400 MB de RAM que
+# suman Umami y su Postgres. Umami tiene su propia base de datos (nunca la
+# del portafolio): así un fallo o una actualización de Umami no toca los
+# datos del sitio, y se puede borrar entero sin dejar rastro.
+#
+# Cómo desplegarlo en Dokploy (Coolify es análogo):
+#   1. En el MISMO proyecto de Dokploy donde vive el portafolio, crear un
+#      segundo servicio de tipo "Docker Compose" apuntando a este repo y a
+#      este archivo (`docker-compose.umami.yml`).
+#   2. Cargar en su panel de variables: UMAMI_DB_PASSWORD y UMAMI_APP_SECRET
+#      (obligatorias; generar ambas con `openssl rand -hex 32`). El resto
+#      tiene default.
+#   3. Asignarle un dominio al servicio `umami`, puerto interno 3000 (p. ej.
+#      analitica.<dominio>, Traefik termina el TLS). Entrar con el usuario
+#      inicial de Umami (admin / umami) y CAMBIAR la contraseña de inmediato.
+#   4. En Umami: Settings → Websites → Add website (nombre y dominio del
+#      portafolio) y copiar el "Website ID". Settings → Users (o API keys,
+#      según la versión) para las credenciales que usará el API del
+#      portafolio en `GET /admin/metricas`.
+#   5. Volver al servicio del portafolio (docker-compose.prod.yml) y cargar:
+#        - build args de `web`: VITE_UMAMI_URL=https://analitica.<dominio>,
+#          VITE_UMAMI_WEBSITE_ID=<id>  → hay que RECONSTRUIR la imagen web
+#          (Vite incrusta las VITE_* en el JS en tiempo de build);
+#        - runtime de `web`: ANALITICA_ORIGIN=https://analitica.<dominio>
+#          (CSP: script-src / connect-src);
+#        - runtime de `api`: UMAMI_API_URL, UMAMI_WEBSITE_ID y
+#          UMAMI_API_TOKEN (o UMAMI_USUARIO + UMAMI_CONTRASENA).
+#
+# Cómo se conecta `api` con Umami: la opción simple y recomendada es por la
+# URL PÚBLICA (UMAMI_API_URL=https://analitica.<dominio>): funciona aunque
+# los dos stacks estén en redes de Docker distintas (en Dokploy cada
+# servicio Compose tiene su red propia) y el tráfico va por HTTPS. La
+# alternativa es unir redes: declarar en ambos compose una red `external`
+# compartida (p. ej. `dokploy-network`, que Dokploy ya crea) y usar
+# UMAMI_API_URL=http://umami:3000; evita salir a Internet pero acopla los
+# despliegues. Ver docs/despliegue.md §7.4.
+#
+# El tracker del sitio público (`<script src="https://analitica.<dominio>/
+# script.js">`) siempre se carga por el dominio público: lo pide el
+# navegador del visitante, no el servidor.
+
+services:
+  umami:
+    image: ghcr.io/umami-software/umami:postgresql-latest
+    restart: unless-stopped
+    depends_on:
+      umami-db:
+        condition: service_healthy
+    environment:
+      DATABASE_TYPE: postgresql
+      DATABASE_URL: postgresql://${UMAMI_DB_USER:-umami}:${UMAMI_DB_PASSWORD:?falta UMAMI_DB_PASSWORD}@umami-db:5432/${UMAMI_DB_NAME:-umami}
+      # Secreto con el que Umami firma sesiones y tokens: largo y aleatorio
+      # (`openssl rand -hex 32`). Cambiarlo invalida todas las sesiones.
+      APP_SECRET: ${UMAMI_APP_SECRET:?falta UMAMI_APP_SECRET}
+      # Umami manda telemetría anónima a sus autores por defecto; apagada.
+      DISABLE_TELEMETRY: "1"
+    # Puerto interno que Dokploy/Traefik enrutan al dominio asignado.
+    expose:
+      - "3000"
+    # Solo loopback del VPS, para depurar con curl o un túnel SSH sin pasar
+    # por Traefik. Quitar este bloque si no hace falta (Traefik usa `expose`).
+    ports:
+      - "127.0.0.1:${UMAMI_PUBLIC_PORT:-3100}:3000"
+    healthcheck:
+      # La imagen trae curl; /api/heartbeat responde `{ ok: true }` sin tocar
+      # la base de datos (liveness). `start_period` cubre las migraciones de
+      # Prisma que Umami corre en su primer arranque.
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:3000/api/heartbeat > /dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      start_period: 60s
+      retries: 3
+
+  umami-db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${UMAMI_DB_USER:-umami}
+      POSTGRES_PASSWORD: ${UMAMI_DB_PASSWORD:?falta UMAMI_DB_PASSWORD}
+      POSTGRES_DB: ${UMAMI_DB_NAME:-umami}
+    volumes:
+      - umami_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${UMAMI_DB_USER:-umami} -d ${UMAMI_DB_NAME:-umami}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  umami_db_data:
