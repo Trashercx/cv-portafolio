@@ -244,12 +244,20 @@ erDiagram
     MEDIA {
         uuid id PK
         uuid usuario_admin_id FK
+        uuid carpeta_id FK
         string url
         string s3_key
         string tipo
         int ancho
         int alto
         string alt_text
+        timestamp created_at
+    }
+    CARPETA_MEDIA {
+        uuid id PK
+        uuid usuario_admin_id FK
+        string nombre
+        int orden
         timestamp created_at
     }
     MEDIA_VARIANTE {
@@ -389,6 +397,8 @@ erDiagram
 
     USUARIO_ADMIN ||--o| PERFIL : tiene
     USUARIO_ADMIN ||--o{ MEDIA : sube
+    USUARIO_ADMIN ||--o{ CARPETA_MEDIA : organiza
+    CARPETA_MEDIA ||--o{ MEDIA : contiene
     USUARIO_ADMIN ||--o{ PROYECTO : gestiona
     USUARIO_ADMIN ||--o{ CERTIFICACION : gestiona
     USUARIO_ADMIN ||--o{ INSIGNIA : gestiona
@@ -411,7 +421,7 @@ erDiagram
     PLATAFORMA_RED ||--o{ RED_SOCIAL : clasifica
 ```
 
-Dieciocho entidades: el administrador es el dueño de todo el contenido; `MEDIA`, `TECNOLOGIA` y `PLATAFORMA_RED` son catálogos compartidos en vez de campos de texto libre repetidos; `SECCION`, `TEMA`, `FONDO_SITIO` y `VERSION_SITIO` sostienen el editor visual y la publicación por versiones. `SKILL` sigue el mismo patrón que `LOGRO`: contenido propio del administrador (no un catálogo compartido) — a diferencia de `TECNOLOGIA`, que solo clasifica proyectos, `SKILL` es lo que se muestra en el carrusel de habilidades del sitio público, así que no tendría sentido reutilizar aquel catálogo para este propósito distinto. `FONDO_SITIO` sigue el mismo patrón de "configuración visual exclusiva" que `TEMA`, pero es deliberadamente independiente de él: `TEMA` solo maneja color y tipografía, `FONDO_SITIO` maneja el fondo animado del landing.
+Diecinueve entidades: el administrador es el dueño de todo el contenido; `MEDIA`, `TECNOLOGIA` y `PLATAFORMA_RED` son catálogos compartidos en vez de campos de texto libre repetidos; `SECCION`, `TEMA`, `FONDO_SITIO` y `VERSION_SITIO` sostienen el editor visual y la publicación por versiones. `SKILL` sigue el mismo patrón que `LOGRO`: contenido propio del administrador (no un catálogo compartido) — a diferencia de `TECNOLOGIA`, que solo clasifica proyectos, `SKILL` es lo que se muestra en el carrusel de habilidades del sitio público, así que no tendría sentido reutilizar aquel catálogo para este propósito distinto. `FONDO_SITIO` sigue el mismo patrón de "configuración visual exclusiva" que `TEMA`, pero es deliberadamente independiente de él: `TEMA` solo maneja color y tipografía, `FONDO_SITIO` maneja el fondo animado del landing. `CARPETA_MEDIA` organiza la biblioteca del panel en carpetas planas (Fase 7e, UC-09); no cambia la clave de S3 y al borrar una carpeta sus archivos quedan sin carpeta (`ON DELETE SET NULL`); nombre único por administrador sin distinguir mayúsculas.
 
 `INSIGNIA` guarda badges importados de Credly/Open Badges u otros (Fase 7d, UC-35); es independiente de `CERTIFICACION` porque la insignia es la imagen oficial emitida por un tercero con proveedor e id externo, mientras que la certificación es un registro propio con logo de institución; `habilidades` es un array nativo de Postgres (no JSONB) porque son etiquetas planas sin estructura.
 
