@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080" role="img" aria-label="Portafolio">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0f172a"/><stop offset="1" stop-color="#1d4ed8"/></linearGradient></defs>
+  <rect width="1920" height="1080" fill="url(#g)"/>
+  <circle cx="1536" cy="270" r="324" fill="#ffffff" fill-opacity="0.08"/>
+  <text x="50%" y="50%" fill="#ffffff" fill-opacity="0.92" font-family="system-ui, sans-serif" font-size="86" font-weight="700" text-anchor="middle" dominant-baseline="middle">Portafolio</text>
+  <text x="50%" y="648" fill="#ffffff" fill-opacity="0.7" font-family="system-ui, sans-serif" font-size="38" text-anchor="middle">1920 × 1080 · fixture Lighthouse CI</text>
+</svg>

@@ -63,6 +63,22 @@ services:
       THROTTLE_LIMIT: ${THROTTLE_LIMIT:-120}
       THROTTLE_LOGIN_LIMIT: ${THROTTLE_LOGIN_LIMIT:-5}
       THROTTLE_LOGIN_TTL_MS: ${THROTTLE_LOGIN_TTL_MS:-60000}
+      # Fase 8 (UC-27) — métricas de Umami en el panel (`GET /admin/metricas`).
+      # Todas OPCIONALES: sin UMAMI_API_URL o UMAMI_WEBSITE_ID el endpoint
+      # responde `{ disponible: false, motivo: 'no_configurado' }` y el resto
+      # del panel no se entera. Umami se despliega aparte con
+      # docker-compose.umami.yml (ver su cabecera y docs/despliegue.md §7.4).
+      #   UMAMI_API_URL: URL de Umami sin barra final; la pública
+      #     (https://analitica.<dominio>) es la opción simple.
+      #   UMAMI_WEBSITE_ID: id del sitio creado en Umami (el mismo que
+      #     VITE_UMAMI_WEBSITE_ID del build de `web`).
+      #   Autenticación: UMAMI_API_TOKEN (Bearer) O BIEN
+      #     UMAMI_USUARIO + UMAMI_CONTRASENA (login en /api/auth/login).
+      UMAMI_API_URL: ${UMAMI_API_URL:-}
+      UMAMI_WEBSITE_ID: ${UMAMI_WEBSITE_ID:-}
+      UMAMI_API_TOKEN: ${UMAMI_API_TOKEN:-}
+      UMAMI_USUARIO: ${UMAMI_USUARIO:-}
+      UMAMI_CONTRASENA: ${UMAMI_CONTRASENA:-}
     # Solo loopback: con TRUST_PROXY=true la API confía en X-Forwarded-For, así
     # que nadie debe poder llegar al puerto sin pasar por Traefik (revisión Fase 6).
     ports:
@@ -87,6 +103,11 @@ services:
       # antes de construir la imagen; no puede cambiarse luego en runtime.
       args:
         VITE_API_URL: ${VITE_API_URL:?falta VITE_API_URL}
+        # Fase 8 (UC-27) — Umami, OPCIONAL y también en tiempo de build: si
+        # alguna queda vacía el sitio sale sin tracker. Al activarlas hay que
+        # reconstruir la imagen `web` (y poner ANALITICA_ORIGIN abajo).
+        VITE_UMAMI_URL: ${VITE_UMAMI_URL:-}
+        VITE_UMAMI_WEBSITE_ID: ${VITE_UMAMI_WEBSITE_ID:-}
     restart: unless-stopped
     # Fase 6 — `web` espera a que `api` responda /health antes de arrancar:
     # así un despliegue nuevo no expone el frontend mientras la API todavía
@@ -107,6 +128,16 @@ services:
       # cae a `https:` (cualquier origen HTTPS) para no romper el sitio.
       API_ORIGIN: ${API_ORIGIN:-${VITE_API_URL}}
       MEDIA_ORIGIN: ${MEDIA_ORIGIN:-}
+      # Fase 8 (UC-34) — SEO_UPSTREAM: URL interna del API a la que nginx hace
+      # proxy para inyectar metadatos por SSI en index.html y servir
+      # /sitemap.xml y /robots.txt. El default es el servicio `api` de este
+      # mismo compose por la red interna de Docker; cambiarlo solo si el API
+      # vive en otro stack/máquina. Sin barra final.
+      SEO_UPSTREAM: ${SEO_UPSTREAM:-http://api:3000}
+      # Fase 8 (UC-27) — ANALITICA_ORIGIN: origen público de Umami para la
+      # CSP (script-src/connect-src). Vacío = sin analítica, CSP sin cambios.
+      # Debe ser el mismo origen que VITE_UMAMI_URL del build arg de arriba.
+      ANALITICA_ORIGIN: ${ANALITICA_ORIGIN:-}
     ports:
       - "${WEB_PUBLIC_PORT:-8081}:80"
     healthcheck:

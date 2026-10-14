@@ -1,0 +1,610 @@
+{
+  "perfil": {
+    "id": "00000000-0000-4000-8000-000000000010",
+    "usuario_admin_id": "00000000-0000-4000-8000-000000000001",
+    "nombre_completo": "Valeria Quispe",
+    "titulo_profesional": "Ingeniera de software full stack",
+    "resumen_bio": "Construyo productos web de punta a punta: APIs en Node.js y NestJS, interfaces en React y despliegues reproducibles con Docker. Ocho años trabajando con equipos de producto en fintech, educación y comercio electrónico, con foco en rendimiento, accesibilidad y código que otros puedan mantener.",
+    "imagen_perfil_id": "44444444-4444-4444-8444-444444444401",
+    "cv_media_id": "44444444-4444-4444-8444-444444444402",
+    "ubicacion": "Lima, Perú (remoto)",
+    "updated_at": "2026-09-30T15:00:00.000Z",
+    "imagen_perfil": {
+      "id": "44444444-4444-4444-8444-444444444401",
+      "url": "http://127.0.0.1:4010/img/perfil.svg",
+      "s3_key": "fixtures/perfil.svg",
+      "tipo": "imagen",
+      "ancho": 800,
+      "alto": 800,
+      "alt_text": "Retrato de Valeria Quispe",
+      "created_at": "2026-09-01T10:00:00.000Z"
+    },
+    "cv_media": {
+      "id": "44444444-4444-4444-8444-444444444402",
+      "url": "http://127.0.0.1:4010/cv-demo.pdf",
+      "s3_key": "fixtures/cv-demo.pdf",
+      "tipo": "documento",
+      "ancho": null,
+      "alto": null,
+      "alt_text": null,
+      "created_at": "2026-09-01T10:05:00.000Z"
+    }
+  },
+  "tema": {
+    "id": "00000000-0000-4000-8000-000000000020",
+    "usuario_admin_id": "00000000-0000-4000-8000-000000000001",
+    "nombre": "Océano",
+    "color_primario": "#0284c7",
+    "color_secundario": "#0891b2",
+    "color_fondo": "#f0f9ff",
+    "color_texto": "#0c4a6e",
+    "fuente_principal": "manrope",
+    "modo": "claro",
+    "activo": true
+  },
+  "secciones": [
+    {
+      "id": "55555555-5555-4555-8555-555555555500",
+      "usuario_admin_id": "00000000-0000-4000-8000-000000000001",
+      "tipo_seccion": "navegacion",
+      "titulo_visible": "Navegación",
+      "orden": 0,
+      "visible": true,
+      "configuracion": {
+        "estilo": "flotante",
+        "fijo": true,
+        "mostrar_nombre": true,
+        "mostrar_cv": true,
+        "mostrar_toggle_modo": true,
+        "mostrar_progreso_scroll": true
+      }
+    },
+    {
+      "id": "55555555-5555-4555-8555-555555555501",
+      "usuario_admin_id": "00000000-0000-4000-8000-000000000001",
+      "tipo_seccion": "hero",
+      "titulo_visible": "Portada",
+      "orden": 1,
+      "visible": true,
+      "configuracion": {
+        "titulo": "Hola, soy Valeria",
+        "subtitulo": "Diseño y construyo productos web rápidos, accesibles y fáciles de mantener.",
+        "imagen_fondo_media_id": "44444444-4444-4444-8444-444444444403",
+        "imagen_fondo": {
+          "id": "44444444-4444-4444-8444-444444444403",
+          "url": "http://127.0.0.1:4010/img/hero-fondo.svg",
+          "s3_key": "fixtures/hero-fondo.svg",
+          "tipo": "imagen",
+          "ancho": 1920,
+          "alto": 1080,
+          "alt_text": "Degradado azul de fondo",
+          "created_at": "2026-09-01T10:10:00.000Z"
+        },
+        "texto_boton": "Ver proyectos",
+        "enlace_boton": "#seccion-55555555-5555-4555-8555-555555555503",
+        "texto_boton_secundario": "Contáctame",
+        "enlace_boton_secundario": "#seccion-55555555-5555-4555-8555-555555555508",
+        "mostrar_foto_perfil": true,
+        "posicion_foto": "centrada",
+        "estilo_foto": "con_marco",
+        "altura": "grande",
+        "overlay_fondo": "oscuro",
+        "tamano_titulo": "grande",
+        "disposicion": "dividido",
+        "titulos_rotativos": ["Full stack", "React y NestJS", "Rendimiento web"],
+        "mostrar_redes": true,
+        "mostrar_indicador_scroll": true,
+        "efecto_titulo": "degradado",
+        "decoracion_fondo": "manchas",
+        "espaciado_vertical": "amplio",
+        "ancho_contenido": "normal",
+        "alineacion_texto": "izquierda",
+        "fondo_bloque": "ninguno",
+        "separador_inferior": false,
+        "animacion_entrada": "aparecer",
+        "separador_forma": "onda"
+      }
+    },
+    {
+      "id": "55555555-5555-4555-8555-555555555502",
+      "usuario_admin_id": "00000000-0000-4000-8000-000000000001",
+      "tipo_seccion": "sobre-mi",
+      "titulo_visible": "Sobre mí",
+      "orden": 2,
+      "visible": true,
+      "configuracion": {
+        "mostrar_foto": true,
+        "posicion_foto": "izquierda",
+        "forma_foto": "circular",
+        "estilo_foto": "marco_degradado",
+        "estadisticas": [
+          { "etiqueta": "Años de experiencia", "valor": "8+" },
+          { "etiqueta": "Proyectos entregados", "valor": "40" },
+          { "etiqueta": "Equipos acompañados", "valor": "6" }
+        ],
+        "espaciado_vertical": "normal",
+        "ancho_contenido": "normal",
+        "alineacion_texto": "izquierda",
+        "fondo_bloque": "sutil",
+        "separador_inferior": true,
+        "animacion_entrada": "deslizar_arriba",
+        "separador_forma": "ninguno"
+      }
+    },
+    {
+      "id": "55555555-5555-4555-8555-555555555503",
+      "usuario_admin_id": "00000000-0000-4000-8000-000000000001",
+      "tipo_seccion": "proyectos",
+      "titulo_visible": "Proyectos",
+      "orden": 3,
+      "visible": true,
+      "configuracion": {
+        "cantidad_a_mostrar": 3,
+        "solo_destacados": false,
+        "columnas": 3,
+        "estilo_tarjeta": "con_sombra",
+        "mostrar_descripcion": true,
+        "disposicion": "tarjetas",
+        "efecto_hover": "elevar",
+        "mostrar_tecnologias": true,
+        "espaciado_vertical": "normal",
+        "ancho_contenido": "amplio",
+        "alineacion_texto": "izquierda",
+        "fondo_bloque": "ninguno",
+        "separador_inferior": true,
+        "animacion_entrada": "aparecer",
+        "separador_forma": "ninguno"
+      }
+    },
+    {
+      "id": "55555555-5555-4555-8555-555555555504",
+      "usuario_admin_id": "00000000-0000-4000-8000-000000000001",
+      "tipo_seccion": "skills",
+      "titulo_visible": "Tecnologías",
+      "orden": 4,
+      "visible": true,
+      "configuracion": {
+        "direccion": "izquierda",
+        "velocidad": "media",
+        "tamano_icono": "lg",
+        "mostrar_nombres": true,
+        "pausar_al_pasar": true,
+        "disposicion": "marquesina",
+        "estilo_chip": "vidrio",
+        "espaciado_vertical": "compacto",
+        "ancho_contenido": "completo",
+        "alineacion_texto": "centro",
+        "fondo_bloque": "degradado",
+        "separador_inferior": true,
+        "animacion_entrada": "aparecer",
+        "separador_forma": "ninguno"
+      }
+    },
+    {
+      "id": "55555555-5555-4555-8555-555555555505",
+      "usuario_admin_id": "00000000-0000-4000-8000-000000000001",
+      "tipo_seccion": "certificaciones",
+      "titulo_visible": "Certificaciones",
+      "orden": 5,
+      "visible": true,
+      "configuracion": {
+        "orden": "fecha",
+        "columnas": 2,
+        "estilo_tarjeta": "simple",
+        "mostrar_fecha": true,
+        "efecto_hover": "elevar",
+        "espaciado_vertical": "normal",
+        "ancho_contenido": "normal",
+        "alineacion_texto": "izquierda",
+        "fondo_bloque": "ninguno",
+        "separador_inferior": true,
+        "animacion_entrada": "aparecer",
+        "separador_forma": "ninguno"
+      }
+    },
+    {
+      "id": "55555555-5555-4555-8555-555555555506",
+      "usuario_admin_id": "00000000-0000-4000-8000-000000000001",
+      "tipo_seccion": "galeria",
+      "titulo_visible": "Galería",
+      "orden": 6,
+      "visible": true,
+      "configuracion": {
+        "fotos": [
+          {
+            "media_id": "44444444-4444-4444-8444-444444444421",
+            "titulo": "Charla en meetup de Node.js",
+            "media": {
+              "id": "44444444-4444-4444-8444-444444444421",
+              "url": "http://127.0.0.1:4010/img/galeria-1.svg",
+              "s3_key": "fixtures/galeria-1.svg",
+              "tipo": "imagen",
+              "ancho": 1200,
+              "alto": 800,
+              "alt_text": "Charla en meetup de Node.js",
+              "created_at": "2026-09-02T10:00:00.000Z"
+            }
+          },
+          {
+            "media_id": "44444444-4444-4444-8444-444444444422",
+            "titulo": "Taller de accesibilidad web",
+            "media": {
+              "id": "44444444-4444-4444-8444-444444444422",
+              "url": "http://127.0.0.1:4010/img/galeria-2.svg",
+              "s3_key": "fixtures/galeria-2.svg",
+              "tipo": "imagen",
+              "ancho": 1200,
+              "alto": 800,
+              "alt_text": "Taller de accesibilidad web",
+              "created_at": "2026-09-02T10:05:00.000Z"
+            }
+          },
+          {
+            "media_id": "44444444-4444-4444-8444-444444444423",
+            "titulo": "Hackathon 2025",
+            "media": {
+              "id": "44444444-4444-4444-8444-444444444423",
+              "url": "http://127.0.0.1:4010/img/galeria-3.svg",
+              "s3_key": "fixtures/galeria-3.svg",
+              "tipo": "imagen",
+              "ancho": 1200,
+              "alto": 800,
+              "alt_text": "Equipo en la hackathon 2025",
+              "created_at": "2026-09-02T10:10:00.000Z"
+            }
+          },
+          {
+            "media_id": "44444444-4444-4444-8444-444444444424",
+            "titulo": "Mentoría a estudiantes",
+            "media": {
+              "id": "44444444-4444-4444-8444-444444444424",
+              "url": "http://127.0.0.1:4010/img/galeria-4.svg",
+              "s3_key": "fixtures/galeria-4.svg",
+              "tipo": "imagen",
+              "ancho": 1200,
+              "alto": 800,
+              "alt_text": "Sesión de mentoría a estudiantes",
+              "created_at": "2026-09-02T10:15:00.000Z"
+            }
+          }
+        ],
+        "disposicion": "grid",
+        "columnas_grid": 2,
+        "efecto_hover": "zoom",
+        "espaciado_vertical": "normal",
+        "ancho_contenido": "normal",
+        "alineacion_texto": "izquierda",
+        "fondo_bloque": "ninguno",
+        "separador_inferior": true,
+        "animacion_entrada": "escalar",
+        "separador_forma": "ninguno"
+      }
+    },
+    {
+      "id": "55555555-5555-4555-8555-555555555507",
+      "usuario_admin_id": "00000000-0000-4000-8000-000000000001",
+      "tipo_seccion": "logros",
+      "titulo_visible": "Logros",
+      "orden": 7,
+      "visible": true,
+      "configuracion": {
+        "estilo_lista": "linea_tiempo",
+        "efecto_hover": "ninguno",
+        "espaciado_vertical": "normal",
+        "ancho_contenido": "estrecho",
+        "alineacion_texto": "izquierda",
+        "fondo_bloque": "ninguno",
+        "separador_inferior": true,
+        "animacion_entrada": "deslizar_lateral",
+        "separador_forma": "ninguno"
+      }
+    },
+    {
+      "id": "55555555-5555-4555-8555-555555555508",
+      "usuario_admin_id": "00000000-0000-4000-8000-000000000001",
+      "tipo_seccion": "contacto",
+      "titulo_visible": "Contacto",
+      "orden": 8,
+      "visible": true,
+      "configuracion": {
+        "mostrar_formulario": false,
+        "estilo_redes": "botones",
+        "estilo": "tarjeta_destacada",
+        "texto_llamada": "¿Hablamos de tu próximo proyecto?",
+        "espaciado_vertical": "amplio",
+        "ancho_contenido": "normal",
+        "alineacion_texto": "centro",
+        "fondo_bloque": "vidrio",
+        "separador_inferior": false,
+        "animacion_entrada": "aparecer",
+        "separador_forma": "ninguno"
+      }
+    }
+  ],
+  "proyectos": [
+    {
+      "id": "11111111-1111-4111-8111-111111111101",
+      "usuario_admin_id": "00000000-0000-4000-8000-000000000001",
+      "titulo": "Plataforma de pagos para comercios",
+      "descripcion": "API y panel de administración para conciliar pagos con tarjeta, billeteras y transferencias. NestJS con Prisma sobre PostgreSQL, colas con BullMQ para los webhooks de los procesadores y un panel en React con reportes exportables. Redujo el tiempo de conciliación de dos días a minutos.",
+      "url_demo": "https://demo.ejemplo.dev/pagos",
+      "url_repositorio": "https://github.com/ejemplo/plataforma-pagos",
+      "fecha_inicio": "2024-03-01T00:00:00.000Z",
+      "fecha_fin": "2025-02-28T00:00:00.000Z",
+      "estado": "finalizado",
+      "destacado": true,
+      "orden": 0,
+      "tecnologias": [
+        {
+          "proyecto_id": "11111111-1111-4111-8111-111111111101",
+          "tecnologia_id": "66666666-6666-4666-8666-666666666601",
+          "tecnologia": { "id": "66666666-6666-4666-8666-666666666601", "nombre": "NestJS" }
+        },
+        {
+          "proyecto_id": "11111111-1111-4111-8111-111111111101",
+          "tecnologia_id": "66666666-6666-4666-8666-666666666602",
+          "tecnologia": { "id": "66666666-6666-4666-8666-666666666602", "nombre": "PostgreSQL" }
+        },
+        {
+          "proyecto_id": "11111111-1111-4111-8111-111111111101",
+          "tecnologia_id": "66666666-6666-4666-8666-666666666603",
+          "tecnologia": { "id": "66666666-6666-4666-8666-666666666603", "nombre": "React" }
+        },
+        {
+          "proyecto_id": "11111111-1111-4111-8111-111111111101",
+          "tecnologia_id": "66666666-6666-4666-8666-666666666604",
+          "tecnologia": { "id": "66666666-6666-4666-8666-666666666604", "nombre": "Redis" }
+        }
+      ],
+      "imagenes": [
+        {
+          "proyecto_id": "11111111-1111-4111-8111-111111111101",
+          "media_id": "44444444-4444-4444-8444-444444444411",
+          "orden": 0,
+          "media": {
+            "id": "44444444-4444-4444-8444-444444444411",
+            "url": "http://127.0.0.1:4010/img/proyecto-1.svg",
+            "s3_key": "fixtures/proyecto-1.svg",
+            "tipo": "imagen",
+            "ancho": 1200,
+            "alto": 800,
+            "alt_text": "Panel de conciliación de pagos",
+            "created_at": "2026-09-03T10:00:00.000Z"
+          }
+        },
+        {
+          "proyecto_id": "11111111-1111-4111-8111-111111111101",
+          "media_id": "44444444-4444-4444-8444-444444444421",
+          "orden": 1,
+          "media": {
+            "id": "44444444-4444-4444-8444-444444444421",
+            "url": "http://127.0.0.1:4010/img/galeria-1.svg",
+            "s3_key": "fixtures/galeria-1.svg",
+            "tipo": "imagen",
+            "ancho": 1200,
+            "alto": 800,
+            "alt_text": "Reporte de transacciones",
+            "created_at": "2026-09-02T10:00:00.000Z"
+          }
+        }
+      ]
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111102",
+      "usuario_admin_id": "00000000-0000-4000-8000-000000000001",
+      "titulo": "Aula virtual para institutos técnicos",
+      "descripcion": "Plataforma de cursos con video bajo demanda, evaluaciones automáticas y certificados en PDF. Frontend en React con TanStack Query, API en Node.js y almacenamiento de media en S3 con CloudFront. Más de 3 000 estudiantes activos al mes.",
+      "url_demo": "https://demo.ejemplo.dev/aula",
+      "url_repositorio": null,
+      "fecha_inicio": "2023-01-15T00:00:00.000Z",
+      "fecha_fin": "2023-12-20T00:00:00.000Z",
+      "estado": "finalizado",
+      "destacado": true,
+      "orden": 1,
+      "tecnologias": [
+        {
+          "proyecto_id": "11111111-1111-4111-8111-111111111102",
+          "tecnologia_id": "66666666-6666-4666-8666-666666666603",
+          "tecnologia": { "id": "66666666-6666-4666-8666-666666666603", "nombre": "React" }
+        },
+        {
+          "proyecto_id": "11111111-1111-4111-8111-111111111102",
+          "tecnologia_id": "66666666-6666-4666-8666-666666666605",
+          "tecnologia": { "id": "66666666-6666-4666-8666-666666666605", "nombre": "Node.js" }
+        },
+        {
+          "proyecto_id": "11111111-1111-4111-8111-111111111102",
+          "tecnologia_id": "66666666-6666-4666-8666-666666666606",
+          "tecnologia": { "id": "66666666-6666-4666-8666-666666666606", "nombre": "AWS S3" }
+        }
+      ],
+      "imagenes": [
+        {
+          "proyecto_id": "11111111-1111-4111-8111-111111111102",
+          "media_id": "44444444-4444-4444-8444-444444444412",
+          "orden": 0,
+          "media": {
+            "id": "44444444-4444-4444-8444-444444444412",
+            "url": "http://127.0.0.1:4010/img/proyecto-2.svg",
+            "s3_key": "fixtures/proyecto-2.svg",
+            "tipo": "imagen",
+            "ancho": 1200,
+            "alto": 800,
+            "alt_text": "Pantalla principal del aula virtual",
+            "created_at": "2026-09-03T10:05:00.000Z"
+          }
+        }
+      ]
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111103",
+      "usuario_admin_id": "00000000-0000-4000-8000-000000000001",
+      "titulo": "Monitor de infraestructura con alertas",
+      "descripcion": "Herramienta interna que recolecta métricas de contenedores Docker y envía alertas a Slack cuando un servicio deja de responder. Agente en Node.js, almacenamiento de series temporales en PostgreSQL y tablero en React con gráficas en tiempo real.",
+      "url_demo": null,
+      "url_repositorio": "https://github.com/ejemplo/monitor-infra",
+      "fecha_inicio": "2025-06-01T00:00:00.000Z",
+      "fecha_fin": null,
+      "estado": "en_progreso",
+      "destacado": false,
+      "orden": 2,
+      "tecnologias": [
+        {
+          "proyecto_id": "11111111-1111-4111-8111-111111111103",
+          "tecnologia_id": "66666666-6666-4666-8666-666666666605",
+          "tecnologia": { "id": "66666666-6666-4666-8666-666666666605", "nombre": "Node.js" }
+        },
+        {
+          "proyecto_id": "11111111-1111-4111-8111-111111111103",
+          "tecnologia_id": "66666666-6666-4666-8666-666666666607",
+          "tecnologia": { "id": "66666666-6666-4666-8666-666666666607", "nombre": "Docker" }
+        },
+        {
+          "proyecto_id": "11111111-1111-4111-8111-111111111103",
+          "tecnologia_id": "66666666-6666-4666-8666-666666666602",
+          "tecnologia": { "id": "66666666-6666-4666-8666-666666666602", "nombre": "PostgreSQL" }
+        }
+      ],
+      "imagenes": [
+        {
+          "proyecto_id": "11111111-1111-4111-8111-111111111103",
+          "media_id": "44444444-4444-4444-8444-444444444413",
+          "orden": 0,
+          "media": {
+            "id": "44444444-4444-4444-8444-444444444413",
+            "url": "http://127.0.0.1:4010/img/proyecto-3.svg",
+            "s3_key": "fixtures/proyecto-3.svg",
+            "tipo": "imagen",
+            "ancho": 1200,
+            "alto": 800,
+            "alt_text": "Tablero de métricas del monitor",
+            "created_at": "2026-09-03T10:10:00.000Z"
+          }
+        }
+      ]
+    }
+  ],
+  "certificaciones": [
+    {
+      "id": "22222222-2222-4222-8222-222222222201",
+      "usuario_admin_id": "00000000-0000-4000-8000-000000000001",
+      "nombre": "AWS Certified Solutions Architect – Associate",
+      "institucion": "Amazon Web Services",
+      "fecha_emision": "2025-04-10T00:00:00.000Z",
+      "fecha_expiracion": "2028-04-10T00:00:00.000Z",
+      "url_verificacion": "https://www.credly.com/badges/ejemplo-aws",
+      "credencial_id": "AWS-SAA-0001",
+      "logo_media_id": "44444444-4444-4444-8444-444444444431",
+      "orden": 0,
+      "logo": {
+        "id": "44444444-4444-4444-8444-444444444431",
+        "url": "http://127.0.0.1:4010/img/certificacion-1.svg",
+        "s3_key": "fixtures/certificacion-1.svg",
+        "tipo": "imagen",
+        "ancho": 400,
+        "alto": 400,
+        "alt_text": "Insignia AWS Solutions Architect",
+        "created_at": "2026-09-04T10:00:00.000Z"
+      }
+    },
+    {
+      "id": "22222222-2222-4222-8222-222222222202",
+      "usuario_admin_id": "00000000-0000-4000-8000-000000000001",
+      "nombre": "Professional Scrum Master I",
+      "institucion": "Scrum.org",
+      "fecha_emision": "2023-09-22T00:00:00.000Z",
+      "fecha_expiracion": null,
+      "url_verificacion": "https://www.scrum.org/certificates/ejemplo-psm",
+      "credencial_id": null,
+      "logo_media_id": "44444444-4444-4444-8444-444444444432",
+      "orden": 1,
+      "logo": {
+        "id": "44444444-4444-4444-8444-444444444432",
+        "url": "http://127.0.0.1:4010/img/certificacion-2.svg",
+        "s3_key": "fixtures/certificacion-2.svg",
+        "tipo": "imagen",
+        "ancho": 400,
+        "alto": 400,
+        "alt_text": "Insignia Professional Scrum Master",
+        "created_at": "2026-09-04T10:05:00.000Z"
+      }
+    }
+  ],
+  "logros": [
+    {
+      "id": "33333333-3333-4333-8333-333333333301",
+      "usuario_admin_id": "00000000-0000-4000-8000-000000000001",
+      "titulo": "Primer lugar en la Hackathon Fintech 2025",
+      "descripcion": "Equipo de cuatro personas; construimos en 36 horas un prototipo de conciliación de pagos con detección de duplicados que luego se convirtió en producto.",
+      "fecha": "2025-08-17T00:00:00.000Z",
+      "categoria": "premio",
+      "url_referencia": "https://hackathon.ejemplo.dev/2025/ganadores",
+      "orden": 0
+    },
+    {
+      "id": "33333333-3333-4333-8333-333333333302",
+      "usuario_admin_id": "00000000-0000-4000-8000-000000000001",
+      "titulo": "Ponente en NodeConf Latinoamérica",
+      "descripcion": "Charla \"Colas y webhooks sin perder un solo evento\" sobre idempotencia y reintentos en integraciones de pago.",
+      "fecha": "2024-11-05T00:00:00.000Z",
+      "categoria": "charla",
+      "url_referencia": null,
+      "orden": 1
+    }
+  ],
+  "redes_sociales": [
+    {
+      "id": "77777777-7777-4777-8777-777777777701",
+      "usuario_admin_id": "00000000-0000-4000-8000-000000000001",
+      "plataforma_id": "88888888-8888-4888-8888-888888888801",
+      "url": "https://www.linkedin.com/in/valeria-quispe-ejemplo",
+      "orden": 0,
+      "plataforma": {
+        "id": "88888888-8888-4888-8888-888888888801",
+        "nombre": "LinkedIn",
+        "icono_defecto": "linkedin"
+      }
+    },
+    {
+      "id": "77777777-7777-4777-8777-777777777702",
+      "usuario_admin_id": "00000000-0000-4000-8000-000000000001",
+      "plataforma_id": "88888888-8888-4888-8888-888888888802",
+      "url": "https://github.com/valeria-ejemplo",
+      "orden": 1,
+      "plataforma": {
+        "id": "88888888-8888-4888-8888-888888888802",
+        "nombre": "GitHub",
+        "icono_defecto": "github"
+      }
+    },
+    {
+      "id": "77777777-7777-4777-8777-777777777703",
+      "usuario_admin_id": "00000000-0000-4000-8000-000000000001",
+      "plataforma_id": "88888888-8888-4888-8888-888888888805",
+      "url": "https://valeria.ejemplo.dev",
+      "orden": 2,
+      "plataforma": {
+        "id": "88888888-8888-4888-8888-888888888805",
+        "nombre": "Sitio personal",
+        "icono_defecto": "link"
+      }
+    }
+  ],
+  "skills": [
+    { "id": "99999999-9999-4999-8999-999999999901", "usuario_admin_id": "00000000-0000-4000-8000-000000000001", "nombre": "React", "icono": "react", "orden": 0, "visible": true },
+    { "id": "99999999-9999-4999-8999-999999999902", "usuario_admin_id": "00000000-0000-4000-8000-000000000001", "nombre": "Node.js", "icono": "nodejs", "orden": 1, "visible": true },
+    { "id": "99999999-9999-4999-8999-999999999903", "usuario_admin_id": "00000000-0000-4000-8000-000000000001", "nombre": "PostgreSQL", "icono": "postgresql", "orden": 2, "visible": true },
+    { "id": "99999999-9999-4999-8999-999999999904", "usuario_admin_id": "00000000-0000-4000-8000-000000000001", "nombre": "Docker", "icono": "docker", "orden": 3, "visible": true },
+    { "id": "99999999-9999-4999-8999-999999999905", "usuario_admin_id": "00000000-0000-4000-8000-000000000001", "nombre": "Git", "icono": "git", "orden": 4, "visible": true },
+    { "id": "99999999-9999-4999-8999-999999999906", "usuario_admin_id": "00000000-0000-4000-8000-000000000001", "nombre": "AWS", "icono": "aws", "orden": 5, "visible": true },
+    { "id": "99999999-9999-4999-8999-999999999907", "usuario_admin_id": "00000000-0000-4000-8000-000000000001", "nombre": "TypeScript", "icono": "typescript", "orden": 6, "visible": true },
+    { "id": "99999999-9999-4999-8999-999999999908", "usuario_admin_id": "00000000-0000-4000-8000-000000000001", "nombre": "NestJS", "icono": "nestjs", "orden": 7, "visible": true }
+  ],
+  "fondo": {
+    "id": "00000000-0000-4000-8000-000000000030",
+    "usuario_admin_id": "00000000-0000-4000-8000-000000000001",
+    "tipo": "degradado_animado",
+    "configuracion": { "velocidad": "lenta", "opacidad": 0.3 },
+    "activo": true
+  }
+}

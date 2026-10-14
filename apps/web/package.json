@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
+    "api-simulada": "node scripts/api-simulada.mjs",
     "test": "vitest run"
   },
   "dependencies": {

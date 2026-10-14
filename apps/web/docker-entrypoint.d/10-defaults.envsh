@@ -1,5 +1,6 @@
 #!/bin/sh
-# Fase 6 — valores por defecto para la Content-Security-Policy de nginx.
+# Fase 6 — valores por defecto para las variables de la plantilla de nginx
+# (Content-Security-Policy y, desde la Fase 8, el upstream de SEO).
 #
 # La imagen oficial nginx:alpine ejecuta en orden los archivos de
 # /docker-entrypoint.d/ al arrancar. Los `*.envsh` se cargan con `source`
@@ -20,12 +21,29 @@
 : "${API_ORIGIN:=https:}"
 : "${MEDIA_ORIGIN:=https:}"
 
+# Fase 8 (UC-34) — SEO_UPSTREAM: URL interna del API (con esquema y puerto)
+# a la que nginx hace proxy para el fragmento SSI de metadatos, /sitemap.xml
+# y /robots.txt. El default es el servicio `api` de docker-compose.prod.yml
+# en la red interna de Docker. Si el API no está ahí (otro proyecto de
+# Dokploy, otra máquina), poner su URL alcanzable desde este contenedor.
+: "${SEO_UPSTREAM:=http://api:3000}"
+
+# Fase 8 (UC-27) — ANALITICA_ORIGIN: origen del tracker de Umami para
+# script-src / connect-src de la CSP. A diferencia de las de arriba, el
+# default es VACÍO a propósito: sin analítica no hay nada que permitir y la
+# CSP queda igual de estricta que antes (nginx interpola una cadena vacía).
+: "${ANALITICA_ORIGIN:=}"
+
 # Un origen CSP no lleva barra final ni ruta ("https://api.midominio.com",
 # no "https://api.midominio.com/"); se recorta por si alguien pega la URL
-# completa de VITE_API_URL con barra.
+# completa de VITE_API_URL con barra. Para SEO_UPSTREAM la barra final
+# duplicaría la `/` de `proxy_pass $seo_upstream/seo/metadatos`.
 API_ORIGIN="${API_ORIGIN%/}"
 MEDIA_ORIGIN="${MEDIA_ORIGIN%/}"
+SEO_UPSTREAM="${SEO_UPSTREAM%/}"
+ANALITICA_ORIGIN="${ANALITICA_ORIGIN%/}"
 
-export API_ORIGIN MEDIA_ORIGIN
+export API_ORIGIN MEDIA_ORIGIN SEO_UPSTREAM ANALITICA_ORIGIN
 
-echo "[10-defaults.envsh] CSP: API_ORIGIN=${API_ORIGIN} MEDIA_ORIGIN=${MEDIA_ORIGIN}"
+echo "[10-defaults.envsh] CSP: API_ORIGIN=${API_ORIGIN} MEDIA_ORIGIN=${MEDIA_ORIGIN} ANALITICA_ORIGIN=${ANALITICA_ORIGIN:-(vacío)}"
+echo "[10-defaults.envsh] SEO: SEO_UPSTREAM=${SEO_UPSTREAM}"
