@@ -1,6 +1,14 @@
 import { CheckCircle2, RotateCw, X, XCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import type { CarpetaMedia } from './types'
 import type { EstadoSubida, ItemCola } from './useColaSubida'
 
 const ETIQUETA_ESTADO: Record<EstadoSubida, string> = {
@@ -16,6 +24,11 @@ type PanelColaSubidaProps = {
   onCancelar: (id: string) => void
   onReintentar: (id: string) => void
   onLimpiar: () => void
+  /** Fase 7e (UC-09): carpetas disponibles y destino de las próximas subidas. */
+  carpetas?: CarpetaMedia[]
+  /** Id de carpeta o `'ninguna'`. */
+  destino?: string
+  onCambiarDestino?: (valor: string) => void
 }
 
 /**
@@ -28,8 +41,12 @@ export function PanelColaSubida({
   onCancelar,
   onReintentar,
   onLimpiar,
+  carpetas,
+  destino = 'ninguna',
+  onCambiarDestino,
 }: PanelColaSubidaProps) {
-  if (items.length === 0) return null
+  // Con selector de destino el panel se muestra siempre (se elige antes de subir).
+  if (items.length === 0 && !onCambiarDestino) return null
 
   const listos = items.filter((i) => i.estado === 'listo').length
   const conError = items.filter((i) => i.estado === 'error').length
@@ -42,17 +59,38 @@ export function PanelColaSubida({
       aria-label="Cola de subida"
       className="grid gap-3 rounded-lg border bg-card p-3"
     >
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p aria-live="polite" className="text-sm font-medium">
-          {listos} de {items.length} archivos subidos
-          {conError > 0 ? ` (${conError} con error)` : ''}
-        </p>
-        {terminados > 0 ? (
-          <Button type="button" variant="ghost" size="sm" onClick={onLimpiar}>
-            Limpiar terminadas
-          </Button>
-        ) : null}
-      </div>
+      {onCambiarDestino ? (
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <span id="destino-subida">Subiendo a:</span>
+          <Select value={destino} onValueChange={onCambiarDestino}>
+            <SelectTrigger className="h-8 w-full sm:w-56" aria-labelledby="destino-subida">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ninguna">Sin carpeta</SelectItem>
+              {(carpetas ?? []).map((carpeta) => (
+                <SelectItem key={carpeta.id} value={carpeta.id}>
+                  {carpeta.nombre}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      ) : null}
+
+      {items.length > 0 ? (
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p aria-live="polite" className="text-sm font-medium">
+            {listos} de {items.length} archivos subidos
+            {conError > 0 ? ` (${conError} con error)` : ''}
+          </p>
+          {terminados > 0 ? (
+            <Button type="button" variant="ghost" size="sm" onClick={onLimpiar}>
+              Limpiar terminadas
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
 
       <ul className="grid gap-2">
         {items.map((item) => (

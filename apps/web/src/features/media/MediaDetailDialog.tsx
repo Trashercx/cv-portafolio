@@ -10,8 +10,16 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { ApiError } from '@/lib/api-client'
 import type { Media, UsoMedia } from './types'
+import { useCarpetasMedia, useMoverMedia } from './useCarpetasMedia'
 import {
   useActualizarMedia,
   useEliminarMedia,
@@ -49,6 +57,9 @@ export function MediaDetailDialog({
   const actualizar = useActualizarMedia()
   const eliminar = useEliminarMedia()
   const reemplazar = useReemplazarMedia()
+  // Fase 7e (UC-09): mover este archivo de carpeta.
+  const { data: carpetas = [] } = useCarpetasMedia()
+  const moverMedia = useMoverMedia()
 
   const errorMessage = (error: unknown, fallback: string) =>
     error instanceof ApiError ? error.message : error ? fallback : null
@@ -114,6 +125,32 @@ export function MediaDetailDialog({
                 {errorMessage(actualizar.error, 'No se pudo actualizar el texto alternativo.')}
               </p>
             ) : null}
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor={`${altTextInputId}-carpeta`}>Carpeta</Label>
+            <Select
+              value={media.carpeta_id ?? 'ninguna'}
+              disabled={moverMedia.isPending}
+              onValueChange={(valor) =>
+                moverMedia.mutate({
+                  ids: [media.id],
+                  carpeta_id: valor === 'ninguna' ? null : valor,
+                })
+              }
+            >
+              <SelectTrigger id={`${altTextInputId}-carpeta`} aria-label="Carpeta del archivo">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ninguna">Sin carpeta</SelectItem>
+                {carpetas.map((carpeta) => (
+                  <SelectItem key={carpeta.id} value={carpeta.id}>
+                    {carpeta.nombre}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="grid gap-2">

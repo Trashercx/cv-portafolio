@@ -10,7 +10,15 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useCarpetasMedia } from '@/features/media/useCarpetasMedia'
 import { useMediaList } from '@/features/media/useMediaLibrary'
 import type { Media } from '@/features/media/types'
 
@@ -206,7 +214,32 @@ function GrillaMediaBiblioteca({
   // filtra acá.
   const tipoFiltroServidor =
     tiposPermitidos.length === 1 ? tiposPermitidos[0] : undefined
-  const { data: media, isLoading } = useMediaList(tipoFiltroServidor)
+  // Fase 7e (UC-09): filtro por carpeta. Sin carpeta elegida se pasa el mismo
+  // argumento de siempre (solo `tipo`); con carpeta, el objeto de filtros.
+  const [carpeta, setCarpeta] = useState('todas')
+  const { data: carpetas = [] } = useCarpetasMedia()
+  const { data: media, isLoading } = useMediaList(
+    carpeta === 'todas'
+      ? tipoFiltroServidor
+      : { tipo: tipoFiltroServidor, carpeta_id: carpeta },
+  )
+
+  const filtroCarpeta = (
+    <Select value={carpeta} onValueChange={setCarpeta}>
+      <SelectTrigger className="w-full" aria-label="Filtrar por carpeta">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="todas">Todas las carpetas</SelectItem>
+        <SelectItem value="ninguna">Sin carpeta</SelectItem>
+        {carpetas.map((c) => (
+          <SelectItem key={c.id} value={c.id}>
+            {c.nombre}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  )
 
   const disponibles = (media ?? []).filter((item) =>
     tiposPermitidos.includes(item.tipo as MediaTipoPermitido),
@@ -214,20 +247,29 @@ function GrillaMediaBiblioteca({
 
   if (isLoading) {
     return (
-      <p className="text-sm text-muted-foreground">Cargando archivos…</p>
+      <div className="grid gap-3">
+        {filtroCarpeta}
+        <p className="text-sm text-muted-foreground">Cargando archivos…</p>
+      </div>
     )
   }
 
   if (disponibles.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground">
-        Todavía no hay archivos de este tipo en la biblioteca. Sube uno desde
-        la pestaña "Subir nuevo".
-      </p>
+      <div className="grid gap-3">
+        {filtroCarpeta}
+        <p className="text-sm text-muted-foreground">
+          {carpeta === 'todas'
+            ? 'Todavía no hay archivos de este tipo en la biblioteca. Sube uno desde la pestaña "Subir nuevo".'
+            : 'No hay archivos de este tipo en esa carpeta.'}
+        </p>
+      </div>
     )
   }
 
   return (
+    <div className="grid gap-3">
+      {filtroCarpeta}
     <div className="grid max-h-96 grid-cols-3 gap-3 overflow-y-auto scrollbar-fina sm:grid-cols-4">
       {disponibles.map((item) => (
         <button
@@ -252,6 +294,7 @@ function GrillaMediaBiblioteca({
           )}
         </button>
       ))}
+    </div>
     </div>
   )
 }

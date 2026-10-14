@@ -1,4 +1,5 @@
 import {
+  FolderInput,
   ImagePlus,
   LayoutGrid,
   List,
@@ -11,6 +12,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -20,6 +27,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { BarraCarpetas } from '@/features/media/BarraCarpetas'
 import { EliminarLoteDialog } from '@/features/media/EliminarLoteDialog'
 import { MediaDetailDialog } from '@/features/media/MediaDetailDialog'
 import { PanelColaSubida } from '@/features/media/PanelColaSubida'
@@ -29,6 +37,7 @@ import type {
   OrdenMedia,
   ResultadoEliminarLote,
 } from '@/features/media/types'
+import { useCarpetasMedia, useMoverMedia } from '@/features/media/useCarpetasMedia'
 import { useColaSubida } from '@/features/media/useColaSubida'
 import {
   useEliminarMediaLote,
@@ -85,6 +94,9 @@ function esCampoDeTexto(destino: EventTarget | null): boolean {
  * arrastrar y soltar con cola y progreso, filtros `tipo`/`q`/`orden` en la URL,
  * vista cuadrícula o lista, modo selección con borrado en lote, usos de cada
  * archivo, copiar URL y edición en línea del texto alternativo.
+ * Fase 7e (UC-09): carpetas planas (`BarraCarpetas`, `?carpeta=` en la URL),
+ * subidas a la carpeta activa, "Mover a…" en la selección y arrastre de
+ * tarjetas a una carpeta.
  */
 export function MediaLibraryPage() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -109,11 +121,30 @@ export function MediaLibraryPage() {
   const eliminarLote = useEliminarMediaLote()
   const cola = useColaSubida(3)
   const { agregar } = cola
+  const moverMedia = useMoverMedia()
+  const { data: carpetasData } = useCarpetasMedia()
+  const carpetas = useMemo(() => carpetasData ?? [], [carpetasData])
+  const nombrePorCarpeta = useMemo(
+    () => new Map(carpetas.map((c) => [c.id, c.nombre])),
+    [carpetas],
+  )
+
+  // Fase 7e (UC-09): la carpeta activa vive en la URL (`?carpeta=<id>|ninguna`; ausente = todos).
+  const carpetaParam = searchParams.get('carpeta') || undefined
+  // Destino de las subidas: el elegido en el panel de cola o, por defecto, la carpeta activa.
+  const [destinoElegido, setDestinoElegido] = useState<string | undefined>(undefined)
+  const carpetaDestino = destinoElegido ?? carpetaParam ?? 'ninguna'
+  const agregarEnDestino = useCallback(
+    (archivos: File[]) =>
+      agregar(archivos, carpetaDestino === 'ninguna' ? undefined : carpetaDestino),
+    [agregar, carpetaDestino],
+  )
 
   const { data: media, isLoading, error } = useMediaList({
     tipo: tipo === 'todos' ? undefined : tipo,
     q,
     orden,
+    carpeta_id: carpetaParam,
   })
   const { data: usosPorMedia } = useMediaUsos()
 
@@ -131,6 +162,12 @@ export function MediaLibraryPage() {
     },
     [setSearchParams],
   )
+
+  const elegirCarpeta = (valor: string | undefined) => {
+    // Cambiar de carpeta vuelve el destino de subida a "la carpeta activa".
+    setDestinoElegido(undefined)
+    actualizarParametro('carpeta', valor)
+  }
 
   // Debounce de 300 ms de la búsqueda hacia `?q=`.
   useEffect(() => {
@@ -175,7 +212,7 @@ export function MediaLibraryPage() {
       evento.preventDefault()
       contadorArrastre.current = 0
       setArrastrando(false)
-      agregar(Array.from(evento.dataTransfer?.files ?? []))
+      agregarEnDestino(Array.from(evento.dataTransfer?.files ?? []))
     }
     window.addEventListener('dragenter', alEntrar)
     window.addEventListener('dragleave', alSalir)
@@ -187,7 +224,7 @@ export function MediaLibraryPage() {
       window.removeEventListener('dragover', alPasar)
       window.removeEventListener('drop', alSoltar)
     }
-  }, [agregar])
+  }, [agregarEnDestino])
 
   const lista = useMemo(() => media ?? [], [media])
   // La selección se acota a lo visible: un filtro nuevo no deja ids ocultos marcados.
@@ -200,6 +237,17 @@ export function MediaLibraryPage() {
     setModoSeleccion(false)
     setSeleccion(new Set())
   }, [])
+
+  // Fase 7e (UC-09): una tarjeta arrastra toda la selección si forma parte de ella.
+  const idsAlArrastrar = (id: string) =>
+    modoSeleccion && seleccion.has(id) ? idsSeleccionados : [id]
+
+  // "Mover a…" de la selección: limpia la selección al terminar.
+  const moverSeleccion = (carpeta_id: string | null) =>
+    moverMedia.mutate(
+      { ids: idsSeleccionados, carpeta_id },
+      { onSuccess: salirDeSeleccion },
+    )
 
   const abrirLote = useCallback(() => {
     setResultadoLote(null)
@@ -264,7 +312,7 @@ export function MediaLibraryPage() {
   const detalle: Media | null =
     lista.find((item) => item.id === seleccionadoId) ?? null
 
-  const hayFiltros = tipo !== 'todos' || q !== ''
+  const hayFiltros = tipo !== 'todos' || q !== '' || carpetaParam !== undefined
 
   return (
     <TooltipProvider>
@@ -292,7 +340,7 @@ export function MediaLibraryPage() {
               aria-label="Seleccionar archivos para subir"
               tabIndex={-1}
               onChange={(evento) => {
-                agregar(Array.from(evento.target.files ?? []))
+                agregarEnDestino(Array.from(evento.target.files ?? []))
                 // Permite volver a elegir el mismo archivo.
                 evento.target.value = ''
               }}
@@ -329,8 +377,19 @@ export function MediaLibraryPage() {
           onCancelar={cola.cancelar}
           onReintentar={cola.reintentar}
           onLimpiar={cola.limpiar}
+          carpetas={carpetas}
+          destino={carpetaDestino}
+          onCambiarDestino={setDestinoElegido}
         />
 
+        <div className="grid gap-4 sm:grid-cols-[14rem_minmax(0,1fr)] sm:items-start">
+        <BarraCarpetas
+          carpetas={carpetas}
+          activa={carpetaParam}
+          onSeleccionar={elegirCarpeta}
+          onMovidos={salirDeSeleccion}
+        />
+        <div className="grid min-w-0 gap-4">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <div className="relative flex-1">
             <Search
@@ -432,6 +491,32 @@ export function MediaLibraryPage() {
                 <Trash2 />
                 Eliminar seleccionados
               </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={idsSeleccionados.length === 0 || moverMedia.isPending}
+                  >
+                    <FolderInput />
+                    Mover a…
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  <DropdownMenuItem onSelect={() => moverSeleccion(null)}>
+                    Sin carpeta
+                  </DropdownMenuItem>
+                  {carpetas.map((carpeta) => (
+                    <DropdownMenuItem
+                      key={carpeta.id}
+                      onSelect={() => moverSeleccion(carpeta.id)}
+                    >
+                      {carpeta.nombre}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </>
           ) : null}
         </div>
@@ -471,9 +556,13 @@ export function MediaLibraryPage() {
               seleccionado={seleccion.has(item.id)}
               onAlternar={alternar}
               onAbrir={setSeleccionadoId}
+              nombreCarpeta={nombrePorCarpeta.get(item.carpeta_id ?? '') ?? 'Sin carpeta'}
+              idsAlArrastrar={idsAlArrastrar}
             />
           ))}
         </ul>
+        </div>
+        </div>
 
         {detalle ? (
           <MediaDetailDialog

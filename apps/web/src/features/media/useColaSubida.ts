@@ -20,6 +20,8 @@ export type ItemCola = {
   progreso: number
   error?: string
   media?: Media
+  /** Fase 7e (UC-09): carpeta destino fijada al encolar; `undefined` = sin carpeta. */
+  carpeta_id?: string
 }
 
 /** Límite del API por archivo (10 MB). */
@@ -63,7 +65,7 @@ export function useColaSubida(concurrencia = 3) {
     )
   }, [])
 
-  const agregar = useCallback((archivos: File[]) => {
+  const agregar = useCallback((archivos: File[], carpeta_id?: string) => {
     const nuevos: ItemCola[] = archivos.map((file) => {
       const error = validarArchivo(file)
       return {
@@ -72,6 +74,7 @@ export function useColaSubida(concurrencia = 3) {
         estado: error ? 'error' : 'pendiente',
         progreso: 0,
         error,
+        carpeta_id,
       }
     })
     if (nuevos.length > 0) setItems((actuales) => [...actuales, ...nuevos])
@@ -90,7 +93,7 @@ export function useColaSubida(concurrencia = 3) {
       actualizar(item.id, { estado: 'subiendo', progreso: 0, error: undefined })
 
       subirMedia(
-        { file: item.file },
+        { file: item.file, carpeta_id: item.carpeta_id },
         {
           signal: controlador.signal,
           onProgress: (progreso) => actualizar(item.id, { progreso }),

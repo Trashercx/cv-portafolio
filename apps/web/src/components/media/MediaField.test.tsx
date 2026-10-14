@@ -40,7 +40,15 @@ const DOCUMENTO_PDF: Media = {
 const useMediaListMock = vi.fn()
 
 vi.mock('@/features/media/useMediaLibrary', () => ({
-  useMediaList: (tipo?: string) => useMediaListMock(tipo),
+  useMediaList: (tipo?: unknown) => useMediaListMock(tipo),
+}))
+
+const CARPETAS = [
+  { id: 'carpeta-1', nombre: 'Certificados', orden: 0, total: 2 },
+  { id: 'carpeta-2', nombre: 'Imágenes', orden: 1, total: 5 },
+]
+vi.mock('@/features/media/useCarpetasMedia', () => ({
+  useCarpetasMedia: () => ({ data: CARPETAS }),
 }))
 
 vi.mock('@/features/media/useUploadMedia', () => ({
@@ -140,5 +148,33 @@ describe('MediaField', () => {
     await user.click(itemPdf)
 
     expect(onUploadedMock).toHaveBeenCalledWith(DOCUMENTO_PDF)
+  })
+
+  it('filtra la biblioteca por carpeta y pasa carpeta_id a useMediaList (Fase 7e, UC-09)', async () => {
+    useMediaListMock.mockReturnValue({ data: [IMAGEN_A], isLoading: false })
+    const user = userEvent.setup()
+    render(<MediaField label="Foto de perfil" onUploaded={onUploadedMock} />)
+
+    await user.click(screen.getByRole('tab', { name: /elegir de biblioteca/i }))
+    await user.click(screen.getByRole('button', { name: /elegir de biblioteca/i }))
+
+    // Sin carpeta elegida se conserva el argumento histórico.
+    expect(useMediaListMock).toHaveBeenLastCalledWith('imagen')
+
+    await user.click(screen.getByRole('combobox', { name: /filtrar por carpeta/i }))
+    expect(screen.getByRole('option', { name: 'Todas las carpetas' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Sin carpeta' })).toBeInTheDocument()
+    await user.click(screen.getByRole('option', { name: 'Certificados' }))
+    expect(useMediaListMock).toHaveBeenLastCalledWith({
+      tipo: 'imagen',
+      carpeta_id: 'carpeta-1',
+    })
+
+    await user.click(screen.getByRole('combobox', { name: /filtrar por carpeta/i }))
+    await user.click(screen.getByRole('option', { name: 'Sin carpeta' }))
+    expect(useMediaListMock).toHaveBeenLastCalledWith({
+      tipo: 'imagen',
+      carpeta_id: 'ninguna',
+    })
   })
 })
