@@ -165,9 +165,18 @@ Pedida por el usuario tras ver la Fase 7b en producción. Sin entidades nuevas: 
 | UC-07 | Toggle "Vista limpia" en el editor que oculta los recuadros y overlays de Puck y el borde punteado de las secciones ocultas | Con la vista limpia el lienzo se ve como el sitio publicado; al desactivarla se vuelve a poder seleccionar bloques. |
 | UC-12 | Campo "Borde del bloque" (ninguno/sutil/marcado) que gobierna el borde del contenedor y de todas las tarjetas, chips y recuadros del bloque | Con "ninguno" ningún elemento del bloque muestra borde en lienzo, vista previa ni sitio; los snapshots anteriores conservan el aspecto actual (`sutil`). |
 
+### Extensión de UC-09 y caso de uso nuevo UC-35 — Fase 7d, biblioteca usable e insignias (2026-10-14)
+
+Pedida por el usuario tras cerrar la Fase 7c. Agrega la entidad `INSIGNIA` (ver diagrama ER) y un tipo de bloque `insignias`. Contrato técnico en `docs/plan-tecnico.md`, "Fase 7d".
+
+| UC | Extensión / caso | Criterio de aceptación |
+|---|---|---|
+| UC-09 | Biblioteca con arrastrar y soltar y subida en lote con progreso, búsqueda, orden, vista cuadrícula/lista, selección múltiple con borrado en lote, indicador "en uso" (perfil, CV, proyecto, certificación, hero, galería, insignia), copiar URL y texto alternativo en línea | Se pueden soltar varias imágenes a la vez y ver el progreso de cada una; un archivo en uso no se borra en lote y el diálogo indica dónde se usa; la búsqueda y los filtros se conservan en la URL. |
+| UC-35 | Gestionar insignias (badges) importadas | enlace público, código de embed o archivo del badge; nombre, emisor, descripción, fechas, habilidades, URL de verificación, imagen, orden, visible | Pegar un enlace de Credly, un enlace de verificación Open Badges o un código de embed muestra una vista previa con los datos y la imagen original en alta resolución; al guardar, la imagen queda en la biblioteca con variantes y la insignia aparece en el bloque "Insignias" del sitio con animación al pasar el puntero y enlace de verificación; si el proveedor no se reconoce, se importa la imagen y el título de la página y los demás datos se completan a mano. |
+
 ### Casos de uso propuestos — roadmap de profesionalización (2026-10-13, pendientes de aprobación)
 
-Los UC-19 a UC-34 nacen de la propuesta de la Sección 7 (roadmap). Se listan aquí para que el índice de casos de uso siga siendo la única fuente de verdad. **Solo UC-27 y UC-34 están aprobados e implementados** (Fase 8, 2026-10-14); el resto sigue pendiente: cada fase del roadmap se aprueba por separado y recién entonces se agregan sus entidades al diagrama ER (vía `db-schema`) y se codifica. La Fase 6 (fundamentos de producción) no agrega casos de uso: refuerza UC-01 (cierre de sesión real, límite de intentos por IP) y UC-12/13 (metadatos SEO, accesibilidad, rendimiento).
+Los UC-19 a UC-34 nacen de la propuesta de la Sección 7 (roadmap). Se listan aquí para que el índice de casos de uso siga siendo la única fuente de verdad. **Solo UC-27 y UC-34 están aprobados e implementados** (Fase 8, 2026-10-14) y UC-35 (insignias, Fase 7d, definido en la sección anterior); el resto sigue pendiente: cada fase del roadmap se aprueba por separado y recién entonces se agregan sus entidades al diagrama ER (vía `db-schema`) y se codifica. La Fase 6 (fundamentos de producción) no agrega casos de uso: refuerza UC-01 (cierre de sesión real, límite de intentos por IP) y UC-12/13 (metadatos SEO, accesibilidad, rendimiento).
 
 #### Actor: Administrador (propuestos)
 
