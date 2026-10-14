@@ -327,3 +327,17 @@ describe('LoginPage', () => {
     expect(envoltorio().style.opacity).toBe('0')
   })
 })
+
+describe('LoginPage responsive (Fase 7f)', () => {
+  it('no desborda en móvil: una columna con min-w-0 y tarjeta acotada', () => {
+    mockMatchMedia(false)
+    renderLoginPage()
+
+    const raiz = screen.getByTestId('panel-marca').parentElement as HTMLElement
+    expect(raiz).toHaveClass('grid-cols-1', 'lg:grid-cols-2', 'overflow-x-hidden')
+    expect(screen.getByTestId('panel-marca')).toHaveClass('min-w-0')
+    expect(screen.getByRole('main')).toHaveClass('min-w-0', 'w-full', 'px-4')
+    const tarjeta = document.querySelector('[data-slot="card"]')!.parentElement as HTMLElement
+    expect(tarjeta).toHaveClass('w-full', 'max-w-sm', 'mx-auto', 'min-w-0')
+  })
+})

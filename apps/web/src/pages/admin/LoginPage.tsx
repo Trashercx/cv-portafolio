@@ -149,7 +149,7 @@ function PantallaLogin() {
   const pendiente = login.isPending
 
   return (
-    <div className="min-h-svh bg-background text-foreground lg:grid lg:grid-cols-2">
+    <div className="grid min-h-svh grid-cols-1 grid-rows-[auto_1fr] lg:grid-rows-1 overflow-x-hidden bg-background text-foreground lg:grid-cols-2">
       <title>Iniciar sesión · Panel</title>
       <meta name="robots" content="noindex" />
 
@@ -159,7 +159,7 @@ function PantallaLogin() {
         style={
           snapshot?.tema ? temaComoVariablesCss(snapshot.tema, modoTema) : undefined
         }
-        className="relative overflow-hidden border-b bg-background text-foreground lg:flex lg:min-h-svh lg:items-end lg:border-b-0 lg:border-r"
+        className="relative min-w-0 overflow-hidden border-b bg-background text-foreground lg:flex lg:min-h-svh lg:items-end lg:border-b-0 lg:border-r"
       >
         {snapshot?.fondo ? (
           <FondoAnimado fondo={snapshot.fondo} modo="sitio" ambito="caja" />
@@ -179,8 +179,8 @@ function PantallaLogin() {
         </div>
       </aside>
 
-      <main className="relative flex items-center justify-center p-4 py-16 lg:min-h-svh">
-        <div className="absolute inset-x-4 top-4 flex items-center justify-between">
+      <main className="relative flex w-full min-w-0 items-center justify-center px-4 py-16 lg:min-h-svh">
+        <div className="absolute inset-x-0 top-4 flex items-center justify-between gap-2 px-4">
           <Link
             to="/"
             className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
@@ -194,7 +194,7 @@ function PantallaLogin() {
           initial={reducido ? false : { opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: 'easeOut' }}
-          className="w-full max-w-sm"
+          className="mx-auto w-full min-w-0 max-w-sm"
         >
           <Card>
             <CardHeader>
