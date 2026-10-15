@@ -299,7 +299,7 @@ describe('ImportarInsigniaDialog (Fase 7d, UC-35)', () => {
     expect(crearMutate).not.toHaveBeenCalled()
   })
 
-  it('Fase 7e: muestra "Convirtiendo…" mientras se renderiza el PDF y avisa si falla', async () => {
+  it('Fase 7e: muestra "Preparando…" mientras se renderiza el PDF y avisa si falla', async () => {
     let rechazar: (error: Error) => void = () => {}
     pdfAImagenPngMock.mockReturnValue(
       new Promise((_resolve, reject) => {
@@ -313,10 +313,10 @@ describe('ImportarInsigniaDialog (Fase 7d, UC-35)', () => {
       screen.getByLabelText(/Archivo PNG, JPG/),
       new File(['%PDF'], 'roto.pdf', { type: 'application/pdf' }),
     )
-    expect(await screen.findByText('Convirtiendo…')).toBeInTheDocument()
+    expect(await screen.findByText('Preparando…')).toBeInTheDocument()
 
     rechazar(new Error('pdf inválido'))
-    expect(await screen.findByRole('alert')).toHaveTextContent('No se pudo convertir el PDF')
+    expect(await screen.findByRole('alert')).toHaveTextContent('No se pudo leer el PDF')
     expect(archivoMutate).not.toHaveBeenCalled()
   })
 

@@ -18,7 +18,8 @@ import {
 import { AREA_MAXIMA_PX, LADO_MAXIMO_PX, MAX_BYTES_SUBIDA } from './limites-lienzo'
 
 export const MENSAJE_ERROR_HEIC =
-  'No se pudo convertir la foto HEIC. Expórtala como JPG desde el teléfono e inténtalo de nuevo.'
+  // Fase 7h: la conversión es interna; el mensaje no menciona formatos de destino.
+  'No se pudo procesar la foto. Vuelve a exportarla desde el teléfono e inténtalo de nuevo.'
 
 type FuenteImagen = CanvasImageSource & { width: number; height: number }
 
@@ -120,7 +121,7 @@ export async function prepararArchivoParaSubir(file: File): Promise<ArchivoPrepa
   }
   try {
     const jpeg = await normalizarImagenParaSubir(file)
-    if (jpeg.size > MAX_BYTES_SUBIDA) return { error: 'La foto convertida supera los 10 MB.' }
+    if (jpeg.size > MAX_BYTES_SUBIDA) return { error: 'La foto supera los 10 MB.' }
     return { file: jpeg, formato: 'imagen' }
   } catch (error) {
     return { error: error instanceof Error ? error.message : MENSAJE_ERROR_HEIC }

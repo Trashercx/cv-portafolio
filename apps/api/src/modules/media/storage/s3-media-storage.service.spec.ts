@@ -45,7 +45,7 @@ describe('S3MediaStorageService (UC-09)', () => {
     const resultado = await service.upload(buildFile(), 'perfil');
 
     expect(sendMock).toHaveBeenCalledTimes(1);
-    expect(resultado.key).toMatch(/^perfil\/[0-9a-f-]+\.png$/);
+    expect(resultado.key).toMatch(/^perfil\/[0-9a-f]{12}\/foto\.png$/);
     expect(resultado.url).toBe(
       `https://mi-bucket.s3.us-east-1.amazonaws.com/${resultado.key}`,
     );
@@ -56,7 +56,32 @@ describe('S3MediaStorageService (UC-09)', () => {
 
     const resultado = await service.upload(buildFile(), 'carpeta-invalida');
 
-    expect(resultado.key).toMatch(/^biblioteca\/[0-9a-f-]+\.png$/);
+    expect(resultado.key).toMatch(/^biblioteca\/[0-9a-f]{12}\/foto\.png$/);
+  });
+
+  it('conserva el nombre original en la clave y en Content-Disposition (Fase 7h)', async () => {
+    const service = new S3MediaStorageService();
+
+    const resultado = await service.upload(
+      buildFile({
+        // Multer entrega el nombre en latin1: "Certificación AWS.pdf".
+        originalname: Buffer.from('Certificación AWS.pdf', 'utf8').toString(
+          'latin1',
+        ),
+        mimetype: 'application/pdf',
+      }),
+      'certificaciones',
+    );
+
+    expect(resultado.key).toMatch(
+      /^certificaciones\/[0-9a-f]{12}\/Certificacion-AWS\.pdf$/,
+    );
+    const comando = sendMock.mock.calls[0][0] as {
+      input: Record<string, string>;
+    };
+    expect(comando.input.ContentDisposition).toBe(
+      'inline; filename="Certificacion-AWS.pdf"; filename*=UTF-8\'\'Certificacion-AWS.pdf',
+    );
   });
 
   it('lee width/height con sharp cuando el archivo es una imagen', async () => {

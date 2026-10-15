@@ -18,6 +18,11 @@ describe('InsigniasConfiguracionDto (Fase 7d, UC-35)', () => {
     expect(i.mostrar_fecha).toBe(true);
     expect(i.mostrar_habilidades).toBe(false);
     expect(i.mostrar_enlace).toBe(true);
+    // Fase 7h: medallas por defecto.
+    expect(i.estilo).toBe('medalla');
+    expect(i.animacion_reposo).toBe('flotar');
+    expect(i.marco_medalla).toBe('halo');
+    expect(i.etiqueta_medalla).toBe('al_pasar');
   });
 
   it('acepta un payload vacío y uno completo', async () => {
@@ -29,6 +34,10 @@ describe('InsigniasConfiguracionDto (Fase 7d, UC-35)', () => {
         columnas: 4,
         tamano: 'grande',
         efecto_hover: 'girar',
+        estilo: 'tarjeta',
+        animacion_reposo: 'balanceo',
+        marco_medalla: 'cinta',
+        etiqueta_medalla: 'siempre',
         mostrar_emisor: false,
         mostrar_fecha: false,
         mostrar_habilidades: true,
@@ -48,6 +57,10 @@ describe('InsigniasConfiguracionDto (Fase 7d, UC-35)', () => {
     { columnas: '3' },
     { tamano: 'enorme' },
     { efecto_hover: 'rebotar' },
+    { estilo: 'poster' },
+    { animacion_reposo: 'girar' },
+    { marco_medalla: 'estrella' },
+    { etiqueta_medalla: 'a_veces' },
     { limite: 0 },
     { limite: 51 },
     { limite: 2.5 },

@@ -207,7 +207,7 @@ export function ImportarInsigniaDialog({ open, onOpenChange }: ImportarInsigniaD
       setArchivoPdf(archivo)
     } catch {
       setConvirtiendo(false)
-      setErrorPdf('No se pudo convertir el PDF a imagen. Prueba con una captura PNG del certificado.')
+      setErrorPdf('No se pudo leer el PDF. Prueba con una captura del certificado.')
     }
   }
 
@@ -320,7 +320,7 @@ export function ImportarInsigniaDialog({ open, onOpenChange }: ImportarInsigniaD
                   onChange={(event) => void alElegirArchivo(event.target.files?.[0])}
                 />
                 {convirtiendo ? (
-                  <p role="status" className="text-sm text-muted-foreground">Convirtiendo…</p>
+                  <p role="status" className="text-sm text-muted-foreground">Preparando…</p>
                 ) : null}
                 {urlPreviaPdf && !mostrarFormulario ? (
                   <img

@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { randomUUID } from 'crypto';
 import { promises as fs } from 'fs';
-import { dirname, extname, join } from 'path';
+import { dirname, join } from 'path';
 import {
   MediaStorageService,
   UploadedMediaResult,
 } from './media-storage.interface';
+import { construirClaveMedia } from './clave-media';
 
 /**
  * STUB LOCAL — ya no es la implementación por defecto desde Sprint 3.
@@ -29,11 +29,15 @@ export class LocalMediaStorageService implements MediaStorageService {
   private readonly uploadsDir = join(process.cwd(), 'uploads');
 
   async upload(file: Express.Multer.File): Promise<UploadedMediaResult> {
-    await fs.mkdir(this.uploadsDir, { recursive: true });
-
-    const extension = extname(file.originalname);
-    const key = `${randomUUID()}${extension}`;
-    await fs.writeFile(join(this.uploadsDir, key), file.buffer);
+    // Fase 7h (UC-09): misma forma de clave que S3 (`<id>/<nombre>`).
+    const key = construirClaveMedia(
+      undefined,
+      file.originalname,
+      file.mimetype,
+    );
+    const destino = join(this.uploadsDir, key);
+    await fs.mkdir(dirname(destino), { recursive: true });
+    await fs.writeFile(destino, file.buffer);
 
     const baseUrl = process.env.PUBLIC_BASE_URL ?? 'http://localhost:3000';
 

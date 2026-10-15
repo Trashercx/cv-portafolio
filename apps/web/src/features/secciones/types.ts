@@ -327,6 +327,14 @@ export type InsigniasConfiguracion = BloqueConfiguracionBase & {
   tamano?: 'compacto' | 'normal' | 'grande'
   /** @default 'inclinar_brillo' */
   efecto_hover?: 'inclinar_brillo' | 'girar' | 'elevar' | 'ninguno'
+  /** Fase 7h. @default 'medalla' */
+  estilo?: 'medalla' | 'tarjeta'
+  /** Fase 7h, solo medalla. @default 'flotar' */
+  animacion_reposo?: 'flotar' | 'balanceo' | 'destello' | 'ninguna'
+  /** Fase 7h, solo medalla. @default 'halo' */
+  marco_medalla?: 'halo' | 'aro' | 'cinta' | 'ninguno'
+  /** Fase 7h, solo medalla. @default 'al_pasar' */
+  etiqueta_medalla?: 'al_pasar' | 'siempre' | 'nunca'
   /** @default true */
   mostrar_emisor?: boolean
   /** @default true */

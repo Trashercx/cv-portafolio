@@ -44,6 +44,30 @@ export class InsigniasConfiguracionDto extends BloqueConfiguracionBaseDto {
   efecto_hover: 'inclinar_brillo' | 'girar' | 'elevar' | 'ninguno' =
     'inclinar_brillo';
 
+  /**
+   * Fase 7h (UC-35): `medalla` muestra solo la insignia (sin tarjeta ni
+   * texto largo), con animación en reposo y toda la medalla como enlace a la
+   * verificación; `tarjeta` es la presentación de la Fase 7d.
+   */
+  @IsOptional()
+  @IsIn(['medalla', 'tarjeta'])
+  estilo: 'medalla' | 'tarjeta' = 'medalla';
+
+  /** Fase 7h: movimiento continuo de las medallas (apagado con movimiento reducido). */
+  @IsOptional()
+  @IsIn(['flotar', 'balanceo', 'destello', 'ninguna'])
+  animacion_reposo: 'flotar' | 'balanceo' | 'destello' | 'ninguna' = 'flotar';
+
+  /** Fase 7h: decoración detrás/debajo de cada medalla. */
+  @IsOptional()
+  @IsIn(['halo', 'aro', 'cinta', 'ninguno'])
+  marco_medalla: 'halo' | 'aro' | 'cinta' | 'ninguno' = 'halo';
+
+  /** Fase 7h: cuándo se ve el nombre bajo la medalla. */
+  @IsOptional()
+  @IsIn(['al_pasar', 'siempre', 'nunca'])
+  etiqueta_medalla: 'al_pasar' | 'siempre' | 'nunca' = 'al_pasar';
+
   @IsOptional()
   @IsBoolean()
   mostrar_emisor: boolean = true;
