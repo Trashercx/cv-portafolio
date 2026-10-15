@@ -450,3 +450,97 @@ div[class*='_MenuBar-inner_'] {
     animation-play-state: paused !important;
   }
 }
+
+/*
+ * Fase 7h (UC-35): medallas del bloque `insignias` (`MedallaInsignia.tsx`).
+ * Movimiento en reposo para que no se vean estáticas: cada medalla desfasa
+ * su ciclo con `--retardo-medalla` (negativo, según su índice) para que no
+ * se muevan todas a la vez. Se apagan con `prefers-reduced-motion`.
+ */
+@keyframes medalla-flotar {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes medalla-balanceo {
+  0%,
+  100% {
+    transform: rotate(-5deg);
+  }
+  50% {
+    transform: rotate(5deg);
+  }
+}
+
+@keyframes medalla-destello {
+  0%,
+  55% {
+    transform: translateX(-160%) skewX(-20deg);
+  }
+  100% {
+    transform: translateX(260%) skewX(-20deg);
+  }
+}
+
+@keyframes medalla-pulso {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.94);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes medalla-giro-aro {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+.medalla-flotar {
+  animation: medalla-flotar 5.5s ease-in-out infinite;
+  animation-delay: var(--retardo-medalla, 0s);
+}
+
+/* Cuelga del borde superior, como una medalla con cinta. */
+.medalla-balanceo {
+  transform-origin: 50% -20%;
+  animation: medalla-balanceo 4.5s ease-in-out infinite;
+  animation-delay: var(--retardo-medalla, 0s);
+}
+
+.medalla-destello-banda {
+  animation: medalla-destello 4.8s ease-in-out infinite;
+  animation-delay: var(--retardo-medalla, 0s);
+}
+
+.medalla-pulso {
+  animation: medalla-pulso 4s ease-in-out infinite;
+  animation-delay: var(--retardo-medalla, 0s);
+}
+
+.medalla-giro-aro {
+  animation: medalla-giro-aro 14s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .medalla-flotar,
+  .medalla-balanceo,
+  .medalla-destello-banda,
+  .medalla-pulso,
+  .medalla-giro-aro {
+    animation: none;
+  }
+
+  .medalla-destello-banda {
+    display: none;
+  }
+}

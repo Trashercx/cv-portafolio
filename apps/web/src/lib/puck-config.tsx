@@ -1156,11 +1156,17 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
      * de la entidad `insignia` (no viven en la configuración; el lienzo las
      * lee de `datos.insignias`, cargadas por `useDatosEditor`). Permitido
      * dentro de `columnas`. Los `defaultProps` coinciden con los fallbacks de
-     * render de `BloqueInsignias` y con los defaults del API.
+     * render de `BloqueInsignias` y con los defaults del API. Fase 7h: estilo
+     * `medalla` (por defecto) con animación en reposo, marco y etiqueta; los
+     * campos de una presentación se ocultan en la otra (`resolveFields`).
      */
     insignias: {
       label: 'Insignias',
       defaultProps: {
+        estilo: 'medalla',
+        animacion_reposo: 'flotar',
+        marco_medalla: 'halo',
+        etiqueta_medalla: 'al_pasar',
         columnas: 'auto',
         tamano: 'normal',
         efecto_hover: 'inclinar_brillo',
@@ -1180,8 +1186,45 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
         mostrar_emisor: campoSiNo('Mostrar emisor'),
         mostrar_fecha: campoSiNo('Mostrar fecha'),
         mostrar_habilidades: campoSiNo('Mostrar habilidades'),
-        mostrar_enlace: campoSiNo('Mostrar enlace "Verificar"'),
+        mostrar_enlace: campoSiNo('Enlazar a la verificación'),
         // Disposición y variantes
+        estilo: {
+          type: 'radio',
+          label: 'Presentación',
+          options: [
+            { label: 'Medallas', value: 'medalla' },
+            { label: 'Tarjetas', value: 'tarjeta' },
+          ],
+        },
+        animacion_reposo: {
+          type: 'select',
+          label: 'Movimiento de las medallas',
+          options: [
+            { label: 'Flotar', value: 'flotar' },
+            { label: 'Balanceo (colgante)', value: 'balanceo' },
+            { label: 'Destello de luz', value: 'destello' },
+            { label: 'Sin movimiento', value: 'ninguna' },
+          ],
+        },
+        marco_medalla: {
+          type: 'select',
+          label: 'Marco de la medalla',
+          options: [
+            { label: 'Halo de luz', value: 'halo' },
+            { label: 'Aro metálico', value: 'aro' },
+            { label: 'Cinta', value: 'cinta' },
+            { label: 'Ninguno', value: 'ninguno' },
+          ],
+        },
+        etiqueta_medalla: {
+          type: 'select',
+          label: 'Nombre de la insignia',
+          options: [
+            { label: 'Al pasar el cursor', value: 'al_pasar' },
+            { label: 'Siempre visible', value: 'siempre' },
+            { label: 'Oculto', value: 'nunca' },
+          ],
+        },
         columnas: {
           type: 'select',
           label: 'Columnas',
@@ -1215,6 +1258,28 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
         ...CAMPOS_BASE_BLOQUE,
         _visible: VISIBLE_FIELD,
         _tituloVisible: TITULO_VISIBLE_FIELD,
+      },
+      // Fase 7h: cada presentación muestra solo sus opciones. En medallas el
+      // texto largo (emisor, fechas, habilidades) no se pinta: la insignia ya
+      // lo dice y el clic lleva a la verificación.
+      resolveFields: (data, { fields }) => {
+        if ((data.props.estilo ?? 'medalla') === 'tarjeta') {
+          return sinCampos(fields, ['animacion_reposo', 'marco_medalla', 'etiqueta_medalla'])
+        }
+        const campos = sinCampos(fields, ['mostrar_emisor', 'mostrar_fecha', 'mostrar_habilidades'])
+        return {
+          ...campos,
+          efecto_hover: {
+            type: 'select',
+            label: 'Efecto al pasar el cursor',
+            options: [
+              { label: 'Inclinar con brillo', value: 'inclinar_brillo' },
+              { label: 'Girar como moneda', value: 'girar' },
+              { label: 'Elevar', value: 'elevar' },
+              { label: 'Ninguno', value: 'ninguno' },
+            ],
+          },
+        }
       },
       render: ({ puck, id: _id, _seccionId, _visible, _tituloVisible, ...config }) => {
         const { datos } = leerMetadata(puck)

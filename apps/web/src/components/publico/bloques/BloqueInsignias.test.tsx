@@ -41,12 +41,15 @@ function crearInsignia(n: number, extra: Partial<InsigniaPublica> = {}): Insigni
 
 const INSIGNIAS = [crearInsignia(1), crearInsignia(2), crearInsignia(3)]
 
+/** Fase 7h: las pruebas de la Fase 7d/7e cubren la presentación en tarjetas. */
+const TARJETA = { estilo: 'tarjeta' } as const
+
 describe('BloqueInsignias (Fase 7e, UC-35: sin vencimiento)', () => {
   it('muestra "Sin vencimiento" sin fecha de expiración y "Expira" cuando la hay', () => {
     render(
       <BloqueInsignias
         titulo="Insignias"
-        config={{ mostrar_fecha: true }}
+        config={{ ...TARJETA, mostrar_fecha: true }}
         insignias={[crearInsignia(1), crearInsignia(2, { fecha_expiracion: '2030-05-01' })]}
       />,
     )
@@ -56,7 +59,7 @@ describe('BloqueInsignias (Fase 7e, UC-35: sin vencimiento)', () => {
 
   it('con mostrar_fecha en false no lo muestra', () => {
     render(
-      <BloqueInsignias titulo="Insignias" config={{ mostrar_fecha: false }} insignias={[crearInsignia(1)]} />,
+      <BloqueInsignias titulo="Insignias" config={{ ...TARJETA, mostrar_fecha: false }} insignias={[crearInsignia(1)]} />,
     )
     expect(screen.queryByText(/Sin vencimiento/)).not.toBeInTheDocument()
   })
@@ -64,7 +67,7 @@ describe('BloqueInsignias (Fase 7e, UC-35: sin vencimiento)', () => {
 
 describe('BloqueInsignias (Fase 7d, UC-35)', () => {
   it('pinta nombre, emisor y fecha por defecto y no muestra las habilidades', () => {
-    render(<BloqueInsignias titulo="Insignias" config={{}} insignias={INSIGNIAS} />)
+    render(<BloqueInsignias titulo="Insignias" config={TARJETA} insignias={INSIGNIAS} />)
 
     expect(screen.getByRole('heading', { name: 'Insignias', level: 2 })).toBeInTheDocument()
     expect(screen.getByText('Insignia 1')).toBeInTheDocument()
@@ -75,7 +78,7 @@ describe('BloqueInsignias (Fase 7d, UC-35)', () => {
 
   it('imagen con ImagenResponsive: width/height, alt y sizes de `insignia`', () => {
     const { container } = render(
-      <BloqueInsignias titulo="Insignias" config={{}} insignias={[INSIGNIAS[0]]} />,
+      <BloqueInsignias titulo="Insignias" config={TARJETA} insignias={[INSIGNIAS[0]]} />,
     )
 
     const img = container.querySelector('img')!
@@ -92,7 +95,7 @@ describe('BloqueInsignias (Fase 7d, UC-35)', () => {
     render(
       <BloqueInsignias
         titulo="Insignias"
-        config={{ limite: 2 }}
+        config={{ ...TARJETA, limite: 2 }}
         insignias={[INSIGNIAS[2], INSIGNIAS[0], INSIGNIAS[1]]}
       />,
     )
@@ -105,7 +108,7 @@ describe('BloqueInsignias (Fase 7d, UC-35)', () => {
     const { rerender } = render(
       <BloqueInsignias
         titulo="Insignias"
-        config={{ mostrar_emisor: false, mostrar_fecha: false, mostrar_enlace: false }}
+        config={{ ...TARJETA, mostrar_emisor: false, mostrar_fecha: false, mostrar_enlace: false }}
         insignias={[INSIGNIAS[0]]}
       />,
     )
@@ -116,7 +119,7 @@ describe('BloqueInsignias (Fase 7d, UC-35)', () => {
     rerender(
       <BloqueInsignias
         titulo="Insignias"
-        config={{ mostrar_habilidades: true }}
+        config={{ ...TARJETA, mostrar_habilidades: true }}
         insignias={[INSIGNIAS[0]]}
       />,
     )
@@ -128,7 +131,7 @@ describe('BloqueInsignias (Fase 7d, UC-35)', () => {
     render(
       <BloqueInsignias
         titulo="Insignias"
-        config={{}}
+        config={TARJETA}
         insignias={[crearInsignia(1), crearInsignia(2, { url_verificacion: 'javascript:alert(1)' })]}
       />,
     )
@@ -142,12 +145,12 @@ describe('BloqueInsignias (Fase 7d, UC-35)', () => {
 
   it('usa la tabla literal de columnas y la de tamaño', () => {
     const { container, rerender } = render(
-      <BloqueInsignias titulo="Insignias" config={{ columnas: 4, tamano: 'grande' }} insignias={INSIGNIAS} />,
+      <BloqueInsignias titulo="Insignias" config={{ ...TARJETA, columnas: 4, tamano: 'grande' }} insignias={INSIGNIAS} />,
     )
     expect(container.querySelector('ul')).toHaveClass('lg:grid-cols-4')
     expect(container.querySelector('img')).toHaveClass('size-52')
 
-    rerender(<BloqueInsignias titulo="Insignias" config={{ tamano: 'compacto' }} insignias={INSIGNIAS} />)
+    rerender(<BloqueInsignias titulo="Insignias" config={{ ...TARJETA, tamano: 'compacto' }} insignias={INSIGNIAS} />)
     expect(container.querySelector('ul')!.className).toContain('auto-fill')
     expect(container.querySelector('img')).toHaveClass('size-24')
   })
@@ -156,7 +159,7 @@ describe('BloqueInsignias (Fase 7d, UC-35)', () => {
     render(
       <BloqueInsignias
         titulo="Insignias"
-        config={{ titulo: 'Mis credenciales', subtitulo: 'Verificables' }}
+        config={{ ...TARJETA, titulo: 'Mis credenciales', subtitulo: 'Verificables' }}
         insignias={INSIGNIAS}
       />,
     )
@@ -167,7 +170,7 @@ describe('BloqueInsignias (Fase 7d, UC-35)', () => {
   describe('efecto_hover', () => {
     it('inclinar_brillo (default) usa TarjetaInteractiva "inclinar" y el brillo especular', () => {
       const { container } = render(
-        <BloqueInsignias titulo="Insignias" config={{}} insignias={[INSIGNIAS[0]]} />,
+        <BloqueInsignias titulo="Insignias" config={TARJETA} insignias={[INSIGNIAS[0]]} />,
       )
       expect(container.querySelector('[data-efecto-hover="inclinar"]')).toBeInTheDocument()
       const brillo = container.querySelector('[data-brillo]')
@@ -177,7 +180,7 @@ describe('BloqueInsignias (Fase 7d, UC-35)', () => {
 
     it('el brillo sigue al puntero fijando --mx/--my', () => {
       const { container } = render(
-        <BloqueInsignias titulo="Insignias" config={{}} insignias={[INSIGNIAS[0]]} />,
+        <BloqueInsignias titulo="Insignias" config={TARJETA} insignias={[INSIGNIAS[0]]} />,
       )
       const tarjeta = container.querySelector('.group\\/insignia') as HTMLElement
       tarjeta.getBoundingClientRect = () =>
@@ -189,7 +192,7 @@ describe('BloqueInsignias (Fase 7d, UC-35)', () => {
 
     it('elevar usa la sombra y traslación de TarjetaInteractiva, sin brillo', () => {
       const { container } = render(
-        <BloqueInsignias titulo="Insignias" config={{ efecto_hover: 'elevar' }} insignias={[INSIGNIAS[0]]} />,
+        <BloqueInsignias titulo="Insignias" config={{ ...TARJETA, efecto_hover: 'elevar' }} insignias={[INSIGNIAS[0]]} />,
       )
       expect(container.querySelector('[data-efecto-hover="elevar"]')).toBeInTheDocument()
       expect(container.querySelector('[data-brillo]')).not.toBeInTheDocument()
@@ -197,7 +200,7 @@ describe('BloqueInsignias (Fase 7d, UC-35)', () => {
 
     it('ninguno no aplica ningún efecto', () => {
       const { container } = render(
-        <BloqueInsignias titulo="Insignias" config={{ efecto_hover: 'ninguno' }} insignias={[INSIGNIAS[0]]} />,
+        <BloqueInsignias titulo="Insignias" config={{ ...TARJETA, efecto_hover: 'ninguno' }} insignias={[INSIGNIAS[0]]} />,
       )
       expect(container.querySelector('[data-efecto-hover="ninguno"]')).toBeInTheDocument()
       expect(container.querySelector('[data-brillo]')).not.toBeInTheDocument()
@@ -207,7 +210,7 @@ describe('BloqueInsignias (Fase 7d, UC-35)', () => {
       const { container } = render(
         <BloqueInsignias
           titulo="Insignias"
-          config={{ efecto_hover: 'girar', mostrar_habilidades: true }}
+          config={{ ...TARJETA, efecto_hover: 'girar', mostrar_habilidades: true }}
           insignias={[INSIGNIAS[0]]}
         />,
       )
@@ -222,7 +225,7 @@ describe('BloqueInsignias (Fase 7d, UC-35)', () => {
 
     it('girar: el toque alterna el volteo solo en punteros sin hover', () => {
       const { container } = render(
-        <BloqueInsignias titulo="Insignias" config={{ efecto_hover: 'girar' }} insignias={[INSIGNIAS[0]]} />,
+        <BloqueInsignias titulo="Insignias" config={{ ...TARJETA, efecto_hover: 'girar' }} insignias={[INSIGNIAS[0]]} />,
       )
       const giratoria = container.querySelector('[data-volteada]') as HTMLElement
 
@@ -248,7 +251,7 @@ describe('BloqueInsignias (Fase 7d, UC-35)', () => {
     it('desactiva el volteo, la inclinación y el brillo', () => {
       simularMovimientoReducido(true)
       const { container, unmount } = render(
-        <BloqueInsignias titulo="Insignias" config={{ efecto_hover: 'girar' }} insignias={[INSIGNIAS[0]]} />,
+        <BloqueInsignias titulo="Insignias" config={{ ...TARJETA, efecto_hover: 'girar' }} insignias={[INSIGNIAS[0]]} />,
       )
       expect(container.querySelector('[data-volteada]')).not.toBeInTheDocument()
       // Sin giro, el emisor queda visible en la tarjeta estática.
@@ -256,7 +259,7 @@ describe('BloqueInsignias (Fase 7d, UC-35)', () => {
       unmount()
 
       const otro = render(
-        <BloqueInsignias titulo="Insignias" config={{}} insignias={[INSIGNIAS[0]]} />,
+        <BloqueInsignias titulo="Insignias" config={TARJETA} insignias={[INSIGNIAS[0]]} />,
       )
       expect(otro.container.querySelector('[data-brillo]')).not.toBeInTheDocument()
       // `TarjetaInteractiva` degrada `inclinar` a solo sombra: sin `transform` en línea.

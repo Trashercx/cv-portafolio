@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils'
 import { useModoRenderizado } from '../contexto-renderizado'
 import { ImagenResponsive } from '../ImagenResponsive'
 import { ItemAnimado } from '../ItemAnimado'
+import { MedallaInsignia } from './MedallaInsignia'
 import { TarjetaInteractiva } from '../TarjetaInteractiva'
 
 type EfectoInsignia = NonNullable<InsigniasConfiguracion['efecto_hover']>
@@ -252,6 +253,39 @@ export function BloqueInsignias({ titulo, config, insignias, alineacionTitulo }:
   const encabezado = config.titulo || titulo
 
   if (mostradas.length === 0 && modo !== 'editor') return null
+
+  // Fase 7h (UC-35): medallas por defecto (clave ausente = `medalla`).
+  if ((config.estilo ?? 'medalla') === 'medalla') {
+    return (
+      <div className="grid gap-8">
+        <div className={cn('grid gap-1', alineacionTitulo)}>
+          <h2 className="text-2xl font-semibold">{encabezado}</h2>
+          {config.subtitulo ? <p className="text-muted-foreground">{config.subtitulo}</p> : null}
+        </div>
+        {mostradas.length === 0 ? (
+          <p className="text-muted-foreground">Sin insignias</p>
+        ) : (
+          <ul
+            data-estilo-insignias="medalla"
+            className={cn(
+              // Espacio vertical extra: la etiqueta "al pasar" y el movimiento no se pisan.
+              columnas === 'auto'
+                ? 'flex flex-wrap justify-center gap-x-6 gap-y-10 sm:gap-x-10'
+                : cn('grid justify-items-center gap-x-6 gap-y-10', GRID_COLS_INSIGNIAS[columnas]),
+            )}
+          >
+            {mostradas.map((insignia, indice) => (
+              <li key={insignia.id} data-efecto-insignia={efecto}>
+                <ItemAnimado indice={indice}>
+                  <MedallaInsignia insignia={insignia} config={config} indice={indice} />
+                </ItemAnimado>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className="grid gap-6">

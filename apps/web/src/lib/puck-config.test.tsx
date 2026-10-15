@@ -296,3 +296,44 @@ describe('puckConfig — bloque insignias (Fase 7d, UC-35)', () => {
     expect(puckConfig.categories?.contenido?.components).toContain('insignias')
   })
 })
+
+describe('puckConfig — insignias como medallas (Fase 7h, UC-35)', () => {
+  it('por defecto son medallas, con los defaults del API', () => {
+    expect(bloques.insignias.defaultProps).toMatchObject({
+      estilo: 'medalla',
+      animacion_reposo: 'flotar',
+      marco_medalla: 'halo',
+      etiqueta_medalla: 'al_pasar',
+      mostrar_enlace: true,
+    })
+    const { fields } = bloques.insignias
+    expect(fields.estilo.options?.map((o) => o.value)).toEqual(['medalla', 'tarjeta'])
+    expect(fields.animacion_reposo.options?.map((o) => o.value)).toEqual([
+      'flotar',
+      'balanceo',
+      'destello',
+      'ninguna',
+    ])
+    expect(fields.marco_medalla.options?.map((o) => o.value)).toEqual(['halo', 'aro', 'cinta', 'ninguno'])
+    expect(fields.etiqueta_medalla.options?.map((o) => o.value)).toEqual(['al_pasar', 'siempre', 'nunca'])
+  })
+
+  it('en medallas oculta el texto de tarjeta y muestra las opciones de medalla', () => {
+    for (const props of [{}, { estilo: 'medalla' }]) {
+      const campos = camposVisibles('insignias', props)
+      expect(campos).toEqual(expect.arrayContaining(['animacion_reposo', 'marco_medalla', 'etiqueta_medalla']))
+      expect(campos).not.toContain('mostrar_emisor')
+      expect(campos).not.toContain('mostrar_fecha')
+      expect(campos).not.toContain('mostrar_habilidades')
+      expect(campos).toContain('mostrar_enlace')
+    }
+  })
+
+  it('en tarjetas oculta las opciones de medalla', () => {
+    const campos = camposVisibles('insignias', { estilo: 'tarjeta' })
+    expect(campos).toEqual(expect.arrayContaining(['mostrar_emisor', 'mostrar_fecha', 'mostrar_habilidades']))
+    expect(campos).not.toContain('animacion_reposo')
+    expect(campos).not.toContain('marco_medalla')
+    expect(campos).not.toContain('etiqueta_medalla')
+  })
+})
