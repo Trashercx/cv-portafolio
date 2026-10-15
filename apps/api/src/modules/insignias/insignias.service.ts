@@ -7,6 +7,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { INCLUDE_MEDIA_CON_VARIANTES } from '../media/media.select';
 import { MediaService } from '../media/media.service';
 import { mensajeRechazoImagen, validarImagen } from '../media/validar-imagen';
+import { repararNombreOriginal } from '../media/storage/clave-media';
 import { CreateInsigniaDto } from './dto/create-insignia.dto';
 import { UpdateInsigniaDto } from './dto/update-insignia.dto';
 import {
@@ -270,7 +271,11 @@ export class InsigniasService {
 
     const media = await this.mediaService.create(
       file,
-      { carpeta: 'insignias', alt_text: file.originalname },
+      {
+        carpeta: 'insignias',
+        // Fase 7h: Multer entrega el nombre en latin1 (tildes rotas).
+        alt_text: repararNombreOriginal(file.originalname),
+      },
       usuarioAdminId,
     );
     const imagen = {

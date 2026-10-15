@@ -5,13 +5,12 @@ import {
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
-import { randomUUID } from 'crypto';
-import { extname } from 'path';
 import { sharp } from '../sharp';
 import {
   MediaStorageService,
   UploadedMediaResult,
 } from './media-storage.interface';
+import { construirClaveMedia, contentDispositionInline } from './clave-media';
 
 /**
  * Estructura de carpetas del bucket (docs/plan-tecnico.md sección 5):
@@ -67,8 +66,12 @@ export class S3MediaStorageService implements MediaStorageService {
   ): Promise<UploadedMediaResult> {
     const carpetaFinal =
       carpeta && CARPETAS_VALIDAS.has(carpeta) ? carpeta : CARPETA_GENERICA;
-    const extension = extname(file.originalname);
-    const key = `${carpetaFinal}/${randomUUID()}${extension}`;
+    // Fase 7h (UC-09): la clave conserva el nombre original del archivo.
+    const key = construirClaveMedia(
+      carpetaFinal,
+      file.originalname,
+      file.mimetype,
+    );
 
     const { width, height } = await this.leerDimensiones(file);
 
@@ -78,6 +81,7 @@ export class S3MediaStorageService implements MediaStorageService {
         Key: key,
         Body: file.buffer,
         ContentType: file.mimetype,
+        ContentDisposition: contentDispositionInline(key.split('/').pop()!),
       }),
     );
 
