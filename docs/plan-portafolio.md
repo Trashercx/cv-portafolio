@@ -201,6 +201,15 @@ Web, API menor y CSP. Contrato en `docs/plan-tecnico.md`, "Fase 7g".
 | UC-09 | La biblioteca y los campos de imagen aceptan las fotos tal como salen del teléfono: HEIC/HEIF (iPhone) además de JPG, PNG, WebP, AVIF, GIF y SVG; el formato se decide por el contenido y la extensión, no por el tipo MIME que declare el sistema | Un `.heic` elegido en Windows (tipo MIME vacío) o en iOS se convierte a JPG en el navegador, se sube y queda con variantes como cualquier JPG; un archivo no admitido se rechaza con un mensaje que enumera los formatos válidos; el API responde 400 explicativo si recibe un HEIC sin convertir. |
 | UC-35 | La pestaña "Subir archivo" de insignias acepta también JPG, WebP y HEIC (convertido a JPG) | Importar una captura HEIC produce la vista previa saneada igual que un PNG. |
 
+### Extensión de UC-09 y UC-35 — Fase 7h, medallas y nombres legibles (2026-10-15)
+
+Web y API menor, sin esquema. Contrato en `docs/plan-tecnico.md`, "Fase 7h".
+
+| UC | Extensión | Criterio de aceptación |
+|---|---|---|
+| UC-09 | El archivo se guarda en S3 con el nombre con el que se subió (saneado: sin tildes ni espacios, con la extensión real) y la biblioteca muestra ese nombre; la cola de subida se limpia sola y no anuncia conversiones internas de formato | Subir "Certificado AWS.pdf" deja la clave `<carpeta>/<id>/Certificado-AWS.pdf` y la tarjeta muestra "Certificado-AWS.pdf"; dos archivos con el mismo nombre no se pisan; al terminar, el archivo desaparece de la cola sin pulsar nada; un fallo se queda con "Reintentar" y "Descartar"; ningún texto menciona la conversión a JPG. Los archivos anteriores conservan su clave y muestran su texto alternativo si lo tienen. |
+| UC-35 | El bloque "Insignias" se presenta por defecto como medallas: solo la imagen oficial, con movimiento en reposo (flotar, balanceo o destello), marco (halo, aro, cinta o ninguno) y el nombre al pasar el cursor, siempre o nunca; toda la medalla es un botón que abre la verificación. Todo se configura desde el editor visual; la presentación en tarjetas de la Fase 7d sigue disponible | Las medallas no muestran emisor, fechas ni habilidades; hacer clic en una abre su URL de verificación en otra pestaña; con movimiento reducido quedan quietas; el panel de Puck solo muestra las opciones de la presentación elegida. |
+
 ### Casos de uso propuestos — roadmap de profesionalización (2026-10-13, pendientes de aprobación)
 
 Los UC-19 a UC-34 nacen de la propuesta de la Sección 7 (roadmap). Se listan aquí para que el índice de casos de uso siga siendo la única fuente de verdad. **Solo UC-27 y UC-34 están aprobados e implementados** (Fase 8, 2026-10-14) y UC-35 (insignias, Fase 7d, definido en la sección anterior); el resto sigue pendiente: cada fase del roadmap se aprueba por separado y recién entonces se agregan sus entidades al diagrama ER (vía `db-schema`) y se codifica. La Fase 6 (fundamentos de producción) no agrega casos de uso: refuerza UC-01 (cierre de sesión real, límite de intentos por IP) y UC-12/13 (metadatos SEO, accesibilidad, rendimiento).
