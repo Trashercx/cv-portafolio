@@ -14,6 +14,7 @@ import {
   ValidateIf,
 } from 'class-validator';
 import { NoJuntoCon } from './no-junto-con.decorator';
+import { EsImagenRemota } from './es-imagen-remota.decorator';
 
 import {
   CLAVES_PROVEEDOR,
@@ -75,8 +76,8 @@ export class CreateInsigniaDto {
     (o: CreateInsigniaDto) =>
       o.imagen_url_remota !== undefined || o.imagen_media_id === undefined,
   )
-  @IsUrl({ protocols: ['https'], require_protocol: true })
-  @MaxLength(2000)
+  // Fase 7i: también la imagen generada por un extractor (data URI).
+  @EsImagenRemota()
   imagen_url_remota?: string;
 
   @IsOptional()

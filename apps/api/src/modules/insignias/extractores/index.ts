@@ -1,3 +1,4 @@
+import { claudeAcademyExtractor } from './claude-academy';
 import { credlyExtractor } from './credly';
 import { datacampExtractor } from './datacamp';
 import { genericoExtractor } from './generico';
@@ -23,9 +24,14 @@ export * from './tipos';
  * tras `credly`, no tras `imagen-directa`: si su página responde 403, el
  * primer extractor genérico que descargue lanzaría `RedSeguraError` y se
  * perdería el resultado parcial de DataCamp (modo archivo).
+ *
+ * Fase 7i: `claude-academy` (host anclado, API pública en JSON) va también
+ * antes de los genéricos: su página es una aplicación sin metadatos y el
+ * extractor genérico no encontraría nada.
  */
 export const EXTRACTORES: Extractor[] = [
   credlyExtractor,
+  claudeAcademyExtractor,
   skilljarExtractor,
   datacampExtractor,
   openBadgesExtractor,

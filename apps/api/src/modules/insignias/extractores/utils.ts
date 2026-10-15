@@ -193,6 +193,21 @@ export const TIPOS_IMAGEN = [
 /** Tope de URL de `CreateInsigniaDto`: "Guardar" nunca debe fallar por longitud. */
 const MAX_URL = 2000;
 
+/**
+ * Fase 7i: tope de una imagen generada por un extractor y enviada como
+ * `data:image/svg+xml;base64,…` (mismo valor que acepta el DTO).
+ */
+export const MAX_DATA_URI_IMAGEN = 64_000;
+export const RE_DATA_URI_IMAGEN =
+  /^data:image\/(?:svg\+xml|png);base64,[A-Za-z0-9+/]+={0,2}$/;
+
+function imagenAdmisible(url: string): boolean {
+  if (url.startsWith('data:')) {
+    return url.length <= MAX_DATA_URI_IMAGEN && RE_DATA_URI_IMAGEN.test(url);
+  }
+  return url.length <= MAX_URL;
+}
+
 function limpiarUrl(valor: string | null): string | null {
   if (!valor) return null;
   const url = valor.trim();
@@ -221,6 +236,6 @@ export function sanearVista(vista: VistaPreviaInsignia): VistaPreviaInsignia {
     habilidades,
     avisos: vista.avisos.map((a) => limpiarTexto(a, 500)).filter(Boolean),
     imagen:
-      vista.imagen && vista.imagen.url.length <= MAX_URL ? vista.imagen : null,
+      vista.imagen && imagenAdmisible(vista.imagen.url) ? vista.imagen : null,
   };
 }

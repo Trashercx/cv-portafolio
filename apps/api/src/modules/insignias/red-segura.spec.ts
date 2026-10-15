@@ -192,6 +192,39 @@ describe('descargarRecursoSeguro (Fase 7d, UC-35)', () => {
     expect(lookupMock).toHaveBeenCalledTimes(2);
   });
 
+  it('Fase 7i: postJson envía POST con cuerpo JSON y cabeceras, sin pisar User-Agent', async () => {
+    fetchMock.mockResolvedValue(
+      respuesta('{"valid":true}', {
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+    await descargarRecursoSeguro('https://ejemplo.test/api', {
+      accept: 'application/json',
+      postJson: {
+        cuerpo: { verifyCode: 'abc' },
+        cabeceras: { 'Connect-Protocol-Version': '1', 'User-Agent': 'otro' },
+      },
+    });
+    const init = fetchMock.mock.calls[0][1];
+    expect(init.method).toBe('POST');
+    expect(init.body).toBe('{"verifyCode":"abc"}');
+    expect(init.headers['Content-Type']).toBe('application/json');
+    expect(init.headers['Connect-Protocol-Version']).toBe('1');
+    expect(init.headers['User-Agent']).toBe(USER_AGENT_INSIGNIAS);
+  });
+
+  it('Fase 7i: un POST nunca sigue redirecciones', async () => {
+    fetchMock.mockResolvedValue(
+      respuesta(null, { status: 307, headers: { location: '/otra' } }),
+    );
+    await expect(
+      descargarRecursoSeguro('https://ejemplo.test/api', {
+        postJson: { cuerpo: {} },
+      }),
+    ).rejects.toThrow('La API respondió con una redirección');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it('rechaza una redirección a una IP privada', async () => {
     fetchMock.mockResolvedValueOnce(
       respuesta(null, {

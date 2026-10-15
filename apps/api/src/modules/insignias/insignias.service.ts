@@ -332,9 +332,20 @@ export class InsigniasService {
 
     if (dto.imagen_url_remota) {
       try {
-        const recurso = await descargarRecursoSeguro(dto.imagen_url_remota, {
-          accept: 'image/*',
-        });
+        // Fase 7i: la imagen que generó un extractor llega como data URI y no
+        // se descarga; se valida por contenido igual que una remota.
+        const recurso = dto.imagen_url_remota.startsWith('data:')
+          ? {
+              buffer: Buffer.from(
+                dto.imagen_url_remota.slice(
+                  dto.imagen_url_remota.indexOf(',') + 1,
+                ),
+                'base64',
+              ),
+            }
+          : await descargarRecursoSeguro(dto.imagen_url_remota, {
+              accept: 'image/*',
+            });
         // Tipo por contenido, no por el `Content-Type` del servidor remoto.
         const real = await validarImagen(recurso.buffer);
         if (!real) {

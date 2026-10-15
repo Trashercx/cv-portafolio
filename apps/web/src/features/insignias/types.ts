@@ -8,6 +8,8 @@ export type ProveedorInsignia =
   | 'manual'
   | 'skilljar'
   | 'datacamp'
+  /** Fase 7i. */
+  | 'claude_academy'
 
 /** Fase 7e, UC-35: cómo se lee un proveedor (`GET /admin/insignias/proveedores`). */
 export type ModoProveedorInsignia = 'automatico' | 'archivo' | 'mixto'

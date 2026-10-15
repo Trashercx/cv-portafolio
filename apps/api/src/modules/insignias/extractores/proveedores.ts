@@ -40,6 +40,14 @@ export const PROVEEDORES_INSIGNIA = [
     ayuda: 'Anthropic Academy y otros cursos en Skilljar',
   },
   {
+    clave: 'claude_academy',
+    nombre: 'Claude Academy',
+    dominios: [/^https:\/\/academy\.claude\.com\/verify\//i],
+    modo: 'automatico',
+    ayuda:
+      'Pega el enlace de verificación (academy.claude.com/verify/...): se leen los datos verificados y se genera la imagen de la insignia.',
+  },
+  {
     clave: 'datacamp',
     nombre: 'DataCamp',
     dominios: [/^https:\/\/(?:www\.)?datacamp\.com\//i],

@@ -51,8 +51,25 @@ describe('CreateInsigniaDto (Fase 7d, UC-35)', () => {
     ).toBeGreaterThan(0);
   });
 
+  it('Fase 7i: acepta la imagen generada como data URI svg o png en base64', async () => {
+    for (const tipo of ['svg+xml', 'png']) {
+      expect(
+        await errores(CreateInsigniaDto, {
+          ...base,
+          imagen_url_remota: `data:image/${tipo};base64,PHN2Zz48L3N2Zz4=`,
+        }),
+      ).toHaveLength(0);
+    }
+  });
+
   it.each([
     { imagen_url_remota: 'http://x.test/a.png' },
+    // Fase 7i: solo svg/png en base64 y con tope de tamaño.
+    { imagen_url_remota: 'data:text/html;base64,PGgxPjwvaDE+' },
+    { imagen_url_remota: 'data:image/svg+xml,<svg></svg>' },
+    { imagen_url_remota: 'data:image/jpeg;base64,AAAA' },
+    { imagen_url_remota: `data:image/png;base64,${'A'.repeat(70_000)}` },
+    { imagen_url_remota: `https://x.test/${'a'.repeat(2000)}.png` },
     { imagen_media_id: 'no-uuid' },
     { imagen_media_id: UUID, proveedor: 'otro' },
     { imagen_media_id: UUID, campo_extra: 1 },
