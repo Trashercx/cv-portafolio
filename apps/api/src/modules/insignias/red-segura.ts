@@ -47,6 +47,16 @@ export interface OpcionesDescarga {
   timeoutMs?: number;
   /** Cabecera `Accept` de la petición. */
   accept?: string;
+  /**
+   * Fase 7i (UC-35): `POST` con cuerpo JSON para APIs públicas de
+   * verificación (p. ej. Claude Academy, Connect-RPC). Un `POST` nunca sigue
+   * redirecciones: un 3xx es error.
+   */
+  postJson?: {
+    cuerpo: unknown;
+    /** Cabeceras extra fijadas por el extractor (nunca datos del usuario). */
+    cabeceras?: Record<string, string>;
+  };
 }
 
 export interface RecursoDescargado {
@@ -296,15 +306,19 @@ export async function descargarRecursoSeguro(
       // CodeQL marca aquí js/request-forgery: la URL viene del admin por diseño
       // (importar insignia). La alerta está aceptada con justificación en
       // .github/codeql/alertas-aceptadas.json; las mitigaciones son las de arriba.
+      const post = opciones.postJson;
       const respuesta = await fetch(actual.toString(), {
-        method: 'GET',
+        method: post ? 'POST' : 'GET',
         redirect: 'manual',
         credentials: 'omit',
         signal: controlador.signal,
         headers: {
+          ...(post?.cabeceras ?? {}),
+          ...(post ? { 'Content-Type': 'application/json' } : {}),
           'User-Agent': USER_AGENT_INSIGNIAS,
           Accept: opciones.accept ?? '*/*',
         },
+        ...(post ? { body: JSON.stringify(post.cuerpo) } : {}),
         // `dispatcher` es extensión de undici, ausente en el RequestInit de DOM.
         dispatcher: agente,
       } as RequestInit);
@@ -314,6 +328,9 @@ export async function descargarRecursoSeguro(
         await respuesta.body?.cancel().catch(() => undefined);
         if (!destino) {
           throw new RedSeguraError('Redirección sin destino');
+        }
+        if (post) {
+          throw new RedSeguraError('La API respondió con una redirección');
         }
         if (saltos >= MAX_REDIRECCIONES) {
           throw new RedSeguraError('Demasiadas redirecciones');
