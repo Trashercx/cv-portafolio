@@ -437,7 +437,8 @@ describe('Versiones del sitio y sitio público (e2e, UC-10 a UC-14)', () => {
   it('GET /cv resuelve la URL del CV desde el snapshot publicado y redirige (302)', async () => {
     const media = await agent
       .post('/admin/media')
-      .attach('file', Buffer.from('cv de prueba e2e'), 'cv.pdf')
+      // Undécima ronda (UC-09): el API valida por contenido, así que el CV debe empezar por %PDF-.
+      .attach('file', Buffer.from('%PDF-1.4\n% cv de prueba e2e'), 'cv.pdf')
       .expect(201);
     idsMediaCreada.push(media.body.id);
     keysMediaCreada.push(media.body.s3_key);
