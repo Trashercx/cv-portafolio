@@ -22,6 +22,7 @@ import { ACCEPT_IMAGENES } from '@/features/media/formatos-imagen'
 import { useCarpetasMedia } from '@/features/media/useCarpetasMedia'
 import { useMediaList } from '@/features/media/useMediaLibrary'
 import type { Media } from '@/features/media/types'
+import { nombreArchivo } from '@/features/media/utilidades-media'
 
 /** Tipos de `Media` que un `MediaField` puede aceptar (subida + biblioteca). */
 export type MediaTipoPermitido = 'imagen' | 'pdf'
@@ -289,7 +290,7 @@ function GrillaMediaBiblioteca({
             <span className="flex aspect-square w-full flex-col items-center justify-center gap-1 bg-muted p-2 text-center">
               <FileIcon className="size-8 text-muted-foreground" />
               <span className="line-clamp-2 text-xs text-muted-foreground">
-                {item.alt_text || item.tipo}
+                {item.alt_text || nombreArchivo(item)}
               </span>
             </span>
           )}

@@ -19,6 +19,8 @@ export type EstadoSubida =
 
 export type ItemCola = {
   id: string
+  /** Fase 7h: nombre tal como lo eligió el usuario (no el del JPEG convertido). */
+  nombre: string
   file: File
   estado: EstadoSubida
   /** 0–100. */
@@ -34,10 +36,19 @@ export type ItemCola = {
 let contador = 0
 
 /**
+ * Fase 7h (UC-09): los archivos subidos salen solos de la cola tras este
+ * retardo, sin botón "Limpiar"; los que fallan o se cancelan se quedan para
+ * reintentar o descartar.
+ */
+export const RETARDO_AUTOLIMPIEZA_MS = 1500
+
+const esAutolimpiable = (estado: EstadoSubida) => estado === 'listo'
+
+/**
  * Cola de subidas de la biblioteca (Fase 7d, UC-09): hasta `concurrencia`
  * (3) archivos en paralelo, progreso por archivo, cancelación, reintento y
- * limpieza. Al terminar cada archivo invalida `['media']`, raíz que cubre la
- * lista y `['media','usos']`.
+ * limpieza (automática para los subidos desde la Fase 7h). Al terminar cada
+ * archivo invalida `['media']`, raíz que cubre la lista y `['media','usos']`.
  */
 export function useColaSubida(concurrencia = 3) {
   const queryClient = useQueryClient()
@@ -48,6 +59,39 @@ export function useColaSubida(concurrencia = 3) {
   useEffect(() => {
     itemsRef.current = items
   }, [items])
+
+  // Fase 7h: autolimpieza. Un temporizador por item terminado; si el item
+  // vuelve a la cola (reintento) antes de que venza, se anula.
+  const temporizadores = useRef(new Map<string, ReturnType<typeof setTimeout>>())
+  useEffect(() => {
+    const mapa = temporizadores.current
+    for (const item of items) {
+      if (esAutolimpiable(item.estado)) {
+        if (mapa.has(item.id)) continue
+        mapa.set(
+          item.id,
+          setTimeout(() => {
+            mapa.delete(item.id)
+            iniciados.current.delete(item.id)
+            controladores.current.delete(item.id)
+            setItems((actuales) =>
+              actuales.filter((i) => !(i.id === item.id && esAutolimpiable(i.estado))),
+            )
+          }, RETARDO_AUTOLIMPIEZA_MS),
+        )
+      } else if (mapa.has(item.id)) {
+        clearTimeout(mapa.get(item.id))
+        mapa.delete(item.id)
+      }
+    }
+  }, [items])
+  useEffect(() => {
+    const mapa = temporizadores.current
+    return () => {
+      mapa.forEach((temporizador) => clearTimeout(temporizador))
+      mapa.clear()
+    }
+  }, [])
 
   // Revisión Fase 7d: al desmontar la página se abortan las subidas en vuelo
   // para no dejar peticiones huérfanas ni actualizaciones de estado tardías.
@@ -87,6 +131,7 @@ export function useColaSubida(concurrencia = 3) {
       if (archivos.length === 0) return
       const nuevos: ItemCola[] = archivos.map((file) => ({
         id: `subida-${++contador}`,
+        nombre: file.name,
         file,
         estado: 'convirtiendo',
         progreso: 0,
@@ -177,6 +222,13 @@ export function useColaSubida(concurrencia = 3) {
     [prepararItem],
   )
 
+  /** Fase 7h: quita un item (lo usa "Descartar" en los que fallaron). */
+  const descartar = useCallback((id: string) => {
+    setItems((actuales) =>
+      actuales.filter((i) => !(i.id === id && (i.estado === 'error' || i.estado === 'cancelado'))),
+    )
+  }, [])
+
   /** Quita de la cola los terminados (`listo`, `error`, `cancelado`). */
   const limpiar = useCallback(() => {
     setItems((actuales) =>
@@ -186,5 +238,5 @@ export function useColaSubida(concurrencia = 3) {
     )
   }, [])
 
-  return { items, agregar, cancelar, reintentar, limpiar }
+  return { items, agregar, cancelar, reintentar, descartar, limpiar }
 }

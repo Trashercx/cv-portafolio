@@ -187,3 +187,54 @@ describe('useColaSubida (Fase 7d, UC-09)', () => {
     expect(result.current.items[0].file.name).toBe('b.png')
   })
 })
+
+describe('useColaSubida (Fase 7h, UC-09: autolimpieza y nombre original)', () => {
+  const original = globalThis.XMLHttpRequest
+
+  beforeEach(() => XhrFalso.instalar())
+  afterEach(() => {
+    ;(globalThis as unknown as { XMLHttpRequest: unknown }).XMLHttpRequest = original
+  })
+
+  it('un archivo subido sale solo de la cola; uno con error se queda', async () => {
+    const { result } = montar()
+    act(() => result.current.agregar([archivo('a.png'), archivo('b.png')]))
+    await waitFor(() => expect(XhrFalso.instancias).toHaveLength(2))
+    act(() => XhrFalso.instancias[0].responder(201, { id: 'm1' }))
+    act(() => XhrFalso.instancias[1].responder(400, { message: 'Formato no admitido' }))
+    await waitFor(() => expect(result.current.items[0].estado).toBe('listo'))
+
+    await waitFor(() => expect(result.current.items).toHaveLength(1), { timeout: 4000 })
+    expect(result.current.items[0].nombre).toBe('b.png')
+    expect(result.current.items[0].estado).toBe('error')
+  })
+
+  it('un cancelado se queda para reintentar, y descartar lo quita al momento', async () => {
+    const { result } = montar()
+    act(() => result.current.agregar([archivo('a.png'), archivo('b.png')]))
+    await waitFor(() => expect(XhrFalso.instancias).toHaveLength(2))
+    act(() => result.current.cancelar(result.current.items[0].id))
+    act(() => XhrFalso.instancias[1].responder(400, { message: 'Formato no admitido' }))
+    await waitFor(() => expect(result.current.items[1].estado).toBe('error'))
+
+    act(() => result.current.descartar(result.current.items[1].id))
+    expect(result.current.items.map((i) => i.nombre)).toEqual(['a.png'])
+    await new Promise((resolver) => setTimeout(resolver, 1800))
+    expect(result.current.items[0].estado).toBe('cancelado')
+    act(() => result.current.descartar(result.current.items[0].id))
+    expect(result.current.items).toHaveLength(0)
+  })
+
+  it('conserva el nombre elegido aunque el archivo se convierta internamente', async () => {
+    vi.mocked(prepararArchivoParaSubir).mockResolvedValueOnce({
+      file: new File(['jpeg'], 'IMG_7.jpg', { type: 'image/jpeg' }),
+      formato: 'imagen',
+    })
+    const { result } = montar()
+    act(() => result.current.agregar([new File(['heic'], 'IMG_7.HEIC', { type: '' })]))
+    await waitFor(() => expect(XhrFalso.instancias).toHaveLength(1))
+
+    expect(result.current.items[0].nombre).toBe('IMG_7.HEIC')
+    expect(result.current.items[0].file.name).toBe('IMG_7.jpg')
+  })
+})

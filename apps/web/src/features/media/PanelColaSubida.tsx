@@ -12,7 +12,8 @@ import type { CarpetaMedia } from './types'
 import type { EstadoSubida, ItemCola } from './useColaSubida'
 
 const ETIQUETA_ESTADO: Record<EstadoSubida, string> = {
-  convirtiendo: 'Convirtiendo…',
+  // Fase 7h: la conversión de formato (HEIC → JPG) es interna; no se anuncia.
+  convirtiendo: 'Preparando…',
   pendiente: 'En espera',
   subiendo: 'Subiendo',
   listo: 'Listo',
@@ -24,7 +25,8 @@ type PanelColaSubidaProps = {
   items: ItemCola[]
   onCancelar: (id: string) => void
   onReintentar: (id: string) => void
-  onLimpiar: () => void
+  /** Fase 7h: quita de la cola un archivo que falló o se canceló. */
+  onDescartar?: (id: string) => void
   /** Fase 7e (UC-09): carpetas disponibles y destino de las próximas subidas. */
   carpetas?: CarpetaMedia[]
   /** Id de carpeta o `'ninguna'`. */
@@ -41,7 +43,7 @@ export function PanelColaSubida({
   items,
   onCancelar,
   onReintentar,
-  onLimpiar,
+  onDescartar,
   carpetas,
   destino = 'ninguna',
   onCambiarDestino,
@@ -51,9 +53,6 @@ export function PanelColaSubida({
 
   const listos = items.filter((i) => i.estado === 'listo').length
   const conError = items.filter((i) => i.estado === 'error').length
-  const terminados = items.filter(
-    (i) => i.estado === 'listo' || i.estado === 'error' || i.estado === 'cancelado',
-  ).length
 
   return (
     <section
@@ -79,26 +78,20 @@ export function PanelColaSubida({
         </div>
       ) : null}
 
+      {/* Fase 7h: sin botón "Limpiar": lo subido sale solo de la lista. */}
       {items.length > 0 ? (
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <p aria-live="polite" className="text-sm font-medium">
-            {listos} de {items.length} archivos subidos
-            {conError > 0 ? ` (${conError} con error)` : ''}
-          </p>
-          {terminados > 0 ? (
-            <Button type="button" variant="ghost" size="sm" onClick={onLimpiar}>
-              Limpiar terminadas
-            </Button>
-          ) : null}
-        </div>
+        <p aria-live="polite" className="text-sm font-medium">
+          {listos} de {items.length} archivos subidos
+          {conError > 0 ? ` (${conError} con error)` : ''}
+        </p>
       ) : null}
 
       <ul className="grid gap-2">
         {items.map((item) => (
           <li key={item.id} className="grid gap-1" data-estado={item.estado}>
             <div className="flex items-center gap-2">
-              <p className="min-w-0 flex-1 truncate text-sm" title={item.file.name}>
-                {item.file.name}
+              <p className="min-w-0 flex-1 truncate text-sm" title={item.nombre}>
+                {item.nombre}
               </p>
               <span className="flex items-center gap-1 text-xs text-muted-foreground">
                 {item.estado === 'listo' ? (
@@ -116,7 +109,7 @@ export function PanelColaSubida({
                   variant="ghost"
                   size="icon"
                   className="size-7"
-                  aria-label={`Cancelar subida de ${item.file.name}`}
+                  aria-label={`Cancelar subida de ${item.nombre}`}
                   onClick={() => onCancelar(item.id)}
                 >
                   <X className="size-4" />
@@ -128,17 +121,29 @@ export function PanelColaSubida({
                   variant="ghost"
                   size="icon"
                   className="size-7"
-                  aria-label={`Reintentar subida de ${item.file.name}`}
+                  aria-label={`Reintentar subida de ${item.nombre}`}
                   onClick={() => onReintentar(item.id)}
                 >
                   <RotateCw className="size-4" />
+                </Button>
+              ) : null}
+              {onDescartar && (item.estado === 'error' || item.estado === 'cancelado') ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="size-7"
+                  aria-label={`Descartar ${item.nombre}`}
+                  onClick={() => onDescartar(item.id)}
+                >
+                  <X className="size-4" />
                 </Button>
               ) : null}
             </div>
             {item.estado === 'subiendo' || item.estado === 'listo' ? (
               <Progress
                 value={item.progreso}
-                aria-label={`Progreso de ${item.file.name}`}
+                aria-label={`Progreso de ${item.nombre}`}
                 className="h-1.5"
               />
             ) : null}

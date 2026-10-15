@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/select'
 import { ApiError } from '@/lib/api-client'
 import type { Media, UsoMedia } from './types'
+import { nombreArchivo } from './utilidades-media'
 import { useCarpetasMedia, useMoverMedia } from './useCarpetasMedia'
 import {
   useActualizarMedia,
@@ -81,6 +82,10 @@ export function MediaDetailDialog({
       <DialogContent className="max-h-[90dvh] overflow-y-auto scrollbar-fina">
         <DialogHeader>
           <DialogTitle>Detalle del archivo</DialogTitle>
+          {/* Fase 7h (UC-09): nombre con el que se subió el archivo. */}
+          <p className="truncate text-sm text-muted-foreground" title={nombreArchivo(media)}>
+            {nombreArchivo(media)}
+          </p>
         </DialogHeader>
 
         <div className="grid gap-4">

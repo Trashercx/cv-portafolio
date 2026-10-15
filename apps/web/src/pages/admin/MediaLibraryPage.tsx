@@ -377,7 +377,7 @@ export function MediaLibraryPage() {
           items={cola.items}
           onCancelar={cola.cancelar}
           onReintentar={cola.reintentar}
-          onLimpiar={cola.limpiar}
+          onDescartar={cola.descartar}
           carpetas={carpetas}
           destino={carpetaDestino}
           onCambiarDestino={setDestinoElegido}

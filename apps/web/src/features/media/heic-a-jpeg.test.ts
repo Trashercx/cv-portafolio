@@ -153,7 +153,7 @@ describe('prepararArchivoParaSubir (Fase 7g, criterio único de tamaño)', () =>
       cb(new Blob([new Uint8Array(11 * 1024 * 1024)])),
     )
     expect(await prepararArchivoParaSubir(archivoHeic())).toEqual({
-      error: 'La foto convertida supera los 10 MB.',
+      error: 'La foto supera los 10 MB.',
     })
   })
 
