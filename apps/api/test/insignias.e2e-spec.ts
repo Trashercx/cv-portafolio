@@ -206,6 +206,42 @@ describe('Insignias (e2e, UC-35)', () => {
       expect(res.body.imagen.tipo).toBe('imagen');
     });
 
+    it('Fase 7i: POST con la imagen generada (data URI SVG) la guarda sin descargar nada', async () => {
+      const svg = Buffer.from(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><rect width="10" height="10"/></svg>',
+      ).toString('base64');
+      const res = await agent
+        .post('/admin/insignias')
+        .send({
+          nombre: 'Claude Code 101',
+          emisor: 'Anthropic · Claude Academy',
+          proveedor: 'claude_academy',
+          imagen_url_remota: `data:image/svg+xml;base64,${svg}`,
+        })
+        .expect(201);
+      idsInsignias.push(res.body.id);
+      idsMedia.push(res.body.imagen.id);
+      keysMedia.push(res.body.imagen.s3_key);
+      expect(res.body.proveedor).toBe('claude_academy');
+      expect(res.body.imagen.s3_key).toMatch(/\/claude-code-101\.svg$/);
+    });
+
+    it('Fase 7i: una imagen generada con contenido activo es 400', async () => {
+      const antes = await prisma.insignia.count();
+      const svg = Buffer.from(
+        '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>',
+      ).toString('base64');
+      await agent
+        .post('/admin/insignias')
+        .send({
+          nombre: 'Maliciosa',
+          emisor: 'X',
+          imagen_url_remota: `data:image/svg+xml;base64,${svg}`,
+        })
+        .expect(400);
+      expect(await prisma.insignia.count()).toBe(antes);
+    });
+
     it('POST con imagen_url_remota a una IP privada responde 400 y no crea nada', async () => {
       const antes = await prisma.insignia.count();
       await agent
@@ -330,6 +366,32 @@ describe('Insignias (e2e, UC-35)', () => {
         id_externo: 'e2eabc',
         imagen: { url: 'https://cdn.test/c.jpg?a=1&b=2' },
       });
+    });
+
+    it('Fase 7i: Claude Academy lee el API público y devuelve la insignia generada', async () => {
+      interceptarFetch({
+        'https://academy.claude.com/api/anthropic.academy_public.api.v1alpha.AcademyPublicService/VerifyCertificate':
+          {
+            cuerpo: JSON.stringify({
+              valid: true,
+              certificateName: 'Ana Prueba',
+              courseTitle: 'Claude 101',
+              issuedAt: '2026-01-15T10:00:00Z',
+            }),
+            tipo: 'application/json',
+          },
+      });
+      const res = await agent
+        .post('/admin/insignias/importar')
+        .send({ entrada: 'https://academy.claude.com/verify/abcdef0123456789' })
+        .expect(201);
+      expect(res.body).toMatchObject({
+        proveedor: 'claude_academy',
+        nombre: 'Claude 101',
+        fecha_emision: '2026-01-15',
+        url_verificacion: 'https://academy.claude.com/verify/abcdef0123456789',
+      });
+      expect(res.body.imagen.url).toMatch(/^data:image\/svg\+xml;base64,/);
     });
 
     it('DataCamp 403: aviso y modo_proveedor archivo', async () => {
