@@ -55,3 +55,26 @@ describe('insigniaSchema (Fase 7e)', () => {
     expect(insigniaSchema.safeParse({ ...BASE, no_expira: true, fecha_expiracion: '' }).success).toBe(true)
   })
 })
+
+describe('insigniaSchema: imagen remota (Fase 7i)', () => {
+  const conImagen = (imagen_url_remota: string) =>
+    insigniaSchema.safeParse({
+      ...BASE,
+      no_expira: true,
+      imagen_media_id: undefined,
+      imagen_url_remota,
+    }).success
+
+  it('acepta https y la imagen generada como data URI svg o png', () => {
+    expect(conImagen('https://images.credly.com/a.png')).toBe(true)
+    expect(conImagen('data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=')).toBe(true)
+    expect(conImagen('data:image/png;base64,iVBORw0KGgo=')).toBe(true)
+  })
+
+  it('rechaza http, otros data URI y texto suelto', () => {
+    expect(conImagen('http://x.test/a.png')).toBe(false)
+    expect(conImagen('data:text/html;base64,PGgxPg==')).toBe(false)
+    expect(conImagen('data:image/svg+xml,<svg></svg>')).toBe(false)
+    expect(conImagen('no es url')).toBe(false)
+  })
+})

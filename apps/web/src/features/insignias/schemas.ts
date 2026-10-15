@@ -2,11 +2,15 @@ import { z } from 'zod'
 
 const MENSAJE_FECHA_INVALIDA = 'Fecha inválida (AAAA-MM-DD)'
 
+/** Fase 7i: imagen generada por el extractor (mismo patrón que el API). */
+const RE_DATA_URI_IMAGEN = /^data:image\/(?:svg\+xml|png);base64,[A-Za-z0-9+/]+={0,2}$/
+
 /**
  * Formulario de insignia (Fase 7d, UC-35): sirve para la vista previa editable
  * de la importación, el alta manual y la edición. Espeja `CreateInsigniaDto`:
  * nombre y emisor obligatorios; la imagen es `imagen_media_id` **o**
- * `imagen_url_remota` (https), al menos una.
+ * `imagen_url_remota` (https o, desde la Fase 7i, la imagen que generó el
+ * extractor como `data:image/svg+xml;base64,…`), al menos una.
  */
 export const insigniaSchema = z
   .object({
@@ -22,8 +26,14 @@ export const insigniaSchema = z
     imagen_media_id: z.string().min(1).optional(),
     imagen_url_remota: z
       .string()
-      .url('URL inválida')
-      .refine((valor) => valor.startsWith('https://'), 'La imagen debe ser https')
+      // Fase 7i: mismo tope que el DTO para la imagen generada (64 000).
+      .max(64_000, 'La imagen es demasiado grande')
+      .refine(
+        (valor) =>
+          RE_DATA_URI_IMAGEN.test(valor) ||
+          (valor.startsWith('https://') && z.string().url().safeParse(valor).success),
+        'La imagen debe ser https',
+      )
       .optional()
       .or(z.literal('')),
   })
