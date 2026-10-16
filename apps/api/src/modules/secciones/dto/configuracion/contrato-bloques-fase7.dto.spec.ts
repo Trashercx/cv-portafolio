@@ -128,7 +128,7 @@ describe('Contrato de bloques Fase 7 (7.2)', () => {
       ['skills', 'disposicion', 'nube', 'espiral'],
       ['skills', 'estilo_chip', 'contorno', 'neon'],
       ['contacto', 'estilo', 'tarjeta_destacada', 'gigante'],
-      ['galeria', 'efecto_hover', 'zoom', 'inclinar'],
+      ['galeria', 'efecto_hover', 'zoom', 'rebotar'],
       ['navegacion', 'estilo', 'barra', 'lateral'],
     ];
 

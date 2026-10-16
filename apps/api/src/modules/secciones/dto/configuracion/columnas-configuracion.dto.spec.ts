@@ -98,7 +98,7 @@ describe('ColumnasConfiguracionDto (Fase 3.3, UC-17)', () => {
     expect(errores.length).toBeGreaterThan(0);
   });
 
-  it('rechaza un hijo con tipo_seccion "hero" anidado en cualquier columna', async () => {
+  it('Fase 7j: acepta una portada (hero) dentro de una columna', async () => {
     const errores = await validarConfiguracion({
       distribucion: '1-1',
       alineacion_vertical: 'inicio',
@@ -115,8 +115,7 @@ describe('ColumnasConfiguracionDto (Fase 3.3, UC-17)', () => {
       columna_3: [],
     });
 
-    expect(errores.length).toBeGreaterThan(0);
-    expect(errores[0].constraints?.esListaDeBloques).toContain('hero');
+    expect(errores).toEqual([]);
   });
 
   it('rechaza un hijo con tipo_seccion "columnas" anidado dentro de columnas (sin anidamiento múltiple)', async () => {

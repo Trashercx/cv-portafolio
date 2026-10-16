@@ -78,3 +78,53 @@ describe('GaleriaConfiguracionDto (Fase 4.5, UC-18)', () => {
     expect(errores.length).toBeGreaterThan(0);
   });
 });
+
+describe('GaleriaConfiguracionDto (Fase 7j, UC-18)', () => {
+  it('acepta las disposiciones, efectos y opciones nuevas', async () => {
+    expect(
+      await validarConfiguracion({ proporcion: 'automatica' }),
+    ).toHaveLength(0);
+    for (const disposicion of ['mosaico', 'masonry', 'cinta']) {
+      expect(await validarConfiguracion({ disposicion })).toHaveLength(0);
+    }
+    expect(
+      await validarConfiguracion({
+        efecto_hover: 'grises',
+        proporcion: 'panoramica',
+        separacion: 'ninguna',
+        esquinas: 'redondeadas',
+        mostrar_titulos: 'al_pasar',
+        aparicion_fotos: 'zoom_suave',
+        reproduccion_automatica: true,
+        intervalo_segundos: 5,
+        velocidad_cinta: 'rapida',
+        ampliar_al_clic: false,
+        mostrar_titulo: false,
+      }),
+    ).toHaveLength(0);
+  });
+
+  it.each([
+    { disposicion: 'collage' },
+    { proporcion: '1:1' },
+    { separacion: 'enorme' },
+    { esquinas: 'circulares' },
+    { mostrar_titulos: true },
+    { aparicion_fotos: 'rebote' },
+    { reproduccion_automatica: 'si' },
+    { intervalo_segundos: 1 },
+    { intervalo_segundos: 16 },
+    { intervalo_segundos: 2.5 },
+    { velocidad_cinta: 'turbo' },
+    { mostrar_titulo: 'no' },
+  ])('rechaza %j', async (payload) => {
+    expect((await validarConfiguracion(payload)).length).toBeGreaterThan(0);
+  });
+
+  it('no persiste defaults de las opciones nuevas', () => {
+    const instancia = plainToInstance(GaleriaConfiguracionDto, {});
+    expect(instancia.proporcion).toBeUndefined();
+    expect(instancia.mostrar_titulos).toBeUndefined();
+    expect(instancia.mostrar_titulo).toBeUndefined();
+  });
+});

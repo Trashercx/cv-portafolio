@@ -72,4 +72,14 @@ export class BloqueConfiguracionBaseDto {
   @IsOptional()
   @IsIn(['ninguno', 'sutil', 'marcado'])
   borde_bloque?: 'ninguno' | 'sutil' | 'marcado';
+
+  /**
+   * Fase 7j (UC-07): mostrar u ocultar el título (`titulo_visible`) en la
+   * página. Oculto, el título sigue en el HTML solo para lectores de
+   * pantalla y la navegación lo sigue usando. Sin default en el API: la
+   * clave ausente se interpreta como `true` en el render.
+   */
+  @IsOptional()
+  @IsBoolean()
+  mostrar_titulo?: boolean;
 }
