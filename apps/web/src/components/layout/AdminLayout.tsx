@@ -13,6 +13,10 @@ import {
 } from '@/components/ui/sidebar'
 import { AvisoSesionExpirando } from '@/features/auth/AvisoSesionExpirando'
 import {
+  useSesionDeslizante,
+  useSincronizarSesionEntrePestanas,
+} from '@/features/auth/useSesionDeslizante'
+import {
   GuardiaNavegacionEditor,
   solicitarCerrarSesion,
 } from '@/features/editor/navegacion-protegida'
@@ -69,6 +73,11 @@ export function AdminLayout() {
   useEffect(() => {
     setSidebarAbierta(!esRutaDeAnchoCompleto)
   }, [esRutaDeAnchoCompleto])
+
+  // Fase 7j (UC-01): con actividad en el panel la sesión se renueva sola.
+  useSesionDeslizante()
+  // Fase 7j: una pestaña quieta adopta la renovación de otra (no cierra la sesión de ambas).
+  useSincronizarSesionEntrePestanas()
 
   const handleLogout = () => {
     // Fase 7 (UC-07): con cambios sin guardar pide confirmación antes de salir.

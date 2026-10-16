@@ -8,6 +8,7 @@ import { TarjetaClicable } from '../contexto-renderizado'
 import { ItemAnimado } from '../ItemAnimado'
 import { TarjetaInteractiva } from '../TarjetaInteractiva'
 import { CLASES_BORDE_BLOQUE, CLASES_BORDE_VIDRIO_BLOQUE } from '@/lib/escalas-bloque'
+import { TituloBloque } from './TituloBloque'
 
 type BloqueProyectosProps = {
   titulo: string
@@ -107,7 +108,7 @@ export function BloqueProyectos({
 
   return (
     <div className="grid gap-6">
-      <h2 className={cn('text-2xl font-semibold', alineacionTitulo)}>{titulo}</h2>
+      <TituloBloque titulo={titulo} alineacion={alineacionTitulo} mostrar={config.mostrar_titulo} />
       {filtrados.length === 0 ? (
         <p className="text-muted-foreground">Todavía no hay proyectos.</p>
       ) : (

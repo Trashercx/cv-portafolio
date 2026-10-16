@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 import { EnlaceBloque, TarjetaClicable } from '../contexto-renderizado'
 import { TarjetaInteractiva } from '../TarjetaInteractiva'
 import { CLASES_BORDE_BLOQUE, LINEA_BORDE_BLOQUE_CLASE } from '@/lib/escalas-bloque'
+import { TituloBloque } from './TituloBloque'
 
 type BloqueLogrosProps = {
   titulo: string
@@ -77,7 +78,7 @@ export function BloqueLogros({ titulo, config, logros, alineacionTitulo }: Bloqu
 
   return (
     <div className="grid gap-6">
-      <h2 className={cn('text-2xl font-semibold', alineacionTitulo)}>{titulo}</h2>
+      <TituloBloque titulo={titulo} alineacion={alineacionTitulo} mostrar={config.mostrar_titulo} />
       {filtrados.length === 0 ? (
         <p className="text-muted-foreground">Todavía no hay logros.</p>
       ) : estiloLista === 'linea_tiempo' ? (

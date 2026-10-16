@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils'
 import { ImagenResponsive } from '../ImagenResponsive'
 import { ItemAnimado } from '../ItemAnimado'
 import { CLASES_BORDE_BLOQUE, GROSOR_BORDE_X4_CLASE } from '@/lib/escalas-bloque'
+import { TituloBloque } from './TituloBloque'
 
 type BloqueSobreMiProps = {
   titulo: string
@@ -117,7 +118,7 @@ export function BloqueSobreMi({
 
   const texto = (
     <div className="grid gap-2">
-      <h2 className={cn('text-2xl font-semibold', alineacionTitulo)}>{titulo}</h2>
+      <TituloBloque titulo={titulo} alineacion={alineacionTitulo} mostrar={config.mostrar_titulo} />
       <p className="font-medium text-muted-foreground">
         {perfil.titulo_profesional} · {perfil.ubicacion}
       </p>

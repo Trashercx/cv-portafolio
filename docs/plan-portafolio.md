@@ -112,8 +112,8 @@ Dos actores: el **Administrador** (tú, usuario único autenticado) y el **Visit
 | UC-11 | Publicar o revertir una versión | estado (borrador/publicado), fecha de publicación | Publicar reemplaza la versión visible al público; revertir restaura la última versión publicada anterior. |
 | UC-15 | Configurar fondo animado del sitio | tipo (sólido, aurora mesh, malla de puntos con foco, rejilla en perspectiva, red de partículas, ondas fluidas, haces de luz, degradado con grano, campo de estrellas; catálogo de la Fase 7b, que reemplazó a los 8 tipos originales; la Fase 7c suma 11 tipos con tsparticles y shaders WebGL), configuración (velocidad, opacidad; desde la Fase 7b también intensidad e interactivo, opcionales), activo | Un fondo guardado y marcado como activo se aplica de inmediato a la vista previa y, tras publicar, al sitio en vivo; solo un fondo puede estar activo a la vez. |
 | UC-16 | Gestionar catálogo de skills | nombre, ícono, orden, visible | Un skill creado, editado, reordenado u ocultado se refleja en el carrusel de skills del sitio publicado tras publicar. |
-| UC-17 | Organizar secciones en columnas | distribución (1-1, 1-2, 2-1, 1-1-1), alineación vertical, espaciado, bloques anidados por columna | Un contenedor "Columnas" guardado con bloques distintos en cada columna se ve igual en el lienzo del editor, en la vista previa y, tras publicar, en el sitio en vivo; no admite anidar `hero` ni otro contenedor "Columnas" dentro de sí mismo. |
-| UC-18 | Gestionar galería de fotos (bloque) | fotos (referencia a media, título opcional), disposición (carousel/grid), columnas del grid | Un bloque "Galería" guardado con fotos ordenadas se ve igual en el lienzo, la vista previa y el sitio publicado; al hacer click en una foto se abre una vista ampliada (lightbox) navegable entre todas las fotos, sin salir de la página. |
+| UC-17 | Organizar secciones en columnas | distribución (1-1, 1-2, 2-1, 1-1-1), alineación vertical, espaciado, bloques anidados por columna | Un contenedor "Columnas" guardado con bloques distintos en cada columna se ve igual en el lienzo del editor, en la vista previa y, tras publicar, en el sitio en vivo; no admite anidar otro contenedor "Columnas" ni la navegación dentro de sí mismo; desde la Fase 7j sí admite la portada (`hero`), que se adapta al ancho de la columna. |
+| UC-18 | Gestionar galería de fotos (bloque) | fotos (referencia a media, título opcional), disposición (carousel/grid; desde la Fase 7j también mosaico, masonry y cinta), columnas del grid | Un bloque "Galería" guardado con fotos ordenadas se ve igual en el lienzo, la vista previa y el sitio publicado; al hacer click en una foto se abre una vista ampliada (lightbox) navegable entre todas las fotos, sin salir de la página. |
 
 ### Actor: Visitante
 
@@ -217,6 +217,17 @@ API y web menor, sin esquema. Contrato en `docs/plan-tecnico.md`, "Fase 7i".
 | UC | Extensión | Criterio de aceptación |
 |---|---|---|
 | UC-35 | Proveedor "Claude Academy": pegar un enlace `academy.claude.com/verify/<código>` lee los datos verificados (curso, titular, fecha) del API público de la página y, como la página no publica un archivo de imagen, genera la insignia como SVG con su mismo diseño y color; queda en la biblioteca como cualquier imagen importada | Pegar el enlace de cualquier insignia válida muestra la vista previa con nombre del curso, emisor, fecha, "no expira" y la imagen generada; un código que no existe muestra un aviso; guardar crea la insignia con la imagen en la biblioteca; un SVG con contenido activo enviado como imagen se rechaza. |
+
+### Extensiones de UC-01, UC-07, UC-17 y UC-18 — Fase 7j, sesión deslizante y bloques más flexibles (2026-10-15)
+
+Web y API menor, sin esquema. Contrato en `docs/plan-tecnico.md`, "Fase 7j".
+
+| UC | Extensión | Criterio de aceptación |
+|---|---|---|
+| UC-01 | Sesión deslizante: mientras el administrador use el panel (también dentro del lienzo del editor) la sesión se renueva sola antes de vencer | Con actividad en los últimos minutos, la sesión no expira ni muestra el aviso; sin actividad, el aviso y el cierre automático funcionan como antes; un fallo al renovar no muestra errores; con dos pestañas abiertas, la renovación de una llega a la otra y la pestaña quieta no cierra la sesión de ambas. |
+| UC-07 | El título de cada bloque de contenido se puede ocultar en la página ("Título en la página": visible u oculto) | Oculto, no se ve pero sigue para lectores de pantalla y la navegación sigue usando el título; la clave ausente equivale a visible. |
+| UC-17 | La portada (`hero`) se puede soltar dentro de una columna | Dentro de una columna la portada reduce altura y tipografía, apila texto y foto y no muestra el indicador de scroll; se ve igual en el lienzo, la vista previa y el sitio. |
+| UC-18 | Galería con cinco disposiciones (carrusel, grilla, mosaico, masonry y cinta en movimiento), proporción, separación, esquinas, títulos sobre la foto, aparición animada, carrusel automático con pausa, efectos "de gris a color" e "inclinar en 3D" y opción de no ampliar al clic | Cada disposición muestra en el editor solo sus opciones; las galerías guardadas antes conservan su aspecto en el lienzo y en el sitio (las opciones nuevas no se rellenan al abrirlas); con movimiento reducido o en el lienzo no hay desplazamiento ni avance automático; el carrusel automático y la cinta se pausan al pasar el cursor, al enfocar y con su botón. |
 
 ### Casos de uso propuestos — roadmap de profesionalización (2026-10-13, pendientes de aprobación)
 

@@ -44,10 +44,10 @@ describe('puckConfig — un bloque por tipo_seccion (Fase 7)', () => {
     expect(puckConfig.categories?.diseno?.components).toEqual(['hero', 'columnas', 'navegacion'])
   })
 
-  it('los slots de columnas no admiten hero, columnas ni navegacion', () => {
+  it('los slots de columnas admiten la portada pero no columnas ni navegacion (Fase 7j)', () => {
     for (const nombre of ['columna_1', 'columna_2', 'columna_3']) {
       const campo = bloques.columnas.fields[nombre] as unknown as { allow: string[] }
-      expect(campo.allow).not.toContain('hero')
+      expect(campo.allow).toContain('hero')
       expect(campo.allow).not.toContain('columnas')
       expect(campo.allow).not.toContain('navegacion')
       expect(campo.allow).toContain('galeria')
@@ -335,5 +335,81 @@ describe('puckConfig — insignias como medallas (Fase 7h, UC-35)', () => {
     expect(campos).not.toContain('animacion_reposo')
     expect(campos).not.toContain('marco_medalla')
     expect(campos).not.toContain('etiqueta_medalla')
+  })
+})
+
+describe('puckConfig — Fase 7j', () => {
+  it('"Título en la página" está en los bloques de contenido y no en la portada', () => {
+    expect(camposVisibles('logros', {})).toContain('mostrar_titulo')
+    expect(camposVisibles('galeria', {})).toContain('mostrar_titulo')
+    expect(camposVisibles('hero', {})).not.toContain('mostrar_titulo')
+    expect(bloques.logros.defaultProps.mostrar_titulo).toBe(true)
+  })
+
+  it('galería: cada disposición muestra solo sus opciones', () => {
+    const carrusel = camposVisibles('galeria', { disposicion: 'carousel' })
+    expect(carrusel).toContain('reproduccion_automatica')
+    expect(carrusel).not.toContain('intervalo_segundos')
+    expect(carrusel).not.toContain('columnas_grid')
+    expect(carrusel).not.toContain('velocidad_cinta')
+    expect(
+      camposVisibles('galeria', { disposicion: 'carousel', reproduccion_automatica: true }),
+    ).toContain('intervalo_segundos')
+
+    const cinta = camposVisibles('galeria', { disposicion: 'cinta' })
+    expect(cinta).toContain('velocidad_cinta')
+    expect(cinta).not.toContain('aparicion_fotos')
+
+    const masonry = camposVisibles('galeria', { disposicion: 'masonry' })
+    expect(masonry).toContain('columnas_grid')
+    expect(masonry).not.toContain('proporcion')
+
+    expect(camposVisibles('galeria', { disposicion: 'mosaico' })).not.toContain('columnas_grid')
+  })
+
+  it('galería: opciones del contrato y resumen de cada foto', () => {
+    const { fields } = bloques.galeria
+    expect(fields.disposicion.options?.map((o) => o.value)).toEqual([
+      'carousel',
+      'grid',
+      'mosaico',
+      'masonry',
+      'cinta',
+    ])
+    expect(fields.efecto_hover.options?.map((o) => o.value)).toEqual([
+      'zoom',
+      'elevar',
+      'inclinar',
+      'grises',
+      'ninguno',
+    ])
+    const resumen = (fields.fotos as unknown as {
+      getItemSummary: (foto: { titulo?: string }, indice?: number) => string
+    }).getItemSummary
+    expect(resumen({ titulo: 'Playa' }, 0)).toBe('Playa')
+    expect(resumen({ titulo: '' }, 2)).toBe('Foto 3')
+  })
+})
+
+describe('puckConfig — galería: opciones nuevas solo al insertar (Fase 7j)', () => {
+  type ConResolveData = {
+    resolveData: (
+      data: { props: Record<string, unknown> },
+      params: { trigger: string },
+    ) => { props: Record<string, unknown> }
+  }
+  const galeria = bloques.galeria as unknown as ConResolveData
+
+  it('defaultProps no trae las opciones nuevas (una galería guardada no cambia en el lienzo)', () => {
+    for (const clave of ['proporcion', 'mostrar_titulos', 'aparicion_fotos', 'separacion', 'esquinas']) {
+      expect(bloques.galeria.defaultProps).not.toHaveProperty(clave)
+    }
+  })
+
+  it('al insertar recibe los valores de partida; al cargar no', () => {
+    const insertada = galeria.resolveData({ props: { fotos: [] } }, { trigger: 'insert' })
+    expect(insertada.props).toMatchObject({ mostrar_titulos: 'al_pasar', aparicion_fotos: 'escalonada' })
+    const cargada = galeria.resolveData({ props: { fotos: [] } }, { trigger: 'load' })
+    expect(cargada.props).not.toHaveProperty('mostrar_titulos')
   })
 })

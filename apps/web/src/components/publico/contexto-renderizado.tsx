@@ -56,6 +56,22 @@ export function useVistaLimpia(): boolean {
   return useContext(ContextoVistaLimpia)
 }
 
+/**
+ * Fase 7j (UC-17): `true` para los bloques pintados dentro de una columna de
+ * `columnas`. Lo proveen `BloqueColumnas` (sitio) y el render del bloque
+ * `columnas` en Puck (lienzo); la portada lo lee para adaptar alto y
+ * tipografía al ancho de la columna.
+ */
+const ContextoEnColumna = createContext(false)
+
+export function ProveedorEnColumna({ children }: { children: ReactNode }) {
+  return <ContextoEnColumna.Provider value>{children}</ContextoEnColumna.Provider>
+}
+
+export function useEnColumna(): boolean {
+  return useContext(ContextoEnColumna)
+}
+
 type EnlaceBloqueProps = {
   /** Ruta interna (react-router). Mutuamente excluyente con `href`. */
   to?: string

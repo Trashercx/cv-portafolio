@@ -122,10 +122,10 @@ export class VersionesSitioService {
    * columna_3` con la MISMA forma que tendrían como fila propia (ver
    * `ColumnasConfiguracionDto`), así que esta función entra en esos 3
    * arrays y aplica la misma resolución a cada hijo (incluida una
-   * `galeria` anidada, tratada igual que un `hero` anidado). Hoy
-   * `@EsListaDeBloques` nunca permite anidar `hero` ni `columnas`
+   * `galeria` anidada y, desde la Fase 7j, una `hero` anidada). Hoy
+   * `@EsListaDeBloques` nunca permite anidar `columnas` ni `navegacion`
    * (restricción de anidamiento de un solo nivel, ver
-   * `es-lista-de-bloques.decorator.ts`), pero SÍ permite anidar `galeria`;
+   * `es-lista-de-bloques.decorator.ts`), pero SÍ `galeria` y `hero`;
    * de todos modos esta función no depende de esa garantía en ningún caso:
    * qué se puede anidar es una decisión de producto explícita del
    * validador, no algo que este resolver deba asumir en silencio.

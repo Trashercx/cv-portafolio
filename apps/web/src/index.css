@@ -544,3 +544,23 @@ div[class*='_MenuBar-inner_'] {
     display: none;
   }
 }
+
+/*
+ * Fase 7j (UC-18): cinta de la galería. Reutiliza `marquee` (-50 %: la pista
+ * lleva las fotos dos veces). Se pausa al pasar el cursor o al enfocar una
+ * foto; con movimiento reducido no se mueve y la cinta se desplaza a mano.
+ */
+.galeria-cinta-pista {
+  animation: marquee var(--duracion-cinta, 40s) linear infinite;
+}
+
+.galeria-cinta:hover .galeria-cinta-pista,
+.galeria-cinta:focus-within .galeria-cinta-pista {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .galeria-cinta-pista {
+    animation: none;
+  }
+}

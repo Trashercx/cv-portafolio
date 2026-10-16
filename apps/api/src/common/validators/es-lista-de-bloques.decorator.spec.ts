@@ -40,7 +40,7 @@ describe('@EsListaDeBloques', () => {
     expect(errores).toHaveLength(0);
   });
 
-  it('rechaza un bloque con tipo_seccion "hero" (la portada no puede anidarse en una columna)', async () => {
+  it('Fase 7j: acepta un bloque con tipo_seccion "hero" (la portada puede ir en una columna)', async () => {
     const dto = new ColumnaDto();
     dto.columna_1 = [
       {
@@ -53,11 +53,7 @@ describe('@EsListaDeBloques', () => {
 
     const errores = await validate(dto);
 
-    expect(errores).toHaveLength(1);
-    expect(errores[0].constraints).toHaveProperty('esListaDeBloques');
-    expect(errores[0].constraints?.esListaDeBloques).toContain(
-      'tipo_seccion "hero" no está permitido',
-    );
+    expect(errores).toHaveLength(0);
   });
 
   it('rechaza un bloque con tipo_seccion "columnas" (evita anidamiento sin límite)', async () => {
@@ -183,7 +179,7 @@ describe('@EsListaDeBloques', () => {
     dto.columna_1 = [
       bloqueSobreMiValido,
       {
-        tipo_seccion: 'hero',
+        tipo_seccion: 'navegacion',
         titulo_visible: 'Inicio',
         visible: true,
         configuracion: {},
