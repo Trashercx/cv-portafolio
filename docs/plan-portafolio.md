@@ -229,6 +229,14 @@ Web y API menor, sin esquema. Contrato en `docs/plan-tecnico.md`, "Fase 7j".
 | UC-17 | La portada (`hero`) se puede soltar dentro de una columna | Dentro de una columna la portada reduce altura y tipografía, apila texto y foto y no muestra el indicador de scroll; se ve igual en el lienzo, la vista previa y el sitio. |
 | UC-18 | Galería con cinco disposiciones (carrusel, grilla, mosaico, masonry y cinta en movimiento), proporción, separación, esquinas, títulos sobre la foto, aparición animada, carrusel automático con pausa, efectos "de gris a color" e "inclinar en 3D" y opción de no ampliar al clic | Cada disposición muestra en el editor solo sus opciones; las galerías guardadas antes conservan su aspecto en el lienzo y en el sitio (las opciones nuevas no se rellenan al abrirlas); con movimiento reducido o en el lienzo no hay desplazamiento ni avance automático; el carrusel automático y la cinta se pausan al pasar el cursor, al enfocar y con su botón. |
 
+### Extensión de UC-07 y UC-09 — Fase 7k, elegir imágenes con miniaturas en el editor (2026-10-15)
+
+Solo web. Contrato en `docs/plan-tecnico.md`, "Fase 7k".
+
+| UC | Extensión | Criterio de aceptación |
+|---|---|---|
+| UC-07, UC-09 | Los campos de imagen del editor visual (fondo de la portada, fotos de la galería) muestran la imagen elegida en miniatura con su nombre y abren la biblioteca en un modal con miniaturas, búsqueda, filtro por carpeta y subida directa | Elegir una foto de la galería o el fondo de la portada se hace viendo las imágenes, no una lista de texto; cada imagen se identifica por su nombre legible (las anteriores a la Fase 7h, por su texto alternativo); una imagen subida desde el modal queda elegida; el fondo de la portada se puede quitar. |
+
 ### Casos de uso propuestos — roadmap de profesionalización (2026-10-13, pendientes de aprobación)
 
 Los UC-19 a UC-34 nacen de la propuesta de la Sección 7 (roadmap). Se listan aquí para que el índice de casos de uso siga siendo la única fuente de verdad. **Solo UC-27 y UC-34 están aprobados e implementados** (Fase 8, 2026-10-14) y UC-35 (insignias, Fase 7d, definido en la sección anterior); el resto sigue pendiente: cada fase del roadmap se aprueba por separado y recién entonces se agregan sus entidades al diagrama ER (vía `db-schema`) y se codifica. La Fase 6 (fundamentos de producción) no agrega casos de uso: refuerza UC-01 (cierre de sesión real, límite de intentos por IP) y UC-12/13 (metadatos SEO, accesibilidad, rendimiento).
