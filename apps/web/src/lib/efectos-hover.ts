@@ -26,7 +26,7 @@ export const INCLINACION_MAXIMA_GRADOS = 6
  * siempre, que es el default.
  */
 export const EFECTO_HOVER_GALERIA_CLASE: Record<
-  'ninguno' | 'zoom' | 'elevar',
+  'ninguno' | 'zoom' | 'elevar' | 'grises' | 'inclinar',
   { tarjeta: string; imagen: string }
 > = {
   ninguno: { tarjeta: '', imagen: '' },
@@ -36,4 +36,12 @@ export const EFECTO_HOVER_GALERIA_CLASE: Record<
       'transition-all duration-300 hover:-translate-y-1 hover:shadow-xl motion-reduce:transition-none motion-reduce:hover:translate-y-0',
     imagen: '',
   },
+  // Fase 7j (UC-18): en blanco y negro hasta que se pasa el cursor o se enfoca.
+  grises: {
+    tarjeta: '',
+    imagen:
+      'grayscale transition-[filter,transform] duration-500 group-hover/foto:grayscale-0 group-hover/foto:scale-[1.03] group-focus-visible/foto:grayscale-0 motion-reduce:group-hover/foto:scale-100',
+  },
+  // Fase 7j: inclinación 3D que sigue al cursor (la aplica `TarjetaInteractiva`).
+  inclinar: { tarjeta: '', imagen: '' },
 }

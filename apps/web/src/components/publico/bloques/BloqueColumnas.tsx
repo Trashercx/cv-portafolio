@@ -5,6 +5,7 @@ import type {
   DistribucionColumnas,
   EspaciadoColumnas,
 } from '@/features/secciones/types'
+import { ProveedorEnColumna } from '../contexto-renderizado'
 import { DespachoBloqueSeccion, type DatosDespachoBloque } from './DespachoBloqueSeccion'
 
 // Clases Tailwind literales (nunca construidas en runtime concatenando
@@ -59,15 +60,18 @@ export function BloqueColumnas({ config, datos, soloVisibles = true }: BloqueCol
   const tresColumnas = config.distribucion === '1-1-1'
 
   return (
-    <div
-      className={`grid ${GRID_COLS_POR_DISTRIBUCION[config.distribucion]} ${ALINEACION_VERTICAL_CLASE[config.alineacion_vertical]} ${ESPACIADO_CLASE[config.espaciado]}`}
-    >
-      <ColumnaHijos hijos={config.columna_1} datos={datos} soloVisibles={soloVisibles} />
-      <ColumnaHijos hijos={config.columna_2} datos={datos} soloVisibles={soloVisibles} />
-      {tresColumnas ? (
-        <ColumnaHijos hijos={config.columna_3} datos={datos} soloVisibles={soloVisibles} />
-      ) : null}
-    </div>
+    // Fase 7j (UC-17): los hijos saben que viven en una columna (portada compacta).
+    <ProveedorEnColumna>
+      <div
+        className={`grid ${GRID_COLS_POR_DISTRIBUCION[config.distribucion]} ${ALINEACION_VERTICAL_CLASE[config.alineacion_vertical]} ${ESPACIADO_CLASE[config.espaciado]}`}
+      >
+        <ColumnaHijos hijos={config.columna_1} datos={datos} soloVisibles={soloVisibles} />
+        <ColumnaHijos hijos={config.columna_2} datos={datos} soloVisibles={soloVisibles} />
+        {tresColumnas ? (
+          <ColumnaHijos hijos={config.columna_3} datos={datos} soloVisibles={soloVisibles} />
+        ) : null}
+      </div>
+    </ProveedorEnColumna>
   )
 }
 

@@ -9,7 +9,7 @@ import { resolverEnlaceSeguro } from '@/lib/enlaces'
 import { fondoImagenSet, SIZES_POR_CONTEXTO } from '@/lib/imagenes'
 import { CLASES_BORDE_BLOQUE, GROSOR_BORDE_X2_CLASE, GROSOR_BORDE_X4_CLASE } from '@/lib/escalas-bloque'
 import { cn } from '@/lib/utils'
-import { EnlaceBloque, useModoRenderizado } from '../contexto-renderizado'
+import { EnlaceBloque, useEnColumna, useModoRenderizado } from '../contexto-renderizado'
 import { ImagenResponsive } from '../ImagenResponsive'
 import { RedesSociales } from '../RedesSociales'
 
@@ -45,6 +45,35 @@ const ALTURA_CLASE: Record<NonNullable<HeroConfiguracion['altura']>, string> = {
   normal: '',
   grande: 'min-h-[70vh]',
   pantalla_completa: 'min-h-screen',
+}
+
+/**
+ * Fase 7j (UC-17): dentro de una columna la portada no puede medir lo que
+ * mide a sangre completa. Alturas, título y disposición se reducen un paso
+ * y `dividido` apila texto y foto (la columna ya es estrecha).
+ */
+const ALTURA_EN_COLUMNA_CLASE: Record<NonNullable<HeroConfiguracion['altura']>, string> = {
+  normal: '',
+  grande: 'min-h-[50vh]',
+  pantalla_completa: 'min-h-[70vh]',
+}
+
+const TAMANO_TITULO_EN_COLUMNA_CLASE: Record<
+  NonNullable<HeroConfiguracion['tamano_titulo']>,
+  string
+> = {
+  normal: 'text-3xl',
+  grande: 'text-4xl sm:text-5xl',
+}
+
+const TITULO_EDITORIAL_EN_COLUMNA_CLASE =
+  'text-4xl font-bold leading-[0.95] tracking-tight text-balance sm:text-5xl'
+
+// `content-center`: con altura mínima, la rejilla no reparte el alto sobrante entre sus filas.
+const CONTENEDOR_EN_COLUMNA_CLASE: Record<Disposicion, string> = {
+  centrado: 'grid content-center gap-4 p-6 text-center',
+  dividido: 'grid content-center gap-6 p-6 text-left',
+  editorial: 'grid content-center gap-5 p-6 text-left',
 }
 
 /** Clase del overlay semi-transparente sobre la imagen de fondo según `config.overlay_fondo` (Fase 3.4). */
@@ -300,6 +329,8 @@ export function BloqueHero({
   hrefSiguiente,
 }: BloqueHeroProps) {
   const modoRenderizado = useModoRenderizado()
+  // Fase 7j: portada dentro de una columna (`ProveedorEnColumna`).
+  const anidada = useEnColumna()
   const disposicion: Disposicion = config.disposicion ?? 'centrado'
   const efectoTitulo = config.efecto_titulo ?? 'ninguno'
   const decoracion = config.decoracion_fondo ?? 'ninguna'
@@ -363,7 +394,9 @@ export function BloqueHero({
         }}
         className={
           enColumna
-            ? `relative z-10 mx-auto size-48 sm:size-60 md:size-72 ${claseFoto}`
+            ? anidada
+              ? `relative z-10 mx-auto size-40 sm:size-48 ${claseFoto}`
+              : `relative z-10 mx-auto size-48 sm:size-60 md:size-72 ${claseFoto}`
             : config.posicion_foto === 'centrada'
               ? `relative z-10 ${disposicion === 'centrado' ? 'mx-auto ' : ''}size-24 ${claseFoto}`
               : `absolute z-10 size-16 sm:size-20 ${claseFoto} ${
@@ -381,23 +414,31 @@ export function BloqueHero({
   const textoBotonSecundario = config.texto_boton_secundario && config.enlace_boton_secundario
   const mostrarRedes = Boolean(config.mostrar_redes) && redesSociales.length > 0
 
+  // Fase 7j: dentro de una columna la portada es secundaria; el único
+  // `<h1>` de la página es el de la portada principal.
+  const EtiquetaTitulo = anidada ? 'h2' : 'h1'
+
   const textos = (
     <div className={TEXTOS_DISPOSICION_CLASE[disposicion]}>
-      <h1
+      <EtiquetaTitulo
         className={cn(
           // `anywhere` (no `break-words`): también reduce el ancho mínimo, así que un
           // nombre largo no ensancha la rejilla ni provoca scroll horizontal a 360 px.
           'font-bold [overflow-wrap:anywhere]',
           disposicion === 'editorial'
-            ? TITULO_EDITORIAL_CLASE
-            : TAMANO_TITULO_CLASE[config.tamano_titulo ?? 'normal'],
+            ? anidada
+              ? TITULO_EDITORIAL_EN_COLUMNA_CLASE
+              : TITULO_EDITORIAL_CLASE
+            : (anidada ? TAMANO_TITULO_EN_COLUMNA_CLASE : TAMANO_TITULO_CLASE)[
+                config.tamano_titulo ?? 'normal'
+              ],
           disposicion === 'centrado' && alineacionTitulo,
           EFECTO_TITULO_CLASE[efectoTitulo],
         )}
         style={efectoTitulo === 'degradado' ? undefined : { color: 'var(--color-texto)' }}
       >
         <TextoTitulo titulo={config.titulo} efecto={efectoTitulo} />
-      </h1>
+      </EtiquetaTitulo>
       {titulosRotativos.length > 0 ? <TitulosRotativos titulos={titulosRotativos} /> : null}
       <p
         className={cn('relative z-10', SUBTITULO_DISPOSICION_CLASE[disposicion])}
@@ -462,9 +503,9 @@ export function BloqueHero({
       }
       className={cn(
         'relative rounded-lg',
-        CONTENEDOR_DISPOSICION_CLASE[disposicion],
-        ALTURA_CLASE[config.altura ?? 'normal'],
-        config.mostrar_indicador_scroll && 'pb-16',
+        (anidada ? CONTENEDOR_EN_COLUMNA_CLASE : CONTENEDOR_DISPOSICION_CLASE)[disposicion],
+        (anidada ? ALTURA_EN_COLUMNA_CLASE : ALTURA_CLASE)[config.altura ?? 'normal'],
+        config.mostrar_indicador_scroll && !anidada && 'pb-16',
         decoracion !== 'ninguna' && 'overflow-hidden',
       )}
     >
@@ -495,7 +536,8 @@ export function BloqueHero({
         )
       ) : null}
       {!enColumna && esEsquina ? fotoPerfil : null}
-      {config.mostrar_indicador_scroll ? <IndicadorScroll href={hrefSiguiente} /> : null}
+      {/* Dentro de una columna no hay "siguiente sección" a la que bajar. */}
+      {config.mostrar_indicador_scroll && !anidada ? <IndicadorScroll href={hrefSiguiente} /> : null}
     </div>
   )
 }

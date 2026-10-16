@@ -5,6 +5,7 @@ import type { SkillsConfiguracion } from '@/features/secciones/types'
 import { cn } from '@/lib/utils'
 import { ItemAnimado } from '../ItemAnimado'
 import { CLASES_BORDE_CHIP_CONTORNO, CLASES_BORDE_VIDRIO_BLOQUE } from '@/lib/escalas-bloque'
+import { TituloBloque } from './TituloBloque'
 
 type BloqueSkillsProps = {
   titulo: string
@@ -137,7 +138,7 @@ export function BloqueSkills({ titulo, config, skills, alineacionTitulo }: Bloqu
   if (visibles.length === 0) {
     return (
       <div className="grid gap-6">
-        <h2 className={cn('text-2xl font-semibold', alineacionTitulo)}>{titulo}</h2>
+        <TituloBloque titulo={titulo} alineacion={alineacionTitulo} mostrar={config.mostrar_titulo} />
         <p className="text-center text-muted-foreground">Todavía no hay skills cargados.</p>
       </div>
     )
@@ -149,7 +150,7 @@ export function BloqueSkills({ titulo, config, skills, alineacionTitulo }: Bloqu
     const estiloChip = config.estilo_chip ?? 'simple'
     return (
       <div className="grid gap-6">
-        <h2 className={cn('text-2xl font-semibold', alineacionTitulo)}>{titulo}</h2>
+        <TituloBloque titulo={titulo} alineacion={alineacionTitulo} mostrar={config.mostrar_titulo} />
         <ul
           data-disposicion={disposicion}
           className={DISPOSICION_LISTA_CLASE[disposicion]}
@@ -192,7 +193,7 @@ export function BloqueSkills({ titulo, config, skills, alineacionTitulo }: Bloqu
 
   return (
     <div className="grid gap-6 overflow-hidden">
-      <h2 className={cn('text-2xl font-semibold', alineacionTitulo)}>{titulo}</h2>
+      <TituloBloque titulo={titulo} alineacion={alineacionTitulo} mostrar={config.mostrar_titulo} />
       {/*
         Dos pistas hermanas con contenido IDÉNTICO (patrón estándar de
         marquee infinito), animadas juntas con `translateX(-50%)`: como

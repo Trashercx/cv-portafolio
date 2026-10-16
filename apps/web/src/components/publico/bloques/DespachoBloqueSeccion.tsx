@@ -8,6 +8,7 @@ import type {
   CertificacionesConfiguracion,
   ContactoConfiguracion,
   GaleriaConfiguracion,
+  HeroConfiguracion,
   InsigniasConfiguracion,
   LogrosConfiguracion,
   ProyectosConfiguracion,
@@ -20,6 +21,7 @@ import { ALINEACION_TEXTO_CLASE } from '@/lib/escalas-bloque'
 import { BloqueCertificaciones } from './BloqueCertificaciones'
 import { BloqueContacto } from './BloqueContacto'
 import { BloqueGaleria } from './BloqueGaleria'
+import { BloqueHero } from './BloqueHero'
 import { BloqueInsignias } from './BloqueInsignias'
 import { BloqueLogros } from './BloqueLogros'
 import { BloqueProyectos } from './BloqueProyectos'
@@ -86,7 +88,9 @@ function resolverAlineacionTitulo(
 ): string {
   const { alineacion_texto } = configuracion as BloqueConfiguracionBase
   const defaultDelTipo =
-    tipoSeccion === 'contacto' || tipoSeccion === 'skills' ? 'centro' : 'izquierda'
+    tipoSeccion === 'contacto' || tipoSeccion === 'skills' || tipoSeccion === 'hero'
+      ? 'centro'
+      : 'izquierda'
   return ALINEACION_TEXTO_CLASE[alineacion_texto ?? defaultDelTipo]
 }
 
@@ -99,6 +103,17 @@ export function DespachoBloqueSeccion({
   const alineacionTitulo = resolverAlineacionTitulo(configuracion, tipo_seccion)
 
   switch (tipo_seccion) {
+    case 'hero':
+      // Fase 7j (UC-17): portada dentro de una columna. Su imagen de fondo ya
+      // viene resuelta en `configuracion.imagen_fondo` (snapshot recursivo).
+      return (
+        <BloqueHero
+          config={configuracion as HeroConfiguracion}
+          perfil={datos.perfil}
+          redesSociales={datos.redes_sociales}
+          alineacionTitulo={alineacionTitulo}
+        />
+      )
     case 'sobre-mi':
       return (
         <BloqueSobreMi

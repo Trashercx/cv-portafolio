@@ -4,6 +4,7 @@ import type { ContactoConfiguracion } from '@/features/secciones/types'
 import { cn } from '@/lib/utils'
 import { RedesSociales } from '../RedesSociales'
 import { CLASES_BORDE_BLOQUE } from '@/lib/escalas-bloque'
+import { TituloBloque } from './TituloBloque'
 
 type BloqueContactoProps = {
   titulo: string
@@ -40,16 +41,16 @@ export function BloqueContacto({
     return (
       <div data-estilo-contacto="tarjeta_destacada" className={TARJETA_DESTACADA_CLASE}>
         <div className="grid gap-2">
-          <h2
+          <TituloBloque
+            titulo={titulo}
+            mostrar={config.mostrar_titulo}
             className={cn(
               llamada
                 ? 'text-sm font-semibold uppercase tracking-wide text-muted-foreground'
                 : 'text-3xl font-bold',
               'text-center',
             )}
-          >
-            {titulo}
-          </h2>
+          />
           {llamada ? (
             <p className="text-3xl font-bold text-balance sm:text-4xl">{llamada}</p>
           ) : null}
@@ -67,7 +68,7 @@ export function BloqueContacto({
 
   return (
     <div className="grid gap-4">
-      <h2 className={cn('text-2xl font-semibold', alineacionTitulo)}>{titulo}</h2>
+      <TituloBloque titulo={titulo} alineacion={alineacionTitulo} mostrar={config.mostrar_titulo} />
       {aviso}
       <RedesSociales
         redes={redesSociales}

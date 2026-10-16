@@ -12,6 +12,8 @@ type ItemAnimadoProps = {
   indice: number
   className?: string
   children: ReactNode
+  /** Fase 7j: animación del ítem (por defecto `deslizar_arriba`, la de siempre). */
+  variante?: keyof typeof VARIANTES_ENTRADA
 }
 
 /**
@@ -19,9 +21,14 @@ type ItemAnimadoProps = {
  * entrar en el viewport (Fase 7, 7.3, UC-12). Sin animación (movimiento
  * reducido o lienzo del editor) es un `div` plano.
  */
-export function ItemAnimado({ indice, className, children }: ItemAnimadoProps) {
+export function ItemAnimado({
+  indice,
+  className,
+  children,
+  variante: clave = 'deslizar_arriba',
+}: ItemAnimadoProps) {
   const activa = useAnimacionesActivas()
-  const variante = VARIANTES_ENTRADA.deslizar_arriba
+  const variante = VARIANTES_ENTRADA[clave]
 
   if (!activa) return <div className={className}>{children}</div>
 

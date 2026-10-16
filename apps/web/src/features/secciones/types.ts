@@ -44,14 +44,14 @@ export const TIPO_SECCION_LABEL: Record<TipoSeccion, string> = {
 
 /**
  * Tipos de bloque que se pueden anidar dentro de una columna de un
- * contenedor `columnas` (UC-17). Nunca `'hero'` (la portada ocupa todo el
- * ancho por diseño) ni `'columnas'` (evita anidamiento sin límite) — ver
+ * contenedor `columnas` (UC-17). Nunca `'columnas'` (evita anidamiento sin
+ * límite) ni `'navegacion'`; desde la Fase 7j la portada `'hero'` sí — ver
  * docs/plan-portafolio.md §4, restricción reforzada tanto en el `allow` del
  * slot de Puck (`puck-config.tsx`) como en el DTO del backend. `'galeria'`
  * (UC-18, Fase 4.5) cae automáticamente acá: una galería de fotos puede
  * vivir dentro de una columna igual que cualquier otro bloque de contenido.
  */
-export type TipoSeccionAnidable = Exclude<TipoSeccion, 'hero' | 'columnas' | 'navegacion'>
+export type TipoSeccionAnidable = Exclude<TipoSeccion, 'columnas' | 'navegacion'>
 
 export type EspaciadoVerticalBloque = 'compacto' | 'normal' | 'amplio'
 export type AnchoContenidoBloque = 'estrecho' | 'normal' | 'amplio' | 'completo'
@@ -99,6 +99,8 @@ export type BloqueConfiguracionBase = {
   separador_forma?: SeparadorFormaBloque
   /** Fase 7c (UC-12): contorno de contenedores y tarjetas del bloque. @default 'sutil' (aspecto previo) */
   borde_bloque?: BordeBloqueBloque
+  /** Fase 7j: mostrar el título en la página. Ausente = `true`. */
+  mostrar_titulo?: boolean
 }
 
 export type HeroConfiguracion = BloqueConfiguracionBase & {
@@ -283,13 +285,31 @@ export type GaleriaFoto = {
 export type GaleriaConfiguracion = BloqueConfiguracionBase & {
   /** @default [] */
   fotos: GaleriaFoto[]
-  /** @default 'carousel' */
-  disposicion?: 'carousel' | 'grid'
-  /** @default 3 — solo aplica si `disposicion === 'grid'`. */
+  /** @default 'carousel'. Fase 7j: + mosaico, masonry y cinta. */
+  disposicion?: DisposicionGaleria
+  /** @default 3 — aplica a grilla y masonry. */
   columnas_grid?: 2 | 3 | 4
-  /** Fase 7 (7.2). @default 'zoom' */
-  efecto_hover?: 'ninguno' | 'zoom' | 'elevar'
+  /** Fase 7 (7.2). @default 'zoom'. Fase 7j: + grises e inclinar. */
+  efecto_hover?: 'ninguno' | 'zoom' | 'elevar' | 'grises' | 'inclinar'
+  // Fase 7j: opcionales sin default persistido (ausente = aspecto previo).
+  /** 'automatica' o ausente = la de antes según la disposición. */
+  proporcion?: 'automatica' | 'cuadrada' | 'horizontal' | 'panoramica' | 'vertical'
+  separacion?: 'ninguna' | 'compacta' | 'normal' | 'amplia'
+  esquinas?: 'rectas' | 'suaves' | 'redondeadas'
+  /** Ausente = 'nunca'. */
+  mostrar_titulos?: 'nunca' | 'al_pasar' | 'siempre'
+  /** Ausente = 'ninguna'. */
+  aparicion_fotos?: 'ninguna' | 'escalonada' | 'zoom_suave'
+  reproduccion_automatica?: boolean
+  /** 2–15; ausente = 5. */
+  intervalo_segundos?: number
+  /** Ausente = 'normal'. */
+  velocidad_cinta?: 'lenta' | 'normal' | 'rapida'
+  /** Ausente = `true`. */
+  ampliar_al_clic?: boolean
 }
+
+export type DisposicionGaleria = 'carousel' | 'grid' | 'mosaico' | 'masonry' | 'cinta'
 
 /**
  * `configuracion` para `tipo_seccion = 'navegacion'` (Fase 7, 7.2/7.3). Espeja

@@ -135,3 +135,74 @@ export const COLUMNAS_GRID_CLASE: Record<2 | 3 | 4, string> = {
   3: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
   4: 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4',
 }
+
+/**
+ * Fase 7j (UC-18): tablas literales de la galería, compartidas por el sitio
+ * y el lienzo. `masonry` usa columnas CSS (`columns-*`), no rejilla.
+ */
+export const PROPORCION_FOTO_CLASE = {
+  cuadrada: 'aspect-square',
+  horizontal: 'aspect-[4/3]',
+  panoramica: 'aspect-video',
+  vertical: 'aspect-[3/4]',
+} as const
+
+export const SEPARACION_GALERIA_CLASE = {
+  ninguna: { gap: 'gap-0', columnas: 'gap-0', item: 'mb-0', relleno: 'pr-0' },
+  compacta: { gap: 'gap-2', columnas: 'gap-2', item: 'mb-2', relleno: 'pr-2' },
+  normal: { gap: 'gap-4', columnas: 'gap-4', item: 'mb-4', relleno: 'pr-4' },
+  amplia: { gap: 'gap-6', columnas: 'gap-6', item: 'mb-6', relleno: 'pr-6' },
+} as const
+
+export const ESQUINAS_FOTO_CLASE = {
+  rectas: 'rounded-none',
+  suaves: 'rounded-lg',
+  redondeadas: 'rounded-2xl',
+} as const
+
+export const COLUMNAS_MASONRY_CLASE: Record<2 | 3 | 4, string> = {
+  2: 'columns-1 sm:columns-2',
+  3: 'columns-1 sm:columns-2 lg:columns-3',
+  4: 'columns-2 lg:columns-4',
+}
+
+/**
+ * Mosaico (bento): patrón que se repite cada 7 fotos y ocupa 12 celdas, es
+ * decir 3 filas completas de 4 columnas (con `grid-flow-dense`): grande 2x2,
+ * dos simples, alta 1x2, ancha 2x1 y dos simples.
+ */
+export const PATRON_MOSAICO = [
+  'col-span-2 row-span-2',
+  '',
+  '',
+  'row-span-2',
+  'col-span-2',
+  '',
+  '',
+] as const
+
+/**
+ * Última tanda incompleta del mosaico (menos de 7 fotos): tamaños que siguen
+ * llenando filas completas de 4 columnas, para que no queden huecos al final.
+ */
+export const PATRON_MOSAICO_FINAL: Record<number, readonly string[]> = {
+  1: ['col-span-2 sm:col-span-4 row-span-2'],
+  2: ['col-span-2 row-span-2', 'col-span-2 row-span-2'],
+  3: ['col-span-2 row-span-2', 'row-span-2', 'row-span-2'],
+  4: ['col-span-2 row-span-2', '', '', 'col-span-2'],
+  5: ['col-span-2 row-span-2', '', '', '', ''],
+  6: ['col-span-2 row-span-2', '', '', 'row-span-2', 'row-span-2', 'col-span-2'],
+}
+
+/** Clase de la foto `indice` de un mosaico de `total` fotos. */
+export function claseMosaico(indice: number, total: number): string {
+  const ciclo = PATRON_MOSAICO.length
+  const inicioUltimaTanda = total - (total % ciclo)
+  if (total % ciclo !== 0 && indice >= inicioUltimaTanda) {
+    return PATRON_MOSAICO_FINAL[total % ciclo][indice - inicioUltimaTanda]
+  }
+  return PATRON_MOSAICO[indice % ciclo]
+}
+
+/** Cinta: segundos que tarda en pasar cada foto, por velocidad. */
+export const SEGUNDOS_POR_FOTO_CINTA = { lenta: 9, normal: 6, rapida: 3.5 } as const

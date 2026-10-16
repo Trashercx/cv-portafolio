@@ -11,6 +11,7 @@ import { useModoRenderizado } from '../contexto-renderizado'
 import { ImagenResponsive } from '../ImagenResponsive'
 import { ItemAnimado } from '../ItemAnimado'
 import { MedallaInsignia } from './MedallaInsignia'
+import { TituloBloque } from './TituloBloque'
 import { TarjetaInteractiva } from '../TarjetaInteractiva'
 
 type EfectoInsignia = NonNullable<InsigniasConfiguracion['efecto_hover']>
@@ -259,7 +260,7 @@ export function BloqueInsignias({ titulo, config, insignias, alineacionTitulo }:
     return (
       <div className="grid gap-8">
         <div className={cn('grid gap-1', alineacionTitulo)}>
-          <h2 className="text-2xl font-semibold">{encabezado}</h2>
+          <TituloBloque titulo={encabezado} mostrar={config.mostrar_titulo} />
           {config.subtitulo ? <p className="text-muted-foreground">{config.subtitulo}</p> : null}
         </div>
         {mostradas.length === 0 ? (
@@ -290,7 +291,7 @@ export function BloqueInsignias({ titulo, config, insignias, alineacionTitulo }:
   return (
     <div className="grid gap-6">
       <div className={cn('grid gap-1', alineacionTitulo)}>
-        <h2 className="text-2xl font-semibold">{encabezado}</h2>
+        <TituloBloque titulo={encabezado} mostrar={config.mostrar_titulo} />
         {config.subtitulo ? <p className="text-muted-foreground">{config.subtitulo}</p> : null}
       </div>
       {mostradas.length === 0 ? (

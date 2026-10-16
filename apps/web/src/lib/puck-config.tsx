@@ -2,6 +2,7 @@ import { FieldLabel } from '@puckeditor/core'
 import type { Config, CustomField, Slot } from '@puckeditor/core'
 import { Image as ImageIcon, List as ListIcon } from 'lucide-react'
 import { EnvoltorioSeccion } from '@/components/publico/EnvoltorioSeccion'
+import { ProveedorEnColumna } from '@/components/publico/contexto-renderizado'
 import {
   BloqueCertificaciones,
   BloqueContacto,
@@ -43,14 +44,16 @@ import type {
  * Tipos de bloque que se pueden soltar dentro de una columna (UC-17), en el
  * mismo orden/valores que `allow` de cada slot más abajo — mismo criterio
  * reforzado en el DTO del backend (`docs/plan-portafolio.md` §4): nunca
- * `'hero'` (la portada ocupa todo el ancho por diseño), `'columnas'` (evita
- * anidamiento sin límite) ni `'navegacion'` (Fase 7: la barra de navegación
- * es del sitio, no de una columna; igual que `hero`, el DTO la rechaza).
+ * `'columnas'` (evita anidamiento sin límite) ni `'navegacion'` (Fase 7: la
+ * barra de navegación es del sitio, no de una columna; el DTO la rechaza).
  * `'galeria'` (UC-18, Fase 4.5) se suma acá igual que cualquier otro bloque
- * de contenido. Está tipado como `TipoSeccionAnidable`, que ya excluye esos
- * tres: agregar `'navegacion'` aquí no compilaría.
+ * de contenido; desde la Fase 7j también la portada (`'hero'`). Está tipado
+ * como `TipoSeccionAnidable`, que ya excluye esos dos: agregar `'navegacion'`
+ * aquí no compilaría.
  */
 const BLOQUES_ANIDABLES: TipoSeccionAnidable[] = [
+  // Fase 7j (UC-17): la portada también, adaptada al ancho de la columna.
+  'hero',
   'sobre-mi',
   'proyectos',
   'certificaciones',
@@ -230,7 +233,34 @@ const CAMPOS_BASE_BLOQUE = {
       { label: 'Escalar', value: 'escalar' },
     ],
   },
+  // Fase 7j (UC-07): el título es obligatorio como dato (lo usa la
+  // navegación), pero se puede ocultar en la página. Va al final para quedar
+  // junto a "Visible" y "Título", que cada bloque agrega después.
+  mostrar_titulo: {
+    type: 'radio',
+    label: 'Título en la página',
+    options: [
+      { label: 'Visible', value: true },
+      { label: 'Oculto', value: false },
+    ],
+  },
 } as const
+
+/**
+ * Fase 7j (UC-18): valores con que nace una galería nueva (vía `resolveData`
+ * al insertar, no `defaultProps`: ver el comentario del bloque `galeria`).
+ */
+const PROPS_GALERIA_NUEVA = {
+  proporcion: 'horizontal',
+  separacion: 'normal',
+  esquinas: 'suaves',
+  mostrar_titulos: 'al_pasar',
+  aparicion_fotos: 'escalonada',
+  reproduccion_automatica: false,
+  intervalo_segundos: 5,
+  velocidad_cinta: 'normal',
+  ampliar_al_clic: true,
+} as const satisfies Partial<GaleriaConfiguracion>
 
 /** `defaultProps` de los campos base, iguales para todos los tipos de bloque (ver comentario de `CAMPOS_BASE_BLOQUE`). Coinciden con los defaults del API. */
 const DEFAULT_PROPS_BASE_BLOQUE: Required<BloqueConfiguracionBase> = {
@@ -242,6 +272,7 @@ const DEFAULT_PROPS_BASE_BLOQUE: Required<BloqueConfiguracionBase> = {
   animacion_entrada: 'aparecer',
   separador_forma: 'ninguno',
   borde_bloque: 'sutil',
+  mostrar_titulo: true,
 }
 
 /**
@@ -582,6 +613,8 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
         if (!data.props.texto_boton) ocultos.push('enlace_boton')
         if (!data.props.texto_boton_secundario) ocultos.push('enlace_boton_secundario')
         if (!data.props.mostrar_foto_perfil) ocultos.push('posicion_foto', 'estilo_foto')
+        // Fase 7j: la portada no pinta un título de sección (su título es el nombre).
+        ocultos.push('mostrar_titulo')
         return sinCampos(fields, ocultos)
       },
       render: ({ puck, id: _id, _seccionId, _visible, _tituloVisible, ...config }) => {
@@ -1073,6 +1106,10 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
      */
     galeria: {
       label: 'Galería',
+      // Fase 7j (UC-18): las opciones nuevas NO van en `defaultProps`: el
+      // editor mezcla `defaultProps` bajo la configuración guardada y una
+      // galería anterior se vería distinta en el lienzo que en el sitio. Los
+      // bloques nuevos reciben sus valores al insertarse (`resolveData`).
       defaultProps: {
         fotos: [],
         disposicion: 'carousel',
@@ -1088,37 +1125,110 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
           type: 'array',
           label: 'Fotos',
           defaultItemProps: { media_id: '', titulo: '' },
+          // Fase 7j: cada foto se reconoce en la lista por su título.
+          getItemSummary: (foto, indice) =>
+            foto.titulo?.trim() || `Foto ${(indice ?? 0) + 1}`,
           arrayFields: {
             media_id: selectorMediaRequeridoField,
             titulo: { type: 'text', label: 'Título (opcional)' },
           },
         },
+        mostrar_titulos: {
+          type: 'select',
+          label: 'Título sobre cada foto',
+          options: [
+            { label: 'Nunca', value: 'nunca' },
+            { label: 'Al pasar el cursor', value: 'al_pasar' },
+            { label: 'Siempre visible', value: 'siempre' },
+          ],
+        },
+        ampliar_al_clic: campoSiNo('Ampliar la foto al hacer clic'),
         // Disposición y variantes
         disposicion: {
-          type: 'radio',
+          type: 'select',
           label: 'Disposición',
           options: [
             { label: 'Carrusel', value: 'carousel' },
             { label: 'Grilla', value: 'grid' },
+            { label: 'Mosaico (bento)', value: 'mosaico' },
+            { label: 'Masonry (proporción natural)', value: 'masonry' },
+            { label: 'Cinta en movimiento', value: 'cinta' },
           ],
         },
         columnas_grid: {
           type: 'select',
-          label: 'Columnas de la grilla',
+          label: 'Columnas',
           options: [
             { label: '2', value: 2 },
             { label: '3', value: 3 },
             { label: '4', value: 4 },
           ],
         },
+        proporcion: {
+          type: 'select',
+          label: 'Proporción de las fotos',
+          // La primera opción es la que vale con la clave ausente.
+          options: [
+            { label: 'Según la disposición', value: 'automatica' },
+            { label: 'Horizontal (4:3)', value: 'horizontal' },
+            { label: 'Panorámica (16:9)', value: 'panoramica' },
+            { label: 'Cuadrada', value: 'cuadrada' },
+            { label: 'Vertical (3:4)', value: 'vertical' },
+          ],
+        },
+        separacion: {
+          type: 'select',
+          label: 'Separación entre fotos',
+          options: [
+            { label: 'Normal', value: 'normal' },
+            { label: 'Ninguna', value: 'ninguna' },
+            { label: 'Compacta', value: 'compacta' },
+            { label: 'Amplia', value: 'amplia' },
+          ],
+        },
+        esquinas: {
+          type: 'radio',
+          label: 'Esquinas',
+          options: [
+            { label: 'Rectas', value: 'rectas' },
+            { label: 'Suaves', value: 'suaves' },
+            { label: 'Redondeadas', value: 'redondeadas' },
+          ],
+        },
+        reproduccion_automatica: campoSiNo('Avanzar solo'),
+        intervalo_segundos: {
+          type: 'number',
+          label: 'Segundos por foto',
+          min: 2,
+          max: 15,
+        },
+        velocidad_cinta: {
+          type: 'radio',
+          label: 'Velocidad de la cinta',
+          options: [
+            { label: 'Lenta', value: 'lenta' },
+            { label: 'Normal', value: 'normal' },
+            { label: 'Rápida', value: 'rapida' },
+          ],
+        },
         // Efectos
+        aparicion_fotos: {
+          type: 'select',
+          label: 'Aparición de las fotos',
+          options: [
+            { label: 'Sin animación', value: 'ninguna' },
+            { label: 'Una tras otra', value: 'escalonada' },
+            { label: 'Zoom suave', value: 'zoom_suave' },
+          ],
+        },
         efecto_hover: {
           type: 'select',
-          // "Zoom" es el comportamiento por defecto, también en el carrusel.
-          label: 'Efecto al pasar el cursor (Zoom por defecto, también en carrusel)',
+          label: 'Efecto al pasar el cursor',
           options: [
             { label: 'Zoom', value: 'zoom' },
             { label: 'Elevar', value: 'elevar' },
+            { label: 'Inclinar en 3D', value: 'inclinar' },
+            { label: 'De gris a color', value: 'grises' },
             { label: 'Ninguno', value: 'ninguno' },
           ],
         },
@@ -1126,12 +1236,27 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
         _visible: VISIBLE_FIELD,
         _tituloVisible: TITULO_VISIBLE_FIELD,
       },
-      // Oculta "Columnas de la grilla" cuando la disposición elegida es
-      // 'carousel' — mismo criterio de UX que `columnas.resolveFields` para
-      // "Columna 3": mejora del sidebar, no la fuente de verdad de qué se
-      // renderiza (eso lo decide `BloqueGaleria` con `disposicion === 'grid'`).
-      resolveFields: (data, { fields }) =>
-        data.props.disposicion === 'grid' ? fields : sinCampos(fields, ['columnas_grid']),
+      // Fase 7j: valores de partida solo para galerías recién insertadas.
+      resolveData: (data, { trigger }) =>
+        trigger === 'insert'
+          ? { ...data, props: { ...data.props, ...PROPS_GALERIA_NUEVA } }
+          : data,
+      // Fase 7j: cada disposición muestra solo sus opciones (mejora del
+      // sidebar, no la fuente de verdad: `BloqueGaleria` decide qué pinta).
+      resolveFields: (data, { fields }) => {
+        const disposicion = data.props.disposicion ?? 'carousel'
+        const ocultos: string[] = []
+        if (disposicion !== 'grid' && disposicion !== 'masonry') ocultos.push('columnas_grid')
+        if (disposicion === 'mosaico' || disposicion === 'masonry') ocultos.push('proporcion')
+        if (disposicion !== 'carousel') ocultos.push('reproduccion_automatica', 'intervalo_segundos')
+        if (disposicion === 'carousel' && !data.props.reproduccion_automatica) {
+          ocultos.push('intervalo_segundos')
+        }
+        if (disposicion !== 'cinta') ocultos.push('velocidad_cinta')
+        // La cinta ya se mueve: no lleva aparición escalonada.
+        if (disposicion === 'cinta' || disposicion === 'carousel') ocultos.push('aparicion_fotos')
+        return sinCampos(fields, ocultos)
+      },
       render: ({ puck, id: _id, _seccionId, _visible, _tituloVisible, ...config }) => {
         const { datos } = leerMetadata(puck)
         const fotosResueltas: GaleriaFoto[] = config.fotos.map((foto) => ({
@@ -1453,14 +1578,20 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
               className={`grid ${GRID_COLS_POR_DISTRIBUCION[distribucion]} ${ALINEACION_VERTICAL_CLASE[alineacion_vertical]} ${ESPACIADO_CLASE[espaciado]}`}
             >
               <div className="grid gap-6">
-                <Columna1 />
+                <ProveedorEnColumna>
+                  <Columna1 />
+                </ProveedorEnColumna>
               </div>
               <div className="grid gap-6">
-                <Columna2 />
+                <ProveedorEnColumna>
+                  <Columna2 />
+                </ProveedorEnColumna>
               </div>
               {tresColumnas ? (
                 <div className="grid gap-6">
+                  <ProveedorEnColumna>
                   <Columna3 />
+                </ProveedorEnColumna>
                 </div>
               ) : null}
             </div>
