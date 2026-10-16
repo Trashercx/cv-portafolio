@@ -17,8 +17,8 @@ import {
 import { ListaTextos, TITULOS_ROTATIVOS_MAX } from '@/features/editor/ListaTextos'
 import { NavegacionEnLienzo } from '@/features/editor/NavegacionEnLienzo'
 import { leerMetadata } from '@/features/editor/useDatosEditor'
+import { CampoImagenPuck } from '@/features/editor/CampoImagenPuck'
 import { PuckRoot } from '@/features/editor/PuckRoot'
-import { useMediaList } from '@/features/media/useMediaLibrary'
 import { ALINEACION_TEXTO_CLASE } from '@/lib/escalas-bloque'
 import type {
   AlineacionVerticalColumnas,
@@ -307,10 +307,9 @@ function propsEnvoltorio(
 
 /**
  * Field personalizado de Puck para elegir UNA imagen de la biblioteca de
- * medios (UC-09): en vez de duplicar el flujo de subida de
- * `MediaUploadField`, deja elegir entre las imágenes ya existentes — más
- * simple de integrar dentro del sidebar de Puck que reusar un input de
- * archivo ahí mismo. Usado por `hero.imagen_fondo_media_id` desde su
+ * medios (UC-09) con `CampoImagenPuck` (Fase 7k: miniatura + diálogo de la
+ * biblioteca con miniaturas, búsqueda y subida; antes era un `<select>` de
+ * texto). Usado por `hero.imagen_fondo_media_id` desde su
  * creación y, desde Fase 4.5 (UC-18), reusado tal cual dentro de
  * `arrayFields.media_id` del bloque `galeria` (una foto a la vez por cada
  * ítem del array) — de ahí el nombre neutro (ya no exclusivo del hero).
@@ -332,7 +331,7 @@ const selectorMediaField: CustomField<string | undefined> = {
       icon={<ImageIcon className="size-4" />}
       readOnly={readOnly}
     >
-      <SelectorMedia value={value} onChange={onChange} />
+      <CampoImagenPuck value={value} onChange={onChange} opcional readOnly={readOnly} />
     </FieldLabel>
   ),
 }
@@ -355,36 +354,13 @@ const selectorMediaRequeridoField: CustomField<string> = {
       icon={<ImageIcon className="size-4" />}
       readOnly={readOnly}
     >
-      <SelectorMedia value={value} onChange={(nuevoValor) => onChange(nuevoValor ?? '')} />
+      <CampoImagenPuck
+        value={value || undefined}
+        onChange={(nuevoValor) => onChange(nuevoValor ?? '')}
+        readOnly={readOnly}
+      />
     </FieldLabel>
   ),
-}
-
-function SelectorMedia({
-  value,
-  onChange,
-}: {
-  value: string | undefined
-  onChange: (value: string | undefined) => void
-}) {
-  const { data: media, isLoading } = useMediaList()
-  const imagenes = (media ?? []).filter((item) => item.tipo === 'imagen')
-
-  return (
-    <select
-      className="w-full rounded-md border border-input bg-transparent px-2 py-1.5 text-sm"
-      value={value ?? ''}
-      disabled={isLoading}
-      onChange={(event) => onChange(event.target.value || undefined)}
-    >
-      <option value="">Sin imagen</option>
-      {imagenes.map((imagen) => (
-        <option key={imagen.id} value={imagen.id}>
-          {imagen.alt_text || imagen.url}
-        </option>
-      ))}
-    </select>
-  )
 }
 
 const listaTextosField: CustomField<string[] | undefined> = {
