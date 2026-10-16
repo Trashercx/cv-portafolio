@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { puckConfig } from './puck-config'
@@ -66,12 +67,21 @@ describe('hero: asignar imagen de fondo desde el editor (UC-07/UC-09)', () => {
       })
     }
 
-    render(<Wrapper />)
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <Wrapper />
+      </QueryClientProvider>,
+    )
 
-    const selector = await screen.findByRole('combobox')
-    fireEvent.change(selector, { target: { value: MEDIA_FONDO.id } })
+    // Fase 7k: miniatura + diálogo de la biblioteca en vez de un <select>.
+    fireEvent.click(screen.getByRole('button', { name: 'Elegir imagen' }))
+    const miniatura = await screen.findByAltText(MEDIA_FONDO.alt_text!)
+    fireEvent.click(miniatura.closest('button')!)
 
-    await waitFor(() => expect(selector).toHaveValue(MEDIA_FONDO.id))
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /Cambiar imagen: fondo.jpg/ })).toBeInTheDocument(),
+    )
+    expect(screen.getByRole('button', { name: 'Quitar imagen' })).toBeInTheDocument()
   })
 
   it('el render del bloque hero con una imagen de fondo ya seleccionada no crashea, y aplica el background-image resuelto', () => {

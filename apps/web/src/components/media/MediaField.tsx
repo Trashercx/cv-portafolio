@@ -1,28 +1,12 @@
-import { FileIcon } from 'lucide-react'
 import { useState } from 'react'
+import { BibliotecaMediaDialog } from '@/components/media/BibliotecaMediaDialog'
 import { MediaPreview } from '@/components/media/MediaPreview'
 import { MediaUploadField } from '@/components/media/MediaUploadField'
 import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ACCEPT_IMAGENES } from '@/features/media/formatos-imagen'
-import { useCarpetasMedia } from '@/features/media/useCarpetasMedia'
-import { useMediaList } from '@/features/media/useMediaLibrary'
 import type { Media } from '@/features/media/types'
-import { nombreArchivo } from '@/features/media/utilidades-media'
 
 /** Tipos de `Media` que un `MediaField` puede aceptar (subida + biblioteca). */
 export type MediaTipoPermitido = 'imagen' | 'pdf'
@@ -178,125 +162,21 @@ function SelectorBibliotecaMedia({
         ) : null}
       </div>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[90dvh] overflow-y-auto scrollbar-fina">
-          <DialogHeader>
-            <DialogTitle>Elegir de la biblioteca</DialogTitle>
-          </DialogHeader>
-          <GrillaMediaBiblioteca
-            tiposPermitidos={tiposPermitidos}
-            onSeleccionar={(media) => {
-              onSeleccionar(media)
-              setOpen(false)
-            }}
-          />
-        </DialogContent>
-      </Dialog>
-    </div>
-  )
-}
-
-/**
- * Solo se monta (y por lo tanto solo llama a `useMediaList`) mientras el
- * diálogo está abierto — Radix desmonta `DialogContent` cuando `open` es
- * `false`, así que no hay una llamada de red de fondo innecesaria mientras
- * el admin no abrió "Elegir de biblioteca".
- */
-function GrillaMediaBiblioteca({
-  tiposPermitidos,
-  onSeleccionar,
-}: {
-  tiposPermitidos: MediaTipoPermitido[]
-  onSeleccionar: (media: Media) => void
-}) {
-  // Con un solo tipo permitido se filtra en el servidor (menos datos
-  // transferidos, y es el caso que ya cubrían los tests existentes). El
-  // filtro de `GET /admin/media?tipo=` solo acepta un valor a la vez, así
-  // que con varios tipos permitidos se trae la biblioteca completa y se
-  // filtra acá.
-  const tipoFiltroServidor =
-    tiposPermitidos.length === 1 ? tiposPermitidos[0] : undefined
-  // Fase 7e (UC-09): filtro por carpeta. Sin carpeta elegida se pasa el mismo
-  // argumento de siempre (solo `tipo`); con carpeta, el objeto de filtros.
-  const [carpeta, setCarpeta] = useState('todas')
-  const { data: carpetas = [] } = useCarpetasMedia()
-  const { data: media, isLoading } = useMediaList(
-    carpeta === 'todas'
-      ? tipoFiltroServidor
-      : { tipo: tipoFiltroServidor, carpeta_id: carpeta },
-  )
-
-  const filtroCarpeta = (
-    <Select value={carpeta} onValueChange={setCarpeta}>
-      <SelectTrigger className="w-full" aria-label="Filtrar por carpeta">
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="todas">Todas las carpetas</SelectItem>
-        <SelectItem value="ninguna">Sin carpeta</SelectItem>
-        {carpetas.map((c) => (
-          <SelectItem key={c.id} value={c.id}>
-            {c.nombre}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
-  )
-
-  const disponibles = (media ?? []).filter((item) =>
-    tiposPermitidos.includes(item.tipo as MediaTipoPermitido),
-  )
-
-  if (isLoading) {
-    return (
-      <div className="grid gap-3">
-        {filtroCarpeta}
-        <p className="text-sm text-muted-foreground">Cargando archivos…</p>
-      </div>
-    )
-  }
-
-  if (disponibles.length === 0) {
-    return (
-      <div className="grid gap-3">
-        {filtroCarpeta}
-        <p className="text-sm text-muted-foreground">
-          {carpeta === 'todas'
-            ? 'Todavía no hay archivos de este tipo en la biblioteca. Sube uno desde la pestaña "Subir nuevo".'
-            : 'No hay archivos de este tipo en esa carpeta.'}
-        </p>
-      </div>
-    )
-  }
-
-  return (
-    <div className="grid gap-3">
-      {filtroCarpeta}
-    <div className="grid max-h-96 grid-cols-3 gap-3 overflow-y-auto scrollbar-fina sm:grid-cols-4">
-      {disponibles.map((item) => (
-        <button
-          key={item.id}
-          type="button"
-          className="overflow-hidden rounded-md border transition-shadow hover:shadow-md focus-visible:outline-2 focus-visible:outline-ring"
-          onClick={() => onSeleccionar(item)}
-        >
-          {item.tipo === 'imagen' ? (
-            <img
-              src={item.url}
-              alt={item.alt_text ?? ''}
-              className="aspect-square w-full object-cover"
-            />
-          ) : (
-            <span className="flex aspect-square w-full flex-col items-center justify-center gap-1 bg-muted p-2 text-center">
-              <FileIcon className="size-8 text-muted-foreground" />
-              <span className="line-clamp-2 text-xs text-muted-foreground">
-                {item.alt_text || nombreArchivo(item)}
-              </span>
-            </span>
-          )}
-        </button>
-      ))}
-    </div>
+      {/* Fase 7k: diálogo compartido con los campos de imagen del editor visual. */}
+      <BibliotecaMediaDialog
+        open={open}
+        onOpenChange={setOpen}
+        tiposPermitidos={tiposPermitidos}
+        seleccionadoId={currentMediaId}
+        onSeleccionar={onSeleccionar}
+        // El formulario ya tiene su pestaña "Subir nuevo".
+        permitirSubir={false}
+        descripcion={
+          tiposPermitidos.includes('pdf')
+            ? 'Haz clic en un archivo para usarlo.'
+            : 'Haz clic en una imagen para usarla.'
+        }
+      />
     </div>
   )
 }
