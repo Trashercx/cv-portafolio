@@ -67,7 +67,7 @@ export function MediaPreview({
         {esImagen ? (
           <img src={url} alt={alt ?? ''} className={cn('size-full', objectFitClass)} />
         ) : (
-          <MiniaturaPdf url={url} alt={nombre || 'Documento PDF'} />
+          <MiniaturaPdf url={url} alt={nombre || 'Documento PDF'} como="span" />
         )}
       </button>
 

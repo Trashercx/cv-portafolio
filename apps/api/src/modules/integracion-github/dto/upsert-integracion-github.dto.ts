@@ -57,7 +57,8 @@ export class UpsertIntegracionGithubDto {
   @ValidateIf((_, valor) => valor !== null)
   @IsString()
   @Matches(
-    /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?\/[A-Za-z0-9._-]{1,100}$/,
+    // El repo no puede ser "." ni ".." (normalizarían el path de la URL).
+    /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?\/(?!\.{1,2}$)[A-Za-z0-9._-]{1,100}$/,
     {
       message: 'readme_repositorio debe tener la forma owner/repo',
     },

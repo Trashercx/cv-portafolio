@@ -17,6 +17,8 @@ type EntradaCache = { objectUrl: string; usos: number }
  */
 const cache = new Map<string, EntradaCache>()
 const enVuelo = new Map<string, Promise<string>>()
+/** URLs que ya fallaron (sin CORS, PDF corrupto…): no se reintentan en cada montaje. */
+const fallos = new Set<string>()
 
 function desalojarExcedente() {
   for (const [clave, entrada] of cache) {
@@ -28,6 +30,7 @@ function desalojarExcedente() {
 }
 
 async function adquirirMiniatura(url: string, ladoMaximo: number): Promise<string> {
+  if (fallos.has(url)) throw new Error('La miniatura de este PDF ya falló')
   const existente = cache.get(url)
   if (existente) {
     // Se reinserta para que quede como la más reciente.
@@ -43,6 +46,10 @@ async function adquirirMiniatura(url: string, ladoMaximo: number): Promise<strin
         const objectUrl = URL.createObjectURL(blob)
         cache.set(url, { objectUrl, usos: 0 })
         return objectUrl
+      })
+      .catch((error: unknown) => {
+        fallos.add(url)
+        throw error
       })
       .finally(() => enVuelo.delete(url))
     enVuelo.set(url, promesa)
@@ -64,6 +71,7 @@ function liberarMiniatura(url: string) {
 export function vaciarCacheMiniaturasPdf() {
   for (const entrada of cache.values()) URL.revokeObjectURL(entrada.objectUrl)
   cache.clear()
+  fallos.clear()
   enVuelo.clear()
 }
 
@@ -82,6 +90,8 @@ type MiniaturaPdfProps = {
   ladoMaximo?: number
   /** Clases del círculo del icono de respaldo. */
   claseIcono?: string
+  /** Elemento raíz: `span` cuando va dentro de un `<button>` (phrasing content). */
+  como?: 'div' | 'span'
 }
 
 type Resultado = { url: string; src: string | null }
@@ -99,8 +109,9 @@ export function MiniaturaPdf({
   className,
   ladoMaximo = 480,
   claseIcono,
+  como: Raiz = 'div',
 }: MiniaturaPdfProps) {
-  const contenedor = useRef<HTMLDivElement>(null)
+  const contenedor = useRef<HTMLElement>(null)
   const [visible, setVisible] = useState(false)
   // `src: null` = falló. El resultado lleva la URL para descartar el de un PDF anterior.
   const [resultado, setResultado] = useState<Resultado | null>(null)
@@ -147,10 +158,10 @@ export function MiniaturaPdf({
   const actual = resultado?.url === url ? resultado : null
 
   return (
-    <div
-      ref={contenedor}
+    <Raiz
+      ref={contenedor as React.Ref<HTMLDivElement>}
       data-estado={actual ? (actual.src ? 'listo' : 'error') : 'cargando'}
-      className={cn('relative size-full overflow-hidden bg-muted', className)}
+      className={cn('relative block size-full overflow-hidden bg-muted', className)}
     >
       {actual?.src ? (
         <img src={actual.src} alt={alt} className="size-full object-cover object-top" />
@@ -165,6 +176,6 @@ export function MiniaturaPdf({
       ) : (
         <Skeleton aria-busy="true" className="size-full rounded-none" />
       )}
-    </div>
+    </Raiz>
   )
 }

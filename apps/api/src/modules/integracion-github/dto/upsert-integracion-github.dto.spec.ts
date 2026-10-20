@@ -26,6 +26,8 @@ describe('UpsertIntegracionGithubDto, README (Fase 7m, #66, UC-36)', () => {
     [{ readme_repositorio: 'oscar' }],
     [{ readme_repositorio: '-oscar/oscar' }],
     [{ readme_repositorio: 'oscar/' }],
+    [{ readme_repositorio: 'oscar/.' }],
+    [{ readme_repositorio: 'oscar/..' }],
     [{ readme_repositorio: 'oscar/a b' }],
     [{ readme_repositorio: `${'a'.repeat(40)}/repo` }],
     [{ readme_repositorio: 5 }],
