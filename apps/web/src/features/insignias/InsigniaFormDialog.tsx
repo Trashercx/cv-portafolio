@@ -2,6 +2,8 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { MediaField } from '@/components/media/MediaField'
+import { DescartarCambiosDialog } from '@/components/shared/DescartarCambiosDialog'
+import { SeccionFormulario } from '@/components/shared/SeccionFormulario'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -13,6 +15,7 @@ import {
 import { Form } from '@/components/ui/form'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import type { Media } from '@/features/media/types'
+import { useCierreConCambios } from '@/features/shared/useCierreConCambios'
 import { useMedia } from '@/features/media/useMediaLibrary'
 import { ApiError } from '@/lib/api-client'
 import { CamposInsignia, construirPayloadInsignia } from './CamposInsignia'
@@ -59,6 +62,12 @@ export function InsigniaFormDialog({ insignia, open, onOpenChange }: InsigniaFor
     setImagenElegida(null)
   }, [open, insignia, form])
 
+  // Fase 7m (#68): cerrar con cambios sin guardar pide confirmación.
+  const { abiertoConfirmacion, intentarCerrar, confirmarDescartar, cancelar } = useCierreConCambios(
+    form.formState.isDirty,
+    onOpenChange,
+  )
+
   const onSubmit = (values: InsigniaFormValues) => {
     if (!insignia) return
     actualizar.mutate(
@@ -75,7 +84,8 @@ export function InsigniaFormDialog({ insignia, open, onOpenChange }: InsigniaFor
         : null
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+    <Dialog open={open} onOpenChange={intentarCerrar}>
       <DialogContent className="max-h-[90dvh] overflow-y-auto scrollbar-fina">
         <DialogHeader>
           <DialogTitle>Editar insignia</DialogTitle>
@@ -83,32 +93,42 @@ export function InsigniaFormDialog({ insignia, open, onOpenChange }: InsigniaFor
         <ScrollArea className="max-h-[70vh] pr-4">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="grid gap-4">
-              {imagenPrevia ? (
-                <img
-                  src={imagenPrevia.url}
-                  alt={insignia?.nombre ?? 'Imagen de la insignia'}
-                  className="mx-auto size-32 object-contain"
-                />
-              ) : null}
               <CamposInsignia form={form} />
-              <MediaField
-                label="Imagen de la insignia"
-                currentMediaId={form.watch('imagen_media_id')}
-                currentPreviewUrl={imagenPrevia?.url}
-                onUploaded={(media) => {
-                  form.setValue('imagen_media_id', media.id, { shouldDirty: true })
-                  setImagenElegida(media)
-                }}
-              />
-              {form.formState.errors.imagen_media_id ? (
-                <p role="alert" className="text-sm text-destructive">{form.formState.errors.imagen_media_id.message}</p>
-              ) : null}
+              <SeccionFormulario titulo="Imagen">
+                {imagenPrevia ? (
+                  <img
+                    src={imagenPrevia.url}
+                    alt={insignia?.nombre ?? 'Imagen de la insignia'}
+                    className="mx-auto size-32 object-contain"
+                  />
+                ) : null}
+                <MediaField
+                  label="Imagen de la insignia"
+                  currentMediaId={form.watch('imagen_media_id')}
+                  currentPreviewUrl={imagenPrevia?.url}
+                  onUploaded={(media) => {
+                    form.setValue('imagen_media_id', media.id, { shouldDirty: true })
+                    setImagenElegida(media)
+                  }}
+                />
+                {form.formState.errors.imagen_media_id ? (
+                  <p role="alert" className="text-sm text-destructive">{form.formState.errors.imagen_media_id.message}</p>
+                ) : null}
+              </SeccionFormulario>
               {errorMessage ? (
                 <p role="alert" className="text-sm text-destructive">
                   {errorMessage}
                 </p>
               ) : null}
               <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={actualizar.isPending}
+                  onClick={() => intentarCerrar(false)}
+                >
+                  Cancelar
+                </Button>
                 <Button type="submit" disabled={actualizar.isPending}>
                   {actualizar.isPending ? 'Guardando…' : 'Guardar'}
                 </Button>
@@ -118,5 +138,12 @@ export function InsigniaFormDialog({ insignia, open, onOpenChange }: InsigniaFor
         </ScrollArea>
       </DialogContent>
     </Dialog>
+
+    <DescartarCambiosDialog
+      open={abiertoConfirmacion}
+      onCancelar={cancelar}
+      onConfirmar={confirmarDescartar}
+    />
+    </>
   )
 }

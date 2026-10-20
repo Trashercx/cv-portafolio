@@ -2,16 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { CampoFechaConCalendario } from '@/components/shared/CampoFechaConCalendario'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { DescartarCambiosDialog } from '@/components/shared/DescartarCambiosDialog'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -31,7 +22,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Textarea } from '@/components/ui/textarea'
-import { useConfirmarDescarte } from '@/hooks/useConfirmarDescarte'
+import { useCierreConCambios } from '@/features/shared/useCierreConCambios'
 import { ApiError } from '@/lib/api-client'
 import { logroSchema, type LogroFormValues } from './logro-schema'
 import type { Logro } from './types'
@@ -94,8 +85,7 @@ export function LogroFormDialog({
 
   // UC-XX (Fase 4.1, punto 1): evita cerrar el modal sin avisar (click
   // afuera/Esc) cuando hay cambios sin guardar en el form.
-  const { intentarCerrar, confirmando, confirmar, cancelar } =
-    useConfirmarDescarte(form.formState.isDirty, onOpenChange)
+  const { abiertoConfirmacion, intentarCerrar, confirmarDescartar, cancelar } = useCierreConCambios(form.formState.isDirty, onOpenChange)
 
   const mutacionActiva = esNuevo ? crear : actualizar
 
@@ -258,6 +248,14 @@ export function LogroFormDialog({
               ) : null}
 
               <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={mutacionActiva.isPending}
+                  onClick={() => intentarCerrar(false)}
+                >
+                  Cancelar
+                </Button>
                 <Button type="submit" disabled={mutacionActiva.isPending}>
                   {mutacionActiva.isPending ? 'Guardando…' : 'Guardar'}
                 </Button>
@@ -268,25 +266,11 @@ export function LogroFormDialog({
         </DialogContent>
       </Dialog>
 
-      <AlertDialog
-        open={confirmando}
-        onOpenChange={(siguienteAbierto) => {
-          if (!siguienteAbierto) cancelar()
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Descartar cambios?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Vas a perder lo que escribiste.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={cancelar}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmar}>Descartar</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DescartarCambiosDialog
+        open={abiertoConfirmacion}
+        onCancelar={cancelar}
+        onConfirmar={confirmarDescartar}
+      />
     </>
   )
 }

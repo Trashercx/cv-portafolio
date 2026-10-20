@@ -73,7 +73,20 @@ describe('InsigniasListPage (Fase 7d, UC-35)', () => {
     const user = userEvent.setup()
     renderPagina()
 
-    await user.click(screen.getByRole('button', { name: 'Importar insignia' }))
+    // Fase 7m (#68): con la lista vacía hay dos accesos (cabecera y estado vacío).
+    const botones = screen.getAllByRole('button', { name: 'Importar insignia' })
+    expect(botones).toHaveLength(2)
+    await user.click(botones[0])
+
+    expect(await screen.findByRole('dialog', { name: 'Importar insignia' })).toBeInTheDocument()
+  })
+
+  it('el botón del estado vacío también abre la importación (Fase 7m, #68)', async () => {
+    estado.data = []
+    const user = userEvent.setup()
+    renderPagina()
+
+    await user.click(screen.getAllByRole('button', { name: 'Importar insignia' })[1])
 
     expect(await screen.findByRole('dialog', { name: 'Importar insignia' })).toBeInTheDocument()
   })

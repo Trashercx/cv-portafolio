@@ -1,4 +1,6 @@
+import { Award } from 'lucide-react'
 import { useState } from 'react'
+import { EstadoVacio } from '@/components/shared/EstadoVacio'
 import { ConfirmDeleteDialog } from '@/components/shared/ConfirmDeleteDialog'
 import { OrderButtons } from '@/components/shared/OrderButtons'
 import { Button } from '@/components/ui/button'
@@ -74,9 +76,13 @@ export function CertificacionesListPage() {
         </p>
       ) : null}
       {certificaciones && certificaciones.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          Todavía no hay certificaciones cargadas.
-        </p>
+        <EstadoVacio
+          icono={Award}
+          titulo="Todavía no hay certificaciones cargadas."
+          descripcion="Agrega tus certificados o credenciales para mostrarlos en el sitio."
+          etiquetaAccion="Nueva certificación"
+          onAccion={abrirNuevo}
+        />
       ) : null}
 
       {certificaciones && certificaciones.length > 0 ? (

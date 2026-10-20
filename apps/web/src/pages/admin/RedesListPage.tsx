@@ -1,4 +1,6 @@
+import { Share2 } from 'lucide-react'
 import { useState } from 'react'
+import { EstadoVacio } from '@/components/shared/EstadoVacio'
 import { ConfirmDeleteDialog } from '@/components/shared/ConfirmDeleteDialog'
 import { OrderButtons } from '@/components/shared/OrderButtons'
 import { Button } from '@/components/ui/button'
@@ -67,9 +69,13 @@ export function RedesListPage() {
         </p>
       ) : null}
       {redes && redes.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          Todavía no hay enlaces de redes cargados.
-        </p>
+        <EstadoVacio
+          icono={Share2}
+          titulo="Todavía no hay enlaces de redes cargados."
+          descripcion="Agrega tus perfiles (LinkedIn, GitHub…) para que aparezcan en el contacto."
+          etiquetaAccion="Nuevo enlace"
+          onAccion={abrirNuevo}
+        />
       ) : null}
 
       {redes && redes.length > 0 ? (

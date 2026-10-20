@@ -1,4 +1,6 @@
+import { Wrench } from 'lucide-react'
 import { useState } from 'react'
+import { EstadoVacio } from '@/components/shared/EstadoVacio'
 import { ConfirmDeleteDialog } from '@/components/shared/ConfirmDeleteDialog'
 import { OrderButtons } from '@/components/shared/OrderButtons'
 import { Button } from '@/components/ui/button'
@@ -72,9 +74,13 @@ export function SkillsListPage() {
         </p>
       ) : null}
       {skills && skills.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          Todavía no hay skills cargados.
-        </p>
+        <EstadoVacio
+          icono={Wrench}
+          titulo="Todavía no hay skills cargados."
+          descripcion="Agrega las tecnologías y habilidades que dominas."
+          etiquetaAccion="Nuevo skill"
+          onAccion={abrirNuevo}
+        />
       ) : null}
 
       {skills && skills.length > 0 ? (

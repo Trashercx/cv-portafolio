@@ -1,16 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { DescartarCambiosDialog } from '@/components/shared/DescartarCambiosDialog'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -36,7 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useConfirmarDescarte } from '@/hooks/useConfirmarDescarte'
+import { useCierreConCambios } from '@/features/shared/useCierreConCambios'
 import { ApiError } from '@/lib/api-client'
 import { CLAVES_ICONO_SKILL, IconoSkill } from './iconos-skill'
 import { crearSkillSchema, type SkillFormValues } from './skill-schema'
@@ -133,8 +124,7 @@ export function SkillFormDialog({
 
   // UC-XX (Fase 4.1, punto 1): evita cerrar el modal sin avisar (click
   // afuera/Esc) cuando hay cambios sin guardar en el form.
-  const { intentarCerrar, confirmando, confirmar, cancelar } =
-    useConfirmarDescarte(form.formState.isDirty, onOpenChange)
+  const { abiertoConfirmacion, intentarCerrar, confirmarDescartar, cancelar } = useCierreConCambios(form.formState.isDirty, onOpenChange)
 
   const mutacionActiva = esNuevo ? crear : actualizar
 
@@ -310,6 +300,14 @@ export function SkillFormDialog({
               ) : null}
 
               <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={mutacionActiva.isPending}
+                  onClick={() => intentarCerrar(false)}
+                >
+                  Cancelar
+                </Button>
                 <Button type="submit" disabled={mutacionActiva.isPending}>
                   {mutacionActiva.isPending ? 'Guardando…' : 'Guardar'}
                 </Button>
@@ -319,25 +317,11 @@ export function SkillFormDialog({
         </DialogContent>
       </Dialog>
 
-      <AlertDialog
-        open={confirmando}
-        onOpenChange={(siguienteAbierto) => {
-          if (!siguienteAbierto) cancelar()
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Descartar cambios?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Vas a perder lo que escribiste.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={cancelar}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmar}>Descartar</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DescartarCambiosDialog
+        open={abiertoConfirmacion}
+        onCancelar={cancelar}
+        onConfirmar={confirmarDescartar}
+      />
     </>
   )
 }

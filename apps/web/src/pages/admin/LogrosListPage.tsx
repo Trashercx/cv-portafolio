@@ -1,4 +1,6 @@
+import { Trophy } from 'lucide-react'
 import { useState } from 'react'
+import { EstadoVacio } from '@/components/shared/EstadoVacio'
 import { ConfirmDeleteDialog } from '@/components/shared/ConfirmDeleteDialog'
 import { OrderButtons } from '@/components/shared/OrderButtons'
 import { Button } from '@/components/ui/button'
@@ -68,9 +70,13 @@ export function LogrosListPage() {
         </p>
       ) : null}
       {logros && logros.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          Todavía no hay logros cargados.
-        </p>
+        <EstadoVacio
+          icono={Trophy}
+          titulo="Todavía no hay logros cargados."
+          descripcion="Registra premios, reconocimientos o hitos que quieras destacar."
+          etiquetaAccion="Nuevo logro"
+          onAccion={abrirNuevo}
+        />
       ) : null}
 
       {logros && logros.length > 0 ? (
