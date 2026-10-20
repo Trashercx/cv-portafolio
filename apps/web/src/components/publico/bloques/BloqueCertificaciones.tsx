@@ -1,5 +1,5 @@
 import { ExternalLink } from 'lucide-react'
-import { IconoDocumento } from '@/components/media/IconoDocumento'
+import { MiniaturaPdf } from '@/components/media/MiniaturaPdf'
 import { useAbrirDetalle } from '@/components/publico/contexto-detalle'
 import type { CertificacionPublica } from '@/features/publico/types'
 import type { CertificacionesConfiguracion } from '@/features/secciones/types'
@@ -54,7 +54,7 @@ function anioEmision(certificacion: CertificacionPublica): string {
   return Number.isNaN(valor.getTime()) ? '—' : String(valor.getUTCFullYear())
 }
 
-/** Logo (imagen o ícono de documento si es un PDF) o `null` sin logo. */
+/** Logo (imagen o miniatura de la primera página si es un PDF) o `null` sin logo. */
 function ContenidoLogo({
   certificacion,
   className,
@@ -66,7 +66,8 @@ function ContenidoLogo({
   if (!logo) return null
   // Tarjeta clicable (abre el detalle en un modal, UC-13): el zoom/lightbox del
   // logo o documento vive dentro del propio modal (`DetalleCertificacionContenido`),
-  // no acá. Si el logo es un PDF (UC-04) se muestra un ícono en vez de un `<img>` roto.
+  // no acá. Si el logo es un PDF (UC-04) se muestra la miniatura de su primera
+  // página (Fase 7m, #66; con el icono de documento de respaldo) en vez de un `<img>` roto.
   return logo.tipo === 'imagen' ? (
     <ImagenResponsive
       media={logo}
@@ -75,7 +76,12 @@ function ContenidoLogo({
       className={cn('size-full object-contain', className)}
     />
   ) : (
-    <IconoDocumento className="size-10" iconoClassName="size-5" />
+    <MiniaturaPdf
+      url={logo.url}
+      alt={logo.alt_text ?? certificacion.nombre}
+      ladoMaximo={240}
+      claseIcono="size-10"
+    />
   )
 }
 

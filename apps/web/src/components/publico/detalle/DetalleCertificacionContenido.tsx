@@ -25,7 +25,11 @@ export function DetalleCertificacionContenido({
           url={certificacion.logo.url}
           alt={certificacion.logo.alt_text ?? certificacion.nombre}
           nombre={certificacion.nombre}
-          className="size-20 rounded-md"
+          bytes={certificacion.logo.bytes}
+          // Fase 7m (#66): un PDF muestra su primera página; la imagen conserva el tamaño anterior.
+          className={
+            certificacion.logo.tipo === 'imagen' ? 'size-20 rounded-md' : 'h-32 w-24 rounded-md border'
+          }
           fit="contain"
         />
       ) : null}

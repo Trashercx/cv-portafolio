@@ -17,18 +17,18 @@ type IconoDocumentoProps = {
  * Insignia circular roja con un ícono de documento (`FileText`), para
  * miniaturas de archivos no-imagen (PDFs de certificados/CV). Extraída de
  * `MediaPreview.tsx` (fix 5ta ronda) para reusarse también en
- * `BloqueCertificaciones.tsx`, sin duplicar el mismo círculo `bg-[#DC2626]/10`
- * + glifo `text-[#DC2626]` en dos lugares.
+ * `BloqueCertificaciones.tsx`, sin duplicar el mismo círculo
+ * + glifo `text-destructive` en dos lugares.
  */
 export function IconoDocumento({ className, iconoClassName }: IconoDocumentoProps) {
   return (
     <span
       className={cn(
-        'inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-[#DC2626]/10',
+        'inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-destructive/10',
         className,
       )}
     >
-      <FileText className={cn('size-5 text-[#DC2626]', iconoClassName)} aria-hidden="true" />
+      <FileText className={cn('size-5 text-destructive', iconoClassName)} aria-hidden="true" />
     </span>
   )
 }
