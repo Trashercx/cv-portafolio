@@ -95,4 +95,42 @@ describe('InsigniasConfiguracionDto (Fase 7d, UC-35)', () => {
     });
     expect(errores).toEqual([]);
   });
+
+  describe('Fase 7l (UC-07): carrusel y cinta', () => {
+    it('disposicion toma "rejilla" por defecto y los demás campos nuevos no tienen default', () => {
+      const i = plainToInstance(InsigniasConfiguracionDto, {});
+      expect(i.disposicion).toBe('rejilla');
+      expect(i.reproduccion_automatica).toBeUndefined();
+      expect(i.intervalo_segundos).toBeUndefined();
+      expect(i.velocidad_cinta).toBeUndefined();
+    });
+
+    it('acepta las tres disposiciones, el intervalo 2-15 y las tres velocidades', async () => {
+      for (const disposicion of ['rejilla', 'carrusel', 'cinta']) {
+        expect(await validarConfiguracion({ disposicion })).toHaveLength(0);
+      }
+      for (const intervalo_segundos of [2, 15]) {
+        expect(await validarConfiguracion({ intervalo_segundos })).toHaveLength(
+          0,
+        );
+      }
+      for (const velocidad_cinta of ['lenta', 'normal', 'rapida']) {
+        expect(await validarConfiguracion({ velocidad_cinta })).toHaveLength(0);
+      }
+      expect(
+        await validarConfiguracion({ reproduccion_automatica: true }),
+      ).toHaveLength(0);
+    });
+
+    it.each([
+      { disposicion: 'mosaico' },
+      { intervalo_segundos: 1 },
+      { intervalo_segundos: 16 },
+      { intervalo_segundos: 2.5 },
+      { velocidad_cinta: 'turbo' },
+      { reproduccion_automatica: 'si' },
+    ])('rechaza %j', async (payload) => {
+      expect((await validarConfiguracion(payload)).length).toBeGreaterThan(0);
+    });
+  });
 });

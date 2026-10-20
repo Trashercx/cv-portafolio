@@ -29,4 +29,21 @@ export class CertificacionesConfiguracionDto extends BloqueConfiguracionBaseDto 
   @IsOptional()
   @IsIn(['ninguno', 'elevar', 'inclinar'])
   efecto_hover: 'ninguno' | 'elevar' | 'inclinar' = 'elevar';
+
+  // Fase 7l (UC-04, UC-07): presentación y datos visibles.
+  @IsOptional()
+  @IsIn(['tarjetas', 'linea_tiempo', 'logos'])
+  disposicion: 'tarjetas' | 'linea_tiempo' | 'logos' = 'tarjetas';
+
+  @IsOptional()
+  @IsBoolean()
+  mostrar_emisor?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  mostrar_vigencia?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  mostrar_enlace?: boolean;
 }

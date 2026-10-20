@@ -1,4 +1,4 @@
-import { plainToInstance } from 'class-transformer';
+import { ClassConstructor, plainToInstance } from 'class-transformer';
 import { CertificacionesConfiguracionDto } from './certificaciones-configuracion.dto';
 import { ColumnasConfiguracionDto } from './columnas-configuracion.dto';
 import { ContactoConfiguracionDto } from './contacto-configuracion.dto';
@@ -121,9 +121,12 @@ describe('Contrato de bloques Fase 7 (7.2)', () => {
       ['hero', 'decoracion_fondo', 'cuadricula', 'estrellas'],
       ['sobre-mi', 'estilo_foto', 'flotante', 'polaroid'],
       ['proyectos', 'disposicion', 'bento', 'masonry'],
+      ['proyectos', 'disposicion', 'vitrina', 'galeria'],
       ['proyectos', 'estilo_tarjeta', 'vidrio', 'neon'],
       ['proyectos', 'efecto_hover', 'inclinar', 'girar'],
       ['certificaciones', 'efecto_hover', 'elevar', 'saltar'],
+      ['certificaciones', 'disposicion', 'linea_tiempo', 'masonry'],
+      ['certificaciones', 'disposicion', 'logos', 'masonry'],
       ['logros', 'efecto_hover', 'ninguno', 'saltar'],
       ['skills', 'disposicion', 'nube', 'espiral'],
       ['skills', 'estilo_chip', 'contorno', 'neon'],
@@ -435,6 +438,54 @@ describe('Contrato de bloques Fase 7 (7.2)', () => {
       });
       expect(errores).toHaveLength(1);
       expect(errores[0].constraints?.esListaDeBloques).toContain('navegacion');
+    });
+  });
+
+  describe('Fase 7l (UC-36, UC-07): disposiciones y visibilidad de datos', () => {
+    it.each(['proyectos', 'certificaciones'] as const)(
+      '%s: los booleanos de visibilidad son opcionales y sin default persistido',
+      async (tipo) => {
+        const claves =
+          tipo === 'proyectos'
+            ? [
+                'mostrar_estado',
+                'mostrar_enlaces',
+                'mostrar_github',
+                'mostrar_fechas',
+              ]
+            : ['mostrar_emisor', 'mostrar_vigencia', 'mostrar_enlace'];
+        const minimo = CASOS_MINIMOS[tipo];
+        const clase: ClassConstructor<unknown> =
+          tipo === 'proyectos'
+            ? ProyectosConfiguracionDto
+            : CertificacionesConfiguracionDto;
+        const instancia = plainToInstance(clase, minimo) as Record<
+          string,
+          unknown
+        >;
+        for (const clave of claves) {
+          expect(instancia[clave]).toBeUndefined();
+          expect(
+            await obtenerErroresConfiguracion(tipo, {
+              ...minimo,
+              [clave]: false,
+            }),
+          ).toEqual([]);
+          expect(
+            (
+              await obtenerErroresConfiguracion(tipo, {
+                ...minimo,
+                [clave]: 'si',
+              })
+            ).length,
+          ).toBeGreaterThan(0);
+        }
+      },
+    );
+
+    it('certificaciones.disposicion toma "tarjetas" por defecto', () => {
+      const c = plainToInstance(CertificacionesConfiguracionDto, {});
+      expect(c.disposicion).toBe('tarjetas');
     });
   });
 });

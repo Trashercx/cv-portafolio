@@ -84,6 +84,31 @@ export class InsigniasConfiguracionDto extends BloqueConfiguracionBaseDto {
   @IsBoolean()
   mostrar_enlace: boolean = true;
 
+  /**
+   * Fase 7l (UC-36/UC-07): `rejilla` (actual), `carrusel` (scroll-snap con
+   * flechas y puntos) o `cinta` (marquee continuo).
+   */
+  @IsOptional()
+  @IsIn(['rejilla', 'carrusel', 'cinta'])
+  disposicion: 'rejilla' | 'carrusel' | 'cinta' = 'rejilla';
+
+  /** Fase 7l: avance automático del carrusel (se pausa al pasar/enfocar). */
+  @IsOptional()
+  @IsBoolean()
+  reproduccion_automatica?: boolean;
+
+  /** Fase 7l: segundos entre avances del carrusel. */
+  @IsOptional()
+  @IsInt()
+  @Min(2)
+  @Max(15)
+  intervalo_segundos?: number;
+
+  /** Fase 7l: velocidad de la cinta. */
+  @IsOptional()
+  @IsIn(['lenta', 'normal', 'rapida'])
+  velocidad_cinta?: 'lenta' | 'normal' | 'rapida';
+
   @IsOptional()
   @IsInt()
   @Min(1)
