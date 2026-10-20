@@ -14,7 +14,7 @@ vi.mock('@/features/media/pdf-render', () => ({
   renderizarPrimeraPagina: (...args: unknown[]) => renderizarMock(...args),
 }))
 
-type Observador = { callback: IntersectionObserverCallback; disconnect: ReturnType<typeof vi.fn> }
+type Observador = { callback: IntersectionObserverCallback; disconnect: () => void }
 let observadores: Observador[] = []
 const ObserverOriginal = window.IntersectionObserver
 
