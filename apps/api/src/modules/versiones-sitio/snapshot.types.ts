@@ -94,6 +94,29 @@ export interface SnapshotInsignia {
   [key: string]: unknown;
 }
 
+/**
+ * Experiencia laboral del snapshot (Fase 7l, UC-19): solo las `visible`, con
+ * los puestos actuales (`fecha_fin` null) primero y luego `fecha_inicio`
+ * descendente. Logo resuelto con variantes y tecnologías aplanadas. Sin
+ * `usuario_admin_id`, `logo_media_id`, `visible` ni timestamps. Las fechas
+ * viajan como ISO completo (`2024-03-01T00:00:00.000Z`). Ausente en
+ * snapshots anteriores a la fase.
+ */
+export interface ExperienciaPublica {
+  id: string;
+  empresa: string;
+  cargo: string;
+  descripcion: string;
+  fecha_inicio: string;
+  fecha_fin: string | null;
+  ubicacion: string | null;
+  modalidad: 'presencial' | 'remoto' | 'hibrido';
+  url_empresa: string | null;
+  orden: number;
+  logo: SnapshotMedia | null;
+  tecnologias: { id: string; nombre: string }[];
+}
+
 export interface SnapshotSeccion extends SnapshotConId {
   tipo_seccion: string;
   configuracion: SnapshotSeccionConfiguracion;
@@ -110,6 +133,8 @@ export interface SnapshotSitio {
   skills: SnapshotConId[];
   /** Fase 7d (UC-35); ausente en snapshots anteriores. */
   insignias?: SnapshotInsignia[];
+  /** Fase 7l (UC-19); ausente en snapshots anteriores. */
+  experiencias?: ExperienciaPublica[];
   fondo: Record<string, unknown> | null;
 }
 

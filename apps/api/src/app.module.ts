@@ -9,6 +9,7 @@ import { AppService } from './app.service';
 import { AuthModule } from './modules/auth/auth.module';
 import { CertificacionesModule } from './modules/certificaciones/certificaciones.module';
 import { FondoSitioModule } from './modules/fondo-sitio/fondo-sitio.module';
+import { ExperienciasModule } from './modules/experiencias/experiencias.module';
 import { InsigniasModule } from './modules/insignias/insignias.module';
 import { LogrosModule } from './modules/logros/logros.module';
 import { MediaModule } from './modules/media/media.module';
@@ -89,6 +90,8 @@ import { PrismaModule } from './prisma/prisma.module';
     SkillsModule,
     // Fase 7d: insignias importables (UC-35).
     InsigniasModule,
+    // Fase 7l: experiencia laboral (UC-19).
+    ExperienciasModule,
     FondoSitioModule,
     VersionesSitioModule,
     PublicoModule,
