@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import type { TipoFondo } from '@/features/fondo-sitio/catalogo-fondos'
 import type { FondoSitio } from '@/features/fondo-sitio/types'
 import type { ModoTema } from '@/lib/tema-oscuro'
 
@@ -55,6 +56,15 @@ type EditorPanelState = {
   fondoEnEdicion: FondoSitio | null
   setFondoEnEdicion: (fondo: FondoSitio | null) => void
   /**
+   * Tipo de fondo elegido en la galería del plugin Fondo (Fase 7l, UC-15): sus
+   * ajustes (`PanelAjustesFondo`) se muestran en el panel derecho mientras no
+   * haya un bloque seleccionado. No persistido; se limpia al cambiar de plugin
+   * (junto con `fondoEnEdicion`), al desmontar el panel y al seleccionar un
+   * bloque en el lienzo.
+   */
+  fondoSeleccionado: TipoFondo | null
+  setFondoSeleccionado: (tipo: TipoFondo | null) => void
+  /**
    * Viewport actual del lienzo (`ui.viewports.current`), recordado para el
    * remount de `<Puck>` tras guardar (Fase 7, UC-07). Solo en memoria, no en
    * `localStorage`: es preferencia de la sesión de edición en curso. La
@@ -92,10 +102,12 @@ export const useEditorPanelStore = create<EditorPanelState>((set) => ({
     set((estado) =>
       estado.pluginActivo === pluginActivo
         ? { pluginActivo }
-        : { pluginActivo, fondoEnEdicion: null },
+        : { pluginActivo, fondoEnEdicion: null, fondoSeleccionado: null },
     ),
   fondoEnEdicion: null,
   setFondoEnEdicion: (fondoEnEdicion) => set({ fondoEnEdicion }),
+  fondoSeleccionado: null,
+  setFondoSeleccionado: (fondoSeleccionado) => set({ fondoSeleccionado }),
   viewportActual: null,
   setViewportActual: (viewportActual) => set({ viewportActual }),
   modoVistaPrevia: leerModoVistaPreviaGuardado(),

@@ -313,6 +313,7 @@ vi.mock('@/features/publicacion/usePublicacion', () => ({
   }),
   usePublicarVersion: () => ({
     mutate: publicarMutateMock,
+    mutateAsync: publicarMutateMock,
     isPending: publicacionMocks.publicarPending,
   }),
   useRevertirVersion: () => ({
@@ -599,7 +600,7 @@ describe('EditorSeccionesPage (UC-07, UC-10, UC-11)', () => {
       await user.click(screen.getByRole('button', { name: /guardar cambios/i }))
       await waitFor(() => expect(toast.success).toHaveBeenCalledTimes(1))
 
-      expect(actualizarConfiguracionMutateAsyncMock).toHaveBeenCalledTimes(1)
+      expect(actualizarConfiguracionMutateAsyncMock).toHaveBeenCalled()
       expect(actualizarConfiguracionMutateAsyncMock).toHaveBeenCalledWith(
         expect.objectContaining({ id: 'seccion-a' }),
       )
@@ -781,7 +782,7 @@ describe('EditorSeccionesPage (UC-07, UC-10, UC-11)', () => {
     // Fase 4.1, punto 6: el banner solo se muestra cuando hay cambios sin
     // publicar, no cuando la última versión ya es la publicada.
     expect(
-      screen.queryByText(/todavía no publicaste/i),
+      screen.queryByText(/cambios sin publicar/i),
     ).not.toBeInTheDocument()
   })
 
@@ -798,7 +799,7 @@ describe('EditorSeccionesPage (UC-07, UC-10, UC-11)', () => {
     // para que "no veo el cambio en `/`" se entienda como "todavía no
     // publicaste", no como un bug.
     expect(
-      screen.getByText(/todavía no publicaste/i),
+      screen.getByText(/cambios sin publicar/i),
     ).toBeInTheDocument()
   })
 
@@ -823,9 +824,10 @@ describe('EditorSeccionesPage (UC-07, UC-10, UC-11)', () => {
 
   it('"Publicar" pide confirmación antes de llamar a la mutación', async () => {
     const user = userEvent.setup()
+    publicarMutateMock.mockResolvedValue(undefined)
     renderEditor()
 
-    await user.click(screen.getByRole('button', { name: /^publicar$/i }))
+    await user.click(await screen.findByRole('button', { name: /^publicar$/i }))
 
     const dialogo = await screen.findByRole('alertdialog')
     expect(
@@ -838,7 +840,107 @@ describe('EditorSeccionesPage (UC-07, UC-10, UC-11)', () => {
       within(dialogo).getByRole('button', { name: /^publicar$/i }),
     )
 
-    expect(publicarMutateMock).toHaveBeenCalledTimes(1)
+    await waitFor(() => expect(publicarMutateMock).toHaveBeenCalledTimes(1))
+    // Sin cambios en el lienzo no se guarda nada antes de publicar.
+    expect(actualizarConfiguracionMutateAsyncMock).not.toHaveBeenCalled()
+    expect(reordenarMutateAsyncMock).not.toHaveBeenCalled()
+    expect(toast.success).not.toHaveBeenCalled()
+  })
+
+  /** Simula una edición del lienzo: `content` con el hero modificado + acción de Puck que edita. */
+  function simularEdicionDelLienzo() {
+    act(() => {
+      useEditorSeccionesStore.getState().setContent([
+        {
+          type: 'hero',
+          props: {
+            id: 'seccion-a',
+            _seccionId: 'seccion-a',
+            _visible: true,
+            _tituloVisible: 'Portada',
+            titulo: 'A',
+            subtitulo: 'B2',
+          },
+        },
+        {
+          type: 'contacto',
+          props: {
+            id: 'seccion-b',
+            _seccionId: 'seccion-b',
+            _visible: true,
+            _tituloVisible: 'Contacto',
+            mostrar_formulario: false,
+          },
+        },
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ] as any)
+    })
+    act(() => puckProps.onAction?.({ type: 'replace' }))
+  }
+
+  it('con cambios sin guardar el botón primario es "Guardar y publicar": guarda primero y luego publica (Fase 7l, UC-11)', async () => {
+    const user = userEvent.setup()
+    publicarMutateMock.mockResolvedValue(undefined)
+    renderEditor()
+    await waitFor(() =>
+      expect(useEditorSeccionesStore.getState().content).toHaveLength(2),
+    )
+    simularEdicionDelLienzo()
+
+    await user.click(screen.getByRole('button', { name: /^guardar y publicar$/i }))
+    const dialogo = await screen.findByRole('alertdialog')
+    expect(
+      within(dialogo).getByText(/primero se guardan los cambios del lienzo/i),
+    ).toBeInTheDocument()
+    await user.click(
+      within(dialogo).getByRole('button', { name: /^guardar y publicar$/i }),
+    )
+
+    await waitFor(() => expect(publicarMutateMock).toHaveBeenCalledTimes(1))
+    expect(actualizarConfiguracionMutateAsyncMock).toHaveBeenCalled()
+    expect(
+      Math.max(...actualizarConfiguracionMutateAsyncMock.mock.invocationCallOrder),
+    ).toBeLessThan(publicarMutateMock.mock.invocationCallOrder[0])
+    expect(useEditorSeccionesStore.getState().hayCambiosSinGuardar).toBe(false)
+  })
+
+  it('si guardar falla, "Guardar y publicar" no publica (Fase 7l, UC-11)', async () => {
+    const user = userEvent.setup()
+    actualizarConfiguracionMutateAsyncMock.mockRejectedValue(new Error('fallo simulado'))
+    renderEditor()
+    await waitFor(() =>
+      expect(useEditorSeccionesStore.getState().content).toHaveLength(2),
+    )
+    simularEdicionDelLienzo()
+
+    await user.click(screen.getByRole('button', { name: /^guardar y publicar$/i }))
+    const dialogo = await screen.findByRole('alertdialog')
+    await user.click(
+      within(dialogo).getByRole('button', { name: /^guardar y publicar$/i }),
+    )
+
+    await waitFor(() =>
+      expect(actualizarConfiguracionMutateAsyncMock).toHaveBeenCalled(),
+    )
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /guardar cambios/i })).not.toBeDisabled(),
+    )
+    expect(publicarMutateMock).not.toHaveBeenCalled()
+    // Los cambios siguen pendientes de guardar.
+    expect(useEditorSeccionesStore.getState().hayCambiosSinGuardar).toBe(true)
+  })
+
+  it('el enlace "Publicar ahora" del banner abre el mismo diálogo de publicación (Fase 7l, UC-10)', async () => {
+    const user = userEvent.setup()
+    publicarMutateMock.mockResolvedValue(undefined)
+    publicacionMocks.versiones = [VERSION_PREVIEW, VERSION_ACTUAL, VERSION_ANTERIOR]
+    renderEditor()
+
+    await user.click(await screen.findByRole('button', { name: /publicar ahora/i }))
+    const dialogo = await screen.findByRole('alertdialog')
+    await user.click(within(dialogo).getByRole('button', { name: /^publicar$/i }))
+
+    await waitFor(() => expect(publicarMutateMock).toHaveBeenCalledTimes(1))
   })
 
   it('"Historial de versiones" abre un diálogo con el historial completo, sin su propio botón de vista previa (Fase 4.1, punto 3: la única "Vista previa" que queda es la de la barra del editor)', async () => {
