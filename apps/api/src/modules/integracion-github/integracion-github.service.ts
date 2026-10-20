@@ -14,6 +14,9 @@ const SELECT_PUBLICO = {
   destacar_nuevos: true,
   ultima_sincronizacion_en: true,
   ultimo_error: true,
+  // Fase 7m (#66): solo el destino; el Markdown y su etag salen por `/readme`.
+  readme_repositorio: true,
+  readme_rama: true,
   created_at: true,
   updated_at: true,
 } as const;
@@ -37,11 +40,42 @@ export class IntegracionGithubService {
    * filtros (forks, archivados) sí deben importar.
    */
   async guardar(usuarioAdminId: string, dto: UpsertIntegracionGithubDto) {
+    // Fase 7m (#66): cambiar o quitar el repositorio/rama del README invalida
+    // la caché (markdown, etag, fecha y error); `null` en el repositorio la deja vacía.
+    const cache = await this.cacheReadmeA(usuarioAdminId, dto);
     return this.prisma.integracionGithub.upsert({
       where: { usuario_admin_id: usuarioAdminId },
       create: { usuario_admin_id: usuarioAdminId, ...dto },
-      update: { ...dto, etag: null },
+      update: { ...dto, etag: null, ...cache },
       select: SELECT_PUBLICO,
     });
+  }
+
+  private async cacheReadmeA(
+    usuarioAdminId: string,
+    dto: UpsertIntegracionGithubDto,
+  ) {
+    if (dto.readme_repositorio === undefined && dto.readme_rama === undefined) {
+      return {};
+    }
+    const actual = await this.prisma.integracionGithub.findUnique({
+      where: { usuario_admin_id: usuarioAdminId },
+      select: { readme_repositorio: true, readme_rama: true },
+    });
+    const repoCambia =
+      dto.readme_repositorio !== undefined &&
+      dto.readme_repositorio !== (actual?.readme_repositorio ?? null);
+    const ramaCambia =
+      dto.readme_rama !== undefined &&
+      dto.readme_rama !== (actual?.readme_rama ?? null);
+    if (!repoCambia && !ramaCambia && dto.readme_repositorio !== null) {
+      return {};
+    }
+    return {
+      readme_markdown: null,
+      readme_etag: null,
+      readme_actualizado_en: null,
+      readme_error: null,
+    };
   }
 }
