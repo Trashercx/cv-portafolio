@@ -51,6 +51,8 @@ vi.mock('@puckeditor/core', () => ({
 
 const pluginActivoMock: { actual: string } = { actual: 'blocks' }
 
+const itemSelectorMock: { actual: unknown } = { actual: null }
+
 const previewModeMock: { actual: 'edit' | 'interactive' } = { actual: 'edit' }
 const dispatchMock = vi.fn()
 
@@ -65,6 +67,7 @@ vi.mock('./usePuckEditor', () => ({
       appState: {
         ui: {
           previewMode: previewModeMock.actual,
+          itemSelector: itemSelectorMock.actual,
           plugin: { current: pluginActivoMock.actual },
           viewports: { current: viewportMock.actual },
         },
@@ -74,6 +77,9 @@ vi.mock('./usePuckEditor', () => ({
 
 vi.mock('./PanelTemaEditor', () => ({
   PanelTemaEditor: () => <div>Panel de tema</div>,
+}))
+vi.mock('./PanelAjustesFondo', () => ({
+  PanelAjustesFondo: () => <div>Ajustes del fondo</div>,
 }))
 vi.mock('./PanelFondoEditor', () => ({
   PanelFondoEditor: () => <div>Panel de fondo</div>,
@@ -98,8 +104,15 @@ describe('LienzoPuck (layout nativo con rail de plugins)', () => {
     pluginActivoMock.actual = 'blocks'
     viewportMock.actual = { width: 1280, height: 'auto' }
     previewModeMock.actual = 'edit'
+    itemSelectorMock.actual = null
     dispatchMock.mockClear()
-    useEditorPanelStore.setState({ pluginActivo: null, viewportActual: null, vistaLimpia: false })
+    useEditorPanelStore.setState({
+      pluginActivo: null,
+      viewportActual: null,
+      vistaLimpia: false,
+      fondoSeleccionado: null,
+      fondoEnEdicion: null,
+    })
   })
 
   afterEach(() => {
@@ -289,5 +302,88 @@ describe('Vista limpia (Fase 7c, UC-07)', () => {
     expect(useEditorPanelStore.getState().vistaLimpia).toBe(false)
     fireEvent.keyDown(document, { key: 'L', ctrlKey: true, shiftKey: true })
     expect(useEditorPanelStore.getState().vistaLimpia).toBe(false)
+  })
+})
+
+type CamposProps = { children?: ReactNode; itemSelector?: unknown }
+
+function renderCampos(itemSelector: unknown) {
+  renderLienzo()
+  const Campos = propsPuck.actual.overrides?.fields as ComponentType<CamposProps>
+  return render(
+    <Campos itemSelector={itemSelector}>
+      <div>Campos del bloque</div>
+    </Campos>,
+  )
+}
+
+describe('Panel derecho con el plugin Fondo (Fase 7l, UC-15)', () => {
+  beforeEach(() => {
+    propsPuck.actual = {}
+    pluginActivoMock.actual = 'fondo'
+    itemSelectorMock.actual = null
+    previewModeMock.actual = 'edit'
+    dispatchMock.mockClear()
+    useEditorPanelStore.setState({
+      pluginActivo: 'fondo',
+      viewportActual: null,
+      vistaLimpia: false,
+      fondoSeleccionado: null,
+      fondoEnEdicion: null,
+    })
+  })
+
+  afterEach(() => {
+    pluginActivoMock.actual = 'blocks'
+    itemSelectorMock.actual = null
+  })
+
+  it('con un fondo seleccionado y sin bloque muestra los ajustes del fondo', () => {
+    useEditorPanelStore.setState({ fondoSeleccionado: 'aurora_mesh' })
+    renderCampos(null)
+    expect(screen.getByText('Ajustes del fondo')).toBeInTheDocument()
+    expect(screen.queryByText('Campos del bloque')).not.toBeInTheDocument()
+  })
+
+  it('con un bloque seleccionado muestra los campos del bloque, no los del fondo', () => {
+    useEditorPanelStore.setState({ fondoSeleccionado: 'aurora_mesh' })
+    renderCampos({ index: 0, zone: 'root:default-zone' })
+    expect(screen.getByText('Campos del bloque')).toBeInTheDocument()
+    expect(screen.queryByText('Ajustes del fondo')).not.toBeInTheDocument()
+  })
+
+  it('sin fondo seleccionado pide elegir uno en la galería', () => {
+    renderCampos(null)
+    expect(screen.getByText(/elige un fondo en la galería/i)).toBeInTheDocument()
+  })
+
+  it('con Vista limpia los ajustes del fondo siguen disponibles (no afecta al fondo)', () => {
+    useEditorPanelStore.setState({ fondoSeleccionado: 'aurora_mesh', vistaLimpia: true })
+    renderCampos(null)
+    expect(screen.getByText('Ajustes del fondo')).toBeInTheDocument()
+  })
+
+  it('fuera del plugin Fondo, un fondo seleccionado no desplaza la guía de bloques', () => {
+    pluginActivoMock.actual = 'blocks'
+    useEditorPanelStore.setState({ pluginActivo: 'blocks', fondoSeleccionado: 'aurora_mesh' })
+    renderCampos(null)
+    expect(screen.getByText(/selecciona un bloque en el lienzo/i)).toBeInTheDocument()
+  })
+
+  it('al seleccionar un bloque en el lienzo se descarta el fondo elegido y el fondo en curso', () => {
+    useEditorPanelStore.setState({
+      fondoSeleccionado: 'aurora_mesh',
+      fondoEnEdicion: { id: 'f1' } as never,
+    })
+    itemSelectorMock.actual = { index: 0, zone: 'root:default-zone' }
+    renderLienzo()
+    expect(useEditorPanelStore.getState().fondoSeleccionado).toBeNull()
+    expect(useEditorPanelStore.getState().fondoEnEdicion).toBeNull()
+  })
+
+  it('sin bloque seleccionado no toca el fondo elegido', () => {
+    useEditorPanelStore.setState({ fondoSeleccionado: 'aurora_mesh' })
+    renderLienzo()
+    expect(useEditorPanelStore.getState().fondoSeleccionado).toBe('aurora_mesh')
   })
 })

@@ -12,9 +12,10 @@ import { Button } from '@/components/ui/button'
 import { puckConfig, type PuckSeccionesComponents } from '@/lib/puck-config'
 import { useEditorPanelStore } from '@/store/editor-panel-store'
 import type { MetadataEditor } from './useDatosEditor'
+import { PanelAjustesFondo } from './PanelAjustesFondo'
 import { PUCK_DICCIONARIO } from './puck-diccionario'
 import { PUCK_UI_INICIAL, PUCK_VIEWPORTS } from './puck-viewports'
-import { PLUGINS_EDITOR } from './plugins-editor'
+import { PLUGINS_EDITOR, PLUGIN_FONDO } from './plugins-editor'
 import { esAtajoVistaLimpia } from './atajos'
 import { usePuckEditor } from './usePuckEditor'
 
@@ -85,6 +86,21 @@ function SincronizadorPlugin() {
       setViewportActual({ width: ancho, height: alto ?? 'auto' })
     }
   }, [ancho, alto, setViewportActual])
+
+  // Fase 7l (UC-15): en Puck 0.23 seleccionar un bloque NO cambia `ui.plugin.current`
+  // (el panel derecho "Campos" es independiente del rail), así que `setPluginActivo`
+  // no limpia nada. Al detectar una selección se descarta el fondo elegido y el
+  // fondo en curso, y el lienzo vuelve al fondo guardado.
+  const hayBloqueSeleccionado = usePuckEditor((state) =>
+    Boolean(state.appState.ui.itemSelector),
+  )
+  useEffect(() => {
+    if (!hayBloqueSeleccionado) return
+    const { fondoSeleccionado, setFondoSeleccionado, setFondoEnEdicion } =
+      useEditorPanelStore.getState()
+    if (fondoSeleccionado) setFondoSeleccionado(null)
+    setFondoEnEdicion(null)
+  }, [hayBloqueSeleccionado])
   return null
 }
 
@@ -148,21 +164,31 @@ function AccionesCabecera() {
 }
 
 /**
- * `overrides.fields` (Fase 7, UC-07): sin bloque seleccionado Puck mostraría
- * los campos de la raíz de la página (un `title` que no se guarda en ningún
- * lado, porque el sitio no tiene título de página editable). En su lugar se
- * muestra la misma guía que tenía `PanelBloqueSeleccionado`. Con un bloque
- * seleccionado se renderizan sus campos tal cual.
+ * `overrides.fields` (Fase 7, UC-07; ajustes de fondo en la Fase 7l, UC-15):
+ * - Con un bloque seleccionado se renderizan sus campos tal cual (y
+ *   `SincronizadorPlugin` ya descartó el fondo elegido).
+ * - Sin bloque y con el plugin `fondo` activo: si hay `fondoSeleccionado` se
+ *   muestran sus ajustes (`PanelAjustesFondo`, también con Vista limpia, que no
+ *   afecta al fondo); si no, "Elige un fondo en la galería".
+ * - Sin bloque en otro plugin, Puck mostraría los campos de la raíz de la
+ *   página (un `title` que no se guarda en ningún lado): en su lugar va la
+ *   guía que tenía `PanelBloqueSeleccionado`. Con Vista limpia (Fase 7c) no hay
+ *   selección posible y se avisa de ello.
  */
-function CamposBloque({
+export function CamposBloque({
   children,
   itemSelector,
 }: {
   children: ReactNode
   itemSelector?: unknown
 }) {
-  // Fase 7c (UC-07): con Vista limpia no hay selección posible en el lienzo.
   const vistaLimpia = useEditorPanelStore((state) => state.vistaLimpia)
+  const pluginActivo = useEditorPanelStore((state) => state.pluginActivo)
+  const fondoSeleccionado = useEditorPanelStore((state) => state.fondoSeleccionado)
+  const enPluginFondo = pluginActivo === PLUGIN_FONDO
+  if (!itemSelector && enPluginFondo && fondoSeleccionado) {
+    return <PanelAjustesFondo />
+  }
   if (vistaLimpia) {
     return (
       <p role="status" className="p-4 text-sm text-muted-foreground">
@@ -171,6 +197,13 @@ function CamposBloque({
     )
   }
   if (!itemSelector) {
+    if (enPluginFondo) {
+      return (
+        <p className="p-4 text-sm text-muted-foreground">
+          Elige un fondo en la galería para ajustarlo aquí.
+        </p>
+      )
+    }
     return (
       <p className="p-4 text-sm text-muted-foreground">
         Selecciona un bloque en el lienzo, o arrastra uno nuevo desde
