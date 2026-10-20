@@ -12,7 +12,10 @@ import {
 } from '@/components/ui/alert-dialog'
 
 type ConfirmActionDialogProps = {
-  trigger: ReactNode
+  /** Opcional si el diálogo se controla desde fuera con `open`/`onOpenChange` (Fase 7l, UC-11). */
+  trigger?: ReactNode
+  open?: boolean
+  onOpenChange?: (abierto: boolean) => void
   title: string
   description: string
   confirmLabel: string
@@ -29,6 +32,8 @@ type ConfirmActionDialogProps = {
  */
 export function ConfirmActionDialog({
   trigger,
+  open,
+  onOpenChange,
   title,
   description,
   confirmLabel,
@@ -37,8 +42,8 @@ export function ConfirmActionDialog({
   isPending,
 }: ConfirmActionDialogProps) {
   return (
-    <AlertDialog>
-      <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      {trigger ? <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger> : null}
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>

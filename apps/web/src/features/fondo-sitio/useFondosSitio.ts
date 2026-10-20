@@ -34,8 +34,12 @@ export function useCrearFondoSitio({ silencioso = false } = {}) {
   })
 }
 
-/** `PATCH /admin/fondos/:id`. */
-export function useActualizarFondoSitio(id: string) {
+/**
+ * `PATCH /admin/fondos/:id`. `silencioso` omite el toast de éxito: los ajustes
+ * del panel Fondo se guardan solos (Fase 7l, UC-15) y avisan con su propio
+ * indicador de texto.
+ */
+export function useActualizarFondoSitio(id: string, { silencioso = false } = {}) {
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -45,7 +49,7 @@ export function useActualizarFondoSitio(id: string) {
         body: payload,
       }),
     meta: {
-      mensajeExito: 'Fondo guardado correctamente.',
+      mensajeExito: silencioso ? undefined : 'Fondo guardado correctamente.',
       mensajeError: 'No se pudo guardar el fondo. Intenta de nuevo.',
     },
     onSuccess: () => {

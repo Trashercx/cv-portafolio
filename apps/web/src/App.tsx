@@ -35,6 +35,10 @@ const InsigniasListPage = lazy(() =>
 const EditorSeccionesPage = lazy(() =>
   import('@/pages/admin/EditorSeccionesPage').then((m) => ({ default: m.EditorSeccionesPage })),
 )
+// Fase 7l (UC-19): experiencia laboral, lazy como el resto de páginas del panel.
+const ExperienciasListPage = lazy(() =>
+  import('@/pages/admin/ExperienciasListPage').then((m) => ({ default: m.ExperienciasListPage })),
+)
 const LogrosListPage = lazy(() =>
   import('@/pages/admin/LogrosListPage').then((m) => ({ default: m.LogrosListPage })),
 )
@@ -126,6 +130,8 @@ function App() {
             />
 
             <Route path="insignias" element={<InsigniasListPage />} />
+
+            <Route path="experiencias" element={<ExperienciasListPage />} />
 
             <Route path="logros" element={<LogrosListPage />} />
 

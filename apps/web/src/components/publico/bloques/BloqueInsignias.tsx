@@ -3,10 +3,18 @@ import type { InsigniaPublica } from '@/features/insignias/types'
 import type { InsigniasConfiguracion } from '@/features/secciones/types'
 import { usePrefiereMovimientoReducido } from '@/lib/animaciones'
 import { resolverEnlaceSeguro } from '@/lib/enlaces'
-import { CLASES_BORDE_BLOQUE } from '@/lib/escalas-bloque'
+import {
+  ANCHO_ITEM_CARRUSEL_INSIGNIAS,
+  ANCHO_ITEM_CINTA_INSIGNIAS,
+  CLASES_BORDE_BLOQUE,
+  DURACION_MINIMA_CINTA_INSIGNIAS,
+  SEGUNDOS_POR_INSIGNIA_CINTA,
+} from '@/lib/escalas-bloque'
 import { formatearFecha } from '@/lib/formato'
 import { SIZES_POR_CONTEXTO } from '@/lib/imagenes'
 import { cn } from '@/lib/utils'
+import { CarruselBase } from '../CarruselBase'
+import { CintaBase } from '../CintaBase'
 import { useModoRenderizado } from '../contexto-renderizado'
 import { ImagenResponsive } from '../ImagenResponsive'
 import { ItemAnimado } from '../ItemAnimado'
@@ -242,12 +250,18 @@ function TarjetaInsignia({
  * Bloque `insignias` (Fase 7d, UC-35), compartido entre el sitio público y el
  * lienzo del editor. Tolera claves ausentes y snapshots sin `insignias`: sin
  * datos muestra "Sin insignias" solo en el editor y nada en el sitio público.
+ * Fase 7l: `disposicion` `rejilla` (la de siempre), `carrusel` (scroll-snap con
+ * avance automático opcional, `CarruselBase`) o `cinta` (marquesina continua,
+ * `CintaBase`), con medallas o con tarjetas. Cuando hay muchas insignias, el
+ * carrusel y la cinta las van rotando; la clave ausente conserva la rejilla.
  */
 export function BloqueInsignias({ titulo, config, insignias, alineacionTitulo }: BloqueInsigniasProps) {
   const modo = useModoRenderizado()
   const efecto = config.efecto_hover ?? 'inclinar_brillo'
   const columnas = config.columnas ?? 'auto'
   const tamano = config.tamano ?? 'normal'
+  const disposicion = config.disposicion ?? 'rejilla'
+  const esMedalla = (config.estilo ?? 'medalla') === 'medalla'
 
   const visibles = [...insignias].sort((a, b) => a.orden - b.orden)
   const mostradas = config.limite ? visibles.slice(0, config.limite) : visibles
@@ -255,63 +269,128 @@ export function BloqueInsignias({ titulo, config, insignias, alineacionTitulo }:
 
   if (mostradas.length === 0 && modo !== 'editor') return null
 
-  // Fase 7h (UC-35): medallas por defecto (clave ausente = `medalla`).
-  if ((config.estilo ?? 'medalla') === 'medalla') {
-    return (
-      <div className="grid gap-8">
-        <div className={cn('grid gap-1', alineacionTitulo)}>
-          <TituloBloque titulo={encabezado} mostrar={config.mostrar_titulo} />
-          {config.subtitulo ? <p className="text-muted-foreground">{config.subtitulo}</p> : null}
-        </div>
-        {mostradas.length === 0 ? (
-          <p className="text-muted-foreground">Sin insignias</p>
-        ) : (
-          <ul
-            data-estilo-insignias="medalla"
-            className={cn(
-              // Espacio vertical extra: la etiqueta "al pasar" y el movimiento no se pisan.
-              columnas === 'auto'
-                ? 'flex flex-wrap justify-center gap-x-6 gap-y-10 sm:gap-x-10'
-                : cn('grid justify-items-center gap-x-6 gap-y-10', GRID_COLS_INSIGNIAS[columnas]),
-            )}
-          >
-            {mostradas.map((insignia, indice) => (
-              <li key={insignia.id} data-efecto-insignia={efecto}>
-                <ItemAnimado indice={indice}>
-                  <MedallaInsignia insignia={insignia} config={config} indice={indice} />
-                </ItemAnimado>
-              </li>
-            ))}
-          </ul>
+  /** Una insignia (medalla o tarjeta) sin envoltorio de aparición, para carrusel y cinta. */
+  const elemento = (insignia: InsigniaPublica, indice: number) => (
+    <div data-efecto-insignia={efecto} className="grid place-items-center">
+      {esMedalla ? (
+        <MedallaInsignia insignia={insignia} config={config} indice={indice} />
+      ) : (
+        <TarjetaInsignia insignia={insignia} config={config} efecto={efecto} />
+      )}
+    </div>
+  )
+
+  let cuerpo: ReactNode
+  if (mostradas.length === 0) {
+    cuerpo = <p className="text-muted-foreground">Sin insignias</p>
+  } else if (disposicion === 'carrusel') {
+    cuerpo = (
+      <CarruselBase
+        items={mostradas.map((insignia, indice) => (
+          <div key={insignia.id} data-item-insignia>
+            {elemento(insignia, indice)}
+          </div>
+        ))}
+        claseItem={ANCHO_ITEM_CARRUSEL_INSIGNIAS[tamano]}
+        gap="gap-4"
+        automatico={config.reproduccion_automatica ?? false}
+        intervaloSegundos={config.intervalo_segundos ?? 5}
+        // Aire para el halo, la sombra y el nombre "al pasar" bajo la medalla (el
+        // contenedor recorta) y relleno lateral para que las flechas no tapen la
+        // primera ni la última insignia (`scroll-px` mantiene el ajuste del snap).
+        claseDesplazable={cn('px-12 scroll-px-12', esMedalla ? 'pt-6 pb-14' : 'py-4')}
+        etiquetas={{
+          anterior: 'Insignia anterior',
+          siguiente: 'Insignia siguiente',
+          pausar: 'Pausar el carrusel',
+          reanudar: 'Reanudar el carrusel',
+          irA: (n) => `Ir a la insignia ${n}`,
+        }}
+      />
+    )
+  } else if (disposicion === 'cinta') {
+    // Con pocas insignias la vuelta quedaría más corta que la pantalla: se
+    // repiten dentro de la vuelta (copias decorativas) hasta llenar el ancho.
+    const repeticiones = Math.max(1, Math.ceil(8 / mostradas.length))
+    cuerpo = (
+      <CintaBase
+        duracionSegundos={Math.max(
+          DURACION_MINIMA_CINTA_INSIGNIAS,
+          mostradas.length * repeticiones * SEGUNDOS_POR_INSIGNIA_CINTA[config.velocidad_cinta ?? 'normal'],
         )}
-      </div>
+        // El relleno derecho de cada vuelta es la misma separación entre insignias.
+        claseVuelta="gap-6 pr-6"
+        claseContenedor={esMedalla ? 'pt-6 pb-14' : 'py-4'}
+        etiquetas={{ pausar: 'Pausar la cinta', reanudar: 'Reanudar la cinta' }}
+      >
+        {(decorativa, quieta) =>
+          Array.from({ length: quieta ? 1 : repeticiones }, (_, repeticion) =>
+            mostradas.map((insignia, indice) => {
+              const copia = decorativa || repeticion > 0
+              return (
+                <div
+                  key={`${repeticion}-${insignia.id}`}
+                  data-item-insignia
+                  // La copia no se anuncia ni se enfoca (WCAG 2.4.3).
+                  aria-hidden={copia || undefined}
+                  inert={copia || undefined}
+                  className={cn('shrink-0', ANCHO_ITEM_CINTA_INSIGNIAS[tamano])}
+                >
+                  {elemento(insignia, indice)}
+                </div>
+              )
+            }),
+          )
+        }
+      </CintaBase>
+    )
+  } else if (esMedalla) {
+    // Fase 7h (UC-35): medallas por defecto (clave ausente = `medalla`).
+    cuerpo = (
+      <ul
+        data-estilo-insignias="medalla"
+        className={cn(
+          // Espacio vertical extra: la etiqueta "al pasar" y el movimiento no se pisan.
+          columnas === 'auto'
+            ? 'flex flex-wrap justify-center gap-x-6 gap-y-10 sm:gap-x-10'
+            : cn('grid justify-items-center gap-x-6 gap-y-10', GRID_COLS_INSIGNIAS[columnas]),
+        )}
+      >
+        {mostradas.map((insignia, indice) => (
+          <li key={insignia.id} data-efecto-insignia={efecto}>
+            <ItemAnimado indice={indice}>
+              <MedallaInsignia insignia={insignia} config={config} indice={indice} />
+            </ItemAnimado>
+          </li>
+        ))}
+      </ul>
+    )
+  } else {
+    cuerpo = (
+      <ul
+        className={cn(
+          'grid gap-4',
+          columnas === 'auto' ? GRID_AUTO_POR_TAMANO[tamano] : GRID_COLS_INSIGNIAS[columnas],
+        )}
+      >
+        {mostradas.map((insignia, indice) => (
+          <li key={insignia.id} data-efecto-insignia={efecto}>
+            <ItemAnimado indice={indice}>
+              <TarjetaInsignia insignia={insignia} config={config} efecto={efecto} />
+            </ItemAnimado>
+          </li>
+        ))}
+      </ul>
     )
   }
 
   return (
-    <div className="grid gap-6">
+    <div className={esMedalla ? 'grid gap-8' : 'grid gap-6'}>
       <div className={cn('grid gap-1', alineacionTitulo)}>
         <TituloBloque titulo={encabezado} mostrar={config.mostrar_titulo} />
         {config.subtitulo ? <p className="text-muted-foreground">{config.subtitulo}</p> : null}
       </div>
-      {mostradas.length === 0 ? (
-        <p className="text-muted-foreground">Sin insignias</p>
-      ) : (
-        <ul
-          className={cn(
-            'grid gap-4',
-            columnas === 'auto' ? GRID_AUTO_POR_TAMANO[tamano] : GRID_COLS_INSIGNIAS[columnas],
-          )}
-        >
-          {mostradas.map((insignia, indice) => (
-            <li key={insignia.id} data-efecto-insignia={efecto}>
-              <ItemAnimado indice={indice}>
-                <TarjetaInsignia insignia={insignia} config={config} efecto={efecto} />
-              </ItemAnimado>
-            </li>
-          ))}
-        </ul>
-      )}
+      {cuerpo}
     </div>
   )
 }

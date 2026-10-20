@@ -37,8 +37,8 @@ export class ProyectosConfiguracionDto extends BloqueConfiguracionBaseDto {
 
   // Fase 7 (7.2, UC-07): opcionales con default.
   @IsOptional()
-  @IsIn(['tarjetas', 'bento', 'lista'])
-  disposicion: 'tarjetas' | 'bento' | 'lista' = 'tarjetas';
+  @IsIn(['tarjetas', 'bento', 'lista', 'vitrina'])
+  disposicion: 'tarjetas' | 'bento' | 'lista' | 'vitrina' = 'tarjetas';
 
   @IsOptional()
   @IsIn(['ninguno', 'elevar', 'inclinar'])
@@ -47,4 +47,25 @@ export class ProyectosConfiguracionDto extends BloqueConfiguracionBaseDto {
   @IsOptional()
   @IsBoolean()
   mostrar_tecnologias: boolean = true;
+
+  // Fase 7l (UC-07, UC-36): opcionales sin default persistido. Ausente =
+  // `true` para estado, enlaces y datos de GitHub (el rediseño de la tarjeta
+  // los muestra a propósito también en bloques ya guardados) y `false` para
+  // las fechas.
+  @IsOptional()
+  @IsBoolean()
+  mostrar_estado?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  mostrar_enlaces?: boolean;
+
+  /** Lenguaje y estrellas de los proyectos importados de GitHub. */
+  @IsOptional()
+  @IsBoolean()
+  mostrar_github?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  mostrar_fechas?: boolean;
 }

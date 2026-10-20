@@ -329,6 +329,12 @@
       "descripcion": "API y panel de administración para conciliar pagos con tarjeta, billeteras y transferencias. NestJS con Prisma sobre PostgreSQL, colas con BullMQ para los webhooks de los procesadores y un panel en React con reportes exportables. Redujo el tiempo de conciliación de dos días a minutos.",
       "url_demo": "https://demo.ejemplo.dev/pagos",
       "url_repositorio": "https://github.com/ejemplo/plataforma-pagos",
+      "origen": "github",
+      "github_nombre_completo": "ejemplo/plataforma-pagos",
+      "github_lenguaje": "TypeScript",
+      "github_estrellas": 128,
+      "github_actualizado_en": "2026-09-12T15:30:00.000Z",
+      "sincronizar_github": true,
       "fecha_inicio": "2024-03-01T00:00:00.000Z",
       "fecha_fin": "2025-02-28T00:00:00.000Z",
       "estado": "finalizado",
@@ -396,6 +402,12 @@
       "descripcion": "Plataforma de cursos con video bajo demanda, evaluaciones automáticas y certificados en PDF. Frontend en React con TanStack Query, API en Node.js y almacenamiento de media en S3 con CloudFront. Más de 3 000 estudiantes activos al mes.",
       "url_demo": "https://demo.ejemplo.dev/aula",
       "url_repositorio": null,
+      "origen": "manual",
+      "github_nombre_completo": null,
+      "github_lenguaje": null,
+      "github_estrellas": null,
+      "github_actualizado_en": null,
+      "sincronizar_github": true,
       "fecha_inicio": "2023-01-15T00:00:00.000Z",
       "fecha_fin": "2023-12-20T00:00:00.000Z",
       "estado": "finalizado",
@@ -443,6 +455,12 @@
       "descripcion": "Herramienta interna que recolecta métricas de contenedores Docker y envía alertas a Slack cuando un servicio deja de responder. Agente en Node.js, almacenamiento de series temporales en PostgreSQL y tablero en React con gráficas en tiempo real.",
       "url_demo": null,
       "url_repositorio": "https://github.com/ejemplo/monitor-infra",
+      "origen": "github",
+      "github_nombre_completo": "ejemplo/monitor-infra",
+      "github_lenguaje": "Go",
+      "github_estrellas": 7,
+      "github_actualizado_en": "2026-10-02T09:10:00.000Z",
+      "sincronizar_github": true,
       "fecha_inicio": "2025-06-01T00:00:00.000Z",
       "fecha_fin": null,
       "estado": "en_progreso",
@@ -482,6 +500,27 @@
           }
         }
       ]
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111199",
+      "usuario_admin_id": "00000000-0000-4000-8000-000000000001",
+      "titulo": "Cli Utilidades",
+      "descripcion": "Repositorio cli-utilidades en GitHub.",
+      "url_demo": null,
+      "url_repositorio": "https://github.com/ejemplo/cli-utilidades",
+      "fecha_inicio": "2025-05-01T00:00:00.000Z",
+      "fecha_fin": null,
+      "estado": "en_progreso",
+      "destacado": false,
+      "orden": 3,
+      "origen": "github",
+      "github_nombre_completo": "ejemplo/cli-utilidades",
+      "github_lenguaje": "TypeScript",
+      "github_estrellas": 12,
+      "github_actualizado_en": "2026-09-20T12:00:00.000Z",
+      "sincronizar_github": true,
+      "tecnologias": [],
+      "imagenes": []
     }
   ],
   "certificaciones": [
@@ -606,5 +645,49 @@
     "tipo": "aurora_mesh",
     "configuracion": { "velocidad": "lenta", "opacidad": 0.3, "intensidad": "media", "interactivo": true },
     "activo": true
-  }
+  },
+  "experiencias": [
+    {
+      "logo": null,
+      "id": "77777777-7777-4777-8777-777777777701",
+      "empresa": "Fintech Andina",
+      "cargo": "Ingeniera de software senior",
+      "descripcion": "Lidera la plataforma de pagos: APIs en NestJS, colas y observabilidad.",
+      "fecha_inicio": "2023-02-01",
+      "fecha_fin": null,
+      "ubicacion": "Lima, Perú",
+      "modalidad": "remoto",
+      "url_empresa": "https://fintech-andina.ejemplo.dev",
+      "tecnologias": [
+        {
+          "id": "66666666-6666-4666-8666-666666666601",
+          "nombre": "NestJS"
+        },
+        {
+          "id": "66666666-6666-4666-8666-666666666602",
+          "nombre": "PostgreSQL"
+        }
+      ],
+      "orden": 0
+    },
+    {
+      "logo": null,
+      "id": "77777777-7777-4777-8777-777777777702",
+      "empresa": "Estudio Pixel",
+      "cargo": "Desarrolladora full stack",
+      "descripcion": "Productos web para educación y comercio electrónico.",
+      "fecha_inicio": "2019-06-01",
+      "fecha_fin": "2023-01-31",
+      "ubicacion": null,
+      "modalidad": "hibrido",
+      "url_empresa": null,
+      "tecnologias": [
+        {
+          "id": "66666666-6666-4666-8666-666666666603",
+          "nombre": "React"
+        }
+      ],
+      "orden": 1
+    }
+  ]
 }

@@ -10,6 +10,7 @@ describe('MediaUsosService (UC-09, Fase 7d)', () => {
     certificacion: { findMany: jest.fn() },
     seccion: { findMany: jest.fn() },
     insignia: { findMany: jest.fn() },
+    experienciaLaboral: { findMany: jest.fn() },
   };
 
   beforeEach(async () => {
@@ -19,6 +20,7 @@ describe('MediaUsosService (UC-09, Fase 7d)', () => {
     prisma.certificacion.findMany.mockResolvedValue([]);
     prisma.seccion.findMany.mockResolvedValue([]);
     prisma.insignia.findMany.mockResolvedValue([]);
+    prisma.experienciaLaboral.findMany.mockResolvedValue([]);
     const mod = await Test.createTestingModule({
       providers: [
         MediaUsosService,
@@ -35,6 +37,16 @@ describe('MediaUsosService (UC-09, Fase 7d)', () => {
     const usos = await service.calcular();
     expect(usos.m9).toEqual([
       { tipo: 'insignia', id: 'i1', nombre: 'AWS Cloud' },
+    ]);
+  });
+
+  it('experiencia: el logo de un puesto cuenta como uso (Fase 7l, UC-19)', async () => {
+    prisma.experienciaLaboral.findMany.mockResolvedValue([
+      { id: 'x1', cargo: 'Dev', empresa: 'Acme', logo_media_id: 'm8' },
+    ]);
+    const usos = await service.calcular();
+    expect(usos.m8).toEqual([
+      { tipo: 'experiencia', id: 'x1', nombre: 'Dev · Acme' },
     ]);
   });
 

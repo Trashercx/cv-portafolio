@@ -37,6 +37,10 @@ model UsuarioAdmin {
   certificaciones Certificacion[]
   /// Fase 7d, UC-35
   insignias       Insignia[]
+  /// Fase 7l, UC-19
+  experiencias    ExperienciaLaboral[]
+  /// Fase 7l, UC-36
+  integracion_github IntegracionGithub?
   logros          Logro[]
   redes_sociales  RedSocial[]
   secciones       Seccion[]
@@ -91,6 +95,8 @@ model Media {
   variantes         MediaVariante[]
   /// Fase 7d, UC-35
   insignias         Insignia[]       @relation("InsigniaImagen")
+  /// Fase 7l, UC-19
+  experiencias      ExperienciaLaboral[] @relation("ExperienciaLogo")
 
   @@map("media")
 }
@@ -146,6 +152,16 @@ model Proyecto {
   estado           String
   destacado        Boolean   @default(false)
   orden            Int
+  /// Fase 7l, UC-36: `manual` o `github` (importado por la sincronización)
+  origen                 String    @default("manual")
+  /// Fase 7l, UC-36: id numérico de GitHub; estable aunque renombren el repo
+  github_repo_id         BigInt?   @unique
+  github_nombre_completo String?
+  github_lenguaje        String?
+  github_estrellas       Int?
+  github_actualizado_en  DateTime?
+  /// Fase 7l, UC-36: en false se congela un proyecto importado para editarlo a mano
+  sincronizar_github     Boolean   @default(true)
 
   usuario_admin UsuarioAdmin         @relation(fields: [usuario_admin_id], references: [id])
   imagenes      ProyectoImagen[]
@@ -172,7 +188,9 @@ model Tecnologia {
   id     String @id @default(uuid()) @db.Uuid
   nombre String @unique
 
-  proyectos ProyectoTecnologia[]
+  proyectos    ProyectoTecnologia[]
+  /// Fase 7l, UC-19
+  experiencias ExperienciaTecnologia[]
 
   @@map("tecnologia")
 }
@@ -396,4 +414,64 @@ model Insignia {
 
   @@index([usuario_admin_id, orden])
   @@map("insignia")
+}
+
+/// Fase 7l, UC-19: puesto de la trayectoria profesional; `fecha_fin` nula = puesto actual.
+model ExperienciaLaboral {
+  id               String    @id @default(uuid()) @db.Uuid
+  usuario_admin_id String    @db.Uuid
+  empresa          String
+  cargo            String
+  descripcion      String    @db.Text
+  fecha_inicio     DateTime  @db.Date
+  fecha_fin        DateTime? @db.Date
+  ubicacion        String?
+  /// `presencial` | `remoto` | `hibrido`
+  modalidad        String
+  url_empresa      String?
+  logo_media_id    String?   @db.Uuid
+  orden            Int
+  visible          Boolean   @default(true)
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+
+  usuario_admin UsuarioAdmin             @relation(fields: [usuario_admin_id], references: [id])
+  logo          Media?                   @relation("ExperienciaLogo", fields: [logo_media_id], references: [id], onDelete: SetNull)
+  tecnologias   ExperienciaTecnologia[]
+
+  @@map("experiencia_laboral")
+}
+
+/// Fase 7l, UC-19: tecnologías de un puesto (unión experiencia <-> tecnologia, como proyecto_tecnologia).
+model ExperienciaTecnologia {
+  experiencia_id String @db.Uuid
+  tecnologia_id  String @db.Uuid
+
+  experiencia ExperienciaLaboral @relation(fields: [experiencia_id], references: [id], onDelete: Cascade)
+  tecnologia  Tecnologia         @relation(fields: [tecnologia_id], references: [id])
+
+  @@id([experiencia_id, tecnologia_id])
+  @@map("experiencia_tecnologia")
+}
+
+/// Fase 7l, UC-36: configuración de la sincronización de repos públicos de GitHub (1:1 con el admin).
+model IntegracionGithub {
+  id                       String    @id @default(uuid()) @db.Uuid
+  usuario_admin_id         String    @unique @db.Uuid
+  usuario_github           String
+  activa                   Boolean   @default(false)
+  intervalo_horas          Int       @default(6)
+  publicar_automaticamente Boolean   @default(false)
+  incluir_forks            Boolean   @default(false)
+  incluir_archivados       Boolean   @default(false)
+  destacar_nuevos          Boolean   @default(false)
+  ultima_sincronizacion_en DateTime?
+  ultimo_error             String?
+  etag                     String?
+  created_at               DateTime  @default(now())
+  updated_at               DateTime  @updatedAt
+
+  usuario_admin UsuarioAdmin @relation(fields: [usuario_admin_id], references: [id])
+
+  @@map("integracion_github")
 }

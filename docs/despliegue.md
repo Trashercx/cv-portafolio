@@ -106,6 +106,8 @@ Ambas se sustituyen al arrancar el contenedor (envsubst de la imagen `nginx:alpi
 | `THROTTLE_LOGIN_LIMIT` | `5` | Intentos máximos de `POST /auth/login` por IP dentro de `THROTTLE_LOGIN_TTL_MS` (responde 429). Independiente del bloqueo de cuenta por 3 intentos fallidos. |
 | `THROTTLE_LOGIN_TTL_MS` | `60000` | Ventana del límite del login, en milisegundos. |
 | `THROTTLE_IMPORTAR_LIMIT` | `10` | Opcional. Peticiones máximas por IP y minuto a `POST /admin/insignias/importar` e `importar-archivo` (Fase 7d, UC-35; hacen peticiones salientes). Solo se sobrescribe en pruebas. |
+| `THROTTLE_GITHUB_LIMIT` | `6` | Opcional. Peticiones máximas por IP y minuto a `POST /admin/integraciones/github/sincronizar` (Fase 7l, UC-36; hace peticiones salientes a GitHub). Solo se sobrescribe en pruebas. |
+| `GITHUB_TOKEN` | vacío | Opcional (Fase 7l, UC-36). Nunca se envía a otro host que `api.github.com` ni aparece en respuestas del API. Si en el panel se activa "Publicar automáticamente", cada sincronización con cambios publica una versión **completa** del sitio (todo lo guardado, no solo proyectos). Token personal de GitHub de **solo lectura**: sube el límite de la API de 60 a 5000 peticiones/hora. Sin él la sincronización de repos públicos funciona igual (la cron corre cada hora y respeta `ETag`, así que gasta poca cuota). Nunca se importan repos privados aunque el token los vea. |
 
 Todas van en el panel de variables de Dokploy/Coolify, igual que las de la sección 2.
 

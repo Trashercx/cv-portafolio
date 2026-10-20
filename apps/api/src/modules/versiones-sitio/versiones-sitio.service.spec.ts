@@ -9,6 +9,7 @@ import { ProyectosService } from '../proyectos/proyectos.service';
 import { RedesSocialesService } from '../redes-sociales/redes-sociales.service';
 import { SeccionesService } from '../secciones/secciones.service';
 import { InsigniasService } from '../insignias/insignias.service';
+import { ExperienciasService } from '../experiencias/experiencias.service';
 import { SkillsService } from '../skills/skills.service';
 import { TemaService } from '../tema/tema.service';
 import { INCLUDE_MEDIA_CON_VARIANTES } from '../media/media.select';
@@ -37,6 +38,7 @@ describe('VersionesSitioService (UC-10 Previsualizar, UC-11 Publicar/revertir)',
   let redesSocialesService: { listar: jest.Mock };
   let skillsService: { listar: jest.Mock };
   let insigniasService: { listarVisibles: jest.Mock };
+  let experienciasService: { listarPublicas: jest.Mock };
   let fondoSitioService: { obtenerActivo: jest.Mock };
 
   const snapshotEsperado = {
@@ -49,6 +51,7 @@ describe('VersionesSitioService (UC-10 Previsualizar, UC-11 Publicar/revertir)',
     redes_sociales: [{ id: 'red-1' }],
     skills: [{ id: 'skill-1' }],
     insignias: [{ id: 'insignia-1' }],
+    experiencias: [{ id: 'exp-1' }],
     fondo: { id: 'fondo-1' },
   };
 
@@ -93,6 +96,11 @@ describe('VersionesSitioService (UC-10 Previsualizar, UC-11 Publicar/revertir)',
     insigniasService = {
       listarVisibles: jest.fn().mockResolvedValue(snapshotEsperado.insignias),
     };
+    experienciasService = {
+      listarPublicas: jest
+        .fn()
+        .mockResolvedValue(snapshotEsperado.experiencias),
+    };
     fondoSitioService = {
       obtenerActivo: jest.fn().mockResolvedValue(snapshotEsperado.fondo),
     };
@@ -110,6 +118,7 @@ describe('VersionesSitioService (UC-10 Previsualizar, UC-11 Publicar/revertir)',
         { provide: RedesSocialesService, useValue: redesSocialesService },
         { provide: SkillsService, useValue: skillsService },
         { provide: InsigniasService, useValue: insigniasService },
+        { provide: ExperienciasService, useValue: experienciasService },
         { provide: FondoSitioService, useValue: fondoSitioService },
       ],
     }).compile();
@@ -136,6 +145,7 @@ describe('VersionesSitioService (UC-10 Previsualizar, UC-11 Publicar/revertir)',
       expect(redesSocialesService.listar).toHaveBeenCalled();
       expect(skillsService.listar).toHaveBeenCalled();
       expect(insigniasService.listarVisibles).toHaveBeenCalled();
+      expect(experienciasService.listarPublicas).toHaveBeenCalled();
       expect(fondoSitioService.obtenerActivo).toHaveBeenCalledWith('admin-1');
 
       expect(prisma.versionSitio.create).toHaveBeenCalledWith({

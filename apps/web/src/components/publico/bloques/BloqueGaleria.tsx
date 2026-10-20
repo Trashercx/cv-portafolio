@@ -1,8 +1,5 @@
-import { lazy, Suspense, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
-import { ChevronLeft, ChevronRight, Pause, Play } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { lazy, Suspense, useState, type ReactNode } from 'react'
 import type { GaleriaConfiguracion, GaleriaFoto } from '@/features/secciones/types'
-import { usePrefiereMovimientoReducido } from '@/lib/animaciones'
 import { EFECTO_HOVER_GALERIA_CLASE } from '@/lib/efectos-hover'
 import {
   COLUMNAS_GRID_CLASE,
@@ -15,10 +12,12 @@ import {
 } from '@/lib/escalas-bloque'
 import { SIZES_POR_CONTEXTO } from '@/lib/imagenes'
 import { cn } from '@/lib/utils'
+import { CarruselBase } from '../CarruselBase'
+import { CintaBase } from '../CintaBase'
 import { ImagenResponsive } from '../ImagenResponsive'
 import { ItemAnimado } from '../ItemAnimado'
 import { TarjetaInteractiva } from '../TarjetaInteractiva'
-import { TarjetaClicable, useModoRenderizado } from '../contexto-renderizado'
+import { TarjetaClicable } from '../contexto-renderizado'
 import { TituloBloque } from './TituloBloque'
 
 // Fase 8 (8.3, UC-34): el Lightbox (Radix Dialog) se descarga al primer clic.
@@ -298,11 +297,8 @@ type CintaGaleriaProps = {
 
 /**
  * `disposicion='cinta'` (Fase 7j): tira continua que se desplaza sola en
- * bucle (CSS, sin JS por fotograma). La pista lleva las fotos dos veces y la
- * segunda vuelta es decorativa para el lector de pantalla y el teclado. Se
- * pausa al pasar el cursor, al enfocar y con su botón (WCAG 2.2.2); con
- * movimiento reducido o en el lienzo del editor es una tira quieta con
- * scroll manual.
+ * bucle. Fase 7l: la mecánica (pista doble, pausa, quieta en el lienzo y con
+ * movimiento reducido) vive en `CintaBase`, compartida con las insignias.
  */
 function CintaGaleria({
   fotos,
@@ -312,68 +308,28 @@ function CintaGaleria({
   segundosPorFoto,
   onAbrir,
 }: CintaGaleriaProps) {
-  const reducido = usePrefiereMovimientoReducido()
-  const modo = useModoRenderizado()
-  const [pausada, setPausada] = useState(false)
-  const quieta = reducido || modo === 'editor'
-  const estilo = {
-    '--duracion-cinta': `${Math.max(12, fotos.length * segundosPorFoto)}s`,
-  } as CSSProperties
-  const vueltas = quieta ? [false] : [false, true]
-
   return (
-    <div className="grid gap-3">
-      <div
-        data-disposicion="cinta"
-        data-pausada={pausada || undefined}
-        className={cn(
-          'galeria-cinta relative',
-          quieta
-            ? 'overflow-x-auto scrollbar-fina'
-            : 'overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_6%,black_94%,transparent)]',
-        )}
-      >
-        <div
-          className={cn(
-            'flex w-max',
-            !quieta && 'galeria-cinta-pista',
-            pausada && '[animation-play-state:paused]',
-          )}
-          style={estilo}
-        >
-          {vueltas.map((decorativa) => (
-            // El relleno derecho de cada vuelta es la misma separación entre fotos.
-            <div
-              key={decorativa ? 'copia' : 'original'}
-              className={cn('flex shrink-0', separacion.gap, separacion.relleno)}
-            >
-              {fotos.map((foto, indice) => (
-                <div key={`${foto.media_id}-${indice}`} className="w-60 shrink-0 sm:w-72">
-                  <FotoGaleria
-                    foto={foto}
-                    indice={indice}
-                    presentacion={presentacion}
-                    claseImagen={PROPORCION_FOTO_CLASE[proporcion]}
-                    onAbrir={onAbrir}
-                    decorativa={decorativa}
-                  />
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
-      </div>
-      {quieta ? null : (
-        <button
-          type="button"
-          onClick={() => setPausada((valor) => !valor)}
-          aria-label={pausada ? 'Reanudar la cinta' : 'Pausar la cinta'}
-          className="mx-auto grid size-8 place-items-center rounded-full text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-[var(--color-primario)] focus-visible:outline-none"
-        >
-          {pausada ? <Play className="size-4" /> : <Pause className="size-4" />}
-        </button>
-      )}
-    </div>
+    <CintaBase
+      duracionSegundos={Math.max(12, fotos.length * segundosPorFoto)}
+      // El relleno derecho de cada vuelta es la misma separación entre fotos.
+      claseVuelta={cn(separacion.gap, separacion.relleno)}
+      etiquetas={{ pausar: 'Pausar la cinta', reanudar: 'Reanudar la cinta' }}
+    >
+      {(decorativa) =>
+        fotos.map((foto, indice) => (
+          <div key={`${foto.media_id}-${indice}`} className="w-60 shrink-0 sm:w-72">
+            <FotoGaleria
+              foto={foto}
+              indice={indice}
+              presentacion={presentacion}
+              claseImagen={PROPORCION_FOTO_CLASE[proporcion]}
+              onAbrir={onAbrir}
+              decorativa={decorativa}
+            />
+          </div>
+        ))
+      }
+    </CintaBase>
   )
 }
 
@@ -388,14 +344,9 @@ type CarouselGaleriaProps = {
 }
 
 /**
- * `disposicion='carousel'` (default de UC-18): scroll-snap horizontal nativo
- * en vez de una librería de carousel nueva (mismo criterio ya aplicado en
- * fases anteriores) — flechas prev/next con `scrollBy`, dots derivados del
- * ítem más cercano al `scrollLeft` actual (robusto sin importar el ancho
- * responsive de cada ítem, a diferencia de calcular el índice por proporción
- * del scroll total). Fase 7j: avance automático opcional, que se pausa al
- * pasar el cursor, al enfocar, con la pestaña oculta o con el botón de pausa
- * (WCAG 2.2.2); nunca en el lienzo del editor ni con movimiento reducido.
+ * `disposicion='carousel'` (default de UC-18): scroll-snap horizontal nativo.
+ * Fase 7j: avance automático opcional. Fase 7l: la mecánica vive en
+ * `CarruselBase`, compartida con las insignias.
  */
 function CarouselGaleria({
   fotos,
@@ -406,175 +357,34 @@ function CarouselGaleria({
   intervaloSegundos,
   onAbrirFoto,
 }: CarouselGaleriaProps) {
-  const prefiereReducido = usePrefiereMovimientoReducido()
-  const modo = useModoRenderizado()
-  const comportamiento: ScrollBehavior = prefiereReducido ? 'auto' : 'smooth'
-
-  const contenedorRef = useRef<HTMLDivElement | null>(null)
-  const itemRefs = useRef<Array<HTMLDivElement | null>>([])
-  const [indiceActivo, setIndiceActivo] = useState(0)
-  const [interaccion, setInteraccion] = useState(false)
-  const [pausadoPorUsuario, setPausadoPorUsuario] = useState(false)
-
-  const autoDisponible = automatico && !prefiereReducido && modo !== 'editor' && fotos.length > 1
-  const avanzando = autoDisponible && !interaccion && !pausadoPorUsuario
-
-  /** El scroll ya no puede avanzar más (en pantallas anchas el último ítem nunca llega al borde izquierdo). */
-  function estaAlFinal(contenedor: HTMLDivElement): boolean {
-    return contenedor.scrollLeft + contenedor.clientWidth >= contenedor.scrollWidth - 2
-  }
-
-  function manejarScroll() {
-    const contenedor = contenedorRef.current
-    if (!contenedor) return
-    if (fotos.length > 1 && contenedor.scrollLeft > 0 && estaAlFinal(contenedor)) {
-      setIndiceActivo(fotos.length - 1)
-      return
-    }
-    let indiceMasCercano = 0
-    let distanciaMinima = Infinity
-    itemRefs.current.forEach((item, indice) => {
-      if (!item) return
-      const distancia = Math.abs(item.offsetLeft - contenedor.scrollLeft)
-      if (distancia < distanciaMinima) {
-        distanciaMinima = distancia
-        indiceMasCercano = indice
-      }
-    })
-    setIndiceActivo(indiceMasCercano)
-  }
-
-  function irA(indice: number) {
-    const contenedor = contenedorRef.current
-    const item = itemRefs.current[indice]
-    if (!contenedor || !item) return
-    contenedor.scrollTo({ left: item.offsetLeft, behavior: comportamiento })
-  }
-
-  function anterior() {
-    const contenedor = contenedorRef.current
-    if (!contenedor) return
-    contenedor.scrollBy({ left: -contenedor.clientWidth, behavior: comportamiento })
-  }
-
-  function siguiente() {
-    const contenedor = contenedorRef.current
-    if (!contenedor) return
-    contenedor.scrollBy({ left: contenedor.clientWidth, behavior: comportamiento })
-  }
-
-  // Avance automático: avanza un ítem y, si el scroll ya no puede avanzar,
-  // vuelve a la primera foto. Lee la posición del DOM en cada tic (sin refs
-  // escritas durante el render).
-  useEffect(() => {
-    if (!avanzando) return
-    const intervalo = window.setInterval(() => {
-      const contenedor = contenedorRef.current
-      if (document.hidden || !contenedor) return
-      if (estaAlFinal(contenedor)) {
-        contenedor.scrollTo({ left: 0, behavior: comportamiento })
-        return
-      }
-      const siguienteItem = itemRefs.current.find(
-        (item) => item !== null && item.offsetLeft > contenedor.scrollLeft + 2,
-      )
-      contenedor.scrollTo({ left: siguienteItem?.offsetLeft ?? 0, behavior: comportamiento })
-    }, intervaloSegundos * 1000)
-    return () => window.clearInterval(intervalo)
-  }, [avanzando, intervaloSegundos, comportamiento])
-
   return (
-    <div
-      className="relative"
-      data-disposicion="carousel"
-      data-automatico={autoDisponible ? (avanzando ? 'avanzando' : 'pausado') : undefined}
-      onPointerEnter={() => setInteraccion(true)}
-      onPointerLeave={() => setInteraccion(false)}
-      onFocus={() => setInteraccion(true)}
-      onBlur={(evento) => {
-        if (!evento.currentTarget.contains(evento.relatedTarget as Node | null)) setInteraccion(false)
+    <CarruselBase
+      items={fotos.map((foto, indice) => (
+        <FotoGaleria
+          key={`${foto.media_id}-${indice}`}
+          foto={foto}
+          indice={indice}
+          presentacion={presentacion}
+          claseImagen={PROPORCION_FOTO_CLASE[proporcion]}
+          onAbrir={onAbrirFoto}
+        />
+      ))}
+      claseItem="w-full sm:w-2/3 lg:w-1/2"
+      gap={gap}
+      automatico={automatico}
+      intervaloSegundos={intervaloSegundos}
+      // `elevar` sube 4 px y proyecta sombra: este contenedor recorta en
+      // vertical (`overflow-x-auto`), así que se le da aire arriba y abajo.
+      claseDesplazable={
+        presentacion.efecto === 'elevar' || presentacion.efecto === 'inclinar' ? '-my-3 py-3' : undefined
+      }
+      etiquetas={{
+        anterior: 'Foto anterior',
+        siguiente: 'Foto siguiente',
+        pausar: 'Pausar el carrusel',
+        reanudar: 'Reanudar el carrusel',
+        irA: (n) => `Ir a la foto ${n}`,
       }}
-    >
-      <div
-        ref={contenedorRef}
-        onScroll={manejarScroll}
-        className={cn(
-          'flex snap-x snap-mandatory overflow-x-auto scroll-smooth',
-          gap,
-          // `elevar` sube 4 px y proyecta sombra: este contenedor recorta en
-          // vertical (`overflow-x-auto`), así que se le da aire arriba y abajo.
-          (presentacion.efecto === 'elevar' || presentacion.efecto === 'inclinar') && '-my-3 py-3',
-          '[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden',
-          prefiereReducido && 'scroll-auto',
-        )}
-      >
-        {fotos.map((foto, indice) => (
-          <div
-            key={`${foto.media_id}-${indice}`}
-            ref={(elemento) => {
-              itemRefs.current[indice] = elemento
-            }}
-            className="w-full shrink-0 snap-center sm:w-2/3 lg:w-1/2"
-          >
-            <FotoGaleria
-              foto={foto}
-              indice={indice}
-              presentacion={presentacion}
-              claseImagen={PROPORCION_FOTO_CLASE[proporcion]}
-              onAbrir={onAbrirFoto}
-            />
-          </div>
-        ))}
-      </div>
-      {fotos.length > 1 ? (
-        <>
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            className="absolute top-1/2 left-2 -translate-y-1/2"
-            onClick={anterior}
-            aria-label="Foto anterior"
-          >
-            <ChevronLeft className="size-4" />
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="icon"
-            className="absolute top-1/2 right-2 -translate-y-1/2"
-            onClick={siguiente}
-            aria-label="Foto siguiente"
-          >
-            <ChevronRight className="size-4" />
-          </Button>
-          <div className="mt-4 flex items-center justify-center gap-2">
-            {autoDisponible ? (
-              <button
-                type="button"
-                onClick={() => setPausadoPorUsuario((valor) => !valor)}
-                aria-label={pausadoPorUsuario ? 'Reanudar el carrusel' : 'Pausar el carrusel'}
-                className="mr-1 grid size-6 place-items-center rounded-full text-muted-foreground hover:text-foreground"
-              >
-                {pausadoPorUsuario ? <Play className="size-3.5" /> : <Pause className="size-3.5" />}
-              </button>
-            ) : null}
-            {fotos.map((foto, indice) => (
-              <button
-                key={`dot-${foto.media_id}-${indice}`}
-                type="button"
-                aria-label={`Ir a la foto ${indice + 1}`}
-                aria-current={indice === indiceActivo}
-                onClick={() => irA(indice)}
-                className={cn(
-                  'h-2 rounded-full transition-all duration-300',
-                  indice === indiceActivo ? 'w-6 bg-primary' : 'w-2 bg-muted-foreground/30',
-                )}
-              />
-            ))}
-          </div>
-        </>
-      ) : null}
-    </div>
+    />
   )
 }

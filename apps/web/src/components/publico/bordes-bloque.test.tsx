@@ -134,7 +134,8 @@ describe('tarjetas de los bloques: usan CLASES_BORDE_BLOQUE (Fase 7c)', () => {
           />
         </ProveedorDetallePublico>,
       )
-      expect(screen.getByRole('button', { name: 'Portafolio personal' })).toHaveClass(
+      // Fase 7l: el contorno vive en el `<article>` de `TarjetaContenido`.
+      expect(screen.getByRole('button', { name: 'Portafolio personal' }).closest('article')).toHaveClass(
         estilo === 'vidrio' ? CLASES_BORDE_VIDRIO_BLOQUE : CLASES_BORDE_BLOQUE,
       )
       unmount()
@@ -152,7 +153,8 @@ describe('tarjetas de los bloques: usan CLASES_BORDE_BLOQUE (Fase 7c)', () => {
           />
         </ProveedorDetallePublico>,
       )
-      expect(container.querySelector(`button.${CSS.escape('border-[length:var(--ancho-borde,1px)]')}`)).not.toBeNull()
+      const articulo = container.querySelector('article')
+      expect(articulo).toHaveClass(estilo === 'vidrio' ? CLASES_BORDE_VIDRIO_BLOQUE : CLASES_BORDE_BLOQUE)
       unmount()
     }
   })

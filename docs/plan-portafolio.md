@@ -237,6 +237,19 @@ Solo web. Contrato en `docs/plan-tecnico.md`, "Fase 7k".
 |---|---|---|
 | UC-07, UC-09 | Los campos de imagen del editor visual (fondo de la portada, fotos de la galería) muestran la imagen elegida en miniatura con su nombre y abren la biblioteca en un modal con miniaturas, búsqueda, filtro por carpeta y subida directa | Elegir una foto de la galería o el fondo de la portada se hace viendo las imágenes, no una lista de texto; cada imagen se identifica por su nombre legible (las anteriores a la Fase 7h, por su texto alternativo); una imagen subida desde el modal queda elegida; el fondo de la portada se puede quitar. |
 
+### Extensiones de UC-02, UC-04, UC-07, UC-10/UC-11, UC-15, UC-35 y casos nuevos UC-19 (parcial) y UC-36 — Fase 7l, trayectoria, GitHub y editor más directo (2026-10-20)
+
+Esquema (dos entidades y columnas nuevas), API y web. Contrato en `docs/plan-tecnico.md`, "Fase 7l". UC-19 se implementa aquí solo en su mitad de **experiencia laboral**; la formación queda para la Fase 9.
+
+| UC | Extensión | Criterio de aceptación |
+|---|---|---|
+| UC-19 (experiencia) | Gestionar experiencia laboral: empresa, cargo, descripción, fecha de inicio, fecha de fin o "actual", ubicación, modalidad (presencial/remoto/híbrido), sitio de la empresa, logo (biblioteca), tecnologías (catálogo), orden, visible; bloque `experiencia` para el editor visual en línea de tiempo, tarjetas o compacto | El sitio muestra las experiencias visibles ordenadas por fecha descendente; un puesto actual se muestra sin fecha de fin y con la duración calculada; el bloque es configurable desde Puck y se ve igual en lienzo, vista previa y sitio. |
+| UC-36 | Vincular la cuenta de GitHub: con el usuario de GitHub configurado, los repositorios **públicos** se importan como proyectos (título, descripción, enlace al repo, sitio del repo, fecha de creación, lenguaje y temas como tecnologías, estrellas) y se vuelven a sincronizar cada cierto tiempo y a demanda; opcionalmente se publica una versión nueva al terminar una sincronización con cambios | Guardar el usuario y pulsar "Sincronizar ahora" crea los proyectos que faltan y actualiza los importados sin tocar los creados a mano; un repo privado o eliminado nunca se importa ni se borra solo; la sincronización periódica respeta el intervalo elegido; la tarjeta del proyecto enlaza al repo y muestra el lenguaje y las estrellas si se eligió mostrarlos; ninguna petición al exterior sale fuera de la red segura. |
+| UC-02, UC-04 (bloques) | Tarjetas de proyectos y certificaciones rediseñadas con la misma anatomía (imagen o logo, título, meta, chips, acciones), nuevas disposiciones (proyectos: `vitrina`; certificaciones: `linea_tiempo`, `logos`), chips de estado y vigencia, iconos de demo y repo | Un proyecto importado de GitHub y uno manual se ven con la misma tarjeta; una certificación vencida muestra "Vencida" y una sin fecha "Sin vencimiento"; las secciones guardadas antes conservan su aspecto. |
+| UC-35 | El bloque de insignias admite `disposicion` rejilla (la actual), carrusel con avance automático y pausa, o cinta en movimiento | Con muchas insignias el carrusel y la cinta las van rotando; con movimiento reducido o en el lienzo quedan quietas y con scroll manual; el carrusel tiene botón de pausa. |
+| UC-15 (panel Fondo) | Cada tarjeta del fondo es un botón: al pulsarla el fondo se activa y aparece en el lienzo al instante y sus ajustes se muestran en el panel derecho (donde van los campos del bloque seleccionado); los ajustes se guardan solos; al seleccionar un bloque del lienzo el panel vuelve a mostrar los campos del bloque | Desaparecen los botones "Activar" y "Ajustar"; pulsar una tarjeta cambia el fondo del lienzo sin más pasos; mover un control cambia el lienzo al momento y queda guardado sin pulsar nada. |
+| UC-10, UC-11 (editor) | Publicar en un solo paso: el botón "Publicar" guarda primero los cambios del lienzo si los hay y luego publica; "Guardar" queda como acción secundaria (y Ctrl+S) | Con cambios sin guardar, "Publicar" pide una sola confirmación y deja el sitio publicado con lo que se ve en el lienzo; si el guardado falla no se publica. |
+
 ### Casos de uso propuestos — roadmap de profesionalización (2026-10-13, pendientes de aprobación)
 
 Los UC-19 a UC-34 nacen de la propuesta de la Sección 7 (roadmap). Se listan aquí para que el índice de casos de uso siga siendo la única fuente de verdad. **Solo UC-27 y UC-34 están aprobados e implementados** (Fase 8, 2026-10-14) y UC-35 (insignias, Fase 7d, definido en la sección anterior); el resto sigue pendiente: cada fase del roadmap se aprueba por separado y recién entonces se agregan sus entidades al diagrama ER (vía `db-schema`) y se codifica. La Fase 6 (fundamentos de producción) no agrega casos de uso: refuerza UC-01 (cierre de sesión real, límite de intentos por IP) y UC-12/13 (metadatos SEO, accesibilidad, rendimiento).
@@ -336,6 +349,13 @@ erDiagram
         string estado
         boolean destacado
         int orden
+        string origen
+        bigint github_repo_id UK
+        string github_nombre_completo
+        string github_lenguaje
+        int github_estrellas
+        timestamp github_actualizado_en
+        boolean sincronizar_github
     }
     PROYECTO_IMAGEN {
         uuid proyecto_id FK
@@ -448,6 +468,44 @@ erDiagram
         timestamp updated_at
     }
 
+    EXPERIENCIA_LABORAL {
+        uuid id PK
+        uuid usuario_admin_id FK
+        string empresa
+        string cargo
+        text descripcion
+        date fecha_inicio
+        date fecha_fin
+        string ubicacion
+        string modalidad
+        string url_empresa
+        uuid logo_media_id FK
+        int orden
+        boolean visible
+        timestamp created_at
+        timestamp updated_at
+    }
+    EXPERIENCIA_TECNOLOGIA {
+        uuid experiencia_id FK
+        uuid tecnologia_id FK
+    }
+    INTEGRACION_GITHUB {
+        uuid id PK
+        uuid usuario_admin_id FK, UK
+        string usuario_github
+        boolean activa
+        int intervalo_horas
+        boolean publicar_automaticamente
+        boolean incluir_forks
+        boolean incluir_archivados
+        boolean destacar_nuevos
+        timestamp ultima_sincronizacion_en
+        string ultimo_error
+        string etag
+        timestamp created_at
+        timestamp updated_at
+    }
+
     USUARIO_ADMIN ||--o| PERFIL : tiene
     USUARIO_ADMIN ||--o{ MEDIA : sube
     USUARIO_ADMIN ||--o{ CARPETA_MEDIA : organiza
@@ -455,6 +513,8 @@ erDiagram
     USUARIO_ADMIN ||--o{ PROYECTO : gestiona
     USUARIO_ADMIN ||--o{ CERTIFICACION : gestiona
     USUARIO_ADMIN ||--o{ INSIGNIA : gestiona
+    USUARIO_ADMIN ||--o{ EXPERIENCIA_LABORAL : gestiona
+    USUARIO_ADMIN ||--o| INTEGRACION_GITHUB : configura
     USUARIO_ADMIN ||--o{ LOGRO : gestiona
     USUARIO_ADMIN ||--o{ RED_SOCIAL : gestiona
     USUARIO_ADMIN ||--o{ SECCION : configura
@@ -471,12 +531,19 @@ erDiagram
     PROYECTO ||--o{ PROYECTO_TECNOLOGIA : usa
     TECNOLOGIA ||--o{ PROYECTO_TECNOLOGIA : "aplicada en"
     CERTIFICACION }o--o| MEDIA : logo
+    EXPERIENCIA_LABORAL ||--o{ EXPERIENCIA_TECNOLOGIA : usa
+    TECNOLOGIA ||--o{ EXPERIENCIA_TECNOLOGIA : "aplicada en"
+    MEDIA ||--o{ EXPERIENCIA_LABORAL : logo
     PLATAFORMA_RED ||--o{ RED_SOCIAL : clasifica
 ```
 
-Diecinueve entidades: el administrador es el dueño de todo el contenido; `MEDIA`, `TECNOLOGIA` y `PLATAFORMA_RED` son catálogos compartidos en vez de campos de texto libre repetidos; `SECCION`, `TEMA`, `FONDO_SITIO` y `VERSION_SITIO` sostienen el editor visual y la publicación por versiones. `SKILL` sigue el mismo patrón que `LOGRO`: contenido propio del administrador (no un catálogo compartido) — a diferencia de `TECNOLOGIA`, que solo clasifica proyectos, `SKILL` es lo que se muestra en el carrusel de habilidades del sitio público, así que no tendría sentido reutilizar aquel catálogo para este propósito distinto. `FONDO_SITIO` sigue el mismo patrón de "configuración visual exclusiva" que `TEMA`, pero es deliberadamente independiente de él: `TEMA` solo maneja color y tipografía, `FONDO_SITIO` maneja el fondo animado del landing. `CARPETA_MEDIA` organiza la biblioteca del panel en carpetas planas (Fase 7e, UC-09); no cambia la clave de S3 y al borrar una carpeta sus archivos quedan sin carpeta (`ON DELETE SET NULL`); nombre único por administrador sin distinguir mayúsculas.
+Veintidós entidades: el administrador es el dueño de todo el contenido; `MEDIA`, `TECNOLOGIA` y `PLATAFORMA_RED` son catálogos compartidos en vez de campos de texto libre repetidos; `SECCION`, `TEMA`, `FONDO_SITIO` y `VERSION_SITIO` sostienen el editor visual y la publicación por versiones. `SKILL` sigue el mismo patrón que `LOGRO`: contenido propio del administrador (no un catálogo compartido) — a diferencia de `TECNOLOGIA`, que solo clasifica proyectos, `SKILL` es lo que se muestra en el carrusel de habilidades del sitio público, así que no tendría sentido reutilizar aquel catálogo para este propósito distinto. `FONDO_SITIO` sigue el mismo patrón de "configuración visual exclusiva" que `TEMA`, pero es deliberadamente independiente de él: `TEMA` solo maneja color y tipografía, `FONDO_SITIO` maneja el fondo animado del landing. `CARPETA_MEDIA` organiza la biblioteca del panel en carpetas planas (Fase 7e, UC-09); no cambia la clave de S3 y al borrar una carpeta sus archivos quedan sin carpeta (`ON DELETE SET NULL`); nombre único por administrador sin distinguir mayúsculas.
 
 `INSIGNIA` guarda badges importados de Credly/Open Badges u otros (Fase 7d, UC-35); es independiente de `CERTIFICACION` porque la insignia es la imagen oficial emitida por un tercero con proveedor e id externo, mientras que la certificación es un registro propio con logo de institución; `habilidades` es un array nativo de Postgres (no JSONB) porque son etiquetas planas sin estructura.
+
+`EXPERIENCIA_LABORAL` guarda la trayectoria profesional (Fase 7l, UC-19); es independiente de `PROYECTO` porque un puesto es un periodo en una empresa (cargo, fechas, modalidad) y un proyecto es un producto con enlaces y galería; `fecha_fin` nulo significa puesto actual, y el logo es un `MEDIA` opcional (`ON DELETE SET NULL`). `EXPERIENCIA_TECNOLOGIA` reutiliza el catálogo `TECNOLOGIA` igual que `PROYECTO_TECNOLOGIA`, para no repetir texto libre ni listas separadas por comas.
+
+`INTEGRACION_GITHUB` guarda la configuración de la sincronización de repositorios públicos (Fase 7l, UC-36); es 1:1 con el administrador (`usuario_admin_id` único) porque hay una sola cuenta de GitHub por portafolio; `etag` evita gastar cuota de la API cuando nada cambió. En `PROYECTO`, `origen` (`manual|github`) distingue lo importado de lo escrito a mano; `github_repo_id` es BigInt único porque el id de GitHub es numérico y estable aunque renombren el repo (evita duplicados al sincronizar); `github_nombre_completo`, `github_lenguaje`, `github_estrellas` y `github_actualizado_en` son metadatos del repo para mostrarlos; `sincronizar_github` en falso congela un proyecto importado para editarlo a mano sin que la sincronización lo pise.
 
 `MEDIA_VARIANTE` guarda las variantes responsive (WebP/AVIF por ancho) derivadas de cada `MEDIA` (Fase 8, UC-34), en tabla propia y no como JSON dentro de `MEDIA`, para respetar 3FN y poder borrarlas en cascada.
 

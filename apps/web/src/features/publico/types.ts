@@ -1,4 +1,5 @@
 import type { Certificacion } from '@/features/certificaciones/types'
+import type { ExperienciaPublica } from '@/features/experiencias/types'
 import type { FondoSitio } from '@/features/fondo-sitio/types'
 import type { InsigniaPublica } from '@/features/insignias/types'
 import type { Logro } from '@/features/logros/types'
@@ -37,7 +38,7 @@ export type PerfilPublico = {
  */
 export type CertificacionPublica = Certificacion & { logo: Media | null }
 
-export type { InsigniaPublica }
+export type { ExperienciaPublica, InsigniaPublica }
 
 /**
  * Forma exacta de `GET /sitio` (UC-12) y de `VersionSitio.snapshot`
@@ -58,4 +59,9 @@ export type SnapshotSitio = {
    * snapshots publicados antes de la fase no lo traen (el bloque queda vacío).
    */
   insignias?: InsigniaPublica[]
+  /**
+   * Fase 7l (UC-19): solo las visibles, con el logo resuelto. Opcional: los
+   * snapshots publicados antes de la fase no lo traen (el bloque no se pinta).
+   */
+  experiencias?: ExperienciaPublica[]
 }

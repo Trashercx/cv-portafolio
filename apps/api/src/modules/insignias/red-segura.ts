@@ -48,6 +48,17 @@ export interface OpcionesDescarga {
   /** Cabecera `Accept` de la petición. */
   accept?: string;
   /**
+   * Fase 7l (UC-36): cabeceras extra de un `GET` fijadas por el servicio
+   * (p. ej. `If-None-Match`, `Authorization`, `X-GitHub-Api-Version`). Nunca
+   * datos del usuario. `User-Agent` y `Accept` no se pueden pisar.
+   */
+  cabeceras?: Record<string, string>;
+  /**
+   * Fase 7l (UC-36): si es `true`, un 304 no es error: se devuelve
+   * `{ buffer: vacío, status: 304 }` (las peticiones condicionales con ETag).
+   */
+  aceptar304?: boolean;
+  /**
    * Fase 7i (UC-35): `POST` con cuerpo JSON para APIs públicas de
    * verificación (p. ej. Claude Academy, Connect-RPC). Un `POST` nunca sigue
    * redirecciones: un 3xx es error.
@@ -65,7 +76,16 @@ export interface RecursoDescargado {
   contentType: string;
   /** URL tras seguir las redirecciones. */
   urlFinal: string;
+  /** Fase 7l (UC-36): código HTTP final (200, o 304 con `aceptar304`). */
+  status: number;
+  /**
+   * Fase 7l (UC-36): cabeceras de respuesta útiles para el llamador, en
+   * minúsculas (`etag`, `x-ratelimit-remaining`, `link`) si venían.
+   */
+  cabeceras: Record<string, string>;
 }
+
+const CABECERAS_DE_RESPUESTA = ['etag', 'x-ratelimit-remaining', 'link'];
 
 // ---------------------------------------------------------------------------
 // Rangos de IP bloqueados
@@ -279,6 +299,37 @@ async function leerCuerpo(
   return Buffer.concat(partes, total);
 }
 
+/** Cabeceras que llevan credenciales o estado de caché: solo viajan al host inicial. */
+const CABECERAS_SOLO_HOST_INICIAL = ['authorization', 'if-none-match'];
+
+/**
+ * Quita `User-Agent`/`Accept` (en cualquier capitalización): no se pueden
+ * pisar. Fase 7l (revisión): si la petición ya saltó a OTRO host por una
+ * redirección, tampoco viajan `Authorization` ni `If-None-Match`, para que
+ * un redirect de la API remota no filtre el token a un tercero.
+ */
+function cabecerasPermitidas(
+  cabeceras: Record<string, string> | undefined,
+  mismoHost = true,
+): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(cabeceras ?? {}).filter(([nombre]) => {
+      const clave = nombre.toLowerCase();
+      if (['user-agent', 'accept'].includes(clave)) return false;
+      return mismoHost || !CABECERAS_SOLO_HOST_INICIAL.includes(clave);
+    }),
+  );
+}
+
+function extraerCabeceras(respuesta: Response): Record<string, string> {
+  const salida: Record<string, string> = {};
+  for (const nombre of CABECERAS_DE_RESPUESTA) {
+    const valor = respuesta.headers.get(nombre);
+    if (valor !== null) salida[nombre] = valor;
+  }
+  return salida;
+}
+
 export async function descargarRecursoSeguro(
   url: string,
   opciones: OpcionesDescarga = {},
@@ -298,6 +349,7 @@ export async function descargarRecursoSeguro(
       throw new RedSeguraError('El enlace no es una URL válida');
     }
 
+    const hostInicial = actual.host;
     for (let saltos = 0; ; saltos++) {
       const direcciones = await validarDestino(actual);
       const agente = crearAgenteFijo(direcciones);
@@ -313,6 +365,10 @@ export async function descargarRecursoSeguro(
         credentials: 'omit',
         signal: controlador.signal,
         headers: {
+          ...cabecerasPermitidas(
+            opciones.cabeceras,
+            actual.host === hostInicial,
+          ),
           ...(post?.cabeceras ?? {}),
           ...(post ? { 'Content-Type': 'application/json' } : {}),
           'User-Agent': USER_AGENT_INSIGNIAS,
@@ -322,6 +378,23 @@ export async function descargarRecursoSeguro(
         // `dispatcher` es extensión de undici, ausente en el RequestInit de DOM.
         dispatcher: agente,
       } as RequestInit);
+
+      if (respuesta.status === 304 && opciones.aceptar304) {
+        await respuesta.body?.cancel().catch(() => undefined);
+        return {
+          buffer: Buffer.alloc(0),
+          contentType: '',
+          urlFinal: actual.toString(),
+          status: 304,
+          cabeceras: extraerCabeceras(respuesta),
+        };
+      }
+
+      if (respuesta.status === 304) {
+        // Sin `aceptar304` un 304 no tiene sentido (no mandamos condicionales).
+        await respuesta.body?.cancel().catch(() => undefined);
+        throw new RedSeguraError('El servidor respondió 304');
+      }
 
       if (respuesta.status >= 300 && respuesta.status < 400) {
         const destino = respuesta.headers.get('location');
@@ -360,7 +433,13 @@ export async function descargarRecursoSeguro(
       }
 
       const buffer = await leerCuerpo(respuesta, maxBytes);
-      return { buffer, contentType, urlFinal: actual.toString() };
+      return {
+        buffer,
+        contentType,
+        urlFinal: actual.toString(),
+        status: respuesta.status,
+        cabeceras: extraerCabeceras(respuesta),
+      };
     }
   } catch (error) {
     if (error instanceof RedSeguraError) throw error;

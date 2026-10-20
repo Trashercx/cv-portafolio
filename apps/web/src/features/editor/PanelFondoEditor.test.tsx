@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ThemeProvider } from '@/components/theme/ThemeProvider'
@@ -10,7 +10,6 @@ import { PanelFondoEditor } from './PanelFondoEditor'
 const activarMutateMock = vi.fn()
 const eliminarMutateMock = vi.fn()
 const crearMutateMock = vi.fn()
-const actualizarMutateMock = vi.fn()
 
 const fondosMock: {
   data: FondoSitio[] | undefined
@@ -31,7 +30,6 @@ vi.mock('@/features/fondo-sitio/useFondosSitio', () => ({
   useActivarFondoSitio: () => ({ mutateAsync: activarMutateMock, isPending: false }),
   useEliminarFondoSitio: () => ({ mutate: eliminarMutateMock, isPending: false }),
   useCrearFondoSitio: () => ({ mutateAsync: crearMutateMock, isPending: false }),
-  useActualizarFondoSitio: () => ({ mutateAsync: actualizarMutateMock, isPending: false }),
 }))
 
 vi.mock('@/features/tema/useTemas', () => ({
@@ -86,6 +84,7 @@ const FONDO_INACTIVO: FondoSitio = {
   activo: false,
 }
 
+/** Cada tarjeta es el `<button>` completo (Fase 7l). */
 function tarjeta(tipo: string) {
   return screen.getByTestId(`tarjeta-fondo-${tipo}`)
 }
@@ -99,11 +98,12 @@ function renderPanel() {
 }
 
 /**
- * Plugin "Fondo" (UC-15, Fase 7b): galería de 20 tarjetas con miniatura en
- * vivo, Activar (crea + activa o solo activa), Ajustar (editor inline +
- * `fondoEnEdicion` en el store), Guardar (un solo PATCH) y Cancelar.
+ * Plugin "Fondo" (UC-15, Fase 7b; tarjeta-botón en la Fase 7l): galería de 20
+ * tarjetas con miniatura en vivo; pulsar una tarjeta crea + activa o activa,
+ * la selecciona (`fondoSeleccionado`) y la publica al lienzo (`fondoEnEdicion`).
+ * Los ajustes viven en `PanelAjustesFondo` (su propio test).
  */
-describe('PanelFondoEditor (UC-15, Fase 7b)', () => {
+describe('PanelFondoEditor (UC-15, Fase 7l)', () => {
   beforeEach(() => {
     fondosMock.data = []
     fondosMock.isLoading = false
@@ -112,6 +112,7 @@ describe('PanelFondoEditor (UC-15, Fase 7b)', () => {
       pluginActivo: null,
       modoVistaPrevia: null,
       fondoEnEdicion: null,
+      fondoSeleccionado: null,
     })
   })
 
@@ -129,6 +130,20 @@ describe('PanelFondoEditor (UC-15, Fase 7b)', () => {
       expect(t.getByText(entrada.descripcion)).toBeInTheDocument()
     }
     expect(screen.queryByText('Activo')).not.toBeInTheDocument()
+  })
+
+  it('cada tarjeta es un botón completo con aria-pressed, sin botones "Activar"/"Ajustar"', () => {
+    renderPanel()
+
+    expect(screen.getAllByRole('button', { pressed: false })).toHaveLength(20)
+    for (const entrada of CATALOGO_FONDOS) {
+      const t = tarjeta(entrada.tipo)
+      expect(t.tagName).toBe('BUTTON')
+      expect(t).toHaveAttribute('type', 'button')
+    }
+    expect(screen.queryByRole('button', { name: 'Activar' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Ajustar' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Guardar' })).not.toBeInTheDocument()
   })
 
   it('cada tarjeta lleva una miniatura en vivo en modo miniatura', () => {
@@ -154,150 +169,171 @@ describe('PanelFondoEditor (UC-15, Fase 7b)', () => {
 
     expect(tarjeta('aurora_mesh')).toHaveClass('border-primary')
     expect(within(tarjeta('aurora_mesh')).getByText('Activo')).toBeInTheDocument()
-    expect(within(tarjeta('aurora_mesh')).getByRole('button', { name: 'Activar' })).toBeDisabled()
     expect(tarjeta('particulas_red')).not.toHaveClass('border-primary')
     expect(screen.getAllByText('Activo')).toHaveLength(1)
   })
 
-  it('"Activar" sobre un tipo ya guardado solo lo activa', async () => {
+  it('al montar, el fondo activo queda preseleccionado y publicado al lienzo', async () => {
     fondosMock.data = [FONDO_ACTIVO, FONDO_INACTIVO]
-    const user = userEvent.setup()
     renderPanel()
 
-    await user.click(within(tarjeta('particulas_red')).getByRole('button', { name: 'Activar' }))
-
-    expect(activarMutateMock).toHaveBeenCalledWith('fondo-2')
+    await waitFor(() =>
+      expect(useEditorPanelStore.getState().fondoSeleccionado).toBe('aurora_mesh'),
+    )
+    expect(tarjeta('aurora_mesh')).toHaveAttribute('aria-pressed', 'true')
+    expect(tarjeta('aurora_mesh')).toHaveClass('ring-primary')
+    expect(tarjeta('particulas_red')).toHaveAttribute('aria-pressed', 'false')
+    expect(useEditorPanelStore.getState().fondoEnEdicion).toMatchObject({
+      id: 'fondo-1',
+      tipo: 'aurora_mesh',
+    })
+    // Preseleccionar no activa ni crea nada.
+    expect(activarMutateMock).not.toHaveBeenCalled()
     expect(crearMutateMock).not.toHaveBeenCalled()
   })
 
-  it('"Activar" sobre un tipo sin guardar lo crea con los valores por defecto y luego lo activa', async () => {
+  it('sin fondo activo no preselecciona nada', () => {
+    fondosMock.data = [FONDO_INACTIVO]
+    renderPanel()
+    expect(useEditorPanelStore.getState().fondoSeleccionado).toBeNull()
+  })
+
+  it('pulsar un tipo guardado e inactivo lo activa, lo selecciona y lo publica al lienzo con su configuración', async () => {
+    fondosMock.data = [
+      FONDO_ACTIVO,
+      { ...FONDO_INACTIVO, configuracion: { velocidad: 'rapida', opacidad: 0.8 } },
+    ]
+    const user = userEvent.setup()
+    renderPanel()
+
+    await user.click(tarjeta('particulas_red'))
+
+    expect(activarMutateMock).toHaveBeenCalledWith('fondo-2')
+    expect(crearMutateMock).not.toHaveBeenCalled()
+    expect(useEditorPanelStore.getState().fondoSeleccionado).toBe('particulas_red')
+    expect(useEditorPanelStore.getState().fondoEnEdicion).toMatchObject({
+      id: 'fondo-2',
+      tipo: 'particulas_red',
+      configuracion: { velocidad: 'rapida', opacidad: 0.8 },
+    })
+    expect(tarjeta('particulas_red')).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('pulsar el fondo que ya está activo solo lo selecciona (sin llamar al API)', async () => {
+    fondosMock.data = [FONDO_ACTIVO, FONDO_INACTIVO]
+    const user = userEvent.setup()
+    renderPanel()
+    await user.click(tarjeta('particulas_red'))
+    activarMutateMock.mockClear()
+
+    await user.click(tarjeta('aurora_mesh'))
+
+    expect(activarMutateMock).not.toHaveBeenCalled()
+    expect(useEditorPanelStore.getState().fondoSeleccionado).toBe('aurora_mesh')
+  })
+
+  it('pulsar un tipo sin guardar lo crea con los valores por defecto, lo activa, lo selecciona y lo publica al lienzo', async () => {
     crearMutateMock.mockResolvedValue({ id: 'nuevo-1' })
     const user = userEvent.setup()
     renderPanel()
 
-    await user.click(within(tarjeta('haces_luz')).getByRole('button', { name: 'Activar' }))
+    await user.click(tarjeta('haces_luz'))
 
+    const porDefecto = {
+      velocidad: 'media',
+      opacidad: 0.5,
+      intensidad: 'media',
+      interactivo: true,
+    }
     expect(crearMutateMock).toHaveBeenCalledTimes(1)
     expect(crearMutateMock.mock.calls[0][0]).toEqual({
       tipo: 'haces_luz',
-      configuracion: { velocidad: 'media', opacidad: 0.5, intensidad: 'media', interactivo: true },
+      configuracion: porDefecto,
     })
     expect(activarMutateMock).toHaveBeenCalledWith('nuevo-1')
-  })
-
-  it('"Ajustar" abre el editor inline y publica el fondo en curso en el store', async () => {
-    fondosMock.data = [FONDO_ACTIVO]
-    const user = userEvent.setup()
-    renderPanel()
-
-    expect(screen.queryByRole('region', { name: /ajustes de/i })).not.toBeInTheDocument()
-    await user.click(within(tarjeta('aurora_mesh')).getByRole('button', { name: 'Ajustar' }))
-
-    const editor = screen.getByRole('region', { name: 'Ajustes de Aurora mesh' })
-    expect(within(editor).getByTestId('vista-previa-fondo')).toBeInTheDocument()
-    expect(within(editor).getByRole('radiogroup', { name: 'Velocidad' })).toBeInTheDocument()
-    expect(within(editor).getByRole('slider', { name: 'Opacidad' })).toBeInTheDocument()
-    expect(within(editor).getByRole('radiogroup', { name: 'Intensidad' })).toBeInTheDocument()
-    expect(within(editor).getByRole('switch', { name: 'Interactivo' })).toBeChecked()
-
-    const enEdicion = useEditorPanelStore.getState().fondoEnEdicion
-    expect(enEdicion).toMatchObject({
-      id: 'fondo-1',
-      tipo: 'aurora_mesh',
-      configuracion: { velocidad: 'media', opacidad: 0.5, intensidad: 'media', interactivo: true },
+    expect(useEditorPanelStore.getState().fondoSeleccionado).toBe('haces_luz')
+    expect(useEditorPanelStore.getState().fondoEnEdicion).toMatchObject({
+      tipo: 'haces_luz',
+      configuracion: porDefecto,
     })
   })
 
-  it('los controles actualizan el fondo en curso del store (velocidad, intensidad, interactivo y slider con retraso)', async () => {
-    fondosMock.data = [FONDO_ACTIVO]
+  it('la selección llega al lienzo antes de que responda el servidor (el fondo no espera)', async () => {
+    crearMutateMock.mockReturnValue(new Promise(() => {}))
     const user = userEvent.setup()
     renderPanel()
-    await user.click(within(tarjeta('aurora_mesh')).getByRole('button', { name: 'Ajustar' }))
-    const editor = screen.getByRole('region', { name: 'Ajustes de Aurora mesh' })
 
-    await user.click(within(editor).getByRole('radio', { name: 'Rápida' }))
-    expect(useEditorPanelStore.getState().fondoEnEdicion?.configuracion.velocidad).toBe('rapida')
+    await user.click(tarjeta('haces_luz'))
 
-    await user.click(within(within(editor).getByRole('radiogroup', { name: 'Intensidad' })).getByRole('radio', { name: 'Alta' }))
-    expect(useEditorPanelStore.getState().fondoEnEdicion?.configuracion.intensidad).toBe('alta')
-
-    await user.click(within(editor).getByRole('switch', { name: 'Interactivo' }))
-    expect(useEditorPanelStore.getState().fondoEnEdicion?.configuracion.interactivo).toBe(false)
-
-    const slider = within(editor).getByRole('slider', { name: 'Opacidad' })
-    slider.focus()
-    await user.keyboard('{ArrowRight}')
-    await waitFor(() =>
-      expect(useEditorPanelStore.getState().fondoEnEdicion?.configuracion.opacidad).toBe(0.55),
-    )
+    expect(useEditorPanelStore.getState().fondoEnEdicion?.tipo).toBe('haces_luz')
+    expect(activarMutateMock).not.toHaveBeenCalled()
   })
 
-  it('"Guardar" sobre un fondo existente hace un único PATCH con la configuración y limpia el store', async () => {
-    fondosMock.data = [FONDO_ACTIVO]
-    actualizarMutateMock.mockResolvedValue({})
+  it('si crear falla no se intenta activar y la selección se mantiene', async () => {
+    crearMutateMock.mockRejectedValue(new Error('boom'))
     const user = userEvent.setup()
     renderPanel()
-    await user.click(within(tarjeta('aurora_mesh')).getByRole('button', { name: 'Ajustar' }))
-    const editor = screen.getByRole('region', { name: 'Ajustes de Aurora mesh' })
-    await user.click(within(editor).getByRole('radio', { name: 'Lenta' }))
 
-    await user.click(within(editor).getByRole('button', { name: 'Guardar' }))
+    await user.click(tarjeta('haces_luz'))
 
-    expect(actualizarMutateMock).toHaveBeenCalledTimes(1)
-    expect(actualizarMutateMock.mock.calls[0][0]).toEqual({
-      configuracion: { velocidad: 'lenta', opacidad: 0.5, intensidad: 'media', interactivo: true },
-    })
-    expect(crearMutateMock).not.toHaveBeenCalled()
-    expect(useEditorPanelStore.getState().fondoEnEdicion).toBeNull()
-    expect(screen.queryByRole('region', { name: /ajustes de/i })).not.toBeInTheDocument()
+    expect(activarMutateMock).not.toHaveBeenCalled()
+    expect(useEditorPanelStore.getState().fondoSeleccionado).toBe('haces_luz')
   })
 
-  it('"Guardar" sobre un tipo sin guardar crea el fondo y lo activa', async () => {
-    crearMutateMock.mockResolvedValue({ id: 'nuevo-2' })
-    const user = userEvent.setup()
-    renderPanel()
-    await user.click(within(tarjeta('campo_estrellas')).getByRole('button', { name: 'Ajustar' }))
-    const editor = screen.getByRole('region', { name: 'Ajustes de Campo de estrellas' })
-
-    await user.click(within(editor).getByRole('button', { name: 'Guardar' }))
-
-    expect(crearMutateMock).toHaveBeenCalledTimes(1)
-    expect(crearMutateMock.mock.calls[0][0]).toMatchObject({ tipo: 'campo_estrellas' })
-    expect(activarMutateMock).toHaveBeenCalledWith('nuevo-2')
-    expect(actualizarMutateMock).not.toHaveBeenCalled()
-    expect(useEditorPanelStore.getState().fondoEnEdicion).toBeNull()
-  })
-
-  it('"Cancelar" cierra el editor, limpia el store y no guarda nada', async () => {
+  it('al desmontar el panel (cambio de plugin) se descartan la selección y el fondo en curso', async () => {
     fondosMock.data = [FONDO_ACTIVO]
-    const user = userEvent.setup()
-    renderPanel()
-    await user.click(within(tarjeta('aurora_mesh')).getByRole('button', { name: 'Ajustar' }))
-    expect(useEditorPanelStore.getState().fondoEnEdicion).not.toBeNull()
-
-    await user.click(screen.getByRole('button', { name: 'Cancelar' }))
-
-    expect(useEditorPanelStore.getState().fondoEnEdicion).toBeNull()
-    expect(screen.queryByRole('region', { name: /ajustes de/i })).not.toBeInTheDocument()
-    expect(actualizarMutateMock).not.toHaveBeenCalled()
-    expect(crearMutateMock).not.toHaveBeenCalled()
-  })
-
-  it('al desmontar el panel (cambio de plugin) el ajuste sin guardar se descarta', async () => {
-    fondosMock.data = [FONDO_ACTIVO]
-    const user = userEvent.setup()
     const { unmount } = renderPanel()
-    await user.click(within(tarjeta('aurora_mesh')).getByRole('button', { name: 'Ajustar' }))
-    expect(useEditorPanelStore.getState().fondoEnEdicion).not.toBeNull()
+    await waitFor(() =>
+      expect(useEditorPanelStore.getState().fondoSeleccionado).not.toBeNull(),
+    )
 
     unmount()
 
+    expect(useEditorPanelStore.getState().fondoSeleccionado).toBeNull()
     expect(useEditorPanelStore.getState().fondoEnEdicion).toBeNull()
   })
 
-  it('el fondo sólido no tiene nada que ajustar', () => {
+  it('cambiar de plugin en el store limpia la selección (setPluginActivo)', async () => {
+    fondosMock.data = [FONDO_ACTIVO]
+    useEditorPanelStore.getState().setPluginActivo('fondo')
     renderPanel()
-    expect(within(tarjeta('solido')).getByRole('button', { name: 'Ajustar' })).toBeDisabled()
+    await waitFor(() =>
+      expect(useEditorPanelStore.getState().fondoSeleccionado).toBe('aurora_mesh'),
+    )
+
+    act(() => useEditorPanelStore.getState().setPluginActivo('blocks'))
+
+    expect(useEditorPanelStore.getState().fondoSeleccionado).toBeNull()
+    expect(useEditorPanelStore.getState().fondoEnEdicion).toBeNull()
+  })
+
+  it('si el rail activa el plugin después de montar el panel, la preselección se repite', async () => {
+    fondosMock.data = [FONDO_ACTIVO]
+    renderPanel()
+    await waitFor(() =>
+      expect(useEditorPanelStore.getState().fondoSeleccionado).toBe('aurora_mesh'),
+    )
+
+    // `SincronizadorPlugin` llama a `setPluginActivo('fondo')` y limpia la selección.
+    act(() => useEditorPanelStore.getState().setPluginActivo('fondo'))
+
+    await waitFor(() =>
+      expect(useEditorPanelStore.getState().fondoSeleccionado).toBe('aurora_mesh'),
+    )
+  })
+
+  it('si un bloque limpia la selección con el panel abierto, no se vuelve a preseleccionar', async () => {
+    fondosMock.data = [FONDO_ACTIVO]
+    useEditorPanelStore.getState().setPluginActivo('fondo')
+    renderPanel()
+    await waitFor(() =>
+      expect(useEditorPanelStore.getState().fondoSeleccionado).toBe('aurora_mesh'),
+    )
+
+    act(() => useEditorPanelStore.getState().setFondoSeleccionado(null))
+
+    expect(useEditorPanelStore.getState().fondoSeleccionado).toBeNull()
+    expect(tarjeta('aurora_mesh')).toHaveAttribute('aria-pressed', 'false')
   })
 
   it('sin duplicados no muestra el desplegable "Fondos duplicados"', () => {

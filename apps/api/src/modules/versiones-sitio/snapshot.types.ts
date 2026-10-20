@@ -94,6 +94,53 @@ export interface SnapshotInsignia {
   [key: string]: unknown;
 }
 
+/**
+ * Experiencia laboral del snapshot (Fase 7l, UC-19): solo las `visible`, con
+ * los puestos actuales (`fecha_fin` null) primero y luego `fecha_inicio`
+ * descendente. Logo resuelto con variantes y tecnologías aplanadas. Sin
+ * `usuario_admin_id`, `logo_media_id`, `visible` ni timestamps. Las fechas
+ * viajan como ISO completo (`2024-03-01T00:00:00.000Z`). Ausente en
+ * snapshots anteriores a la fase.
+ */
+export interface ExperienciaPublica {
+  id: string;
+  empresa: string;
+  cargo: string;
+  descripcion: string;
+  fecha_inicio: string;
+  fecha_fin: string | null;
+  ubicacion: string | null;
+  modalidad: 'presencial' | 'remoto' | 'hibrido';
+  url_empresa: string | null;
+  orden: number;
+  logo: SnapshotMedia | null;
+  tecnologias: { id: string; nombre: string }[];
+}
+
+/**
+ * Proyecto del snapshot (UC-03; Fase 7l, UC-36). Los campos de GitHub salen del
+ * servicio de proyectos: `github_repo_id` va como string (BigInt no serializa a
+ * JSON); ausentes en snapshots anteriores a la fase.
+ */
+export interface ProyectoPublico extends SnapshotConId {
+  titulo: string;
+  descripcion: string;
+  url_demo: string | null;
+  url_repositorio: string | null;
+  fecha_inicio: string;
+  fecha_fin: string | null;
+  estado: string;
+  destacado: boolean;
+  orden: number;
+  origen?: 'manual' | 'github';
+  github_repo_id?: string | null;
+  github_nombre_completo?: string | null;
+  github_lenguaje?: string | null;
+  github_estrellas?: number | null;
+  github_actualizado_en?: string | null;
+  sincronizar_github?: boolean;
+}
+
 export interface SnapshotSeccion extends SnapshotConId {
   tipo_seccion: string;
   configuracion: SnapshotSeccionConfiguracion;
@@ -103,13 +150,15 @@ export interface SnapshotSitio {
   perfil: SnapshotPerfil | null;
   tema: Record<string, unknown> | null;
   secciones: SnapshotSeccion[];
-  proyectos: SnapshotConId[];
+  proyectos: ProyectoPublico[];
   certificaciones: SnapshotConId[];
   logros: SnapshotConId[];
   redes_sociales: SnapshotConId[];
   skills: SnapshotConId[];
   /** Fase 7d (UC-35); ausente en snapshots anteriores. */
   insignias?: SnapshotInsignia[];
+  /** Fase 7l (UC-19); ausente en snapshots anteriores. */
+  experiencias?: ExperienciaPublica[];
   fondo: Record<string, unknown> | null;
 }
 

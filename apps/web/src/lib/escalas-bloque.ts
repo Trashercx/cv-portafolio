@@ -206,3 +206,50 @@ export function claseMosaico(indice: number, total: number): string {
 
 /** Cinta: segundos que tarda en pasar cada foto, por velocidad. */
 export const SEGUNDOS_POR_FOTO_CINTA = { lenta: 9, normal: 6, rapida: 3.5 } as const
+
+/**
+ * Fase 7l (UC-02, UC-04): contenedor de `TarjetaContenido` según
+ * `estilo_tarjeta` (proyectos y certificaciones). El contorno sale de
+ * `CLASES_BORDE_BLOQUE`, de modo que `borde_bloque: 'ninguno'` lo quita.
+ */
+export const ESTILO_TARJETA_CLASE = {
+  simple: `bg-card ${CLASES_BORDE_BLOQUE}`,
+  con_sombra: `bg-card ${CLASES_BORDE_BLOQUE} shadow-md`,
+  vidrio: `${CLASES_BORDE_VIDRIO_BLOQUE} bg-card/60 backdrop-blur-sm`,
+} as const
+
+/** Fase 7l (UC-35): segundos que tarda en pasar cada insignia en la cinta, por velocidad. */
+export const SEGUNDOS_POR_INSIGNIA_CINTA = { lenta: 7, normal: 4.5, rapida: 2.5 } as const
+
+/** Fase 7l (UC-35): duración mínima de una vuelta de la cinta (pocas insignias no deben ir a toda prisa). */
+export const DURACION_MINIMA_CINTA_INSIGNIAS = 14
+
+/**
+ * Fase 7l (UC-35): ancho de cada diapositiva del carrusel de insignias por
+ * `tamano` (en pantallas anchas caben varias; en móvil casi una).
+ */
+export const ANCHO_ITEM_CARRUSEL_INSIGNIAS = {
+  compacto: 'w-1/2 sm:w-1/3 lg:w-1/5',
+  normal: 'w-3/4 sm:w-1/2 lg:w-1/3',
+  grande: 'w-full sm:w-2/3 lg:w-1/2',
+} as const
+
+/**
+ * Fase 7l (UC-02): contenedor de la portada de proyecto por disposición. La
+ * imagen se pinta absoluta y rellena este contenedor (siempre 16:9 apilado;
+ * en `vitrina` ocupa 3/5 del ancho desde `md`).
+ */
+export const PORTADA_PROYECTO_CLASE = {
+  tarjetas: 'aspect-video w-full',
+  bento: 'aspect-video w-full',
+  bento_destacado: 'aspect-video w-full md:aspect-auto md:min-h-48 md:flex-1 md:shrink',
+  lista: 'aspect-video w-28 sm:w-48',
+  vitrina: 'aspect-video w-full md:aspect-auto md:min-h-72 md:w-3/5',
+} as const
+
+/** Fase 7l (UC-35): ancho de cada elemento de la cinta de insignias por `tamano`. */
+export const ANCHO_ITEM_CINTA_INSIGNIAS = {
+  compacto: 'w-36',
+  normal: 'w-48',
+  grande: 'w-64',
+} as const

@@ -445,6 +445,9 @@ export function EditorSeccionesPage() {
   const [initialData, setInitialData] = useState<EditorData | null>(null)
   const [editorKey, setEditorKey] = useState(0)
   const [guardando, setGuardando] = useState(false)
+  // Fase 7l (UC-10/UC-11): un solo diálogo de publicación, abierto desde el
+  // botón primario del toolbar y desde "Publicar ahora" del banner.
+  const [publicarAbierto, setPublicarAbierto] = useState(false)
 
   // Fase 7 (UC-08): modo de la vista previa (solo lienzo y `DialogVistaPrevia`).
   const { theme } = useTheme()
@@ -509,7 +512,9 @@ export function EditorSeccionesPage() {
     [datos],
   )
 
-  const guardarCambios = async () => {
+  // Devuelve `true` si todo se guardó (Fase 7l, UC-07/UC-11): "Publicar" solo
+  // continúa cuando el guardado previo tuvo éxito.
+  const guardarCambios = async (): Promise<boolean> => {
     setGuardando(true)
 
     const seccionesOriginales = seccionesPersistentesRef.current
@@ -643,6 +648,7 @@ export function EditorSeccionesPage() {
       setEditorKey((key) => key + 1)
       setHayCambiosSinGuardar(false)
       toast.success('Cambios guardados correctamente.')
+      return true
     } catch {
       // No mostramos un toast de error aquí: cada sub-mutación
       // (`crearSeccion`, `actualizarConfiguracion`, etc.) ya es un
@@ -656,10 +662,24 @@ export function EditorSeccionesPage() {
       // avanza `seccionesPersistentesRef` aquí, para que el próximo intento
       // vuelva a diffear contra el último estado realmente persistido.
       setContent(contentActualizado)
+      return false
     } finally {
       setGuardando(false)
     }
   }
+
+  // Fase 7l (UC-10/UC-11): "Publicar" en un paso. Con cambios sin guardar
+  // primero guarda el lienzo y solo publica si el guardado tuvo éxito (si
+  // falla, el toast global ya lo explica y no se publica nada a medias).
+  const publicarTodo = async () => {
+    if (hayCambiosSinGuardar && !(await guardarCambios())) return
+    try {
+      await publicar.mutateAsync()
+    } catch {
+      // Ya notificado por el manejador global de mutaciones.
+    }
+  }
+  const ocupado = guardando || publicar.isPending
 
   // `Ctrl/Cmd+S` = guardar (Fase 7, UC-08). `guardarRef` siempre apunta a la
   // versión más reciente de `guardarCambios` (cierra sobre `content`), así el
@@ -671,7 +691,7 @@ export function EditorSeccionesPage() {
   const guardarRef = useRef<() => void>(() => {})
   useEffect(() => {
     guardarRef.current = () => {
-      if (!guardando && initialData) void guardarCambios()
+      if (!ocupado && initialData) void guardarCambios()
     }
   })
   useEffect(() => {
@@ -724,6 +744,25 @@ export function EditorSeccionesPage() {
         </DialogContent>
       </Dialog>
 
+      <ConfirmActionDialog
+        open={publicarAbierto}
+        onOpenChange={setPublicarAbierto}
+        title={
+          hayCambiosSinGuardar
+            ? '¿Guardar y publicar los cambios actuales?'
+            : '¿Publicar los cambios actuales?'
+        }
+        description={
+          hayCambiosSinGuardar
+            ? 'Primero se guardan los cambios del lienzo y, si todo sale bien, se reemplaza de inmediato la versión visible al público con el contenido, secciones y tema actuales.'
+            : 'Esto reemplaza de inmediato la versión visible al público con el contenido, secciones y tema actuales.'
+        }
+        confirmLabel={hayCambiosSinGuardar ? 'Guardar y publicar' : 'Publicar'}
+        pendingLabel="Publicando…"
+        isPending={publicar.isPending}
+        onConfirm={() => void publicarTodo()}
+      />
+
       {/*
         Fase 4.1, punto 6: el badge "Borrador" del header de Puck (más abajo)
         es chico y fácil de pasar por alto — este banner persistente hace
@@ -737,11 +776,17 @@ export function EditorSeccionesPage() {
           className="flex shrink-0 items-center gap-2 border-b bg-secondary px-4 py-2 text-sm text-secondary-foreground"
         >
           <Info className="size-4 shrink-0" aria-hidden="true" />
-          <span>
-            Tenés cambios guardados que todavía no publicaste. Los
-            visitantes del sitio siguen viendo la última versión publicada
-            hasta que presiones "Publicar".
-          </span>
+          <span>Hay cambios sin publicar: los visitantes ven la última versión publicada.</span>
+          <Button
+            type="button"
+            variant="link"
+            size="sm"
+            className="h-auto p-0 text-sm"
+            disabled={ocupado || !initialData}
+            onClick={() => setPublicarAbierto(true)}
+          >
+            Publicar ahora
+          </Button>
         </div>
       ) : null}
 
@@ -922,23 +967,11 @@ export function EditorSeccionesPage() {
                   >
                     Historial de versiones
                   </Button>
-                  <ConfirmActionDialog
-                    trigger={
-                      <Button size="sm" disabled={publicar.isPending}>
-                        Publicar
-                      </Button>
-                    }
-                    title="¿Publicar los cambios actuales?"
-                    description="Esto reemplaza de inmediato la versión visible al público con el contenido, secciones y tema actuales."
-                    confirmLabel="Publicar"
-                    pendingLabel="Publicando…"
-                    isPending={publicar.isPending}
-                    onConfirm={() => publicar.mutate()}
-                  />
                   <Button
                     size="sm"
-                    onClick={guardarCambios}
-                    disabled={guardando || !initialData}
+                    variant="outline"
+                    onClick={() => void guardarCambios()}
+                    disabled={ocupado || !initialData}
                     title={
                       hayCambiosSinGuardar
                         ? 'Hay cambios sin guardar (Ctrl+S)'
@@ -950,10 +983,21 @@ export function EditorSeccionesPage() {
                       <span
                         aria-hidden="true"
                         data-testid="indicador-sin-guardar"
-                        className="size-2 rounded-full bg-primary-foreground"
+                        className="size-2 rounded-full bg-primary"
                       />
                     ) : null}
                     {guardando ? 'Guardando…' : 'Guardar cambios'}
+                  </Button>
+                  <Button
+                    size="sm"
+                    disabled={ocupado || !initialData}
+                    onClick={() => setPublicarAbierto(true)}
+                  >
+                    {publicar.isPending
+                      ? 'Publicando…'
+                      : hayCambiosSinGuardar
+                        ? 'Guardar y publicar'
+                        : 'Publicar'}
                   </Button>
                 </>
               }
