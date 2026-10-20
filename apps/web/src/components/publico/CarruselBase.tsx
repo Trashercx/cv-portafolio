@@ -118,7 +118,7 @@ export function CarruselBase({
 
   return (
     <div
-      className="relative"
+      className="relative min-w-0"
       data-disposicion="carousel"
       data-automatico={autoDisponible ? (avanzando ? 'avanzando' : 'pausado') : undefined}
       onPointerEnter={() => setInteraccion(true)}

@@ -301,7 +301,7 @@ export function BloqueProyectos({
                   }
                   chips={
                     <>
-                      {esLista ? chipEstado : null}
+                      {esLista && chipEstado ? <div className="flex">{chipEstado}</div> : null}
                       {mostrarTecnologias ? <ChipsTecnologias proyecto={proyecto} /> : null}
                     </>
                   }
