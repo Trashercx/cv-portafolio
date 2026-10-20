@@ -8,5 +8,10 @@
     "ruleId": "js/xss-through-dom",
     "uri": "apps/web/src/components/media/MediaPreview.tsx",
     "motivo": "Fase 7g (UC-09): el `url` que llega a `src`/`data`/`href` es el que produce `URL.createObjectURL(file)` en MediaUploadField (una URL `blob:` generada por el propio navegador para un File elegido por el admin) o la URL de la media ya guardada; nunca se interpreta como HTML (React escapa atributos) y los enlaces llevan `rel=\"noreferrer\"`. Alerta previa a la fase (fallaba en cada push a main desde el 2026-10-13); el PR #57 la hizo visible en el análisis por diff al tocar ese flujo."
+  },
+  {
+    "ruleId": "js/xss-through-dom",
+    "uri": "apps/web/src/components/media/VisorPdfDialog.tsx",
+    "motivo": "Fase 7m (#66, #68): mismo caso que MediaPreview.tsx. El `url` que va a `href` (abrir/descargar) y a `data` del `<object>` es la URL de una Media ya guardada (S3/CloudFront) o una `blob:` que creó el propio navegador con URL.createObjectURL para un File del admin; nunca se interpreta como HTML (React escapa atributos), los enlaces llevan rel=\"noopener noreferrer\" y la CSP limita `object-src`/`connect-src` al origen de media."
   }
 ]
