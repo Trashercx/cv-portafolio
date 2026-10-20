@@ -30,7 +30,8 @@ function mesAnio(fecha: string): string {
 
 function periodo(experiencia: ExperienciaPublica): string {
   const inicio = mesAnio(experiencia.fecha_inicio)
-  const fin = experiencia.fecha_fin ? mesAnio(experiencia.fecha_fin) : 'actualidad'
+  // El puesto actual ya lo marca la duración ("Actual · …"): aquí solo el inicio.
+  const fin = experiencia.fecha_fin ? mesAnio(experiencia.fecha_fin) : ''
   return [inicio, fin].filter(Boolean).join(' – ')
 }
 
