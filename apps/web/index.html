@@ -8,8 +8,16 @@
          origen (VITE_API_URL, que Vite sustituye aquí en tiempo de build) en
          cuanto arranca el JS; abrir la conexión TCP+TLS desde el HTML ahorra
          ~150 ms en móvil. `crossorigin` porque esos fetch van sin credenciales
-         (`credentials: 'omit'`, lib/api-client.ts) y así comparten conexión. -->
+         (`credentials: 'same-origin'`, lib/api-client.ts) y así comparten conexión. -->
     <link rel="preconnect" href="%VITE_API_URL%" crossorigin />
+    <!-- Fase 7m (Lighthouse): toda ruta pública pide `GET /sitio` nada más
+         arrancar (useSitio), pero el fetch recién sale cuando el JS ya se
+         descargó y ejecutó. Este preload lo lanza en paralelo con el JS y
+         recorta ese escalón de la cascada (FCP/LCP). Para que el navegador
+         reutilice la respuesta, el fetch tiene que coincidir en modo de
+         credenciales: `crossorigin` (anónimo) ↔ `credentials: 'same-origin'`
+         en lib/api-client.ts. En /admin/* sobra (21 KB una sola vez). -->
+    <link rel="preload" href="%VITE_API_URL%/sitio" as="fetch" crossorigin />
     <!-- Fase 8 (UC-34): directiva SSI de nginx. En producción nginx la
          reemplaza por el fragmento que devuelve `GET /seo/metadatos` del API
          (title, description, canonical, Open Graph, Twitter card y JSON-LD
