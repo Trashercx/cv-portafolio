@@ -252,7 +252,7 @@ Esquema (dos entidades y columnas nuevas), API y web. Contrato en `docs/plan-tec
 
 ### Extensiones de UC-04, UC-09, UC-15 y UC-36 — Fase 7m, issues #65 a #68 (2026-10-20)
 
-Resuelve los issues abiertos del repositorio. Esquema menor (dos columnas), API y web. Contrato en `docs/plan-tecnico.md`, "Fase 7m".
+Resuelve los issues abiertos del repositorio. Esquema menor (dos columnas), API y web. Por qué cada columna: `MEDIA.bytes` guarda el tamaño del original para mostrarlo en el visor y los detalles del panel (null en los archivos subidos antes de la Fase 7m); `INTEGRACION_GITHUB.readme_*` cachea el README del perfil (repositorio, rama, ETag para peticiones condicionales, fecha y último error) y `readme_markdown` guarda el Markdown crudo tal como lo entrega GitHub, porque el saneado depende de dónde se pinta y por eso lo hace el cliente al renderizar, no el API. Contrato en `docs/plan-tecnico.md`, "Fase 7m".
 
 | Issue | UC | Extensión | Criterio de aceptación |
 |---|---|---|---|
@@ -328,6 +328,7 @@ erDiagram
         string tipo
         int ancho
         int alto
+        int bytes
         string alt_text
         timestamp created_at
     }
@@ -514,6 +515,12 @@ erDiagram
         timestamp ultima_sincronizacion_en
         string ultimo_error
         string etag
+        string readme_repositorio
+        string readme_rama
+        string readme_markdown
+        string readme_etag
+        timestamp readme_actualizado_en
+        string readme_error
         timestamp created_at
         timestamp updated_at
     }
