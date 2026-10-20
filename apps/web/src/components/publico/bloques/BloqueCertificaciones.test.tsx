@@ -39,7 +39,7 @@ describe('BloqueCertificaciones (Fase 7e, UC-04: sin vencimiento)', () => {
     expect(screen.getByText(/Sin vencimiento/)).toBeInTheDocument()
   })
 
-  it('no lo indica si la certificación tiene expiración ni si mostrar_fecha es false', () => {
+  it('no lo indica si la certificación tiene expiración ni si mostrar_vigencia es false', () => {
     const { rerender } = render(
       <BloqueCertificaciones
         titulo="Certificaciones"
@@ -52,10 +52,11 @@ describe('BloqueCertificaciones (Fase 7e, UC-04: sin vencimiento)', () => {
     rerender(
       <BloqueCertificaciones
         titulo="Certificaciones"
-        config={{ orden: 'manual', mostrar_fecha: false }}
+        config={{ orden: 'manual', mostrar_vigencia: false }}
         certificaciones={[CERTIFICACION]}
       />,
     )
+    // Fase 7l: el aviso es el chip de vigencia (`mostrar_vigencia`), no la línea de fechas.
     expect(screen.queryByText(/Sin vencimiento/)).not.toBeInTheDocument()
   })
 })

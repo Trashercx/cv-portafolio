@@ -32,6 +32,16 @@ export type ProyectoBase = {
   estado: string
   destacado: boolean
   orden: number
+  /**
+   * Fase 7l (UC-36): origen y datos de GitHub. Opcionales a propósito: los
+   * snapshots publicados antes de la fase no los traen; el render los tolera.
+   */
+  origen?: 'manual' | 'github'
+  github_nombre_completo?: string | null
+  github_lenguaje?: string | null
+  github_estrellas?: number | null
+  github_actualizado_en?: string | null
+  sincronizar_github?: boolean
 }
 
 /** `Proyecto` con relaciones, tal como lo devuelven `GET /admin/proyectos` y `GET /admin/proyectos/:id`. */

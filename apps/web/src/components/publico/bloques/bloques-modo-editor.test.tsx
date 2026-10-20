@@ -91,7 +91,7 @@ describe('BloqueProyectos en modo editor', () => {
 
     const tarjeta = screen.getByRole('button', { name: /portafolio/i })
     expect(tarjeta.tagName).toBe('BUTTON')
-    expect(screen.queryByRole('link')).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /^portafolio$/i })).not.toBeInTheDocument()
   })
 })
 
@@ -106,7 +106,7 @@ describe('BloqueCertificaciones en modo editor', () => {
       />,
     )
 
-    const tarjeta = screen.getByRole('link', { name: /aws certified/i })
+    const tarjeta = screen.getByRole('link', { name: 'AWS Certified' })
     expect(tarjeta.tagName).toBe('DIV')
     expect(tarjeta).toHaveAttribute('aria-disabled', 'true')
     expect(tarjeta).not.toHaveAttribute('href')
@@ -124,6 +124,6 @@ describe('BloqueCertificaciones en modo editor', () => {
 
     const tarjeta = screen.getByRole('button', { name: /aws certified/i })
     expect(tarjeta.tagName).toBe('BUTTON')
-    expect(screen.queryByRole('link')).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /^aws certified$/i })).not.toBeInTheDocument()
   })
 })

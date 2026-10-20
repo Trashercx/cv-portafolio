@@ -109,15 +109,17 @@ describe('BloqueProyectos — disposición (Fase 7)', () => {
       ],
     )
     expect(container.querySelector('[data-disposicion="lista"]')).toHaveClass('grid', 'gap-3')
-    expect(screen.getByRole('button', { name: 'Proyecto 1' })).toHaveClass('flex', 'items-start')
-    expect(screen.getByAltText('Captura')).toHaveClass('w-24', 'shrink-0')
+    // Fase 7l: la fila es el `<article>` de `TarjetaContenido` (medio a la izquierda).
+    expect(screen.getByRole('button', { name: 'Proyecto 1' }).closest('article')).toHaveClass('flex', 'flex-row')
+    expect(screen.getByAltText('Captura').closest('[data-medio]')).toHaveAttribute('data-medio', 'izquierda')
+    expect(screen.getByAltText('Captura').parentElement).toHaveClass('w-28', 'shrink-0')
   })
 })
 
 describe('BloqueProyectos — tarjeta y tecnologías (Fase 7)', () => {
   it('estilo_tarjeta="vidrio" aplica la tarjeta translúcida', () => {
     renderProyectos({ estilo_tarjeta: 'vidrio' }, [proyecto(1)])
-    expect(screen.getByRole('button', { name: 'Proyecto 1' })).toHaveClass(
+    expect(screen.getByRole('button', { name: 'Proyecto 1' }).closest('article')).toHaveClass(
       'bg-card/60',
       'backdrop-blur-sm',
       CLASES_BORDE_VIDRIO_BLOQUE,
