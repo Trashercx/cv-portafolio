@@ -12,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { ReadmeGithub } from '@/features/integracion-github/ReadmeGithub'
 import { TarjetaIntegracionGithub } from '@/features/integracion-github/TarjetaIntegracionGithub'
 import { useAlternarSincronizacionProyecto } from '@/features/integracion-github/useIntegracionGithub'
 import { ProyectoFormDialog } from '@/features/proyectos/ProyectoFormDialog'
@@ -67,6 +68,8 @@ export function ProyectosListPage() {
       </div>
 
       <TarjetaIntegracionGithub />
+
+      <ReadmeGithub />
 
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Cargando proyectos…</p>
