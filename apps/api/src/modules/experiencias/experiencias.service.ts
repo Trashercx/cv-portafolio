@@ -184,8 +184,15 @@ export class ExperienciasService {
     await this.prisma.experienciaLaboral.delete({ where: { id } });
   }
 
-  /** `PATCH /admin/experiencias/reordenar`: todo o nada. */
+  /** `PATCH /admin/experiencias/reordenar`: todo o nada; un id inexistente es 404. */
   async reordenar(items: ReordenarExperienciaItemDto[]) {
+    const ids = items.map((item) => item.id);
+    const existentes = await this.prisma.experienciaLaboral.count({
+      where: { id: { in: ids } },
+    });
+    if (existentes !== new Set(ids).size) {
+      throw new NotFoundException('Alguna experiencia a reordenar no existe');
+    }
     await this.prisma.$transaction(
       items.map((item) =>
         this.prisma.experienciaLaboral.update({

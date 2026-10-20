@@ -192,6 +192,48 @@ describe('descargarRecursoSeguro (Fase 7d, UC-35)', () => {
     expect(lookupMock).toHaveBeenCalledTimes(2);
   });
 
+  it('Fase 7l: Authorization e If-None-Match no viajan a otro host tras una redirección', async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        respuesta(null, {
+          status: 302,
+          headers: { location: 'https://otro.test/recurso' },
+        }),
+      )
+      .mockResolvedValueOnce(
+        respuesta('fin', { headers: { 'content-type': 'text/plain' } }),
+      );
+    await descargarRecursoSeguro('https://ejemplo.test/a', {
+      cabeceras: {
+        Authorization: 'Bearer secreto',
+        'If-None-Match': '"etag"',
+        'X-Otra': '1',
+      },
+    });
+    const primera = fetchMock.mock.calls[0][1].headers;
+    const segunda = fetchMock.mock.calls[1][1].headers;
+    expect(primera.Authorization).toBe('Bearer secreto');
+    expect(segunda.Authorization).toBeUndefined();
+    expect(segunda['If-None-Match']).toBeUndefined();
+    expect(segunda['X-Otra']).toBe('1');
+  });
+
+  it('Fase 7l: una redirección al mismo host conserva Authorization', async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        respuesta(null, { status: 301, headers: { location: '/b' } }),
+      )
+      .mockResolvedValueOnce(
+        respuesta('fin', { headers: { 'content-type': 'text/plain' } }),
+      );
+    await descargarRecursoSeguro('https://ejemplo.test/a', {
+      cabeceras: { Authorization: 'Bearer secreto' },
+    });
+    expect(fetchMock.mock.calls[1][1].headers.Authorization).toBe(
+      'Bearer secreto',
+    );
+  });
+
   it('Fase 7i: postJson envía POST con cuerpo JSON y cabeceras, sin pisar User-Agent', async () => {
     fetchMock.mockResolvedValue(
       respuesta('{"valid":true}', {

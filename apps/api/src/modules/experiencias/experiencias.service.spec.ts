@@ -35,6 +35,7 @@ describe('ExperienciasService (UC-19, Fase 7l)', () => {
         findMany: jest.fn().mockResolvedValue([]),
         findUnique: jest.fn(),
         aggregate: jest.fn().mockResolvedValue({ _max: { orden: 2 } }),
+        count: jest.fn().mockResolvedValue(2),
         create: jest.fn().mockResolvedValue({ id: 'e1' }),
         update: jest.fn().mockResolvedValue({}),
         delete: jest.fn(),
@@ -214,6 +215,17 @@ describe('ExperienciasService (UC-19, Fase 7l)', () => {
       where: { id: 'a' },
       data: { orden: 1 },
     });
+  });
+
+  it('reordenar() responde 404 si algún id no existe (revisión 7l)', async () => {
+    prisma.experienciaLaboral.count.mockResolvedValueOnce(1);
+    await expect(
+      service.reordenar([
+        { id: 'a', orden: 1 },
+        { id: 'no-existe', orden: 0 },
+      ]),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
   it('listarPublicas() filtra visibles, pone los actuales primero y luego fecha_inicio desc, sin campos internos', async () => {

@@ -299,14 +299,25 @@ async function leerCuerpo(
   return Buffer.concat(partes, total);
 }
 
-/** Quita `User-Agent`/`Accept` (en cualquier capitalización): no se pueden pisar. */
+/** Cabeceras que llevan credenciales o estado de caché: solo viajan al host inicial. */
+const CABECERAS_SOLO_HOST_INICIAL = ['authorization', 'if-none-match'];
+
+/**
+ * Quita `User-Agent`/`Accept` (en cualquier capitalización): no se pueden
+ * pisar. Fase 7l (revisión): si la petición ya saltó a OTRO host por una
+ * redirección, tampoco viajan `Authorization` ni `If-None-Match`, para que
+ * un redirect de la API remota no filtre el token a un tercero.
+ */
 function cabecerasPermitidas(
   cabeceras: Record<string, string> | undefined,
+  mismoHost = true,
 ): Record<string, string> {
   return Object.fromEntries(
-    Object.entries(cabeceras ?? {}).filter(
-      ([nombre]) => !['user-agent', 'accept'].includes(nombre.toLowerCase()),
-    ),
+    Object.entries(cabeceras ?? {}).filter(([nombre]) => {
+      const clave = nombre.toLowerCase();
+      if (['user-agent', 'accept'].includes(clave)) return false;
+      return mismoHost || !CABECERAS_SOLO_HOST_INICIAL.includes(clave);
+    }),
   );
 }
 
@@ -338,6 +349,7 @@ export async function descargarRecursoSeguro(
       throw new RedSeguraError('El enlace no es una URL válida');
     }
 
+    const hostInicial = actual.host;
     for (let saltos = 0; ; saltos++) {
       const direcciones = await validarDestino(actual);
       const agente = crearAgenteFijo(direcciones);
@@ -353,7 +365,10 @@ export async function descargarRecursoSeguro(
         credentials: 'omit',
         signal: controlador.signal,
         headers: {
-          ...cabecerasPermitidas(opciones.cabeceras),
+          ...cabecerasPermitidas(
+            opciones.cabeceras,
+            actual.host === hostInicial,
+          ),
           ...(post?.cabeceras ?? {}),
           ...(post ? { 'Content-Type': 'application/json' } : {}),
           'User-Agent': USER_AGENT_INSIGNIAS,

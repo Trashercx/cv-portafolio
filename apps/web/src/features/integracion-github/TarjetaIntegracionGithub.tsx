@@ -66,7 +66,8 @@ const OPCIONES: OpcionSwitch[] = [
   {
     name: 'publicar_automaticamente',
     label: 'Publicar automáticamente',
-    ayuda: 'Publica una versión nueva del sitio al terminar una sincronización con cambios.',
+    ayuda:
+      'Publica una versión nueva del sitio al terminar una sincronización con cambios. Ojo: publica TODO lo guardado en el panel (secciones, tema, textos), no solo los proyectos.',
   },
   { name: 'incluir_forks', label: 'Incluir forks', ayuda: 'Importa también los repositorios que son forks.' },
   { name: 'incluir_archivados', label: 'Incluir archivados', ayuda: 'Importa también los repositorios archivados.' },

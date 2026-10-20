@@ -19,7 +19,13 @@ export const experienciaSchema = z
     actual: z.boolean(),
     ubicacion: z.string().trim().optional(),
     modalidad: z.enum(['presencial', 'remoto', 'hibrido'], { error: 'Elige una modalidad' }),
-    url_empresa: z.string().trim().url('URL inválida').optional().or(z.literal('')),
+    url_empresa: z
+      .string()
+      .trim()
+      .url('URL inválida')
+      .refine((valor) => valor.startsWith('https://'), 'La URL debe empezar por https://')
+      .optional()
+      .or(z.literal('')),
     logo_media_id: z.string().nullable(),
     tecnologias: z.array(z.string()),
     visible: z.boolean(),

@@ -51,7 +51,13 @@ export function ExperienciasListPage() {
       ) : null}
 
       {experiencias && experiencias.length > 0 ? (
-        <ListaExperiencias experiencias={experiencias} onEditar={abrirEdicion} />
+        <>
+          <p className="text-xs text-muted-foreground">
+            En el sitio los puestos se ordenan solos: primero los actuales y luego del más reciente
+            al más antiguo. El orden de esta lista es solo para el panel.
+          </p>
+          <ListaExperiencias experiencias={experiencias} onEditar={abrirEdicion} />
+        </>
       ) : null}
 
       <ExperienciaFormDialog

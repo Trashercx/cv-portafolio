@@ -101,6 +101,20 @@ function SincronizadorPlugin() {
     if (fondoSeleccionado) setFondoSeleccionado(null)
     setFondoEnEdicion(null)
   }, [hayBloqueSeleccionado])
+
+  // Revisión 7l: al pulsar una tarjeta de fondo con un bloque todavía
+  // seleccionado, se deselecciona el bloque para que el panel derecho pase a
+  // mostrar los ajustes del fondo (si no, quedarían ocultos tras los campos).
+  const fondoSeleccionado = useEditorPanelStore((state) => state.fondoSeleccionado)
+  const dispatchSeleccion = usePuckEditor((state) => state.dispatch)
+  useEffect(() => {
+    if (fondoSeleccionado && hayBloqueSeleccionado) {
+      dispatchSeleccion({ type: 'setUi', ui: { itemSelector: null } })
+    }
+    // Solo reacciona al cambio de fondo elegido: la selección de bloque ya
+    // tiene su propio efecto arriba.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fondoSeleccionado])
   return null
 }
 

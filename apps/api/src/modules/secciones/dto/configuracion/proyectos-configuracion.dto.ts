@@ -48,8 +48,10 @@ export class ProyectosConfiguracionDto extends BloqueConfiguracionBaseDto {
   @IsBoolean()
   mostrar_tecnologias: boolean = true;
 
-  // Fase 7l (UC-07, UC-36): opcionales sin default persistido; ausente = el
-  // aspecto previo del bloque.
+  // Fase 7l (UC-07, UC-36): opcionales sin default persistido. Ausente =
+  // `true` para estado, enlaces y datos de GitHub (el rediseño de la tarjeta
+  // los muestra a propósito también en bloques ya guardados) y `false` para
+  // las fechas.
   @IsOptional()
   @IsBoolean()
   mostrar_estado?: boolean;

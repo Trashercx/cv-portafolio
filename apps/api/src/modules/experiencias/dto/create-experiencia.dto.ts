@@ -63,6 +63,7 @@ export class CreateExperienciaDto {
   modalidad: ModalidadExperiencia;
 
   @IsOptional()
+  @MaxLength(2000)
   @IsUrl({ protocols: ['https'], require_protocol: true })
   url_empresa?: string | null;
 

@@ -307,12 +307,16 @@ export class GithubSyncService {
       Date.now() - pushedAt.getTime() < DIAS_EN_PROGRESO * MS_POR_DIA;
     const descripcion =
       repo.description?.trim() || `Repositorio ${repo.name} en GitHub.`;
+    // `fecha_inicio` y `estado` solo se fijan al crear: el formulario los deja
+    // editar a mano y una sincronización no debe revertirlos (revisión 7l).
+    const soloAlCrear = {
+      fecha_inicio: new Date(repo.created_at),
+      estado: reciente ? 'en_progreso' : 'finalizado',
+    };
     const datos = {
       descripcion,
       url_repositorio: repo.html_url,
       url_demo: this.urlDemo(repo.homepage),
-      fecha_inicio: new Date(repo.created_at),
-      estado: reciente ? 'en_progreso' : 'finalizado',
       github_nombre_completo: repo.full_name,
       github_lenguaje: repo.language,
       github_estrellas: repo.stargazers_count,
@@ -344,6 +348,7 @@ export class GithubSyncService {
           origen: 'github',
           sincronizar_github: true,
           github_repo_id: BigInt(repo.id),
+          ...soloAlCrear,
           ...datos,
           tecnologias: {
             create: tecnologiaIds.map((tecnologia_id) => ({ tecnologia_id })),
@@ -362,9 +367,6 @@ export class GithubSyncService {
       existente.descripcion !== datos.descripcion ||
       existente.url_repositorio !== datos.url_repositorio ||
       existente.url_demo !== datos.url_demo ||
-      existente.fecha_inicio.toISOString().slice(0, 10) !==
-        datos.fecha_inicio.toISOString().slice(0, 10) ||
-      existente.estado !== datos.estado ||
       existente.github_nombre_completo !== datos.github_nombre_completo ||
       existente.github_lenguaje !== datos.github_lenguaje ||
       existente.github_estrellas !== datos.github_estrellas ||
