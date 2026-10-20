@@ -3,6 +3,7 @@ import { ConfirmDeleteDialog } from '@/components/shared/ConfirmDeleteDialog'
 import { OrderButtons } from '@/components/shared/OrderButtons'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Switch } from '@/components/ui/switch'
 import {
   Table,
   TableBody,
@@ -11,6 +12,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { TarjetaIntegracionGithub } from '@/features/integracion-github/TarjetaIntegracionGithub'
+import { useAlternarSincronizacionProyecto } from '@/features/integracion-github/useIntegracionGithub'
 import { ProyectoFormDialog } from '@/features/proyectos/ProyectoFormDialog'
 import type { ProyectoBase } from '@/features/proyectos/types'
 import {
@@ -27,6 +30,8 @@ export function ProyectosListPage() {
   const { data: proyectos, isLoading, error } = useProyectos()
   const reordenar = useReordenarProyectos()
   const eliminar = useEliminarProyecto()
+  // Fase 7l (UC-36): "Mantener sincronizado" de los proyectos importados de GitHub.
+  const alternarSincronizacion = useAlternarSincronizacionProyecto()
 
   const [dialogoAbierto, setDialogoAbierto] = useState(false)
   const [itemEditando, setItemEditando] = useState<ProyectoBase | null>(null)
@@ -60,6 +65,8 @@ export function ProyectosListPage() {
         <h1 className="font-heading text-xl font-semibold">Proyectos</h1>
         <Button onClick={abrirNuevo}>Nuevo proyecto</Button>
       </div>
+
+      <TarjetaIntegracionGithub />
 
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Cargando proyectos…</p>
@@ -101,7 +108,28 @@ export function ProyectosListPage() {
                     onBajar={() => mover(proyecto.id, 'bajar')}
                   />
                 </TableCell>
-                <TableCell>{proyecto.titulo}</TableCell>
+                <TableCell>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span>{proyecto.titulo}</span>
+                    {proyecto.origen === 'github' ? (
+                      <Badge variant="secondary">GitHub</Badge>
+                    ) : null}
+                  </div>
+                  {proyecto.origen === 'github' ? (
+                    <label className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                      <Switch
+                        size="sm"
+                        checked={proyecto.sincronizar_github !== false}
+                        disabled={alternarSincronizacion.isPending}
+                        aria-label={`Mantener sincronizado ${proyecto.titulo}`}
+                        onCheckedChange={(sincronizar_github) =>
+                          alternarSincronizacion.mutate({ id: proyecto.id, sincronizar_github })
+                        }
+                      />
+                      Mantener sincronizado
+                    </label>
+                  ) : null}
+                </TableCell>
                 <TableCell className="hidden md:table-cell">{proyecto.estado}</TableCell>
                 <TableCell className="hidden md:table-cell">
                   {proyecto.destacado ? <Badge>Destacado</Badge> : null}

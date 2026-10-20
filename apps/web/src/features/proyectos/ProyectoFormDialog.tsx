@@ -167,6 +167,12 @@ export function ProyectoFormDialog({
     useConfirmarDescarte(form.formState.isDirty, handleOpenChange)
 
   const esNuevoProyecto = !proyectoIdActivo
+  // Fase 7l (UC-36): un proyecto importado de GitHub y sincronizado se
+  // reescribe en cada sincronización, así que título, descripción y enlaces
+  // van en solo lectura hasta apagar "Mantener sincronizado" en la lista.
+  const origenProyecto = proyectoIdActivo ? (proyectoFresco ?? proyecto) : null
+  const sincronizadoConGithub =
+    origenProyecto?.origen === 'github' && origenProyecto.sincronizar_github !== false
   const mutacionActiva = esNuevoProyecto ? crear : actualizar
 
   const onSubmit = (values: ProyectoFormValues) => {
@@ -204,7 +210,17 @@ export function ProyectoFormDialog({
         },
       })
     } else {
-      actualizar.mutate(payload, { onSuccess: () => handleOpenChange(false) })
+      // Sincronizado con GitHub: los campos bloqueados no viajan en el PATCH.
+      const cuerpo = sincronizadoConGithub
+        ? {
+            fecha_inicio: payload.fecha_inicio,
+            fecha_fin: payload.fecha_fin,
+            estado: payload.estado,
+            destacado: payload.destacado,
+            orden: payload.orden,
+          }
+        : payload
+      actualizar.mutate(cuerpo, { onSuccess: () => handleOpenChange(false) })
     }
   }
 
@@ -231,6 +247,16 @@ export function ProyectoFormDialog({
               noValidate
               className="grid gap-4"
             >
+              {sincronizadoConGithub ? (
+                <p
+                  role="note"
+                  className="rounded-md bg-muted px-3 py-2 text-sm text-muted-foreground"
+                >
+                  Este proyecto se importa de GitHub y se mantiene sincronizado: el título, la
+                  descripción y los enlaces vienen del repositorio. Desactiva la sincronización
+                  para editarlo a mano.
+                </p>
+              ) : null}
               <FormField
                 control={form.control}
                 name="titulo"
@@ -238,7 +264,7 @@ export function ProyectoFormDialog({
                   <FormItem>
                     <FormLabel>Título</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input {...field} readOnly={sincronizadoConGithub} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -251,7 +277,7 @@ export function ProyectoFormDialog({
                   <FormItem>
                     <FormLabel>Descripción</FormLabel>
                     <FormControl>
-                      <Textarea rows={4} {...field} />
+                      <Textarea rows={4} {...field} readOnly={sincronizadoConGithub} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -264,7 +290,7 @@ export function ProyectoFormDialog({
                   <FormItem>
                     <FormLabel>URL de demo (opcional)</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input {...field} readOnly={sincronizadoConGithub} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -277,7 +303,7 @@ export function ProyectoFormDialog({
                   <FormItem>
                     <FormLabel>URL del repositorio (opcional)</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input {...field} readOnly={sincronizadoConGithub} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
