@@ -143,11 +143,15 @@ function crearPrismaFalso(integracionInicial: Record<string, unknown> = {}) {
 function crearServicio(integracionInicial: Record<string, unknown> = {}) {
   const falso = crearPrismaFalso(integracionInicial);
   const versiones = { publicar: jest.fn().mockResolvedValue({ id: 'v1' }) };
+  const readme = {
+    refrescar: jest.fn(async (i: unknown) => i),
+  };
   const servicio = new GithubSyncService(
     falso.prisma as never,
     versiones as never,
+    readme as never,
   );
-  return { servicio, versiones, ...falso };
+  return { servicio, versiones, readme, ...falso };
 }
 
 describe('GithubSyncService (Fase 7l, UC-36)', () => {
@@ -501,6 +505,38 @@ describe('GithubSyncService (Fase 7l, UC-36)', () => {
       await expect(
         servicio.sincronizarVencidas(new Date(AHORA)),
       ).resolves.toBeUndefined();
+    });
+  });
+
+  describe('README (Fase 7m, #66)', () => {
+    it('sincronizar refresca el README si está configurado', async () => {
+      const { servicio, readme } = crearServicio({
+        readme_repositorio: 'oscar/oscar',
+      });
+      descargar.mockResolvedValue(pagina([]));
+      const r = await servicio.sincronizar(ADMIN);
+      expect(readme.refrescar).toHaveBeenCalledTimes(1);
+      expect(r.errores).toEqual([]);
+    });
+
+    it('no lo refresca si no hay readme_repositorio', async () => {
+      const { servicio, readme } = crearServicio();
+      descargar.mockResolvedValue(pagina([]));
+      await servicio.sincronizar(ADMIN);
+      expect(readme.refrescar).not.toHaveBeenCalled();
+    });
+
+    it('un fallo del README va a errores sin afectar a los repos', async () => {
+      const { servicio, readme } = crearServicio({
+        readme_repositorio: 'oscar/oscar',
+      });
+      readme.refrescar.mockResolvedValue({
+        readme_error: 'sin cuota',
+      } as never);
+      descargar.mockResolvedValue(pagina([repo()]));
+      const r = await servicio.sincronizar(ADMIN);
+      expect(r.creados).toBe(1);
+      expect(r.errores).toEqual(['README: sin cuota']);
     });
   });
 });

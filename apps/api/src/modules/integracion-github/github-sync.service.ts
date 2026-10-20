@@ -11,6 +11,8 @@ import {
   descargarRecursoSeguro,
   RedSeguraError,
 } from '../insignias/red-segura';
+import { GithubReadmeService } from './github-readme.service';
+import { mensajeDeErrorGithub } from './github-errores';
 import { VersionesSitioService } from '../versiones-sitio/versiones-sitio.service';
 
 /** Máximo de páginas de 100 repos por sincronización (1000 repos). */
@@ -69,6 +71,7 @@ export class GithubSyncService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly versionesSitio: VersionesSitioService,
+    private readonly readme: GithubReadmeService,
   ) {}
 
   /**
@@ -138,6 +141,7 @@ export class GithubSyncService {
     try {
       const descarga = await this.descargarRepos(integracion);
       if (descarga === 'sin_cambios') {
+        await this.refrescarReadme(integracion, resultado);
         await this.prisma.integracionGithub.update({
           where: { id: integracion.id },
           data: {
@@ -186,6 +190,8 @@ export class GithubSyncService {
       }
     }
 
+    await this.refrescarReadme(integracion, resultado);
+
     await this.prisma.integracionGithub.update({
       where: { id: integracion.id },
       data: {
@@ -199,6 +205,27 @@ export class GithubSyncService {
       },
     });
     return resultado;
+  }
+
+  /**
+   * Fase 7m (#66, UC-36): refresca el README si está configurado. Su fallo no
+   * afecta a los repos: va a `errores` del resultado (y a `readme_error`).
+   */
+  private async refrescarReadme(
+    integracion: IntegracionGithub,
+    resultado: ResultadoSincronizacion,
+  ): Promise<void> {
+    if (!integracion.readme_repositorio) return;
+    try {
+      const actualizada = await this.readme.refrescar(integracion);
+      if (actualizada.readme_error) {
+        resultado.errores.push(`README: ${actualizada.readme_error}`);
+      }
+    } catch (error) {
+      resultado.errores.push(
+        `README: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
   }
 
   /**
@@ -265,20 +292,10 @@ export class GithubSyncService {
   }
 
   private mensajeDeError(error: unknown, usuario: string): string {
-    if (error instanceof RedSeguraError) {
-      if (/respondió 404/.test(error.message)) {
-        return `No existe el usuario de GitHub "${usuario}"`;
-      }
-      if (/respondió (403|429)/.test(error.message)) {
-        return 'GitHub rechazó la petición (límite de cuota). Define GITHUB_TOKEN o reintenta más tarde';
-      }
-      return error.message;
-    }
-    return error instanceof SyntaxError
-      ? 'GitHub devolvió una respuesta que no es JSON'
-      : error instanceof Error
-        ? error.message
-        : String(error);
+    return mensajeDeErrorGithub(
+      error,
+      `No existe el usuario de GitHub "${usuario}"`,
+    );
   }
 
   /** Crea o actualiza el proyecto de un repo; devuelve en qué contador cae. */
