@@ -1,15 +1,29 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react'
+import { QueryClientProvider } from '@tanstack/react-query'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ThemeProvider } from '@/components/theme/ThemeProvider'
 import { CATALOGO_FONDOS } from '@/features/fondo-sitio/catalogo-fondos'
 import type { FondoSitio } from '@/features/fondo-sitio/types'
+import { ApiError } from '@/lib/api-client'
+import { queryClient } from '@/lib/query-client'
 import { useEditorPanelStore } from '@/store/editor-panel-store'
 import { PanelFondoEditor } from './PanelFondoEditor'
 
 const activarMutateMock = vi.fn()
 const eliminarMutateMock = vi.fn()
 const crearMutateMock = vi.fn()
+const toastMock = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }))
+const apiFetchMock = vi.hoisted(() => vi.fn())
+// Fase 7m (#65): con `usarActivarReal` el hook de activar es el verdadero (con
+// su `meta` y el `MutationCache` real) para comprobar los avisos.
+const estado = { usarActivarReal: false }
+
+vi.mock('sonner', () => ({ toast: toastMock }))
+vi.mock('@/lib/api-client', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/api-client')>()),
+  apiFetch: apiFetchMock,
+}))
 
 const fondosMock: {
   data: FondoSitio[] | undefined
@@ -21,16 +35,22 @@ const fondosMock: {
   error: null,
 }
 
-vi.mock('@/features/fondo-sitio/useFondosSitio', () => ({
-  useFondosSitio: () => ({
-    data: fondosMock.data,
-    isLoading: fondosMock.isLoading,
-    error: fondosMock.error,
-  }),
-  useActivarFondoSitio: () => ({ mutateAsync: activarMutateMock, isPending: false }),
+vi.mock('@/features/fondo-sitio/useFondosSitio', async (importOriginal) => {
+  const real = await importOriginal<typeof import('@/features/fondo-sitio/useFondosSitio')>()
+  return {
+    useFondosSitio: () => ({
+      data: fondosMock.data,
+      isLoading: fondosMock.isLoading,
+      error: fondosMock.error,
+    }),
+  useActivarFondoSitio: (opciones?: { silencioso?: boolean }) =>
+    estado.usarActivarReal
+      ? real.useActivarFondoSitio(opciones)
+      : { mutateAsync: activarMutateMock, isPending: false },
   useEliminarFondoSitio: () => ({ mutate: eliminarMutateMock, isPending: false }),
   useCrearFondoSitio: () => ({ mutateAsync: crearMutateMock, isPending: false }),
-}))
+  }
+})
 
 vi.mock('@/features/tema/useTemas', () => ({
   useTemas: () => ({
@@ -91,9 +111,11 @@ function tarjeta(tipo: string) {
 
 function renderPanel() {
   return render(
-    <ThemeProvider>
-      <PanelFondoEditor />
-    </ThemeProvider>,
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <PanelFondoEditor />
+      </ThemeProvider>
+    </QueryClientProvider>,
   )
 }
 
@@ -118,6 +140,7 @@ describe('PanelFondoEditor (UC-15, Fase 7l)', () => {
 
   afterEach(() => {
     vi.clearAllMocks()
+    estado.usarActivarReal = false
   })
 
   it('muestra la galería con las 20 tarjetas del catálogo aunque no haya fondos guardados', () => {
@@ -371,5 +394,43 @@ describe('PanelFondoEditor (UC-15, Fase 7l)', () => {
     renderPanel()
     expect(screen.getByText(/cargando fondos/i)).toBeInTheDocument()
     expect(screen.getByRole('alert')).toHaveTextContent(/no se pudieron cargar los fondos/i)
+  })
+
+  describe('avisos al elegir un fondo (Fase 7m, #65)', () => {
+    beforeEach(() => {
+      estado.usarActivarReal = true
+      fondosMock.data = [FONDO_ACTIVO, FONDO_INACTIVO]
+    })
+
+    it('pulsar una tarjeta no dispara toast de éxito ni abre diálogos', async () => {
+      apiFetchMock.mockResolvedValue({ ...FONDO_INACTIVO, activo: true })
+      const user = userEvent.setup()
+      renderPanel()
+
+      await user.click(tarjeta('particulas_red'))
+
+      await waitFor(() =>
+        expect(apiFetchMock).toHaveBeenCalledWith('/admin/fondos/fondo-2/activar', {
+          method: 'PATCH',
+        }),
+      )
+      // Deja resolver la mutación y el `import('sonner')` diferido.
+      await new Promise((r) => setTimeout(r, 50))
+      expect(toastMock.success).not.toHaveBeenCalled()
+      expect(toastMock.error).not.toHaveBeenCalled()
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    })
+
+    it('un error del API sí muestra el toast de error', async () => {
+      apiFetchMock.mockRejectedValue(new ApiError('Fallo al activar', 500, '/admin/fondos/fondo-2/activar'))
+      const user = userEvent.setup()
+      renderPanel()
+
+      await user.click(tarjeta('particulas_red'))
+
+      await waitFor(() => expect(toastMock.error).toHaveBeenCalledWith('Fallo al activar'))
+      expect(toastMock.success).not.toHaveBeenCalled()
+    })
   })
 })
