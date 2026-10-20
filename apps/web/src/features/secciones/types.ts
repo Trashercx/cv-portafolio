@@ -23,6 +23,8 @@ export const TIPOS_SECCION = [
   'galeria',
   'navegacion',
   'insignias',
+  // Fase 7l (UC-19): experiencia laboral.
+  'experiencia',
 ] as const
 
 export type TipoSeccion = (typeof TIPOS_SECCION)[number]
@@ -40,6 +42,7 @@ export const TIPO_SECCION_LABEL: Record<TipoSeccion, string> = {
   galeria: 'Galería',
   navegacion: 'Navegación',
   insignias: 'Insignias',
+  experiencia: 'Experiencia',
 }
 
 /**
@@ -391,6 +394,32 @@ export type InsigniasConfiguracion = BloqueConfiguracionBase & {
   velocidad_cinta?: 'lenta' | 'normal' | 'rapida'
 }
 
+/**
+ * `configuracion` para `tipo_seccion = 'experiencia'` (Fase 7l, UC-19).
+ * Espeja `ExperienciaConfiguracionDto`. Las experiencias en sí (entidad
+ * `experiencia_laboral`) no viven en la configuración: se leen del snapshot
+ * (`experiencias[]`) o, en el lienzo, de `admin/experiencias`. Se permite
+ * dentro de `columnas`.
+ */
+export type ExperienciaConfiguracion = BloqueConfiguracionBase & {
+  titulo?: string
+  subtitulo?: string
+  /** @default 'linea_tiempo' */
+  disposicion?: 'linea_tiempo' | 'tarjetas' | 'compacta'
+  /** @default true */
+  mostrar_duracion?: boolean
+  /** @default true */
+  mostrar_tecnologias?: boolean
+  /** @default true */
+  mostrar_logos?: boolean
+  /** @default true */
+  mostrar_ubicacion?: boolean
+  /** 1-50; sin valor = todas. */
+  limite?: number
+  /** @default 'elevar' */
+  efecto_hover?: EfectoHoverTarjeta
+}
+
 export type ConfiguracionPorTipo = {
   hero: HeroConfiguracion
   'sobre-mi': SobreMiConfiguracion
@@ -403,6 +432,7 @@ export type ConfiguracionPorTipo = {
   galeria: GaleriaConfiguracion
   navegacion: NavegacionConfiguracion
   insignias: InsigniasConfiguracion
+  experiencia: ExperienciaConfiguracion
 }
 
 /** Forma exacta de `Seccion` devuelta por `GET /admin/secciones`. */

@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import type { PuckContext } from '@puckeditor/core'
 import { useCertificaciones } from '@/features/certificaciones/useCertificaciones'
 import { useFondosSitio } from '@/features/fondo-sitio/useFondosSitio'
+import { useExperiencias } from '@/features/experiencias/useExperiencias'
 import { useInsignias } from '@/features/insignias/useInsignias'
 import type { InsigniaPublica } from '@/features/insignias/types'
 import { useMediaList } from '@/features/media/useMediaLibrary'
@@ -110,6 +111,8 @@ export function useDatosEditor(): ResultadoUseDatosEditor {
   const fondosQuery = useFondosSitio()
   const mediaQuery = useMediaList()
   const insigniasQuery = useInsignias()
+  // Fase 7l (UC-19): el lienzo muestra las experiencias visibles, como el snapshot.
+  const experienciasQuery = useExperiencias()
 
   const queries = [
     perfilQuery,
@@ -122,6 +125,7 @@ export function useDatosEditor(): ResultadoUseDatosEditor {
     fondosQuery,
     mediaQuery,
     insigniasQuery,
+    experienciasQuery,
   ]
 
   const isLoading = queries.some((query) => query.isLoading)
@@ -147,7 +151,8 @@ export function useDatosEditor(): ResultadoUseDatosEditor {
       !temasQuery.data ||
       !fondosQuery.data ||
       !mediaQuery.data ||
-      !insigniasQuery.data
+      !insigniasQuery.data ||
+      !experienciasQuery.data
     ) {
       return null
     }
@@ -183,6 +188,16 @@ export function useDatosEditor(): ResultadoUseDatosEditor {
         return imagen ? [{ ...insignia, imagen }] : []
       })
 
+    // Fase 7l (UC-19): solo visibles y, como en el snapshot, con el logo resuelto.
+    const experiencias = experienciasQuery.data
+      .filter((experiencia) => experiencia.visible)
+      .map((experiencia) => ({
+        ...experiencia,
+        logo:
+          experiencia.logo ??
+          (experiencia.logo_media_id ? (mediaPorId[experiencia.logo_media_id] ?? null) : null),
+      }))
+
     return {
       perfil,
       tema: temasQuery.data.find((tema) => tema.activo) ?? null,
@@ -193,6 +208,7 @@ export function useDatosEditor(): ResultadoUseDatosEditor {
       skills: skillsQuery.data,
       fondo: fondosQuery.data.find((fondo) => fondo.activo) ?? null,
       insignias,
+      experiencias,
       mediaPorId,
     }
   }, [
@@ -206,6 +222,7 @@ export function useDatosEditor(): ResultadoUseDatosEditor {
     fondosQuery.data,
     mediaQuery.data,
     insigniasQuery.data,
+    experienciasQuery.data,
     mediaPorId,
   ])
 

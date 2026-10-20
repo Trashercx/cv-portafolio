@@ -8,6 +8,7 @@ import {
   BloqueContacto,
   BloqueGaleria,
   BloqueHero,
+  BloqueExperiencia,
   BloqueInsignias,
   BloqueLogros,
   BloqueProyectos,
@@ -32,6 +33,7 @@ import type {
   GaleriaFoto,
   HeroConfiguracion,
   InsigniasConfiguracion,
+  ExperienciaConfiguracion,
   LogrosConfiguracion,
   NavegacionConfiguracion,
   ProyectosConfiguracion,
@@ -62,6 +64,8 @@ const BLOQUES_ANIDABLES: TipoSeccionAnidable[] = [
   'skills',
   'galeria',
   'insignias',
+  // Fase 7l (UC-19).
+  'experiencia',
 ]
 
 // Clases Tailwind literales para el layout de columnas (nunca construidas en
@@ -421,6 +425,7 @@ export type PuckSeccionesComponents = {
   skills: ConInternos<SkillsConfiguracion>
   galeria: ConInternos<GaleriaConfiguracion>
   insignias: ConInternos<InsigniasConfiguracion>
+  experiencia: ConInternos<ExperienciaConfiguracion>
   navegacion: ConInternos<NavegacionConfiguracion>
   /**
    * A diferencia de los demás bloques, `columna_1/2/3` NO reutilizan
@@ -475,6 +480,7 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
         'skills',
         'galeria',
         'insignias',
+        'experiencia',
       ],
     },
   },
@@ -1514,6 +1520,84 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
               titulo={_tituloVisible}
               config={config}
               insignias={datos.insignias ?? []}
+              alineacionTitulo={ALINEACION_TEXTO_CLASE[config.alineacion_texto ?? 'izquierda']}
+            />
+          </EnvoltorioSeccion>
+        )
+      },
+    },
+    /**
+     * Experiencia laboral (Fase 7l, UC-19): muestra las experiencias visibles
+     * de la entidad `experiencia_laboral` (no viven en la configuración; el
+     * lienzo las lee de `datos.experiencias`, cargadas por `useDatosEditor`).
+     * Permitido dentro de `columnas`. Los `defaultProps` coinciden con los
+     * defaults del API y con los fallbacks de `BloqueExperiencia`; en
+     * `compacta` (una línea por puesto) no hay logos, así que `mostrar_logos`
+     * se oculta (`resolveFields`).
+     */
+    experiencia: {
+      label: 'Experiencia',
+      defaultProps: {
+        disposicion: 'linea_tiempo',
+        mostrar_duracion: true,
+        mostrar_tecnologias: true,
+        mostrar_logos: true,
+        mostrar_ubicacion: true,
+        efecto_hover: 'elevar',
+        ...DEFAULT_PROPS_BASE_BLOQUE,
+        _visible: true,
+        _tituloVisible: 'Experiencia',
+      },
+      fields: {
+        // Contenido
+        titulo: { type: 'text', label: 'Título (opcional)' },
+        subtitulo: { type: 'text', label: 'Subtítulo (opcional)' },
+        limite: { type: 'number', label: 'Máximo de puestos (vacío = todos)', min: 1, max: 50 },
+        mostrar_duracion: campoSiNo('Mostrar la duración'),
+        mostrar_tecnologias: campoSiNo('Mostrar tecnologías'),
+        mostrar_logos: campoSiNo('Mostrar logos de las empresas'),
+        mostrar_ubicacion: campoSiNo('Mostrar la ubicación'),
+        // Disposición y variantes
+        disposicion: {
+          type: 'select',
+          label: 'Disposición',
+          options: [
+            { label: 'Línea de tiempo', value: 'linea_tiempo' },
+            { label: 'Tarjetas', value: 'tarjetas' },
+            { label: 'Compacta (una línea por puesto)', value: 'compacta' },
+          ],
+        },
+        // Efectos
+        efecto_hover: {
+          type: 'select',
+          label: 'Efecto al pasar el cursor (tarjetas)',
+          options: [
+            { label: 'Elevar', value: 'elevar' },
+            { label: 'Inclinar', value: 'inclinar' },
+            { label: 'Ninguno', value: 'ninguno' },
+          ],
+        },
+        ...CAMPOS_BASE_BLOQUE,
+        _visible: VISIBLE_FIELD,
+        _tituloVisible: TITULO_VISIBLE_FIELD,
+      },
+      resolveFields: (data, { fields }) => {
+        const disposicion = data.props.disposicion ?? 'linea_tiempo'
+        // Solo las tarjetas tienen efecto al pasar el cursor; la compacta no lleva logos.
+        if (disposicion === 'compacta') return sinCampos(fields, ['mostrar_logos', 'efecto_hover'])
+        if (disposicion === 'linea_tiempo') return sinCampos(fields, ['efecto_hover'])
+        return fields
+      },
+      render: ({ puck, id: _id, _seccionId, _visible, _tituloVisible, ...config }) => {
+        const { datos } = leerMetadata(puck)
+        return (
+          <EnvoltorioSeccion
+            {...propsEnvoltorio({ ...config, id: _id, _seccionId, _visible, _tituloVisible })}
+          >
+            <BloqueExperiencia
+              titulo={_tituloVisible}
+              config={config}
+              experiencias={datos.experiencias ?? []}
               alineacionTitulo={ALINEACION_TEXTO_CLASE[config.alineacion_texto ?? 'izquierda']}
             />
           </EnvoltorioSeccion>

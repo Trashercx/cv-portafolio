@@ -2,6 +2,7 @@ import {
   Award,
   BadgeCheck,
   BarChart3,
+  Briefcase,
   ExternalLink,
   Image,
   LayoutGrid,
@@ -55,6 +56,8 @@ const GRUPOS_NAV: Array<{ label: string; items: NavItem[] }> = [
       },
       // Fase 7d (UC-35): insignias importables (Credly, Open Badges).
       { to: '/admin/insignias', label: 'Insignias', icon: Award },
+      // Fase 7l (UC-19): experiencia laboral.
+      { to: '/admin/experiencias', label: 'Experiencia', icon: Briefcase },
       { to: '/admin/logros', label: 'Logros', icon: Trophy },
       { to: '/admin/skills', label: 'Skills', icon: Sparkles },
       { to: '/admin/redes', label: 'Redes sociales', icon: Share2 },
