@@ -3,16 +3,8 @@ import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { MediaField } from '@/components/media/MediaField'
 import { CampoFechaConCalendario } from '@/components/shared/CampoFechaConCalendario'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { DescartarCambiosDialog } from '@/components/shared/DescartarCambiosDialog'
+import { SeccionFormulario } from '@/components/shared/SeccionFormulario'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -41,7 +33,7 @@ import {
 } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import type { Media } from '@/features/media/types'
-import { useConfirmarDescarte } from '@/hooks/useConfirmarDescarte'
+import { useCierreConCambios } from '@/features/shared/useCierreConCambios'
 import { ApiError } from '@/lib/api-client'
 import {
   construirPayloadExperiencia,
@@ -113,7 +105,7 @@ export function ExperienciaFormDialog({
     )
   }, [open, experiencia, form])
 
-  const { intentarCerrar, confirmando, confirmar, cancelar } = useConfirmarDescarte(
+  const { abiertoConfirmacion, intentarCerrar, confirmarDescartar, cancelar } = useCierreConCambios(
     form.formState.isDirty,
     onOpenChange,
   )
@@ -153,151 +145,172 @@ export function ExperienciaFormDialog({
           <ScrollArea className="max-h-[70vh] pr-4">
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} noValidate className="grid gap-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="empresa"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Empresa</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="cargo"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Cargo</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <FormField
-                  control={form.control}
-                  name="descripcion"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Descripción (opcional)</FormLabel>
-                      <FormControl>
-                        <Textarea rows={4} {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="fecha_inicio"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Fecha de inicio</FormLabel>
-                        <div className="flex gap-2">
+                <SeccionFormulario titulo="Puesto">
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="empresa"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Empresa</FormLabel>
                           <FormControl>
-                            <Input type="date" {...field} />
+                            <Input {...field} />
                           </FormControl>
-                          <CampoFechaConCalendario
-                            value={field.value}
-                            onChange={field.onChange}
-                            triggerAriaLabel="Abrir calendario para elegir el inicio"
-                          />
-                        </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="cargo"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Cargo</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <FormField
+                    control={form.control}
+                    name="descripcion"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Descripción (opcional)</FormLabel>
+                        <FormControl>
+                          <Textarea rows={4} {...field} />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  <FormField
-                    control={form.control}
-                    name="fecha_fin"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Fecha de fin</FormLabel>
-                        <div className="flex gap-2">
-                          <FormControl>
-                            <Input
-                              type="date"
-                              disabled={actual}
-                              min={form.watch('fecha_inicio') || undefined}
-                              {...field}
-                              value={actual ? '' : (field.value ?? '')}
+                </SeccionFormulario>
+                <SeccionFormulario titulo="Fechas">
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="fecha_inicio"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Fecha de inicio</FormLabel>
+                          <div className="flex gap-2">
+                            <FormControl>
+                              <Input type="date" {...field} />
+                            </FormControl>
+                            <CampoFechaConCalendario
+                              value={field.value}
+                              onChange={field.onChange}
+                              triggerAriaLabel="Abrir calendario para elegir el inicio"
                             />
-                          </FormControl>
-                          <CampoFechaConCalendario
-                            value={field.value ?? ''}
-                            onChange={field.onChange}
-                            min={form.watch('fecha_inicio') || undefined}
-                            disabled={actual}
-                            triggerAriaLabel="Abrir calendario para elegir el fin"
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="fecha_fin"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Fecha de fin</FormLabel>
+                          <div className="flex gap-2">
+                            <FormControl>
+                              <Input
+                                type="date"
+                                disabled={actual}
+                                min={form.watch('fecha_inicio') || undefined}
+                                {...field}
+                                value={actual ? '' : (field.value ?? '')}
+                              />
+                            </FormControl>
+                            <CampoFechaConCalendario
+                              value={field.value ?? ''}
+                              onChange={field.onChange}
+                              min={form.watch('fecha_inicio') || undefined}
+                              disabled={actual}
+                              triggerAriaLabel="Abrir calendario para elegir el fin"
+                            />
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <FormField
+                    control={form.control}
+                    name="actual"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center gap-2 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={(checked) => {
+                              const marcado = checked === true
+                              field.onChange(marcado)
+                              // "Actual" anula la fecha de fin (y su error pendiente).
+                              if (marcado) {
+                                form.setValue('fecha_fin', '', { shouldDirty: true })
+                                form.clearErrors('fecha_fin')
+                              }
+                            }}
                           />
-                        </div>
-                        <FormMessage />
+                        </FormControl>
+                        <FormLabel className="mt-0!">Actual (sigo en este puesto)</FormLabel>
                       </FormItem>
                     )}
                   />
-                </div>
-                <FormField
-                  control={form.control}
-                  name="actual"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-center gap-2 space-y-0">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={(checked) => {
-                            const marcado = checked === true
-                            field.onChange(marcado)
-                            // "Actual" anula la fecha de fin (y su error pendiente).
-                            if (marcado) {
-                              form.setValue('fecha_fin', '', { shouldDirty: true })
-                              form.clearErrors('fecha_fin')
-                            }
-                          }}
-                        />
-                      </FormControl>
-                      <FormLabel className="mt-0!">Actual (sigo en este puesto)</FormLabel>
-                    </FormItem>
-                  )}
-                />
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="modalidad"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Modalidad</FormLabel>
-                        <Select value={field.value} onValueChange={field.onChange}>
+                </SeccionFormulario>
+                <SeccionFormulario titulo="Modalidad y lugar">
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="modalidad"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Modalidad</FormLabel>
+                          <Select value={field.value} onValueChange={field.onChange}>
+                            <FormControl>
+                              <SelectTrigger className="w-full">
+                                <SelectValue />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {MODALIDADES_EXPERIENCIA.map((modalidad) => (
+                                <SelectItem key={modalidad.valor} value={modalidad.valor}>
+                                  {modalidad.etiqueta}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="ubicacion"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Ubicación (opcional)</FormLabel>
                           <FormControl>
-                            <SelectTrigger className="w-full">
-                              <SelectValue />
-                            </SelectTrigger>
+                            <Input {...field} value={field.value ?? ''} />
                           </FormControl>
-                          <SelectContent>
-                            {MODALIDADES_EXPERIENCIA.map((modalidad) => (
-                              <SelectItem key={modalidad.valor} value={modalidad.valor}>
-                                {modalidad.etiqueta}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </SeccionFormulario>
+                <SeccionFormulario titulo="Enlaces y tecnologías">
                   <FormField
                     control={form.control}
-                    name="ubicacion"
+                    name="url_empresa"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Ubicación (opcional)</FormLabel>
+                        <FormLabel>Sitio de la empresa (opcional)</FormLabel>
                         <FormControl>
                           <Input {...field} value={field.value ?? ''} />
                         </FormControl>
@@ -305,45 +318,34 @@ export function ExperienciaFormDialog({
                       </FormItem>
                     )}
                   />
-                </div>
-                <FormField
-                  control={form.control}
-                  name="url_empresa"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Sitio de la empresa (opcional)</FormLabel>
-                      <FormControl>
-                        <Input {...field} value={field.value ?? ''} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="tecnologias"
-                  render={({ field }) => (
-                    <FormItem>
-                      <TecnologiasPorNombre
-                        value={field.value}
-                        onChange={(nombres) => field.onChange(nombres)}
-                      />
-                    </FormItem>
-                  )}
-                />
-                <MediaField
-                  label="Logo de la empresa (opcional)"
-                  currentMediaId={logoId}
-                  currentPreviewUrl={urlLogo}
-                  onUploaded={(media) => {
-                    form.setValue('logo_media_id', media.id, { shouldDirty: true })
-                    setLogoElegido(media)
-                  }}
-                  onClear={() => {
-                    form.setValue('logo_media_id', null, { shouldDirty: true })
-                    setLogoElegido(null)
-                  }}
-                />
+                  <FormField
+                    control={form.control}
+                    name="tecnologias"
+                    render={({ field }) => (
+                      <FormItem>
+                        <TecnologiasPorNombre
+                          value={field.value}
+                          onChange={(nombres) => field.onChange(nombres)}
+                        />
+                      </FormItem>
+                    )}
+                  />
+                </SeccionFormulario>
+                <SeccionFormulario titulo="Logo">
+                  <MediaField
+                    label="Logo de la empresa (opcional)"
+                    currentMediaId={logoId}
+                    currentPreviewUrl={urlLogo}
+                    onUploaded={(media) => {
+                      form.setValue('logo_media_id', media.id, { shouldDirty: true })
+                      setLogoElegido(media)
+                    }}
+                    onClear={() => {
+                      form.setValue('logo_media_id', null, { shouldDirty: true })
+                      setLogoElegido(null)
+                    }}
+                  />
+                </SeccionFormulario>
                 <FormField
                   control={form.control}
                   name="visible"
@@ -367,6 +369,14 @@ export function ExperienciaFormDialog({
                 ) : null}
 
                 <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={mutacionActiva.isPending}
+                    onClick={() => intentarCerrar(false)}
+                  >
+                    Cancelar
+                  </Button>
                   <Button type="submit" disabled={mutacionActiva.isPending}>
                     {mutacionActiva.isPending ? 'Guardando…' : 'Guardar'}
                   </Button>
@@ -377,23 +387,11 @@ export function ExperienciaFormDialog({
         </DialogContent>
       </Dialog>
 
-      <AlertDialog
-        open={confirmando}
-        onOpenChange={(siguienteAbierto) => {
-          if (!siguienteAbierto) cancelar()
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Descartar cambios?</AlertDialogTitle>
-            <AlertDialogDescription>Vas a perder lo que escribiste.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={cancelar}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmar}>Descartar</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DescartarCambiosDialog
+        open={abiertoConfirmacion}
+        onCancelar={cancelar}
+        onConfirmar={confirmarDescartar}
+      />
     </>
   )
 }

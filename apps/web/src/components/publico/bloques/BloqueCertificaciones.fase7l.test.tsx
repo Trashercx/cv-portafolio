@@ -103,7 +103,7 @@ describe('BloqueCertificaciones — tarjeta (Fase 7l, UC-04)', () => {
     expect(screen.queryByRole('link')).not.toBeInTheDocument()
   })
 
-  it('logo de imagen en marco cuadrado con ImagenResponsive; logo PDF con ícono de documento', () => {
+  it('logo de imagen en marco cuadrado con ImagenResponsive; logo PDF con miniatura de la primera página (Fase 7m)', () => {
     const { container, unmount } = renderCerts({}, [cert(1, { logo: LOGO })])
     const marco = container.querySelector('[data-marco-logo]')
     expect(marco).toHaveClass('size-14')
@@ -112,7 +112,8 @@ describe('BloqueCertificaciones — tarjeta (Fase 7l, UC-04)', () => {
 
     const pdf = renderCerts({}, [cert(2, { logo: { ...LOGO, tipo: 'documento' } })])
     expect(pdf.container.querySelector('[data-marco-logo] img')).toBeNull()
-    expect(pdf.container.querySelector('[data-marco-logo] svg')).toBeInTheDocument()
+    // Fase 7m (#66): `MiniaturaPdf` ocupa el marco (skeleton hasta entrar en el viewport).
+    expect(pdf.container.querySelector('[data-marco-logo] [data-estado]')).toBeInTheDocument()
   })
 
   it('url_verificacion nula o peligrosa no genera enlace', () => {

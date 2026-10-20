@@ -1,6 +1,7 @@
 import { X } from 'lucide-react'
 import { useState } from 'react'
 import type { UseFormReturn } from 'react-hook-form'
+import { SeccionFormulario } from '@/components/shared/SeccionFormulario'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -109,54 +110,15 @@ export function CamposInsignia({ form }: { form: UseFormReturn<InsigniaFormValue
   const noExpira = form.watch('no_expira')
   return (
     <>
-      <FormField
-        control={form.control}
-        name="nombre"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Nombre</FormLabel>
-            <FormControl>
-              <Input {...field} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-      <FormField
-        control={form.control}
-        name="emisor"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Emisor</FormLabel>
-            <FormControl>
-              <Input {...field} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-      <FormField
-        control={form.control}
-        name="descripcion"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Descripción (opcional)</FormLabel>
-            <FormControl>
-              <Textarea rows={3} {...field} value={field.value ?? ''} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-      <div className="grid grid-cols-2 gap-4">
+      <SeccionFormulario titulo="Datos">
         <FormField
           control={form.control}
-          name="fecha_emision"
+          name="nombre"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Fecha de emisión</FormLabel>
+              <FormLabel>Nombre</FormLabel>
               <FormControl>
-                <Input type="date" {...field} value={field.value ?? ''} />
+                <Input {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -164,60 +126,105 @@ export function CamposInsignia({ form }: { form: UseFormReturn<InsigniaFormValue
         />
         <FormField
           control={form.control}
-          name="fecha_expiracion"
+          name="emisor"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Fecha de expiración</FormLabel>
+              <FormLabel>Emisor</FormLabel>
               <FormControl>
-                <Input type="date" {...field} value={field.value ?? ''} disabled={noExpira} />
+                <Input {...field} />
               </FormControl>
-              <FormField
-                control={form.control}
-                name="no_expira"
-                render={({ field: casilla }) => (
-                  <FormItem className="flex items-center gap-2 space-y-0">
-                    <FormControl>
-                      <Checkbox
-                        checked={casilla.value}
-                        onCheckedChange={(marcada) => {
-                          casilla.onChange(marcada === true)
-                          if (marcada === true) form.setValue('fecha_expiracion', '')
-                        }}
-                      />
-                    </FormControl>
-                    <FormLabel className="font-normal">No expira</FormLabel>
-                  </FormItem>
-                )}
-              />
               <FormMessage />
             </FormItem>
           )}
         />
-      </div>
-      <FormField
-        control={form.control}
-        name="habilidades"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Habilidades</FormLabel>
-            <ChipsHabilidades valor={field.value} onChange={field.onChange} />
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-      <FormField
-        control={form.control}
-        name="url_verificacion"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>URL de verificación</FormLabel>
-            <FormControl>
-              <Input {...field} value={field.value ?? ''} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+        <FormField
+          control={form.control}
+          name="descripcion"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Descripción (opcional)</FormLabel>
+              <FormControl>
+                <Textarea rows={3} {...field} value={field.value ?? ''} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="habilidades"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Habilidades</FormLabel>
+              <ChipsHabilidades valor={field.value} onChange={field.onChange} />
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </SeccionFormulario>
+      <SeccionFormulario titulo="Fechas">
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="fecha_emision"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Fecha de emisión</FormLabel>
+                <FormControl>
+                  <Input type="date" {...field} value={field.value ?? ''} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="fecha_expiracion"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Fecha de expiración</FormLabel>
+                <FormControl>
+                  <Input type="date" {...field} value={field.value ?? ''} disabled={noExpira} />
+                </FormControl>
+                <FormField
+                  control={form.control}
+                  name="no_expira"
+                  render={({ field: casilla }) => (
+                    <FormItem className="flex items-center gap-2 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={casilla.value}
+                          onCheckedChange={(marcada) => {
+                            casilla.onChange(marcada === true)
+                            if (marcada === true) form.setValue('fecha_expiracion', '')
+                          }}
+                        />
+                      </FormControl>
+                      <FormLabel className="font-normal">No expira</FormLabel>
+                    </FormItem>
+                  )}
+                />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+      </SeccionFormulario>
+      <SeccionFormulario titulo="Enlaces">
+        <FormField
+          control={form.control}
+          name="url_verificacion"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>URL de verificación</FormLabel>
+              <FormControl>
+                <Input {...field} value={field.value ?? ''} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </SeccionFormulario>
     </>
   )
 }

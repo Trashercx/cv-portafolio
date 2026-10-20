@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { Check, FileIcon, Loader2, Search, Upload } from 'lucide-react'
+import { Check, Loader2, Search, Upload } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
@@ -27,6 +27,7 @@ import { nombreArchivo } from '@/features/media/utilidades-media'
 import { ApiError } from '@/lib/api-client'
 import { cn } from '@/lib/utils'
 import { ImagenResponsive } from '@/components/publico/ImagenResponsive'
+import { MiniaturaPdf } from './MiniaturaPdf'
 
 /** Miniaturas de la grilla: como mucho ~12 rem, así el navegador elige la variante de 640 px. */
 const SIZES_MINIATURA = '(min-width: 768px) 12rem, 45vw'
@@ -217,12 +218,12 @@ function GrillaBibliotecaMedia({
                       className="aspect-square w-full rounded-md bg-muted object-cover"
                     />
                   ) : (
-                    <span className="flex aspect-square w-full flex-col items-center justify-center gap-1 rounded-md bg-muted p-2 text-center">
-                      <FileIcon className="size-8 text-muted-foreground" />
-                      <span className="line-clamp-2 text-xs text-muted-foreground">
-                        {item.alt_text || nombre}
-                      </span>
-                    </span>
+                    // Fase 7m (#66, #68): miniatura de la primera página del PDF.
+                    <MiniaturaPdf
+                      url={item.url}
+                      alt={item.alt_text || nombre}
+                      className="aspect-square rounded-md"
+                    />
                   )}
                   <span className="truncate px-0.5 text-xs text-muted-foreground">{nombre}</span>
                   {elegido ? (

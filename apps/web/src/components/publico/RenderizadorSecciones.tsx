@@ -114,6 +114,13 @@ export function RenderizadorSecciones({
             .slice(indice + 1)
             .find((otra) => otra.tipo_seccion !== 'navegacion')
 
+          // Fase 7m (Lighthouse): a partir de la tercera sección con contenido
+          // (la portada y la siguiente suelen asomar en el primer pantallazo),
+          // el pintado se difiere con `content-visibility: auto`.
+          const posicionContenido = pintadas
+            .slice(0, indice)
+            .filter((otra) => otra.tipo_seccion !== 'navegacion').length
+
           return (
             <EnvoltorioSeccion
               key={seccion.id}
@@ -126,6 +133,7 @@ export function RenderizadorSecciones({
               animacion_entrada={animacion_entrada}
               separador_forma={separador_forma}
               borde_bloque={borde_bloque}
+              diferirPintado={posicionContenido >= 2}
             >
               <BloqueSeccion
                 seccion={seccion}

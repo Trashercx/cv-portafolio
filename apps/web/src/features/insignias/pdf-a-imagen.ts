@@ -6,6 +6,7 @@
  * de Vite), nunca de un CDN: la CSP no lo permite.
  */
 import { AREA_MAXIMA_PX, LADO_MAXIMO_PX } from '@/features/media/limites-lienzo'
+import { abrirDocumentoPdf } from '@/features/media/pdf-render'
 
 export type OpcionesPdfAImagen = {
   /** Escala mínima de render (por defecto 2). */
@@ -20,13 +21,8 @@ export async function pdfAImagenPng(
   file: File,
   { escala = 2, anchoMinimo = 1600 }: OpcionesPdfAImagen = {},
 ): Promise<ImagenDePdf> {
-  const [pdfjs, { default: urlWorker }] = await Promise.all([
-    import('pdfjs-dist'),
-    import('pdfjs-dist/build/pdf.worker.min.mjs?url'),
-  ])
-  pdfjs.GlobalWorkerOptions.workerSrc = urlWorker
-
-  const documento = await pdfjs.getDocument({ data: await file.arrayBuffer(), isEvalSupported: false }).promise
+  // Fase 7m: el cargador lazy de pdf.js vive en `features/media/pdf-render.ts`.
+  const documento = await abrirDocumentoPdf(file)
   try {
     const pagina = await documento.getPage(1)
     const base = pagina.getViewport({ scale: 1 })
@@ -40,7 +36,7 @@ export async function pdfAImagenPng(
       escalaDeseada > escalaMaxima ? escalaMaxima * 0.999 : escalaDeseada
     const viewport = pagina.getViewport({ scale: escalaFinal })
 
-    const canvas = document.createElement('canvas')
+    const canvas = window.document.createElement('canvas')
     canvas.width = Math.min(Math.ceil(viewport.width), LADO_MAXIMO_PX)
     canvas.height = Math.min(Math.ceil(viewport.height), LADO_MAXIMO_PX)
     const contexto = canvas.getContext('2d')

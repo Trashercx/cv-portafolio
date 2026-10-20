@@ -3,6 +3,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  ValidateIf,
   Matches,
   Max,
   Min,
@@ -47,4 +48,29 @@ export class UpsertIntegracionGithubDto {
   @IsOptional()
   @IsBoolean()
   destacar_nuevos?: boolean;
+
+  /**
+   * Fase 7m (#66, UC-36): repositorio `owner/repo` cuyo README se muestra en el
+   * panel; `null` lo quita y limpia la caché.
+   */
+  @IsOptional()
+  @ValidateIf((_, valor) => valor !== null)
+  @IsString()
+  @Matches(
+    // El repo no puede ser "." ni ".." (normalizarían el path de la URL).
+    /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?\/(?!\.{1,2}$)[A-Za-z0-9._-]{1,100}$/,
+    {
+      message: 'readme_repositorio debe tener la forma owner/repo',
+    },
+  )
+  readme_repositorio?: string | null;
+
+  /** Rama del README; `null` o ausente usa `main`. */
+  @IsOptional()
+  @ValidateIf((_, valor) => valor !== null)
+  @IsString()
+  @Matches(/^[\w./-]{1,255}$/, {
+    message: 'readme_rama no es un nombre de rama válido',
+  })
+  readme_rama?: string | null;
 }

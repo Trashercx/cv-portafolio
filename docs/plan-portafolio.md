@@ -140,7 +140,7 @@ Aprobada por el usuario el 2026-10-14 como siguiente fase del roadmap (§7); con
 
 | UC | Extensión | Criterio de aceptación |
 |---|---|---|
-| UC-09 | Variantes responsive de cada imagen de la biblioteca (WebP y AVIF a 640/1024/1600 px, generadas con sharp al subir o reemplazar) y acción "Generar variantes faltantes" para las imágenes anteriores a esta fase | Subir una imagen rasterizada crea sus variantes sin que la subida falle aunque la generación falle; reemplazarla las regenera; eliminarla las borra; la acción de relleno informa procesadas, omitidas y errores. |
+| UC-09 | Variantes responsive de cada imagen de la biblioteca (WebP y AVIF a 640/1024/1600 px, generadas con sharp al subir o reemplazar, y regenerables por archivo con `POST /admin/media/:id/variantes`) | Subir una imagen rasterizada crea sus variantes sin que la subida falle aunque la generación falle; reemplazarla las regenera; eliminarla las borra. La acción masiva "Generar variantes faltantes" se retiró en la Fase 7m (#67). |
 | UC-12 | Las imágenes del sitio se sirven con `<picture>`/`srcset` (AVIF → WebP → original) y `sizes` por contexto; la imagen de fondo del hero con `image-set()` | En móvil el navegador descarga la variante de 640 px; sin variantes (snapshots anteriores a la fase) se muestra el original; las imágenes declaran `width`/`height` y no desplazan el contenido al cargar. |
 | UC-14 | Los enlaces a redes y al CV registran los eventos `clic_red` y `descargar_cv` en la analítica, si está configurada | Sin analítica configurada los enlaces funcionan igual y el sitio no carga ningún script externo. |
 | UC-27 | Página `/admin/metricas` con periodo 7/30/90 días, entrada "Métricas" en el panel | Ver fila UC-27 más abajo; la página indica el motivo (`no_configurado`, `sin_respuesta`, `no_autorizado`) cuando la analítica no está disponible, sin romper el resto del panel. |
@@ -250,6 +250,18 @@ Esquema (dos entidades y columnas nuevas), API y web. Contrato en `docs/plan-tec
 | UC-15 (panel Fondo) | Cada tarjeta del fondo es un botón: al pulsarla el fondo se activa y aparece en el lienzo al instante y sus ajustes se muestran en el panel derecho (donde van los campos del bloque seleccionado); los ajustes se guardan solos; al seleccionar un bloque del lienzo el panel vuelve a mostrar los campos del bloque | Desaparecen los botones "Activar" y "Ajustar"; pulsar una tarjeta cambia el fondo del lienzo sin más pasos; mover un control cambia el lienzo al momento y queda guardado sin pulsar nada. |
 | UC-10, UC-11 (editor) | Publicar en un solo paso: el botón "Publicar" guarda primero los cambios del lienzo si los hay y luego publica; "Guardar" queda como acción secundaria (y Ctrl+S) | Con cambios sin guardar, "Publicar" pide una sola confirmación y deja el sitio publicado con lo que se ve en el lienzo; si el guardado falla no se publica. |
 
+### Extensiones de UC-04, UC-09, UC-15 y UC-36 — Fase 7m, issues #65 a #68 (2026-10-20)
+
+Resuelve los issues abiertos del repositorio. Esquema menor (dos columnas), API y web. Por qué cada columna: `MEDIA.bytes` guarda el tamaño del original para mostrarlo en el visor y los detalles del panel (null en los archivos subidos antes de la Fase 7m); `INTEGRACION_GITHUB.readme_*` cachea el README del perfil (repositorio, rama, ETag para peticiones condicionales, fecha y último error) y `readme_markdown` guarda el Markdown crudo tal como lo entrega GitHub, porque el saneado depende de dónde se pinta y por eso lo hace el cliente al renderizar, no el API. Contrato en `docs/plan-tecnico.md`, "Fase 7m".
+
+| Issue | UC | Extensión | Criterio de aceptación |
+|---|---|---|---|
+| #65 | UC-15 | Elegir un fondo en el panel no muestra ningún aviso emergente: ni `alert` nativo ni toast de éxito; solo los errores reales se notifican con el sistema de toasts | Pulsar cualquier tarjeta actualiza el lienzo y los ajustes en silencio; un fallo del API sigue mostrando su toast de error; hay prueba de regresión. |
+| #67 | UC-09 | Desaparece el botón "Generar variantes faltantes" de la biblioteca y su endpoint masivo; la generación de variantes al subir, al reemplazar y por archivo (`POST /admin/media/:id/variantes`) se mantiene | No queda ningún control, texto ni endpoint para la acción masiva; subir una imagen sigue creando variantes. |
+| #66, #68 | UC-04, UC-09 | PDF como documento visualizable: miniatura de la primera página (generada en el navegador) en la biblioteca, el selector de medios, los formularios y las tarjetas y el detalle de certificaciones; visor en modal con nombre, tipo, tamaño, estado de carga, error y acciones "Abrir en pestaña nueva" y "Descargar"; `Media.bytes` para el tamaño | Un PDF de certificado se previsualiza desde el listado del panel, desde el formulario y desde el sitio público sin descargarlo; si no puede cargarse se indica y se ofrece abrirlo aparte; funciona con teclado y en móvil. |
+| #68 | UC-02…UC-06, UC-19, UC-35 | CRUD del panel con el mismo patrón: campos agrupados por secciones, acciones primaria/secundaria distinguibles, estados de carga, guardado, validación, vacío y error, confirmación no bloqueante para borrar y aviso de cambios sin guardar al cerrar en todos los formularios | Ningún formulario pierde cambios al cerrar sin avisar; todos los listados tienen estado vacío con llamada a la acción; las acciones destructivas confirman en un diálogo contextual. |
+| #66 | UC-36 | README del perfil de GitHub: la integración admite repositorio y rama del README (sugerido `<usuario>/<usuario>`, nunca fijo); el API lo descarga por la red segura con caché y ETag, y el panel lo muestra renderizado como Markdown de solo lectura y saneado | Con `Trashercx/Trashercx` y `main` se ve el README en el panel; un repositorio o archivo inexistente, GitHub caído o el límite de cuota muestran un error claro; el Markdown nunca ejecuta HTML ni scripts; hay pruebas. |
+
 ### Casos de uso propuestos — roadmap de profesionalización (2026-10-13, pendientes de aprobación)
 
 Los UC-19 a UC-34 nacen de la propuesta de la Sección 7 (roadmap). Se listan aquí para que el índice de casos de uso siga siendo la única fuente de verdad. **Solo UC-27 y UC-34 están aprobados e implementados** (Fase 8, 2026-10-14) y UC-35 (insignias, Fase 7d, definido en la sección anterior); el resto sigue pendiente: cada fase del roadmap se aprueba por separado y recién entonces se agregan sus entidades al diagrama ER (vía `db-schema`) y se codifica. La Fase 6 (fundamentos de producción) no agrega casos de uso: refuerza UC-01 (cierre de sesión real, límite de intentos por IP) y UC-12/13 (metadatos SEO, accesibilidad, rendimiento).
@@ -316,6 +328,7 @@ erDiagram
         string tipo
         int ancho
         int alto
+        int bytes
         string alt_text
         timestamp created_at
     }
@@ -502,6 +515,12 @@ erDiagram
         timestamp ultima_sincronizacion_en
         string ultimo_error
         string etag
+        string readme_repositorio
+        string readme_rama
+        string readme_markdown
+        string readme_etag
+        timestamp readme_actualizado_en
+        string readme_error
         timestamp created_at
         timestamp updated_at
     }

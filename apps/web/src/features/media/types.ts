@@ -28,6 +28,8 @@ export type Media = {
   carpeta_id?: string | null
   /** Fase 8 (8.2): ausente en snapshots antiguos o en imágenes sin procesar. */
   variantes?: VarianteMedia[]
+  /** Fase 7m (#68): tamaño del original en bytes; `null` en archivos anteriores a la 7m. */
+  bytes?: number | null
 }
 
 /** Dónde se usa un archivo (Fase 7d, UC-09): elemento de `GET /admin/media/usos`. */

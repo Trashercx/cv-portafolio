@@ -107,6 +107,7 @@ export class MediaService {
         usuario_admin_id: usuarioAdminId,
         url: resultado.url,
         s3_key: resultado.key,
+        bytes: file.size,
         tipo: dto.tipo ?? inferirTipo(file.mimetype),
         ancho: resultado.width,
         alto: resultado.height,
@@ -272,6 +273,7 @@ export class MediaService {
       data: {
         url: resultado.url,
         s3_key: resultado.key,
+        bytes: file.size,
         tipo: inferirTipo(file.mimetype),
         ancho: resultado.width,
         alto: resultado.height,
@@ -314,40 +316,6 @@ export class MediaService {
     return error
       ? { generadas: 0, omitida: false, error }
       : { generadas, omitida };
-  }
-
-  /**
-   * `POST /admin/media/variantes/regenerar` (Fase 8): rellena las imágenes
-   * existentes sin variantes, una por una (acota memoria y CPU).
-   */
-  async regenerarFaltantes() {
-    const pendientes = await this.prisma.media.findMany({
-      where: { tipo: 'imagen', variantes: { none: {} } },
-      select: { id: true },
-      orderBy: { created_at: 'asc' },
-    });
-
-    let procesadas = 0;
-    let omitidas = 0;
-    const errores: { id: string; motivo: string }[] = [];
-
-    for (const { id } of pendientes) {
-      try {
-        const resultado = await this.regenerarVariantes(id);
-        if (resultado.omitida) omitidas++;
-        else if (resultado.error) {
-          errores.push({ id, motivo: resultado.error });
-        } else if (resultado.generadas > 0) procesadas++;
-        else errores.push({ id, motivo: 'No se generó ninguna variante' });
-      } catch (error) {
-        errores.push({
-          id,
-          motivo: error instanceof Error ? error.message : String(error),
-        });
-      }
-    }
-
-    return { procesadas, omitidas, errores };
   }
 
   /** Fase 7e (UC-09): 404 si la carpeta indicada no existe. */

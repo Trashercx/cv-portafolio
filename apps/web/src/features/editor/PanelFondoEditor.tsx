@@ -62,7 +62,7 @@ export function PanelFondoEditor() {
   const setFondoSeleccionado = useEditorPanelStore((state) => state.setFondoSeleccionado)
 
   const crear = useCrearFondoSitio({ silencioso: true })
-  const activar = useActivarFondoSitio()
+  const activar = useActivarFondoSitio({ silencioso: true })
   const eliminar = useEliminarFondoSitio()
 
   // Marco con las variables del tema activo, igual que el lienzo (`PuckRoot`).

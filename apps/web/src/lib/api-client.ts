@@ -54,7 +54,10 @@ type ApiFetchOptions = Omit<RequestInit, 'body'> & {
    * del árbol `publico` (`features/publico/usePublico.ts`, UC-12/13/14)
    * deben pasar `false` explícitamente — esos endpoints son de acceso
    * anónimo por diseño y no deben filtrar la cookie de sesión del admin a
-   * un visitante ni a caches intermedias.
+   * un visitante ni a caches intermedias. `false` se traduce en
+   * `'same-origin'` (Fase 7m): con el API en otro origen no viaja ninguna
+   * cookie; solo si API y sitio compartieran origen iría `access_token`,
+   * y esas rutas no tienen guard ni la leen.
    */
   conCredenciales?: boolean
 }
@@ -73,7 +76,11 @@ export async function apiFetch<T>(
 ): Promise<T> {
   const response = await fetch(`${API_URL ?? ''}${path}`, {
     ...options,
-    credentials: conCredenciales ? 'include' : 'omit',
+    // Fase 7m (Lighthouse): los fetch públicos van en 'same-origin' y no en
+    // 'omit' para que coincidan con el `<link rel="preload" as="fetch"
+    // crossorigin>` de index.html y reutilicen esa respuesta. Para el API
+    // (otro origen) ambos modos envían exactamente lo mismo: sin cookies.
+    credentials: conCredenciales ? 'include' : 'same-origin',
     headers: {
       ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
       ...headers,

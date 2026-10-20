@@ -327,4 +327,151 @@ describe('Integración con GitHub (e2e, UC-36)', () => {
       .expect(200);
     expect(integracion.body.ultimo_error).toContain('usuario-e2e');
   });
+
+  // Fase 7m (#66): README de GitHub cacheado.
+  describe('README (Fase 7m, #66)', () => {
+    const MD = '# Hola\n\nPerfil de prueba e2e';
+
+    it('las rutas del README sin cookie responden 401', async () => {
+      const http = request(app.getHttpServer());
+      await http.get('/admin/integraciones/github/readme').expect(401);
+      await http
+        .post('/admin/integraciones/github/readme/actualizar')
+        .expect(401);
+    });
+
+    it.each([
+      [{ readme_repositorio: 'sin-barra' }],
+      [{ readme_repositorio: '-a/b' }],
+      [{ readme_repositorio: 'a/b c' }],
+      [{ readme_repositorio: 'a/' }],
+      [{ readme_rama: 'con espacio' }],
+      [{ readme_rama: '' }],
+    ])('PUT rechaza %j con 400', async (extra) => {
+      await agent
+        .put('/admin/integraciones/github')
+        .send({ usuario_github: 'usuario-e2e', ...extra })
+        .expect(400);
+    });
+
+    it('PUT guarda readme_repositorio y readme_rama sin exponer markdown ni etag', async () => {
+      const res = await agent
+        .put('/admin/integraciones/github')
+        .send({
+          usuario_github: 'usuario-e2e',
+          readme_repositorio: 'usuario-e2e/usuario-e2e',
+          readme_rama: 'main',
+        })
+        .expect(200);
+      expect(res.body).toMatchObject({
+        readme_repositorio: 'usuario-e2e/usuario-e2e',
+        readme_rama: 'main',
+      });
+      expect(res.body.readme_markdown).toBeUndefined();
+      expect(res.body.readme_etag).toBeUndefined();
+    });
+
+    it('GET readme sin descargar devuelve la forma vacía', async () => {
+      const res = await agent
+        .get('/admin/integraciones/github/readme')
+        .expect(200);
+      expect(res.body).toEqual({
+        repositorio: 'usuario-e2e/usuario-e2e',
+        rama: 'main',
+        markdown: null,
+        actualizado_en: null,
+        error: null,
+      });
+    });
+
+    it('actualizar descarga con fetch interceptado y el GET devuelve el markdown', async () => {
+      fetchMock.mockClear();
+      fetchMock.mockResolvedValueOnce(
+        new Response(MD, {
+          status: 200,
+          headers: {
+            'content-type': 'application/vnd.github.raw+json; charset=utf-8',
+            etag: '"readme-e2e"',
+          },
+        }),
+      );
+      const res = await agent
+        .post('/admin/integraciones/github/readme/actualizar')
+        .expect(201);
+      expect(res.body).toMatchObject({
+        repositorio: 'usuario-e2e/usuario-e2e',
+        rama: 'main',
+        markdown: MD,
+        error: null,
+      });
+      expect(typeof res.body.actualizado_en).toBe('string');
+
+      const [url, init] = fetchMock.mock.calls[0];
+      expect(String(url)).toBe(
+        'https://api.github.com/repos/usuario-e2e/usuario-e2e/readme?ref=main',
+      );
+      expect(init.headers.Accept).toBe('application/vnd.github.raw+json');
+
+      const leido = await agent
+        .get('/admin/integraciones/github/readme')
+        .expect(200);
+      expect(leido.body.markdown).toBe(MD);
+    });
+
+    it('un 404 de GitHub queda en error y responde 201 sin borrar el markdown', async () => {
+      fetchMock.mockResolvedValueOnce(new Response('no', { status: 404 }));
+      const res = await agent
+        .post('/admin/integraciones/github/readme/actualizar')
+        .expect(201);
+      expect(res.body.error).toBe(
+        'No existe el README en usuario-e2e/usuario-e2e@main',
+      );
+      expect(res.body.markdown).toBe(MD);
+    });
+
+    it('PUT sin readme_* conserva lo guardado (ausente = no se toca)', async () => {
+      await agent
+        .put('/admin/integraciones/github')
+        .send({
+          usuario_github: 'usuario-e2e',
+          readme_repositorio: 'usuario-e2e/usuario-e2e',
+        })
+        .expect(200);
+      fetchMock.mockResolvedValueOnce(
+        new Response(MD, {
+          status: 200,
+          headers: { 'content-type': 'text/plain; charset=utf-8' },
+        }),
+      );
+      await agent
+        .post('/admin/integraciones/github/readme/actualizar')
+        .expect(201);
+
+      const res = await agent
+        .put('/admin/integraciones/github')
+        .send({ usuario_github: 'usuario-e2e', intervalo_horas: 8 })
+        .expect(200);
+      expect(res.body.readme_repositorio).toBe('usuario-e2e/usuario-e2e');
+      const leido = await agent
+        .get('/admin/integraciones/github/readme')
+        .expect(200);
+      expect(leido.body.markdown).toBe(MD);
+    });
+
+    it('readme_repositorio null limpia la caché', async () => {
+      await agent
+        .put('/admin/integraciones/github')
+        .send({ usuario_github: 'usuario-e2e', readme_repositorio: null })
+        .expect(200);
+      const res = await agent
+        .get('/admin/integraciones/github/readme')
+        .expect(200);
+      expect(res.body).toMatchObject({
+        repositorio: null,
+        markdown: null,
+        actualizado_en: null,
+        error: null,
+      });
+    });
+  });
 });

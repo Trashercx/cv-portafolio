@@ -59,14 +59,6 @@ export class MediaController {
     return this.mediaService.create(file, dto, req.user.sub);
   }
 
-  /**
-   * Fase 8 (UC-34): ruta literal declarada ANTES de las rutas con `:id`.
-   */
-  @Post('variantes/regenerar')
-  async regenerarFaltantes() {
-    return this.mediaService.regenerarFaltantes();
-  }
-
   @Post(':id/variantes')
   async regenerarVariantes(@Param('id', ParseUUIDPipe) id: string) {
     return this.mediaService.regenerarVariantes(id);

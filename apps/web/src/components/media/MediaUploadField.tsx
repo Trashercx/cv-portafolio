@@ -226,6 +226,7 @@ export function MediaUploadField({
               tipo={tipoDelArchivo(archivoPendiente)}
               url={previewPendienteUrl}
               nombre={archivoPendiente.name}
+              bytes={archivoPendiente.size}
             />
           ) : (
             <p className="text-sm text-muted-foreground">

@@ -116,6 +116,7 @@ describe('MediaService (UC-02/03/04 + biblioteca UC-09)', () => {
           usuario_admin_id: 'admin-uuid',
           url: 'https://bucket.s3.us-east-1.amazonaws.com/biblioteca/abc.png',
           s3_key: 'biblioteca/abc.png',
+          bytes: 9,
           tipo: 'imagen',
           ancho: undefined,
           alto: undefined,
@@ -295,6 +296,28 @@ describe('MediaService (UC-02/03/04 + biblioteca UC-09)', () => {
           service.reemplazar('media-uuid', file, undefined, undefined, 'a'),
         ).rejects.toThrow(/HEIC\/HEIF/);
       });
+    });
+
+    it('guarda bytes = file.size al reemplazar (Fase 7m, #68)', async () => {
+      prisma.media.findUnique.mockResolvedValue({
+        id: 'media-uuid',
+        tipo: 'imagen',
+      });
+      prisma.media.update.mockResolvedValue({ id: 'media-uuid' });
+
+      await service.reemplazar(
+        'media-uuid',
+        buildFile({ size: 1234 }),
+        undefined,
+        undefined,
+        'a',
+      );
+
+      expect(prisma.media.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ bytes: 1234 }),
+        }),
+      );
     });
 
     it('respeta el tipo explícito del DTO en vez de inferirlo', async () => {
@@ -551,6 +574,7 @@ describe('MediaService (UC-02/03/04 + biblioteca UC-09)', () => {
         data: {
           url: 'https://bucket.s3.us-east-1.amazonaws.com/biblioteca/nuevo.png',
           s3_key: 'biblioteca/nuevo.png',
+          bytes: 9,
           tipo: 'imagen',
           ancho: 100,
           alto: 200,
@@ -604,7 +628,7 @@ describe('MediaService (UC-02/03/04 + biblioteca UC-09)', () => {
     });
   });
 
-  describe('regenerarVariantes / regenerarFaltantes (Fase 8, UC-34)', () => {
+  describe('regenerarVariantes (Fase 8, UC-34; Fase 7m: sin versión masiva, #67)', () => {
     it('regenerarVariantes lanza 404 si la media no existe', async () => {
       prisma.media.findUnique.mockResolvedValue(null);
 
@@ -671,42 +695,6 @@ describe('MediaService (UC-02/03/04 + biblioteca UC-09)', () => {
         generadas: 4,
         omitida: false,
       });
-    });
-
-    it('regenerarFaltantes cuenta procesadas, omitidas y errores reales', async () => {
-      prisma.media.findMany.mockResolvedValue([
-        { id: 'a' },
-        { id: 'b' },
-        { id: 'c' },
-        { id: 'd' },
-      ]);
-      const espia = jest
-        .spyOn(service, 'regenerarVariantes')
-        .mockResolvedValueOnce({ generadas: 4, omitida: false })
-        .mockRejectedValueOnce(new Error('sin objeto'))
-        .mockResolvedValueOnce({ generadas: 0, omitida: true })
-        .mockResolvedValueOnce({
-          generadas: 0,
-          omitida: false,
-          error: 'fallo al generar',
-        });
-
-      const resultado = await service.regenerarFaltantes();
-
-      expect(prisma.media.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { tipo: 'imagen', variantes: { none: {} } },
-        }),
-      );
-      expect(resultado).toEqual({
-        procesadas: 1,
-        omitidas: 1,
-        errores: [
-          { id: 'b', motivo: 'sin objeto' },
-          { id: 'd', motivo: 'fallo al generar' },
-        ],
-      });
-      espia.mockRestore();
     });
   });
 });

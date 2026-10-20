@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { VersionesSitioModule } from '../versiones-sitio/versiones-sitio.module';
+import { GithubReadmeService } from './github-readme.service';
 import { GithubSyncService } from './github-sync.service';
 import { IntegracionGithubAdminController } from './integracion-github-admin.controller';
 import { IntegracionGithubService } from './integracion-github.service';
@@ -8,7 +9,7 @@ import { IntegracionGithubService } from './integracion-github.service';
 @Module({
   imports: [VersionesSitioModule],
   controllers: [IntegracionGithubAdminController],
-  providers: [IntegracionGithubService, GithubSyncService],
+  providers: [IntegracionGithubService, GithubSyncService, GithubReadmeService],
   exports: [GithubSyncService],
 })
 export class IntegracionGithubModule {}

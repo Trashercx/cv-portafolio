@@ -48,6 +48,13 @@ type EnvoltorioSeccionProps = {
   separador_forma?: SeparadorFormaBloque
   /** Fase 7c (UC-12). `undefined` = `'sutil'` (snapshots anteriores a la fase). */
   borde_bloque?: BordeBloqueBloque
+  /**
+   * Fase 7m (Lighthouse): en el sitio público las secciones que quedan bajo el
+   * pliegue se pintan con `content-visibility: auto`, así el navegador no
+   * calcula estilo ni layout de lo que no se ve hasta acercarse. Solo lo activa
+   * `RenderizadorSecciones`; el lienzo del editor nunca lo usa.
+   */
+  diferirPintado?: boolean
   children: ReactNode
 }
 
@@ -70,6 +77,12 @@ type EnvoltorioSeccionProps = {
  * reducido, ver `useAnimacionesActivas`), `separador_forma` como SVG al pie
  * y los fondos `degradado`/`vidrio` (en `FONDO_BLOQUE_CLASE`).
  */
+/**
+ * Fase 7m (Lighthouse): `contain-intrinsic-size` reserva una altura estimada
+ * mientras la sección no se ha pintado, para que la barra de scroll no salte.
+ */
+const CLASE_PINTADO_DIFERIDO = '[content-visibility:auto] [contain-intrinsic-size:auto_600px]'
+
 export function EnvoltorioSeccion({
   id,
   visible,
@@ -80,6 +93,7 @@ export function EnvoltorioSeccion({
   animacion_entrada,
   separador_forma,
   borde_bloque,
+  diferirPintado = false,
   children,
 }: EnvoltorioSeccionProps) {
   const vistaLimpia = useVistaLimpia()
@@ -112,6 +126,7 @@ export function EnvoltorioSeccion({
         FONDO_BLOQUE_CLASE[fondo_bloque ?? 'ninguno'],
         separador && (visible ? 'border-b' : 'border-b border-dashed'),
         !visible && 'opacity-40',
+        diferirPintado && CLASE_PINTADO_DIFERIDO,
       )}
     >
       {forma !== 'ninguno' ? (

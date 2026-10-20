@@ -13,6 +13,7 @@ import { Throttle } from '@nestjs/throttler';
 import { AuthenticatedRequest } from '../../common/authenticated-request';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { UpsertIntegracionGithubDto } from './dto/upsert-integracion-github.dto';
+import { GithubReadmeService } from './github-readme.service';
 import { GithubSyncService } from './github-sync.service';
 import { IntegracionGithubService } from './integracion-github.service';
 
@@ -26,6 +27,7 @@ export class IntegracionGithubAdminController {
   constructor(
     private readonly integracionService: IntegracionGithubService,
     private readonly syncService: GithubSyncService,
+    private readonly readmeService: GithubReadmeService,
   ) {}
 
   /**
@@ -59,5 +61,26 @@ export class IntegracionGithubAdminController {
   @Post('sincronizar')
   async sincronizar(@Req() req: AuthenticatedRequest) {
     return this.syncService.sincronizar(req.user.sub);
+  }
+
+  /** README cacheado (Fase 7m, #66): solo base de datos, sin red. */
+  @Get('readme')
+  async obtenerReadme(@Req() req: AuthenticatedRequest) {
+    return this.readmeService.obtener(req.user.sub);
+  }
+
+  /**
+   * Descarga el README desde GitHub (misma cuota que sincronizar, mismo
+   * límite por IP). Los fallos de GitHub quedan en `error`, nunca 5xx.
+   */
+  @Throttle({
+    default: {
+      limit: () => Number(process.env.THROTTLE_GITHUB_LIMIT ?? 6),
+      ttl: 60_000,
+    },
+  })
+  @Post('readme/actualizar')
+  async actualizarReadme(@Req() req: AuthenticatedRequest) {
+    return this.readmeService.actualizar(req.user.sub);
   }
 }

@@ -1,4 +1,6 @@
+import { BadgeCheck } from 'lucide-react'
 import { useState } from 'react'
+import { EstadoVacio } from '@/components/shared/EstadoVacio'
 import { Button } from '@/components/ui/button'
 import { ImportarInsigniaDialog } from '@/features/insignias/ImportarInsigniaDialog'
 import { InsigniaFormDialog } from '@/features/insignias/InsigniaFormDialog'
@@ -37,7 +39,13 @@ export function InsigniasListPage() {
       ) : null}
 
       {insignias && insignias.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Todavía no hay insignias cargadas.</p>
+        <EstadoVacio
+          icono={BadgeCheck}
+          titulo="Todavía no hay insignias cargadas."
+          descripcion="Importa tus medallas por enlace, código de embed o archivo."
+          etiquetaAccion="Importar insignia"
+          onAccion={() => setImportando(true)}
+        />
       ) : null}
 
       {insignias && insignias.length > 0 ? (

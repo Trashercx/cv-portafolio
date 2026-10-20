@@ -133,35 +133,6 @@ export type ReemplazarMediaPayload = {
   carpeta?: 'perfil' | 'proyectos' | 'certificaciones' | 'logros'
 }
 
-/** Resultado de `POST /admin/media/variantes/regenerar` (Fase 8, 8.2; UC-09). */
-export type ResultadoRegenerarVariantes = {
-  procesadas: number
-  omitidas: number
-  errores: { id: string; motivo: string }[]
-}
-
-/**
- * `POST /admin/media/variantes/regenerar` (Fase 8, 8.2; UC-09): genera las
- * variantes AVIF/WebP de las imágenes subidas antes de la Fase 8. El resumen
- * (procesadas/omitidas/errores) lo muestra el llamador en un toast.
- */
-export function useRegenerarVariantes() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: () =>
-      apiFetch<ResultadoRegenerarVariantes>('/admin/media/variantes/regenerar', {
-        method: 'POST',
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: MEDIA_QUERY_KEY })
-    },
-    meta: {
-      mensajeError: 'No se pudieron generar las variantes de imagen.',
-    },
-  })
-}
-
 /** `PATCH /admin/media/:id/reemplazar`: sube un archivo nuevo sobre la misma fila (mismo `id`). */
 export function useReemplazarMedia() {
   const queryClient = useQueryClient()

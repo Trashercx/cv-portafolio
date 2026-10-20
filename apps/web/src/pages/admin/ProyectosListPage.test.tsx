@@ -22,6 +22,10 @@ vi.mock('@/features/proyectos/ProyectoFormDialog', () => ({
   ProyectoFormDialog: () => null,
 }))
 
+vi.mock('@/features/integracion-github/ReadmeGithub', () => ({
+  ReadmeGithub: () => <section aria-label="README de GitHub" />,
+}))
+
 vi.mock('@/features/integracion-github/TarjetaIntegracionGithub', () => ({
   TarjetaIntegracionGithub: () => <section aria-label="Integración GitHub" />,
 }))

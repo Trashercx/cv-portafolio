@@ -1,4 +1,7 @@
+import { Download, ExternalLink, Eye } from 'lucide-react'
 import { useId, useRef, useState } from 'react'
+import { MiniaturaPdf } from '@/components/media/MiniaturaPdf'
+import { VisorPdfDialog } from '@/components/media/VisorPdfDialog'
 import { Button } from '@/components/ui/button'
 import { ConfirmDeleteDialog } from '@/components/shared/ConfirmDeleteDialog'
 import {
@@ -18,6 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { ApiError } from '@/lib/api-client'
+import { formatearBytes } from '@/lib/formato'
 import type { Media, UsoMedia } from './types'
 import { nombreArchivo } from './utilidades-media'
 import { useCarpetasMedia, useMoverMedia } from './useCarpetasMedia'
@@ -54,6 +58,7 @@ export function MediaDetailDialog({
   const altTextInputId = useId()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [altText, setAltText] = useState(media.alt_text ?? '')
+  const [visorAbierto, setVisorAbierto] = useState(false)
 
   const actualizar = useActualizarMedia()
   const eliminar = useEliminarMedia()
@@ -95,6 +100,45 @@ export function MediaDetailDialog({
               alt={media.alt_text ?? ''}
               className="max-h-64 w-full rounded-md border object-contain"
             />
+          ) : media.tipo === 'pdf' ? (
+            // Fase 7m (#66, #68): miniatura, tamaño y acciones del documento.
+            <div className="flex flex-wrap items-start gap-3">
+              <MiniaturaPdf
+                url={media.url}
+                alt={media.alt_text || nombreArchivo(media)}
+                className="h-40 w-28 shrink-0 rounded-md border"
+              />
+              <div className="grid min-w-0 gap-2">
+                <p className="text-sm text-muted-foreground">
+                  {['PDF', formatearBytes(media.bytes)].filter(Boolean).join(' · ')}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" variant="outline" size="sm" onClick={() => setVisorAbierto(true)}>
+                    <Eye aria-hidden="true" />
+                    Ver documento
+                  </Button>
+                  <Button asChild variant="outline" size="sm">
+                    <a href={media.url} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink aria-hidden="true" />
+                      Abrir en pestaña nueva
+                    </a>
+                  </Button>
+                  <Button asChild variant="outline" size="sm">
+                    <a href={media.url} download={nombreArchivo(media)} rel="noopener noreferrer">
+                      <Download aria-hidden="true" />
+                      Descargar
+                    </a>
+                  </Button>
+                </div>
+              </div>
+              <VisorPdfDialog
+                open={visorAbierto}
+                onOpenChange={setVisorAbierto}
+                url={media.url}
+                nombre={nombreArchivo(media)}
+                bytes={media.bytes}
+              />
+            </div>
           ) : (
             <a
               href={media.url}

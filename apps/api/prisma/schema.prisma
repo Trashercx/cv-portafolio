@@ -83,6 +83,8 @@ model Media {
   tipo             String
   ancho            Int?
   alto             Int?
+  /// Fase 7m, UC-09: tamaño del original en bytes; null en archivos anteriores
+  bytes            Int?
   alt_text         String?
   created_at       DateTime @default(now())
 
@@ -468,6 +470,15 @@ model IntegracionGithub {
   ultima_sincronizacion_en DateTime?
   ultimo_error             String?
   etag                     String?
+  /// Fase 7m, UC-36: README cacheado. `owner/repo` (sugerido <usuario>/<usuario>)
+  readme_repositorio       String?
+  /// Rama del README; null = main
+  readme_rama              String?
+  /// Markdown crudo; el saneado lo hace el cliente al renderizar
+  readme_markdown          String?   @db.Text
+  readme_etag              String?
+  readme_actualizado_en    DateTime?
+  readme_error             String?
   created_at               DateTime  @default(now())
   updated_at               DateTime  @updatedAt
 

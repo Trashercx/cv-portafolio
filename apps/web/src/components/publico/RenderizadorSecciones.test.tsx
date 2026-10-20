@@ -34,6 +34,7 @@ function seccion(id: string, tipo_seccion: Seccion['tipo_seccion']): Seccion {
       columna_3: [],
     },
     proyectos: { cantidad_a_mostrar: 3, solo_destacados: false },
+    navegacion: {},
   }
 
   return {
@@ -94,5 +95,38 @@ describe('RenderizadorSecciones — ancho_contenido por defecto cuando falta en 
     const section = document.getElementById(`seccion-${tipo}`) as HTMLElement
     const divInterno = section.querySelector(':scope > div')
     expect(divInterno).toHaveClass(claseEsperada)
+  })
+})
+
+/**
+ * Fase 7m (Lighthouse): las secciones bajo el pliegue se pintan con
+ * `content-visibility: auto` (`diferirPintado`), a partir de la tercera con
+ * contenido; la navegación no cuenta porque va `fixed` fuera del flujo.
+ */
+describe('RenderizadorSecciones — pintado diferido de las secciones bajo el pliegue (Fase 7m)', () => {
+  it('difiere desde la tercera sección con contenido y nunca las dos primeras', () => {
+    renderSnapshot([
+      seccion('hero', 'hero'),
+      seccion('sobre-mi', 'sobre-mi'),
+      seccion('proyectos', 'proyectos'),
+      seccion('contacto', 'contacto'),
+    ])
+
+    expect(document.getElementById('seccion-hero')).not.toHaveClass('[content-visibility:auto]')
+    expect(document.getElementById('seccion-sobre-mi')).not.toHaveClass('[content-visibility:auto]')
+    expect(document.getElementById('seccion-proyectos')).toHaveClass('[content-visibility:auto]')
+    expect(document.getElementById('seccion-contacto')).toHaveClass('[content-visibility:auto]')
+  })
+
+  it('la navegación no cuenta como sección con contenido', () => {
+    renderSnapshot([
+      seccion('nav', 'navegacion'),
+      seccion('hero', 'hero'),
+      seccion('sobre-mi', 'sobre-mi'),
+      seccion('proyectos', 'proyectos'),
+    ])
+
+    expect(document.getElementById('seccion-sobre-mi')).not.toHaveClass('[content-visibility:auto]')
+    expect(document.getElementById('seccion-proyectos')).toHaveClass('[content-visibility:auto]')
   })
 })

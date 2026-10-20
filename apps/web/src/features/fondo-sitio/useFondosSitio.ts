@@ -80,16 +80,17 @@ export function useEliminarFondoSitio() {
 /**
  * `PATCH /admin/fondos/:id/activar` (sin body): desactiva cualquier otro
  * fondo del admin y activa este (exclusividad reforzada en el backend con
- * una transacción, UC-15).
+ * una transacción, UC-15). `silencioso` omite el toast de éxito: elegir un
+ * fondo en el panel no muestra avisos (Fase 7m, #65).
  */
-export function useActivarFondoSitio() {
+export function useActivarFondoSitio({ silencioso = false } = {}) {
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: (id: string) =>
       apiFetch<FondoSitio>(`/admin/fondos/${id}/activar`, { method: 'PATCH' }),
     meta: {
-      mensajeExito: 'Fondo activado correctamente.',
+      mensajeExito: silencioso ? undefined : 'Fondo activado correctamente.',
       mensajeError: 'No se pudo activar el fondo. Intenta de nuevo.',
     },
     onSuccess: () => {

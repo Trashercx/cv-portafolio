@@ -93,6 +93,7 @@ describe('Media admin (e2e, UC-02/UC-03/UC-04 + biblioteca UC-09)', () => {
 
     expect(respuesta.body).toMatchObject({
       tipo: 'imagen',
+      bytes: PNG_1X1.length, // Fase 7m (#68)
       alt_text: 'Foto de prueba e2e',
     });
     expect(respuesta.body.url).toEqual(expect.any(String));
@@ -341,7 +342,7 @@ describe('Media admin (e2e, UC-02/UC-03/UC-04 + biblioteca UC-09)', () => {
       expect(respuesta.body.variantes).toEqual([]);
     });
 
-    it('POST /admin/media/:id/variantes regenera y POST /admin/media/variantes/regenerar responde la forma del contrato', async () => {
+    it('POST /admin/media/:id/variantes regenera y el endpoint masivo ya no existe (#67)', async () => {
       const subida = await agent
         .post('/admin/media')
         .attach('file', await pngReal(), 'regenerar.png')
@@ -354,15 +355,8 @@ describe('Media admin (e2e, UC-02/UC-03/UC-04 + biblioteca UC-09)', () => {
         where: { media_id: subida.body.id },
       });
 
-      const faltantes = await agent
-        .post('/admin/media/variantes/regenerar')
-        .expect(201);
-      expect(faltantes.body).toEqual({
-        procesadas: expect.any(Number),
-        omitidas: expect.any(Number),
-        errores: expect.any(Array),
-      });
-      expect(faltantes.body.procesadas).toBeGreaterThanOrEqual(1);
+      // Fase 7m (#67): el endpoint masivo ya no existe.
+      await agent.post('/admin/media/variantes/regenerar').expect(404);
 
       const individual = await agent
         .post(`/admin/media/${subida.body.id}/variantes`)
