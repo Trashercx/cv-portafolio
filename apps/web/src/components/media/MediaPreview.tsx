@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -7,7 +7,17 @@ import {
 } from '@/components/ui/dialog'
 import { cn } from '@/lib/utils'
 import { MiniaturaPdf } from './MiniaturaPdf'
-import { VisorPdfDialog } from './VisorPdfDialog'
+
+/**
+ * Fase 7m (#66): el visor de PDF (diálogo, iconos, formato de bytes) se carga
+ * solo al abrirlo. `MediaPreview` llega al bundle inicial del sitio público a
+ * través de `BloqueCertificaciones` → `DetalleCertificacionContenido`, y
+ * cargarlo de forma estática subía el peso inicial y bajaba el presupuesto de
+ * Lighthouse CI (`apps/web/lighthouserc.json`).
+ */
+const VisorPdfDialog = lazy(() =>
+  import('./VisorPdfDialog').then((m) => ({ default: m.VisorPdfDialog })),
+)
 
 type MediaPreviewProps = {
   /**
@@ -49,6 +59,8 @@ export function MediaPreview({
   fit = 'cover',
 }: MediaPreviewProps) {
   const [open, setOpen] = useState(false)
+  // Una vez pedido, el visor queda montado para conservar su animación de cierre.
+  const [visorSolicitado, setVisorSolicitado] = useState(false)
   const esImagen = tipo === 'imagen'
   const titulo = nombre || (esImagen ? 'Imagen ampliada' : 'Documento')
   const objectFitClass = fit === 'cover' ? 'object-cover' : 'object-contain'
@@ -57,7 +69,10 @@ export function MediaPreview({
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setVisorSolicitado(true)
+          setOpen(true)
+        }}
         aria-label={esImagen ? 'Ampliar imagen' : 'Ver documento'}
         className={cn(
           'overflow-hidden transition-shadow hover:shadow-md focus-visible:outline-2 focus-visible:outline-ring',
@@ -84,15 +99,17 @@ export function MediaPreview({
             />
           </DialogContent>
         </Dialog>
-      ) : (
-        <VisorPdfDialog
-          open={open}
-          onOpenChange={setOpen}
-          url={url}
-          nombre={nombre}
-          bytes={bytes}
-        />
-      )}
+      ) : visorSolicitado ? (
+        <Suspense fallback={null}>
+          <VisorPdfDialog
+            open={open}
+            onOpenChange={setOpen}
+            url={url}
+            nombre={nombre}
+            bytes={bytes}
+          />
+        </Suspense>
+      ) : null}
     </>
   )
 }

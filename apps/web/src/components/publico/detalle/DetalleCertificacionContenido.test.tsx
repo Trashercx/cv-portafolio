@@ -58,7 +58,8 @@ describe('DetalleCertificacionContenido (Fase 4.3)', () => {
     expect(document.querySelector('[data-estado]')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /ver documento/i }))
 
-    expect(screen.getByText('PDF · 840 KB')).toBeInTheDocument()
+    // El visor se carga con `lazy` al abrirlo: se espera a que aparezca.
+    expect(await screen.findByText('PDF · 840 KB')).toBeInTheDocument()
     expect(document.querySelector('object[type="application/pdf"]')).toHaveAttribute(
       'data',
       'https://cdn.example.com/certificado.pdf',

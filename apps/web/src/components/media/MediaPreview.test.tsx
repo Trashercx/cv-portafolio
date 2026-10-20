@@ -45,7 +45,8 @@ describe('MediaPreview', () => {
     expect(document.querySelector('[data-estado]')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: /ver documento/i }))
-    expect(screen.getByRole('heading', { name: 'certificado.pdf' })).toBeInTheDocument()
+    // El visor se carga con `lazy` al abrirlo: se espera a que aparezca.
+    expect(await screen.findByRole('heading', { name: 'certificado.pdf' })).toBeInTheDocument()
     expect(screen.getByText('PDF · 1,2 MB')).toBeInTheDocument()
 
     // El embed usa `<object data type="application/pdf">` (no `<iframe

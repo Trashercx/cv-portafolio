@@ -144,7 +144,8 @@ describe('MediaUploadField', () => {
     // embebido como documento (no como <img> roto) usando
     // `<object data type="application/pdf">` (ver MediaPreview.tsx y VisorPdfDialog.tsx).
     await user.click(screen.getByRole('button', { name: /ver documento/i }))
-    expect(screen.getByRole('heading', { name: 'certificado.pdf' })).toBeInTheDocument()
+    // El visor se carga con `lazy` al abrirlo: se espera a que aparezca.
+    expect(await screen.findByRole('heading', { name: 'certificado.pdf' })).toBeInTheDocument()
     const objeto = document.querySelector('object[type="application/pdf"]')
     expect(objeto).toHaveAttribute('data', expect.stringMatching(/^blob:mock-/))
 
