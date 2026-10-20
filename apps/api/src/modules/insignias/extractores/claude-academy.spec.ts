@@ -38,6 +38,8 @@ function contexto(respuestas: Record<string, string | Error>) {
             ? 'application/json'
             : 'text/html',
         urlFinal: url,
+        status: 200,
+        cabeceras: {},
       });
     },
   };
