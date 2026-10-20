@@ -131,7 +131,7 @@ describe('galería (Fase 7j, UC-18)', () => {
   it('cinta duplica la pista; la copia no es enfocable ni se anuncia', () => {
     const { container } = galeria({ disposicion: 'cinta', velocidad_cinta: 'rapida' })
     const cinta = container.querySelector('[data-disposicion="cinta"]')!
-    expect(cinta.querySelector('.galeria-cinta-pista')).toHaveStyle({ '--duracion-cinta': '24.5s' })
+    expect(cinta.querySelector('.cinta-pista')).toHaveStyle({ '--duracion-cinta': '24.5s' })
     expect(screen.getAllByRole('button', { name: 'Playa' })).toHaveLength(1)
     expect(cinta.querySelectorAll('[aria-hidden="true"][tabindex="-1"]')).toHaveLength(7)
   })
@@ -139,7 +139,7 @@ describe('galería (Fase 7j, UC-18)', () => {
   it('cinta con movimiento reducido es una tira sin animación ni copia', () => {
     simularMovimientoReducido(true)
     const { container } = galeria({ disposicion: 'cinta' })
-    expect(container.querySelector('.galeria-cinta-pista')).not.toBeInTheDocument()
+    expect(container.querySelector('.cinta-pista')).not.toBeInTheDocument()
     expect(container.querySelectorAll('img')).toHaveLength(7)
   })
 
@@ -243,7 +243,7 @@ describe('galería: correcciones de la revisión (Fase 7j)', () => {
         <BloqueGaleria titulo="Galería" config={{ fotos: FOTOS, disposicion: 'cinta' }} />
       </ProveedorModoRenderizado>,
     )
-    expect(enEditor.container.querySelector('.galeria-cinta-pista')).not.toBeInTheDocument()
+    expect(enEditor.container.querySelector('.cinta-pista')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Pausar la cinta' })).not.toBeInTheDocument()
   })
 

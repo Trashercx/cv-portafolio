@@ -198,11 +198,19 @@ export type ProyectosConfiguracion = BloqueConfiguracionBase & {
   /** @default true */
   mostrar_descripcion?: boolean
   /** Fase 7 (7.2). @default 'tarjetas' */
-  disposicion?: 'tarjetas' | 'bento' | 'lista'
+  disposicion?: 'tarjetas' | 'bento' | 'lista' | 'vitrina'
   /** Fase 7 (7.2). @default 'elevar' */
   efecto_hover?: EfectoHoverTarjeta
   /** Fase 7 (7.2). @default true */
   mostrar_tecnologias?: boolean
+  /** Fase 7l (UC-02): chip "En curso"/"Finalizado"/"Pausado". @default true */
+  mostrar_estado?: boolean
+  /** Fase 7l (UC-02): acciones "Demo" y "Código". @default true */
+  mostrar_enlaces?: boolean
+  /** Fase 7l (UC-02, UC-36): lenguaje y estrellas de un proyecto de GitHub. @default true */
+  mostrar_github?: boolean
+  /** Fase 7l (UC-02): rango de fechas en la línea meta. @default false */
+  mostrar_fechas?: boolean
 }
 
 export type CertificacionesConfiguracion = BloqueConfiguracionBase & {
@@ -215,6 +223,14 @@ export type CertificacionesConfiguracion = BloqueConfiguracionBase & {
   mostrar_fecha?: boolean
   /** Fase 7 (7.2). @default 'elevar' */
   efecto_hover?: EfectoHoverTarjeta
+  /** Fase 7l (UC-04). @default 'tarjetas' */
+  disposicion?: 'tarjetas' | 'linea_tiempo' | 'logos'
+  /** Fase 7l (UC-04). @default true */
+  mostrar_emisor?: boolean
+  /** Fase 7l (UC-04): chip "Vigente"/"Vencida"/"Sin vencimiento". @default true */
+  mostrar_vigencia?: boolean
+  /** Fase 7l (UC-04): acción "Ver credencial". @default true */
+  mostrar_enlace?: boolean
 }
 
 export type LogrosConfiguracion = BloqueConfiguracionBase & {
@@ -365,6 +381,14 @@ export type InsigniasConfiguracion = BloqueConfiguracionBase & {
   mostrar_enlace?: boolean
   /** 1-50; sin valor = todas. */
   limite?: number
+  /** Fase 7l (UC-35). @default 'rejilla' */
+  disposicion?: 'rejilla' | 'carrusel' | 'cinta'
+  /** Fase 7l, solo carrusel. @default false */
+  reproduccion_automatica?: boolean
+  /** Fase 7l, solo carrusel automático: segundos entre avances, 2-15. @default 5 */
+  intervalo_segundos?: number
+  /** Fase 7l, solo cinta. @default 'normal' */
+  velocidad_cinta?: 'lenta' | 'normal' | 'rapida'
 }
 
 export type ConfiguracionPorTipo = {
