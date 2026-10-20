@@ -11,7 +11,8 @@ export interface UsoMedia {
     | 'certificacion'
     | 'hero'
     | 'galeria'
-    | 'insignia';
+    | 'insignia'
+    | 'experiencia';
   id: string;
   nombre: string;
 }
@@ -37,6 +38,7 @@ export class MediaUsosService {
       () => this.usosDeCertificaciones(),
       () => this.usosDeSecciones(),
       () => this.usosDeInsignias(),
+      () => this.usosDeExperiencias(),
     ];
   }
 
@@ -125,6 +127,22 @@ export class MediaUsosService {
     return filas.map((i) => ({
       mediaId: i.imagen_media_id,
       uso: { tipo: 'insignia' as const, id: i.id, nombre: i.nombre },
+    }));
+  }
+
+  /** Fase 7l (UC-19): el logo de un puesto cuenta como uso. */
+  private async usosDeExperiencias() {
+    const filas = await this.prisma.experienciaLaboral.findMany({
+      where: { logo_media_id: { not: null } },
+      select: { id: true, cargo: true, empresa: true, logo_media_id: true },
+    });
+    return filas.map((e) => ({
+      mediaId: e.logo_media_id as string,
+      uso: {
+        tipo: 'experiencia' as const,
+        id: e.id,
+        nombre: `${e.cargo} · ${e.empresa}`,
+      },
     }));
   }
 

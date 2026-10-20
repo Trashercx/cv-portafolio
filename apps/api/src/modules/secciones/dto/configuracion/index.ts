@@ -1,6 +1,7 @@
 import { CertificacionesConfiguracionDto } from './certificaciones-configuracion.dto';
 import { ColumnasConfiguracionDto } from './columnas-configuracion.dto';
 import { ContactoConfiguracionDto } from './contacto-configuracion.dto';
+import { ExperienciaConfiguracionDto } from './experiencia-configuracion.dto';
 import { GaleriaConfiguracionDto } from './galeria-configuracion.dto';
 import { HeroConfiguracionDto } from './hero-configuracion.dto';
 import { InsigniasConfiguracionDto } from './insignias-configuracion.dto';
@@ -14,6 +15,7 @@ export {
   CertificacionesConfiguracionDto,
   ColumnasConfiguracionDto,
   ContactoConfiguracionDto,
+  ExperienciaConfiguracionDto,
   GaleriaConfiguracionDto,
   HeroConfiguracionDto,
   InsigniasConfiguracionDto,
@@ -46,6 +48,8 @@ export const TIPOS_SECCION = [
   'galeria',
   'navegacion',
   'insignias',
+  // Fase 7l (UC-19): trayectoria laboral.
+  'experiencia',
 ] as const;
 
 export type TipoSeccion = (typeof TIPOS_SECCION)[number];
@@ -68,4 +72,5 @@ export const CONFIGURACION_DTO_POR_TIPO: Record<TipoSeccion, new () => object> =
     galeria: GaleriaConfiguracionDto,
     navegacion: NavegacionConfiguracionDto,
     insignias: InsigniasConfiguracionDto,
+    experiencia: ExperienciaConfiguracionDto,
   };

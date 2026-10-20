@@ -6,6 +6,7 @@ import {
 import { Prisma } from '../../../generated/prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CertificacionesService } from '../certificaciones/certificaciones.service';
+import { ExperienciasService } from '../experiencias/experiencias.service';
 import { FondoSitioService } from '../fondo-sitio/fondo-sitio.service';
 import { InsigniasService } from '../insignias/insignias.service';
 import { LogrosService } from '../logros/logros.service';
@@ -48,6 +49,7 @@ export class VersionesSitioService {
     private readonly redesSocialesService: RedesSocialesService,
     private readonly skillsService: SkillsService,
     private readonly insigniasService: InsigniasService,
+    private readonly experienciasService: ExperienciasService,
     private readonly fondoSitioService: FondoSitioService,
   ) {}
 
@@ -74,6 +76,7 @@ export class VersionesSitioService {
       redes_sociales,
       skills,
       insignias,
+      experiencias,
       fondo,
     ] = await Promise.all([
       this.perfilService.obtenerConMedia(usuarioAdminId),
@@ -85,6 +88,7 @@ export class VersionesSitioService {
       this.redesSocialesService.listar(),
       this.skillsService.listar(),
       this.insigniasService.listarVisibles(),
+      this.experienciasService.listarPublicas(),
       this.fondoSitioService.obtenerActivo(usuarioAdminId),
     ]);
 
@@ -98,6 +102,7 @@ export class VersionesSitioService {
       redes_sociales,
       skills,
       insignias,
+      experiencias,
       fondo,
     } as unknown as SnapshotSitio;
   }

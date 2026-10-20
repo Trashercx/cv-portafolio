@@ -16,6 +16,7 @@ const MINIMOS: Record<string, Record<string, unknown>> = {
   galeria: {},
   navegacion: {},
   insignias: {},
+  experiencia: {},
 };
 
 describe('borde_bloque (Fase 7c)', () => {
