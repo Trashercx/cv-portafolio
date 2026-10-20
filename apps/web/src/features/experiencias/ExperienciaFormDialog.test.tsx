@@ -51,7 +51,7 @@ const EXISTENTE: Experiencia = {
 
 function abrir(experiencia: Experiencia | null = null, onOpenChange = vi.fn()) {
   return render(
-    <ExperienciaFormDialog experiencia={experiencia} open onOpenChange={onOpenChange} ordenSiguiente={5} />,
+    <ExperienciaFormDialog experiencia={experiencia} open onOpenChange={onOpenChange} />,
   )
 }
 
@@ -96,7 +96,6 @@ describe('ExperienciaFormDialog (Fase 7l, UC-19)', () => {
       logo_media_id: null,
       tecnologias: [],
       visible: true,
-      orden: 5,
     })
   })
 

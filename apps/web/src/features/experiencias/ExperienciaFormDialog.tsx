@@ -71,8 +71,6 @@ type ExperienciaFormDialogProps = {
   experiencia?: Experiencia | null
   open: boolean
   onOpenChange: (open: boolean) => void
-  /** `orden` que recibe un puesto nuevo (al final de la lista). */
-  ordenSiguiente?: number
 }
 
 /** UC-19 (Gestionar experiencia laboral): crear/editar un puesto dentro de un modal. */
@@ -80,7 +78,6 @@ export function ExperienciaFormDialog({
   experiencia,
   open,
   onOpenChange,
-  ordenSiguiente = 0,
 }: ExperienciaFormDialogProps) {
   const esNuevo = !experiencia
   const crear = useCrearExperiencia()
@@ -133,7 +130,7 @@ export function ExperienciaFormDialog({
         { onSuccess: () => onOpenChange(false) },
       )
     } else {
-      crear.mutate(construirPayloadExperiencia(values, ordenSiguiente), {
+      crear.mutate(construirPayloadExperiencia(values), {
         onSuccess: () => onOpenChange(false),
       })
     }

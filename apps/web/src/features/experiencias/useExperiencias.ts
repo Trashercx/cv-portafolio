@@ -28,7 +28,6 @@ export type ExperienciaPayload = {
   url_empresa: string | null
   logo_media_id: string | null
   tecnologias: string[]
-  orden?: number
   visible: boolean
 }
 

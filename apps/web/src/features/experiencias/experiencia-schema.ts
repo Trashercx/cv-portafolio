@@ -51,10 +51,7 @@ export type ExperienciaFormValues = z.infer<typeof experienciaSchema>
  * viejo, y los textos opcionales vacíos viajan `null` (así `PATCH` también
  * puede borrarlos).
  */
-export function construirPayloadExperiencia(
-  values: ExperienciaFormValues,
-  orden?: number,
-): ExperienciaPayload {
+export function construirPayloadExperiencia(values: ExperienciaFormValues): ExperienciaPayload {
   return {
     empresa: values.empresa.trim(),
     cargo: values.cargo.trim(),
@@ -66,7 +63,8 @@ export function construirPayloadExperiencia(
     url_empresa: values.url_empresa?.trim() || null,
     logo_media_id: values.logo_media_id,
     tecnologias: values.tecnologias,
+    // `orden` no viaja: el API coloca el puesto nuevo al final y
+    // `PATCH reordenar` lo cambia (la whitelist rechazaría la clave).
     visible: values.visible,
-    ...(orden === undefined ? {} : { orden }),
   }
 }

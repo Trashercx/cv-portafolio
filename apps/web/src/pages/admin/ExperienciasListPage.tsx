@@ -13,8 +13,6 @@ export function ExperienciasListPage() {
   const [dialogoAbierto, setDialogoAbierto] = useState(false)
   const [itemEditando, setItemEditando] = useState<Experiencia | null>(null)
 
-  const ordenSiguiente = Math.max(-1, ...(experiencias ?? []).map((item) => item.orden)) + 1
-
   const abrirNuevo = () => {
     setItemEditando(null)
     setDialogoAbierto(true)
@@ -60,7 +58,6 @@ export function ExperienciasListPage() {
         experiencia={itemEditando}
         open={dialogoAbierto}
         onOpenChange={setDialogoAbierto}
-        ordenSiguiente={ordenSiguiente}
       />
     </div>
   )
