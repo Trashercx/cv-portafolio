@@ -295,8 +295,10 @@ export function BloqueInsignias({ titulo, config, insignias, alineacionTitulo }:
         gap="gap-4"
         automatico={config.reproduccion_automatica ?? false}
         intervaloSegundos={config.intervalo_segundos ?? 5}
-        // Aire para el halo, la sombra y el nombre "al pasar" bajo la medalla (el contenedor recorta).
-        claseDesplazable={esMedalla ? 'pt-6 pb-14' : 'py-4'}
+        // Aire para el halo, la sombra y el nombre "al pasar" bajo la medalla (el
+        // contenedor recorta) y relleno lateral para que las flechas no tapen la
+        // primera ni la última insignia (`scroll-px` mantiene el ajuste del snap).
+        claseDesplazable={cn('px-12 scroll-px-12', esMedalla ? 'pt-6 pb-14' : 'py-4')}
         etiquetas={{
           anterior: 'Insignia anterior',
           siguiente: 'Insignia siguiente',
