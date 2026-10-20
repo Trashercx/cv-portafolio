@@ -1,3 +1,4 @@
+import type { ExperienciaPublica } from '@/features/experiencias/types'
 import type { InsigniaPublica } from '@/features/insignias/types'
 import type { Logro } from '@/features/logros/types'
 import type { Proyecto } from '@/features/proyectos/types'
@@ -7,6 +8,7 @@ import type {
   BloqueConfiguracionBase,
   CertificacionesConfiguracion,
   ContactoConfiguracion,
+  ExperienciaConfiguracion,
   GaleriaConfiguracion,
   HeroConfiguracion,
   InsigniasConfiguracion,
@@ -20,6 +22,7 @@ import type { Skill } from '@/features/skills/types'
 import { ALINEACION_TEXTO_CLASE } from '@/lib/escalas-bloque'
 import { BloqueCertificaciones } from './BloqueCertificaciones'
 import { BloqueContacto } from './BloqueContacto'
+import { BloqueExperiencia } from './BloqueExperiencia'
 import { BloqueGaleria } from './BloqueGaleria'
 import { BloqueHero } from './BloqueHero'
 import { BloqueInsignias } from './BloqueInsignias'
@@ -48,6 +51,8 @@ export type DatosDespachoBloque = {
   skills: Skill[]
   /** Fase 7d (UC-35): ausente en snapshots anteriores a la fase. */
   insignias?: InsigniaPublica[]
+  /** Fase 7l (UC-19): ausente en snapshots anteriores a la fase. */
+  experiencias?: ExperienciaPublica[]
 }
 
 type DespachoBloqueSeccionProps = {
@@ -189,6 +194,16 @@ export function DespachoBloqueSeccion({
           alineacionTitulo={alineacionTitulo}
           config={configuracion as InsigniasConfiguracion}
           insignias={datos.insignias ?? []}
+        />
+      )
+    case 'experiencia':
+      // Fase 7l (UC-19): las experiencias vienen del snapshot/`DatosEditor`, no de la configuración.
+      return (
+        <BloqueExperiencia
+          titulo={titulo_visible}
+          alineacionTitulo={alineacionTitulo}
+          config={configuracion as ExperienciaConfiguracion}
+          experiencias={datos.experiencias ?? []}
         />
       )
     default:

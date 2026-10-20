@@ -2,6 +2,7 @@ import { renderHook } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Perfil } from '@/features/perfil/types'
 import type { Certificacion } from '@/features/certificaciones/types'
+import type { Experiencia } from '@/features/experiencias/types'
 import type { Insignia } from '@/features/insignias/types'
 import type { Media } from '@/features/media/types'
 import { useDatosEditor } from './useDatosEditor'
@@ -88,6 +89,7 @@ const estado = {
   certificaciones: [] as Certificacion[],
   media: [] as Media[],
   insignias: [] as Insignia[],
+  experiencias: [] as Experiencia[],
 }
 
 vi.mock('@/features/perfil/usePerfil', () => ({
@@ -116,6 +118,10 @@ vi.mock('@/features/media/useMediaLibrary', () => ({
 
 vi.mock('@/features/insignias/useInsignias', () => ({
   useInsignias: () => ({ data: estado.insignias, isLoading: false, error: null }),
+}))
+
+vi.mock('@/features/experiencias/useExperiencias', () => ({
+  useExperiencias: () => ({ data: estado.experiencias, isLoading: false, error: null }),
 }))
 
 vi.mock('@/features/proyectos/useProyectos', () => ({
@@ -148,6 +154,7 @@ describe('useDatosEditor', () => {
     estado.certificaciones = []
     estado.media = []
     estado.insignias = []
+    estado.experiencias = []
   })
 
   it('resuelve imagen_perfil y cv_media cuando el id existe en la biblioteca de medios', () => {
@@ -233,5 +240,36 @@ describe('useDatosEditor', () => {
 
     expect(result.current.datos?.insignias?.map((i) => i.id)).toEqual(['i1'])
     expect(result.current.datos?.insignias?.[0].imagen).toEqual(MEDIA_PERFIL)
+  })
+
+  it('Fase 7l: expone solo las experiencias visibles y resuelve el logo contra la biblioteca', () => {
+    const base = {
+      usuario_admin_id: 'admin-1',
+      empresa: 'Acme',
+      cargo: 'Dev',
+      descripcion: 'x',
+      fecha_inicio: '2024-01-01',
+      fecha_fin: null,
+      ubicacion: null,
+      modalidad: 'remoto' as const,
+      url_empresa: null,
+      tecnologias: [],
+      created_at: '2026-01-01T00:00:00.000Z',
+      updated_at: '2026-01-01T00:00:00.000Z',
+    }
+    estado.perfil = PERFIL
+    estado.media = [MEDIA_PERFIL]
+    estado.experiencias = [
+      { ...base, id: 'e1', orden: 0, visible: true, logo_media_id: 'media-perfil', logo: null },
+      { ...base, id: 'e2', orden: 1, visible: false, logo_media_id: null, logo: null },
+      { ...base, id: 'e3', orden: 2, visible: true, logo_media_id: 'media-borrada', logo: null },
+    ]
+
+    const { result } = renderHook(() => useDatosEditor())
+
+    expect(result.current.datos?.experiencias?.map((e) => e.id)).toEqual(['e1', 'e3'])
+    expect(result.current.datos?.experiencias?.[0].logo).toEqual(MEDIA_PERFIL)
+    // Logo roto: se omite en silencio, como en el snapshot.
+    expect(result.current.datos?.experiencias?.[1].logo).toBeNull()
   })
 })
