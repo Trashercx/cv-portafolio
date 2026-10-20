@@ -117,6 +117,30 @@ export interface ExperienciaPublica {
   tecnologias: { id: string; nombre: string }[];
 }
 
+/**
+ * Proyecto del snapshot (UC-03; Fase 7l, UC-36). Los campos de GitHub salen del
+ * servicio de proyectos: `github_repo_id` va como string (BigInt no serializa a
+ * JSON); ausentes en snapshots anteriores a la fase.
+ */
+export interface ProyectoPublico extends SnapshotConId {
+  titulo: string;
+  descripcion: string;
+  url_demo: string | null;
+  url_repositorio: string | null;
+  fecha_inicio: string;
+  fecha_fin: string | null;
+  estado: string;
+  destacado: boolean;
+  orden: number;
+  origen?: 'manual' | 'github';
+  github_repo_id?: string | null;
+  github_nombre_completo?: string | null;
+  github_lenguaje?: string | null;
+  github_estrellas?: number | null;
+  github_actualizado_en?: string | null;
+  sincronizar_github?: boolean;
+}
+
 export interface SnapshotSeccion extends SnapshotConId {
   tipo_seccion: string;
   configuracion: SnapshotSeccionConfiguracion;
@@ -126,7 +150,7 @@ export interface SnapshotSitio {
   perfil: SnapshotPerfil | null;
   tema: Record<string, unknown> | null;
   secciones: SnapshotSeccion[];
-  proyectos: SnapshotConId[];
+  proyectos: ProyectoPublico[];
   certificaciones: SnapshotConId[];
   logros: SnapshotConId[];
   redes_sociales: SnapshotConId[];

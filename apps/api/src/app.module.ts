@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
 import { HealthModule } from './modules/health/health.module';
@@ -10,6 +11,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { CertificacionesModule } from './modules/certificaciones/certificaciones.module';
 import { FondoSitioModule } from './modules/fondo-sitio/fondo-sitio.module';
 import { ExperienciasModule } from './modules/experiencias/experiencias.module';
+import { IntegracionGithubModule } from './modules/integracion-github/integracion-github.module';
 import { InsigniasModule } from './modules/insignias/insignias.module';
 import { LogrosModule } from './modules/logros/logros.module';
 import { MediaModule } from './modules/media/media.module';
@@ -75,6 +77,9 @@ import { PrismaModule } from './prisma/prisma.module';
         },
       ],
     }),
+    // Fase 7l (UC-36): cron de la sincronización con GitHub. En los tests no se
+    // registra el planificador: ningún cron corre durante jest/e2e.
+    ...(process.env.NODE_ENV === 'test' ? [] : [ScheduleModule.forRoot()]),
     HealthModule,
     PrismaModule,
     AuthModule,
@@ -92,6 +97,8 @@ import { PrismaModule } from './prisma/prisma.module';
     InsigniasModule,
     // Fase 7l: experiencia laboral (UC-19).
     ExperienciasModule,
+    // Fase 7l: repositorios públicos de GitHub como proyectos (UC-36).
+    IntegracionGithubModule,
     FondoSitioModule,
     VersionesSitioModule,
     PublicoModule,

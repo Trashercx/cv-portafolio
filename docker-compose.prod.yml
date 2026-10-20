@@ -63,6 +63,8 @@ services:
       THROTTLE_LIMIT: ${THROTTLE_LIMIT:-120}
       THROTTLE_LOGIN_LIMIT: ${THROTTLE_LOGIN_LIMIT:-5}
       THROTTLE_LOGIN_TTL_MS: ${THROTTLE_LOGIN_TTL_MS:-60000}
+      # Fase 7l (UC-36): opcional; sin token la API de GitHub permite 60 peticiones/hora.
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
       # Fase 8 (UC-27) — métricas de Umami en el panel (`GET /admin/metricas`).
       # Todas OPCIONALES: sin UMAMI_API_URL o UMAMI_WEBSITE_ID el endpoint
       # responde `{ disponible: false, motivo: 'no_configurado' }` y el resto

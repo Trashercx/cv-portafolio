@@ -23,6 +23,7 @@ export async function crearAppDePrueba(
   process.env.THROTTLE_LIMIT ??= '100000';
   process.env.THROTTLE_LOGIN_LIMIT ??= '100000';
   process.env.THROTTLE_IMPORTAR_LIMIT ??= '100000';
+  process.env.THROTTLE_GITHUB_LIMIT ??= '100000';
   let builder = Test.createTestingModule({ imports: [AppModule] });
   if (configurar) {
     builder = configurar(builder);
