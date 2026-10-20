@@ -21,6 +21,29 @@ const INCLUDE_DETALLE = {
   },
 };
 
+/**
+ * Fase 7l (UC-36): `github_repo_id` es BigInt en la base y `JSON.stringify`
+ * (respuesta HTTP y snapshot JSONB) lanza con BigInt, así que todo proyecto
+ * que sale de este servicio lo lleva como string (o null).
+ */
+export function serializarProyecto<T extends { github_repo_id: bigint | null }>(
+  proyecto: T,
+): Omit<T, 'github_repo_id'> & { github_repo_id: string | null } {
+  return {
+    ...proyecto,
+    github_repo_id:
+      proyecto.github_repo_id === null ? null : String(proyecto.github_repo_id),
+  };
+}
+
+/** Campos que la sincronización con GitHub pisa y que, por tanto, se bloquean. */
+const CAMPOS_SINCRONIZADOS = [
+  'titulo',
+  'descripcion',
+  'url_repositorio',
+  'url_demo',
+] as const;
+
 @Injectable()
 export class ProyectosService {
   constructor(private readonly prisma: PrismaService) {}
@@ -31,7 +54,10 @@ export class ProyectosService {
 
   /** `GET /proyectos`: lista respetando `orden`. */
   async listarPublico() {
-    return this.prisma.proyecto.findMany({ orderBy: { orden: 'asc' } });
+    const proyectos = await this.prisma.proyecto.findMany({
+      orderBy: { orden: 'asc' },
+    });
+    return proyectos.map(serializarProyecto);
   }
 
   /** `GET /proyectos/:id`: detalle con tecnologías e imágenes. */
@@ -45,7 +71,7 @@ export class ProyectosService {
       throw new NotFoundException(`No existe un proyecto con id ${id}`);
     }
 
-    return proyecto;
+    return serializarProyecto(proyecto);
   }
 
   // ---------------------------------------------------------------------
@@ -53,10 +79,11 @@ export class ProyectosService {
   // ---------------------------------------------------------------------
 
   async listarAdmin() {
-    return this.prisma.proyecto.findMany({
+    const proyectos = await this.prisma.proyecto.findMany({
       orderBy: { orden: 'asc' },
       include: INCLUDE_DETALLE,
     });
+    return proyectos.map(serializarProyecto);
   }
 
   async obtenerAdmin(id: string) {
@@ -69,7 +96,7 @@ export class ProyectosService {
       throw new NotFoundException(`No existe un proyecto con id ${id}`);
     }
 
-    return proyecto;
+    return serializarProyecto(proyecto);
   }
 
   /**
@@ -80,7 +107,7 @@ export class ProyectosService {
    * convierten explícitamente a `Date` antes de llegar a Prisma.
    */
   async crear(usuarioAdminId: string, dto: CreateProyectoDto) {
-    return this.prisma.proyecto.create({
+    const creado = await this.prisma.proyecto.create({
       data: {
         usuario_admin_id: usuarioAdminId,
         ...dto,
@@ -88,12 +115,29 @@ export class ProyectosService {
         fecha_fin: dto.fecha_fin ? new Date(dto.fecha_fin) : undefined,
       },
     });
+    return serializarProyecto(creado);
   }
 
   async actualizar(id: string, dto: UpdateProyectoDto) {
-    await this.obtenerAdmin(id);
+    const actual = await this.obtenerAdmin(id);
 
-    return this.prisma.proyecto.update({
+    // Fase 7l (UC-36): un importado que sigue sincronizado se reescribe en la
+    // próxima sincronización; editarlo a mano sería perder el cambio en silencio.
+    // Apagar `sincronizar_github` en el mismo PATCH sí lo permite.
+    const seguiraSincronizado =
+      dto.sincronizar_github ?? actual.sincronizar_github;
+    if (actual.origen === 'github' && seguiraSincronizado) {
+      const cambia = CAMPOS_SINCRONIZADOS.filter(
+        (campo) => dto[campo] !== undefined && dto[campo] !== actual[campo],
+      );
+      if (cambia.length > 0) {
+        throw new ConflictException(
+          `Este proyecto se sincroniza con GitHub y no se puede editar a mano (${cambia.join(', ')}). Desactiva la sincronización con GitHub para editarlo a mano.`,
+        );
+      }
+    }
+
+    const actualizado = await this.prisma.proyecto.update({
       where: { id },
       data: {
         ...dto,
@@ -101,6 +145,7 @@ export class ProyectosService {
         fecha_fin: dto.fecha_fin ? new Date(dto.fecha_fin) : undefined,
       },
     });
+    return serializarProyecto(actualizado);
   }
 
   async eliminar(id: string) {
