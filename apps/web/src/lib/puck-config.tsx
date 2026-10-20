@@ -262,6 +262,33 @@ const PROPS_GALERIA_NUEVA = {
   ampliar_al_clic: true,
 } as const satisfies Partial<GaleriaConfiguracion>
 
+/**
+ * Fase 7l (UC-02, UC-04, UC-35): valores con que nacen los bloques de
+ * proyectos, certificaciones e insignias nuevos (vía `resolveData` al insertar,
+ * no `defaultProps`: los bloques ya guardados no los traen y mantienen su
+ * aspecto previo, y el API no persiste defaults).
+ */
+const PROPS_PROYECTOS_NUEVOS = {
+  mostrar_estado: true,
+  mostrar_enlaces: true,
+  mostrar_github: true,
+  mostrar_fechas: false,
+} as const satisfies Partial<ProyectosConfiguracion>
+
+const PROPS_CERTIFICACIONES_NUEVAS = {
+  disposicion: 'tarjetas',
+  mostrar_emisor: true,
+  mostrar_vigencia: true,
+  mostrar_enlace: true,
+} as const satisfies Partial<CertificacionesConfiguracion>
+
+const PROPS_INSIGNIAS_NUEVAS = {
+  disposicion: 'rejilla',
+  reproduccion_automatica: false,
+  intervalo_segundos: 5,
+  velocidad_cinta: 'normal',
+} as const satisfies Partial<InsigniasConfiguracion>
+
 /** `defaultProps` de los campos base, iguales para todos los tipos de bloque (ver comentario de `CAMPOS_BASE_BLOQUE`). Coinciden con los defaults del API. */
 const DEFAULT_PROPS_BASE_BLOQUE: Required<BloqueConfiguracionBase> = {
   espaciado_vertical: 'normal',
@@ -733,6 +760,11 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
         solo_destacados: campoSiNo('Solo destacados'),
         mostrar_descripcion: campoSiNo('Mostrar descripción'),
         mostrar_tecnologias: campoSiNo('Mostrar tecnologías'),
+        // Fase 7l (UC-02): estado, enlaces, datos de GitHub y fechas.
+        mostrar_estado: campoSiNo('Mostrar estado (En curso, Finalizado...)'),
+        mostrar_enlaces: campoSiNo('Mostrar botones Demo y Código'),
+        mostrar_github: campoSiNo('Mostrar lenguaje y estrellas (GitHub)'),
+        mostrar_fechas: campoSiNo('Mostrar fechas'),
         // Disposición y variantes
         disposicion: {
           type: 'select',
@@ -741,6 +773,7 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
             { label: 'Tarjetas', value: 'tarjetas' },
             { label: 'Bento (uno destacado grande)', value: 'bento' },
             { label: 'Lista', value: 'lista' },
+            { label: 'Vitrina (filas alternas con imagen grande)', value: 'vitrina' },
           ],
         },
         columnas: {
@@ -766,10 +799,16 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
         _visible: VISIBLE_FIELD,
         _tituloVisible: TITULO_VISIBLE_FIELD,
       },
-      // `columnas` solo aplica a la disposición `tarjetas` (bento y lista
-      // tienen su propia rejilla).
-      resolveFields: (data, { fields }) =>
-        (data.props.disposicion ?? 'tarjetas') === 'tarjetas' ? fields : sinCampos(fields, ['columnas']),
+      // `columnas` solo aplica a la disposición `tarjetas` (bento, lista y
+      // vitrina tienen su propia rejilla).
+      resolveData: (data, { trigger }) =>
+        trigger === 'insert'
+          ? { ...data, props: { ...data.props, ...PROPS_PROYECTOS_NUEVOS } }
+          : data,
+      resolveFields: (data, { fields }) => {
+        const disposicion = data.props.disposicion ?? 'tarjetas'
+        return disposicion === 'tarjetas' ? fields : sinCampos(fields, ['columnas'])
+      },
       render: ({ puck, id: _id, _seccionId, _visible, _tituloVisible, ...config }) => {
         const { datos } = leerMetadata(puck)
         return (
@@ -809,7 +848,20 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
           ],
         },
         mostrar_fecha: campoSiNo('Mostrar fecha'),
+        // Fase 7l (UC-04): emisor, vigencia y enlace a la credencial.
+        mostrar_emisor: campoSiNo('Mostrar emisor'),
+        mostrar_vigencia: campoSiNo('Mostrar vigencia (Vigente, Vencida...)'),
+        mostrar_enlace: campoSiNo('Mostrar "Ver credencial"'),
         // Disposición y variantes
+        disposicion: {
+          type: 'select',
+          label: 'Disposición',
+          options: [
+            { label: 'Tarjetas', value: 'tarjetas' },
+            { label: 'Línea de tiempo (por año)', value: 'linea_tiempo' },
+            { label: 'Muro de logos', value: 'logos' },
+          ],
+        },
         columnas: {
           type: 'select',
           label: 'Columnas',
@@ -832,6 +884,28 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
         ...CAMPOS_BASE_BLOQUE,
         _visible: VISIBLE_FIELD,
         _tituloVisible: TITULO_VISIBLE_FIELD,
+      },
+      // Fase 7l: `columnas` y `estilo_tarjeta` solo aplican a las tarjetas; el
+      // muro de logos no tiene texto que mostrar ni tarjeta, y la línea de
+      // tiempo tiene su propia rejilla por año.
+      resolveData: (data, { trigger }) =>
+        trigger === 'insert'
+          ? { ...data, props: { ...data.props, ...PROPS_CERTIFICACIONES_NUEVAS } }
+          : data,
+      resolveFields: (data, { fields }) => {
+        const disposicion = data.props.disposicion ?? 'tarjetas'
+        if (disposicion === 'logos') {
+          return sinCampos(fields, [
+            'columnas',
+            'estilo_tarjeta',
+            'mostrar_fecha',
+            'mostrar_emisor',
+            'mostrar_vigencia',
+            'mostrar_enlace',
+          ])
+        }
+        if (disposicion === 'linea_tiempo') return sinCampos(fields, ['columnas'])
+        return fields
       },
       render: ({ puck, id: _id, _seccionId, _visible, _tituloVisible, ...config }) => {
         const { datos } = leerMetadata(puck)
@@ -1289,6 +1363,31 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
         mostrar_habilidades: campoSiNo('Mostrar habilidades'),
         mostrar_enlace: campoSiNo('Enlazar a la verificación'),
         // Disposición y variantes
+        disposicion: {
+          type: 'select',
+          label: 'Disposición',
+          options: [
+            { label: 'Rejilla', value: 'rejilla' },
+            { label: 'Carrusel (con flechas y puntos)', value: 'carrusel' },
+            { label: 'Cinta continua', value: 'cinta' },
+          ],
+        },
+        reproduccion_automatica: campoSiNo('Avanzar solo (carrusel)'),
+        intervalo_segundos: {
+          type: 'number',
+          label: 'Segundos entre avances (2 a 15)',
+          min: 2,
+          max: 15,
+        },
+        velocidad_cinta: {
+          type: 'select',
+          label: 'Velocidad de la cinta',
+          options: [
+            { label: 'Lenta', value: 'lenta' },
+            { label: 'Normal', value: 'normal' },
+            { label: 'Rápida', value: 'rapida' },
+          ],
+        },
         estilo: {
           type: 'radio',
           label: 'Presentación',
@@ -1360,14 +1459,37 @@ export const puckConfig: Config<PuckSeccionesComponents, Record<string, never>> 
         _visible: VISIBLE_FIELD,
         _tituloVisible: TITULO_VISIBLE_FIELD,
       },
+      // Fase 7l: valores de partida solo para bloques recién insertados.
+      resolveData: (data, { trigger }) =>
+        trigger === 'insert' ? { ...data, props: { ...data.props, ...PROPS_INSIGNIAS_NUEVAS } } : data,
       // Fase 7h: cada presentación muestra solo sus opciones. En medallas el
       // texto largo (emisor, fechas, habilidades) no se pinta: la insignia ya
-      // lo dice y el clic lleva a la verificación.
+      // lo dice y el clic lleva a la verificación. Fase 7l: `columnas` solo
+      // aplica a la rejilla; el carrusel automático y la cinta tienen sus
+      // propios ajustes.
       resolveFields: (data, { fields }) => {
-        if ((data.props.estilo ?? 'medalla') === 'tarjeta') {
-          return sinCampos(fields, ['animacion_reposo', 'marco_medalla', 'etiqueta_medalla'])
+        const disposicion = data.props.disposicion ?? 'rejilla'
+        const ocultosDisposicion: string[] = []
+        if (disposicion !== 'rejilla') ocultosDisposicion.push('columnas')
+        if (disposicion !== 'carrusel') ocultosDisposicion.push('reproduccion_automatica', 'intervalo_segundos')
+        if (disposicion === 'carrusel' && !data.props.reproduccion_automatica) {
+          ocultosDisposicion.push('intervalo_segundos')
         }
-        const campos = sinCampos(fields, ['mostrar_emisor', 'mostrar_fecha', 'mostrar_habilidades'])
+        if (disposicion !== 'cinta') ocultosDisposicion.push('velocidad_cinta')
+        if ((data.props.estilo ?? 'medalla') === 'tarjeta') {
+          return sinCampos(fields, [
+            'animacion_reposo',
+            'marco_medalla',
+            'etiqueta_medalla',
+            ...ocultosDisposicion,
+          ])
+        }
+        const campos = sinCampos(fields, [
+          'mostrar_emisor',
+          'mostrar_fecha',
+          'mostrar_habilidades',
+          ...ocultosDisposicion,
+        ])
         return {
           ...campos,
           efecto_hover: {
