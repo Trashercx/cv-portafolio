@@ -78,4 +78,38 @@ describe('InsigniaFormDialog (Fase 7e, UC-35)', () => {
     await waitFor(() => expect(actualizarMutate).toHaveBeenCalledTimes(1))
     expect(actualizarMutate.mock.calls[0][0].payload.fecha_expiracion).toBeNull()
   })
+
+  it('Cancelar sin cambios cierra directo (Fase 7m, #68)', async () => {
+    const user = userEvent.setup()
+    const onOpenChange = vi.fn()
+    render(<InsigniaFormDialog insignia={crearInsignia()} open onOpenChange={onOpenChange} />)
+
+    await user.click(await screen.findByRole('button', { name: 'Cancelar' }))
+
+    expect(onOpenChange).toHaveBeenCalledWith(false)
+    expect(screen.queryByText('¿Descartar cambios?')).not.toBeInTheDocument()
+  })
+
+  it('cerrar con cambios sin guardar pide confirmación y solo cierra al descartar (Fase 7m, #68)', async () => {
+    const user = userEvent.setup()
+    const onOpenChange = vi.fn()
+    render(<InsigniaFormDialog insignia={crearInsignia()} open onOpenChange={onOpenChange} />)
+
+    await user.type(await screen.findByLabelText('Nombre'), ' 2')
+    await user.click(screen.getByRole('button', { name: 'Cancelar' }))
+
+    expect(await screen.findByText('¿Descartar cambios?')).toBeInTheDocument()
+    expect(onOpenChange).not.toHaveBeenCalled()
+
+    await user.click(screen.getByRole('button', { name: 'Descartar' }))
+    expect(onOpenChange).toHaveBeenCalledWith(false)
+  })
+
+  it('agrupa los campos en secciones (Fase 7m, #68)', async () => {
+    render(<InsigniaFormDialog insignia={crearInsignia()} open onOpenChange={vi.fn()} />)
+
+    for (const nombre of ['Datos', 'Fechas', 'Enlaces', 'Imagen']) {
+      expect(await screen.findByRole('group', { name: nombre })).toBeInTheDocument()
+    }
+  })
 })

@@ -30,20 +30,23 @@ describe('MediaPreview', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('pdf: la miniatura muestra un ícono de archivo y el diálogo embebe el documento con enlace externo', async () => {
+  it('pdf: la miniatura es MiniaturaPdf y el visor embebe el documento con nombre, tamaño y acciones (Fase 7m)', async () => {
     const user = userEvent.setup()
     render(
       <MediaPreview
         tipo="pdf"
         url="https://cdn.example.com/certificado.pdf"
         nombre="certificado.pdf"
+        bytes={1258291}
       />,
     )
 
     expect(screen.queryByRole('img')).not.toBeInTheDocument()
-    expect(screen.getByText('certificado.pdf')).toBeInTheDocument()
+    expect(document.querySelector('[data-estado]')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: /ver documento/i }))
+    expect(screen.getByRole('heading', { name: 'certificado.pdf' })).toBeInTheDocument()
+    expect(screen.getByText('PDF · 1,2 MB')).toBeInTheDocument()
 
     // El embed usa `<object data type="application/pdf">` (no `<iframe
     // sandbox>`): el visor nativo de PDF de Chrome ya corre aislado desde

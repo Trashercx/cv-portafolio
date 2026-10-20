@@ -139,12 +139,12 @@ describe('MediaUploadField', () => {
     )
 
     expect(screen.queryByRole('img')).not.toBeInTheDocument()
-    expect(screen.getByText('certificado.pdf')).toBeInTheDocument()
 
-    // Al ampliar, se embebe como documento (no como <img> roto) usando
-    // `<object data type="application/pdf">` (ver comentario en
-    // MediaPreview.tsx sobre por qué no un `<iframe sandbox>`).
+    // Al ampliar, se abre el visor (Fase 7m) con el nombre del archivo y el PDF
+    // embebido como documento (no como <img> roto) usando
+    // `<object data type="application/pdf">` (ver MediaPreview.tsx y VisorPdfDialog.tsx).
     await user.click(screen.getByRole('button', { name: /ver documento/i }))
+    expect(screen.getByRole('heading', { name: 'certificado.pdf' })).toBeInTheDocument()
     const objeto = document.querySelector('object[type="application/pdf"]')
     expect(objeto).toHaveAttribute('data', expect.stringMatching(/^blob:mock-/))
 

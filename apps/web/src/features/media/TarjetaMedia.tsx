@@ -2,12 +2,14 @@ import { Copy, Pencil } from 'lucide-react'
 import { useRef, useState, type DragEvent } from 'react'
 import { toast } from 'sonner'
 import { IconoDocumento } from '@/components/media/IconoDocumento'
+import { MiniaturaPdf } from '@/components/media/MiniaturaPdf'
 import { ImagenResponsive } from '@/components/publico/ImagenResponsive'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { formatearBytes } from '@/lib/formato'
 import { cn } from '@/lib/utils'
 import { MIME_IDS_MEDIA } from './BarraCarpetas'
 import type { Media, UsoMedia } from './types'
@@ -166,6 +168,9 @@ export function TarjetaMedia({
           sizes="(min-width: 1024px) 25vw, 50vw"
           className="size-full object-cover"
         />
+      ) : media.tipo === 'pdf' ? (
+        // Fase 7m (#66, #68): miniatura de la primera página; solo se renderiza al entrar en pantalla.
+        <MiniaturaPdf url={media.url} alt={media.alt_text || nombre} />
       ) : (
         <IconoDocumento />
       )}
@@ -201,6 +206,7 @@ export function TarjetaMedia({
           media.ancho && media.alto ? `${media.ancho}×${media.alto} px` : null,
           variantes,
           media.tipo !== 'imagen' ? media.tipo : null,
+          formatearBytes(media.bytes),
           enLista && nombreCarpeta ? `Carpeta: ${nombreCarpeta}` : null,
         ]
           .filter(Boolean)

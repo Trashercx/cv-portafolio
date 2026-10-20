@@ -143,9 +143,9 @@ describe('MediaField', () => {
     // filtra en el cliente.
     expect(useMediaListMock).toHaveBeenCalledWith(undefined)
 
-    // El PDF se ve como ítem seleccionable (ícono, no un <img> roto) y
+    // El PDF se ve como ítem seleccionable (miniatura de su primera página, no un <img> roto) y
     // elegirlo llama a onUploaded con ese Media.
-    const itemPdf = await screen.findByText('Certificado AWS')
+    const itemPdf = await screen.findByText('certificado.pdf')
     await user.click(itemPdf)
 
     expect(onUploadedMock).toHaveBeenCalledWith(DOCUMENTO_PDF)

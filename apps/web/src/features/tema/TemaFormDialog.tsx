@@ -1,16 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { DescartarCambiosDialog } from '@/components/shared/DescartarCambiosDialog'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -38,7 +29,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
-import { useConfirmarDescarte } from '@/hooks/useConfirmarDescarte'
+import { useCierreConCambios } from '@/features/shared/useCierreConCambios'
 import { ApiError } from '@/lib/api-client'
 import { esHexValido } from '@/lib/contraste'
 import { cn } from '@/lib/utils'
@@ -199,8 +190,7 @@ export function TemaFormDialog({ tema }: TemaFormDialogProps = {}) {
 
   // UC-XX (Fase 4.1, punto 1): evita cerrar el modal sin avisar (click
   // afuera/Esc) cuando hay cambios sin guardar en el form.
-  const { intentarCerrar, confirmando, confirmar, cancelar } =
-    useConfirmarDescarte(form.formState.isDirty, cambiarAbierto)
+  const { abiertoConfirmacion, intentarCerrar, confirmarDescartar, cancelar } = useCierreConCambios(form.formState.isDirty, cambiarAbierto)
 
   const onSubmit = (values: TemaFormValues) => {
     const alTerminar = {
@@ -452,6 +442,14 @@ export function TemaFormDialog({ tema }: TemaFormDialogProps = {}) {
               ) : null}
 
               <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={mutacion.isPending}
+                  onClick={() => intentarCerrar(false)}
+                >
+                  Cancelar
+                </Button>
                 <Button type="submit" disabled={mutacion.isPending}>
                   {editando
                     ? mutacion.isPending
@@ -467,25 +465,11 @@ export function TemaFormDialog({ tema }: TemaFormDialogProps = {}) {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog
-        open={confirmando}
-        onOpenChange={(siguienteAbierto) => {
-          if (!siguienteAbierto) cancelar()
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Descartar cambios?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Vas a perder lo que escribiste.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={cancelar}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmar}>Descartar</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DescartarCambiosDialog
+        open={abiertoConfirmacion}
+        onCancelar={cancelar}
+        onConfirmar={confirmarDescartar}
+      />
     </>
   )
 }

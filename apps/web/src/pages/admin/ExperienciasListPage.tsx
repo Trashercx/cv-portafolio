@@ -1,4 +1,6 @@
+import { Briefcase } from 'lucide-react'
 import { useState } from 'react'
+import { EstadoVacio } from '@/components/shared/EstadoVacio'
 import { Button } from '@/components/ui/button'
 import { ExperienciaFormDialog } from '@/features/experiencias/ExperienciaFormDialog'
 import { ListaExperiencias } from '@/features/experiencias/ListaExperiencias'
@@ -45,9 +47,13 @@ export function ExperienciasListPage() {
         </p>
       ) : null}
       {experiencias && experiencias.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          Todavía no hay experiencias cargadas.
-        </p>
+        <EstadoVacio
+          icono={Briefcase}
+          titulo="Todavía no hay experiencias cargadas."
+          descripcion="Agrega tus puestos de trabajo para mostrar tu trayectoria."
+          etiquetaAccion="Nueva experiencia"
+          onAccion={abrirNuevo}
+        />
       ) : null}
 
       {experiencias && experiencias.length > 0 ? (

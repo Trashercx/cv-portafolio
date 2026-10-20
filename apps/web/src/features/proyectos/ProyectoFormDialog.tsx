@@ -1,17 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
 import { CampoFechaConCalendario } from '@/components/shared/CampoFechaConCalendario'
+import { DescartarCambiosDialog } from '@/components/shared/DescartarCambiosDialog'
+import { SeccionFormulario } from '@/components/shared/SeccionFormulario'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -40,7 +32,7 @@ import {
 } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { Textarea } from '@/components/ui/textarea'
-import { useConfirmarDescarte } from '@/hooks/useConfirmarDescarte'
+import { useCierreConCambios } from '@/features/shared/useCierreConCambios'
 import { ApiError } from '@/lib/api-client'
 import { GaleriaImagenesProyecto } from './GaleriaImagenesProyecto'
 import { proyectoSchema, type ProyectoFormValues } from './proyecto-schema'
@@ -163,8 +155,7 @@ export function ProyectoFormDialog({
   // `handleOpenChange` (que ya resetea el form/estado local al cerrar) en
   // vez de reemplazarlo: solo se ejecuta tras confirmar el descarte, o de
   // inmediato si no hay cambios sin guardar.
-  const { intentarCerrar, confirmando, confirmar, cancelar } =
-    useConfirmarDescarte(form.formState.isDirty, handleOpenChange)
+  const { abiertoConfirmacion, intentarCerrar, confirmarDescartar, cancelar } = useCierreConCambios(form.formState.isDirty, handleOpenChange)
 
   const esNuevoProyecto = !proyectoIdActivo
   // Fase 7l (UC-36): un proyecto importado de GitHub y sincronizado se
@@ -257,166 +248,174 @@ export function ProyectoFormDialog({
                   para editarlo a mano.
                 </p>
               ) : null}
-              <FormField
-                control={form.control}
-                name="titulo"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Título</FormLabel>
-                    <FormControl>
-                      <Input {...field} readOnly={sincronizadoConGithub} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="descripcion"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Descripción</FormLabel>
-                    <FormControl>
-                      <Textarea rows={4} {...field} readOnly={sincronizadoConGithub} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="url_demo"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>URL de demo (opcional)</FormLabel>
-                    <FormControl>
-                      <Input {...field} readOnly={sincronizadoConGithub} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="url_repositorio"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>URL del repositorio (opcional)</FormLabel>
-                    <FormControl>
-                      <Input {...field} readOnly={sincronizadoConGithub} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <div className="grid grid-cols-2 gap-4">
+              <SeccionFormulario titulo="Datos">
                 <FormField
                   control={form.control}
-                  name="fecha_inicio"
+                  name="titulo"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Fecha de inicio</FormLabel>
-                      <div className="flex gap-2">
-                        <FormControl>
-                          <Input type="date" max={hoy} {...field} />
-                        </FormControl>
-                        <CampoFechaConCalendario
-                          value={field.value}
-                          onChange={field.onChange}
-                          max={hoy}
-                          triggerAriaLabel="Abrir calendario para elegir el inicio"
-                        />
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="fecha_fin"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Fecha de fin (opcional)</FormLabel>
-                      <div className="flex gap-2">
-                        <FormControl>
-                          <Input
-                            type="date"
-                            min={form.watch('fecha_inicio') || undefined}
-                            {...field}
-                          />
-                        </FormControl>
-                        <CampoFechaConCalendario
-                          value={field.value ?? ''}
-                          onChange={field.onChange}
-                          min={form.watch('fecha_inicio') || undefined}
-                          triggerAriaLabel="Abrir calendario para elegir el fin"
-                        />
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <FormField
-                control={form.control}
-                name="estado"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Estado</FormLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormLabel>Título</FormLabel>
                       <FormControl>
-                        <SelectTrigger className="w-full">
-                          <SelectValue />
-                        </SelectTrigger>
+                        <Input {...field} readOnly={sincronizadoConGithub} />
                       </FormControl>
-                      <SelectContent>
-                        {OPCIONES_ESTADO.map((opcion) => (
-                          <SelectItem key={opcion.value} value={opcion.value}>
-                            {opcion.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="orden"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Orden</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        value={field.value}
-                        onChange={(event) =>
-                          field.onChange(event.target.valueAsNumber)
-                        }
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="destacado"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center gap-2 space-y-0">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={(checked) =>
-                          field.onChange(checked === true)
-                        }
-                      />
-                    </FormControl>
-                    <FormLabel className="mt-0!">Destacado</FormLabel>
-                  </FormItem>
-                )}
-              />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="descripcion"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Descripción</FormLabel>
+                      <FormControl>
+                        <Textarea rows={4} {...field} readOnly={sincronizadoConGithub} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </SeccionFormulario>
+              <SeccionFormulario titulo="Enlaces">
+                <FormField
+                  control={form.control}
+                  name="url_demo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>URL de demo (opcional)</FormLabel>
+                      <FormControl>
+                        <Input {...field} readOnly={sincronizadoConGithub} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="url_repositorio"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>URL del repositorio (opcional)</FormLabel>
+                      <FormControl>
+                        <Input {...field} readOnly={sincronizadoConGithub} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </SeccionFormulario>
+              <SeccionFormulario titulo="Fechas y estado">
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="fecha_inicio"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Fecha de inicio</FormLabel>
+                        <div className="flex gap-2">
+                          <FormControl>
+                            <Input type="date" max={hoy} {...field} />
+                          </FormControl>
+                          <CampoFechaConCalendario
+                            value={field.value}
+                            onChange={field.onChange}
+                            max={hoy}
+                            triggerAriaLabel="Abrir calendario para elegir el inicio"
+                          />
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="fecha_fin"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Fecha de fin (opcional)</FormLabel>
+                        <div className="flex gap-2">
+                          <FormControl>
+                            <Input
+                              type="date"
+                              min={form.watch('fecha_inicio') || undefined}
+                              {...field}
+                            />
+                          </FormControl>
+                          <CampoFechaConCalendario
+                            value={field.value ?? ''}
+                            onChange={field.onChange}
+                            min={form.watch('fecha_inicio') || undefined}
+                            triggerAriaLabel="Abrir calendario para elegir el fin"
+                          />
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <FormField
+                  control={form.control}
+                  name="estado"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Estado</FormLabel>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {OPCIONES_ESTADO.map((opcion) => (
+                            <SelectItem key={opcion.value} value={opcion.value}>
+                              {opcion.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </SeccionFormulario>
+              <SeccionFormulario titulo="Publicación">
+                <FormField
+                  control={form.control}
+                  name="orden"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Orden</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          value={field.value}
+                          onChange={(event) =>
+                            field.onChange(event.target.valueAsNumber)
+                          }
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="destacado"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center gap-2 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={(checked) =>
+                            field.onChange(checked === true)
+                          }
+                        />
+                      </FormControl>
+                      <FormLabel className="mt-0!">Destacado</FormLabel>
+                    </FormItem>
+                  )}
+                />
+              </SeccionFormulario>
 
               {errorMessage ? (
                 <p role="alert" className="text-sm text-destructive">
@@ -467,25 +466,11 @@ export function ProyectoFormDialog({
         </DialogContent>
       </Dialog>
 
-      <AlertDialog
-        open={confirmando}
-        onOpenChange={(siguienteAbierto) => {
-          if (!siguienteAbierto) cancelar()
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Descartar cambios?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Vas a perder lo que escribiste.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={cancelar}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmar}>Descartar</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DescartarCambiosDialog
+        open={abiertoConfirmacion}
+        onCancelar={cancelar}
+        onConfirmar={confirmarDescartar}
+      />
     </>
   )
 }
