@@ -349,6 +349,13 @@ erDiagram
         string estado
         boolean destacado
         int orden
+        string origen
+        bigint github_repo_id UK
+        string github_nombre_completo
+        string github_lenguaje
+        int github_estrellas
+        timestamp github_actualizado_en
+        boolean sincronizar_github
     }
     PROYECTO_IMAGEN {
         uuid proyecto_id FK
@@ -461,6 +468,44 @@ erDiagram
         timestamp updated_at
     }
 
+    EXPERIENCIA_LABORAL {
+        uuid id PK
+        uuid usuario_admin_id FK
+        string empresa
+        string cargo
+        text descripcion
+        date fecha_inicio
+        date fecha_fin
+        string ubicacion
+        string modalidad
+        string url_empresa
+        uuid logo_media_id FK
+        int orden
+        boolean visible
+        timestamp created_at
+        timestamp updated_at
+    }
+    EXPERIENCIA_TECNOLOGIA {
+        uuid experiencia_id FK
+        uuid tecnologia_id FK
+    }
+    INTEGRACION_GITHUB {
+        uuid id PK
+        uuid usuario_admin_id FK, UK
+        string usuario_github
+        boolean activa
+        int intervalo_horas
+        boolean publicar_automaticamente
+        boolean incluir_forks
+        boolean incluir_archivados
+        boolean destacar_nuevos
+        timestamp ultima_sincronizacion_en
+        string ultimo_error
+        string etag
+        timestamp created_at
+        timestamp updated_at
+    }
+
     USUARIO_ADMIN ||--o| PERFIL : tiene
     USUARIO_ADMIN ||--o{ MEDIA : sube
     USUARIO_ADMIN ||--o{ CARPETA_MEDIA : organiza
@@ -468,6 +513,8 @@ erDiagram
     USUARIO_ADMIN ||--o{ PROYECTO : gestiona
     USUARIO_ADMIN ||--o{ CERTIFICACION : gestiona
     USUARIO_ADMIN ||--o{ INSIGNIA : gestiona
+    USUARIO_ADMIN ||--o{ EXPERIENCIA_LABORAL : gestiona
+    USUARIO_ADMIN ||--o| INTEGRACION_GITHUB : configura
     USUARIO_ADMIN ||--o{ LOGRO : gestiona
     USUARIO_ADMIN ||--o{ RED_SOCIAL : gestiona
     USUARIO_ADMIN ||--o{ SECCION : configura
@@ -484,12 +531,19 @@ erDiagram
     PROYECTO ||--o{ PROYECTO_TECNOLOGIA : usa
     TECNOLOGIA ||--o{ PROYECTO_TECNOLOGIA : "aplicada en"
     CERTIFICACION }o--o| MEDIA : logo
+    EXPERIENCIA_LABORAL ||--o{ EXPERIENCIA_TECNOLOGIA : usa
+    TECNOLOGIA ||--o{ EXPERIENCIA_TECNOLOGIA : "aplicada en"
+    MEDIA ||--o{ EXPERIENCIA_LABORAL : logo
     PLATAFORMA_RED ||--o{ RED_SOCIAL : clasifica
 ```
 
-Diecinueve entidades: el administrador es el dueño de todo el contenido; `MEDIA`, `TECNOLOGIA` y `PLATAFORMA_RED` son catálogos compartidos en vez de campos de texto libre repetidos; `SECCION`, `TEMA`, `FONDO_SITIO` y `VERSION_SITIO` sostienen el editor visual y la publicación por versiones. `SKILL` sigue el mismo patrón que `LOGRO`: contenido propio del administrador (no un catálogo compartido) — a diferencia de `TECNOLOGIA`, que solo clasifica proyectos, `SKILL` es lo que se muestra en el carrusel de habilidades del sitio público, así que no tendría sentido reutilizar aquel catálogo para este propósito distinto. `FONDO_SITIO` sigue el mismo patrón de "configuración visual exclusiva" que `TEMA`, pero es deliberadamente independiente de él: `TEMA` solo maneja color y tipografía, `FONDO_SITIO` maneja el fondo animado del landing. `CARPETA_MEDIA` organiza la biblioteca del panel en carpetas planas (Fase 7e, UC-09); no cambia la clave de S3 y al borrar una carpeta sus archivos quedan sin carpeta (`ON DELETE SET NULL`); nombre único por administrador sin distinguir mayúsculas.
+Veintidós entidades: el administrador es el dueño de todo el contenido; `MEDIA`, `TECNOLOGIA` y `PLATAFORMA_RED` son catálogos compartidos en vez de campos de texto libre repetidos; `SECCION`, `TEMA`, `FONDO_SITIO` y `VERSION_SITIO` sostienen el editor visual y la publicación por versiones. `SKILL` sigue el mismo patrón que `LOGRO`: contenido propio del administrador (no un catálogo compartido) — a diferencia de `TECNOLOGIA`, que solo clasifica proyectos, `SKILL` es lo que se muestra en el carrusel de habilidades del sitio público, así que no tendría sentido reutilizar aquel catálogo para este propósito distinto. `FONDO_SITIO` sigue el mismo patrón de "configuración visual exclusiva" que `TEMA`, pero es deliberadamente independiente de él: `TEMA` solo maneja color y tipografía, `FONDO_SITIO` maneja el fondo animado del landing. `CARPETA_MEDIA` organiza la biblioteca del panel en carpetas planas (Fase 7e, UC-09); no cambia la clave de S3 y al borrar una carpeta sus archivos quedan sin carpeta (`ON DELETE SET NULL`); nombre único por administrador sin distinguir mayúsculas.
 
 `INSIGNIA` guarda badges importados de Credly/Open Badges u otros (Fase 7d, UC-35); es independiente de `CERTIFICACION` porque la insignia es la imagen oficial emitida por un tercero con proveedor e id externo, mientras que la certificación es un registro propio con logo de institución; `habilidades` es un array nativo de Postgres (no JSONB) porque son etiquetas planas sin estructura.
+
+`EXPERIENCIA_LABORAL` guarda la trayectoria profesional (Fase 7l, UC-19); es independiente de `PROYECTO` porque un puesto es un periodo en una empresa (cargo, fechas, modalidad) y un proyecto es un producto con enlaces y galería; `fecha_fin` nulo significa puesto actual, y el logo es un `MEDIA` opcional (`ON DELETE SET NULL`). `EXPERIENCIA_TECNOLOGIA` reutiliza el catálogo `TECNOLOGIA` igual que `PROYECTO_TECNOLOGIA`, para no repetir texto libre ni listas separadas por comas.
+
+`INTEGRACION_GITHUB` guarda la configuración de la sincronización de repositorios públicos (Fase 7l, UC-36); es 1:1 con el administrador (`usuario_admin_id` único) porque hay una sola cuenta de GitHub por portafolio; `etag` evita gastar cuota de la API cuando nada cambió. En `PROYECTO`, `origen` (`manual|github`) distingue lo importado de lo escrito a mano; `github_repo_id` es BigInt único porque el id de GitHub es numérico y estable aunque renombren el repo (evita duplicados al sincronizar); `github_nombre_completo`, `github_lenguaje`, `github_estrellas` y `github_actualizado_en` son metadatos del repo para mostrarlos; `sincronizar_github` en falso congela un proyecto importado para editarlo a mano sin que la sincronización lo pise.
 
 `MEDIA_VARIANTE` guarda las variantes responsive (WebP/AVIF por ancho) derivadas de cada `MEDIA` (Fase 8, UC-34), en tabla propia y no como JSON dentro de `MEDIA`, para respetar 3FN y poder borrarlas en cascada.
 
