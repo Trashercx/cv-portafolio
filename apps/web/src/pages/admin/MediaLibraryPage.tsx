@@ -1,9 +1,7 @@
 import {
   FolderInput,
-  ImagePlus,
   LayoutGrid,
   List,
-  Loader2,
   Search,
   Trash2,
   Upload,
@@ -44,7 +42,6 @@ import {
   useEliminarMediaLote,
   useMediaList,
   useMediaUsos,
-  useRegenerarVariantes,
 } from '@/features/media/useMediaLibrary'
 import { nombreArchivo } from '@/features/media/utilidades-media'
 import { ApiError } from '@/lib/api-client'
@@ -118,7 +115,6 @@ export function MediaLibraryPage() {
   const contadorArrastre = useRef(0)
   const inputArchivos = useRef<HTMLInputElement>(null)
 
-  const regenerar = useRegenerarVariantes()
   const eliminarLote = useEliminarMediaLote()
   const cola = useColaSubida(3)
   const { agregar } = cola
@@ -349,26 +345,6 @@ export function MediaLibraryPage() {
             <Button type="button" onClick={() => inputArchivos.current?.click()}>
               <Upload />
               Subir archivos
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={regenerar.isPending}
-              onClick={() =>
-                regenerar.mutate(undefined, {
-                  // Fase 8 (8.2, UC-09): resumen del relleno de variantes.
-                  onSuccess: (r) => {
-                    // Revisión Fase 8: con errores el aviso es de advertencia, no de éxito.
-                    const avisar = r.errores.length > 0 ? toast.warning : toast.success
-                    avisar(
-                      `Variantes generadas: ${r.procesadas} procesadas, ${r.omitidas} omitidas, ${r.errores.length} con error.`,
-                    )
-                  },
-                })
-              }
-            >
-              {regenerar.isPending ? <Loader2 className="animate-spin" /> : <ImagePlus />}
-              Generar variantes faltantes
             </Button>
           </div>
         </div>

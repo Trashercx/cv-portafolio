@@ -39,7 +39,6 @@ const useMediaListMock = vi.fn()
 const useMediaUsosMock = vi.fn()
 const eliminarMutateMock = vi.fn()
 const actualizarMutateMock = vi.fn()
-const regenerarMutateMock = vi.fn()
 const eliminarState: { isPending: boolean; error: unknown } = {
   isPending: false,
   error: null,
@@ -61,7 +60,6 @@ vi.mock('@/features/media/useMediaLibrary', () => ({
   }),
   useEliminarMediaLote: () => ({ mutate: eliminarMutateMock, isPending: false }),
   useReemplazarMedia: () => ({ mutate: vi.fn(), isPending: false, error: null }),
-  useRegenerarVariantes: () => ({ mutate: regenerarMutateMock, isPending: false }),
 }))
 
 // Fase 7e (UC-09): carpetas de la biblioteca (hooks simulados).
@@ -337,20 +335,10 @@ describe('MediaLibraryPage (UC-09, Fase 7d)', () => {
     expect(within(dialogo).getByRole('button', { name: 'Eliminar' })).toBeEnabled()
   })
 
-  it('"Generar variantes faltantes" dispara la mutación y avisa con procesadas/omitidas/errores (Fase 8, UC-09)', async () => {
-    const user = userEvent.setup()
-    regenerarMutateMock.mockImplementation((_v, opciones) =>
-      opciones.onSuccess({ procesadas: 3, omitidas: 2, errores: [{ id: 'x', motivo: 'fallo' }] }),
-    )
+  it('no ofrece la acción masiva "Generar variantes faltantes" (Fase 7m, #67)', () => {
     renderPagina()
 
-    await user.click(screen.getByRole('button', { name: /generar variantes faltantes/i }))
-
-    expect(regenerarMutateMock).toHaveBeenCalledTimes(1)
-    const { toast } = await import('sonner')
-    expect(toast.warning).toHaveBeenCalledWith(
-      'Variantes generadas: 3 procesadas, 2 omitidas, 1 con error.',
-    )
+    expect(screen.queryByRole('button', { name: /generar variantes/i })).not.toBeInTheDocument()
   })
 
   it('muestra el mensaje de error 409 del detalle sin quitar el archivo de la lista', async () => {
