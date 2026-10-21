@@ -1,0 +1,27 @@
+# Override OPCIONAL para construir las imágenes en la propia máquina en vez de
+# tirar de las publicadas en GHCR (ver docker-compose.prod.yml y
+# docs/despliegue.md §3). Desde la Fase 7m el VPS ya no construye nada: con
+# ~1 GB de RAM los tres `npm ci` en paralelo mataban el despliegue. Este
+# archivo queda para desarrollo local o para un servidor con memoria de sobra:
+#
+#   docker compose -f docker-compose.prod.yml -f docker-compose.build.yml up -d --build
+#
+# El contexto de build es la raíz del repo (monorepo con npm workspaces).
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      # VITE_API_URL queda incrustado en el JS en tiempo de build (ver
+      # apps/web/Dockerfile): debe ser la URL pública real de `api`.
+      args:
+        VITE_API_URL: ${VITE_API_URL:?falta VITE_API_URL}
+        # Fase 8 (UC-27) — Umami, OPCIONAL y también en tiempo de build: si
+        # alguna queda vacía el sitio sale sin tracker.
+        VITE_UMAMI_URL: ${VITE_UMAMI_URL:-}
+        VITE_UMAMI_WEBSITE_ID: ${VITE_UMAMI_WEBSITE_ID:-}

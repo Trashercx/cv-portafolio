@@ -6,12 +6,25 @@
 # path, y gestionan las variables de entorno (`env_file`/secretos) desde su
 # propio panel en vez de un `.env` en el servidor.
 #
-# `apps/api` y `apps/web` se construyen con sus Dockerfiles ya existentes
-# (`apps/api/Dockerfile`, `apps/web/Dockerfile`); el contexto de build es la
-# raíz del repo en ambos casos (monorepo con npm workspaces, un solo
-# package-lock.json). Ninguna credencial vive en este archivo: todo llega
-# por variables de entorno que Dokploy/Coolify inyectan en runtime (o, para
-# `VITE_API_URL`, como build arg — ver comentario en el servicio `web`).
+# Fase 7m: `api` y `web` NO se construyen en el servidor. Tiran de las
+# imágenes que GitHub Actions publica en GHCR en cada push a `main`
+# (`.github/workflows/ci.yml`: `ghcr.io/<owner>/<repo>/api` y `.../web`,
+# etiquetas `latest` y el SHA del commit). Motivo: en un VPS de ~1 GB los tres
+# `npm ci` en paralelo del build superaban la memoria y el despliegue moría a
+# mitad sin error. Para construir en la propia máquina (desarrollo local o un
+# servidor con memoria de sobra) está el override `docker-compose.build.yml`.
+#
+#   GHCR_REPO  owner/repo en minúsculas (default: trashercx/cv-portafolio).
+#   IMAGE_TAG  `latest` (default) o un SHA de commit para fijar o volver atrás.
+#
+# Como el repositorio es privado, las imágenes también lo son: el servidor
+# necesita credenciales de ghcr.io (en Dokploy: Settings → Registry, usuario de
+# GitHub + token clásico con `read:packages`; ver docs/despliegue.md §3).
+# `pull_policy: always` hace que cada `up` baje la `latest` nueva; sin él,
+# Compose reutilizaría la imagen ya descargada. Ninguna credencial vive en este
+# archivo: todo llega por variables de entorno que Dokploy/Coolify inyectan en
+# runtime. `VITE_API_URL` ya no es build arg aquí: va incrustado en la imagen
+# `web` por el secreto `VITE_API_URL_PRODUCCION` de GitHub Actions.
 
 services:
   postgres:
@@ -30,9 +43,8 @@ services:
       retries: 10
 
   api:
-    build:
-      context: .
-      dockerfile: apps/api/Dockerfile
+    image: ghcr.io/${GHCR_REPO:-trashercx/cv-portafolio}/api:${IMAGE_TAG:-latest}
+    pull_policy: always
     restart: unless-stopped
     depends_on:
       postgres:
@@ -72,8 +84,8 @@ services:
       # docker-compose.umami.yml (ver su cabecera y docs/despliegue.md §7.4).
       #   UMAMI_API_URL: URL de Umami sin barra final; la pública
       #     (https://analitica.<dominio>) es la opción simple.
-      #   UMAMI_WEBSITE_ID: id del sitio creado en Umami (el mismo que
-      #     VITE_UMAMI_WEBSITE_ID del build de `web`).
+      #   UMAMI_WEBSITE_ID: id del sitio creado en Umami (el mismo que el
+      #     secreto VITE_UMAMI_WEBSITE_ID con el que ci.yml construye `web`).
       #   Autenticación: UMAMI_API_TOKEN (Bearer) O BIEN
       #     UMAMI_USUARIO + UMAMI_CONTRASENA (login en /api/auth/login).
       UMAMI_API_URL: ${UMAMI_API_URL:-}
@@ -96,20 +108,12 @@ services:
       retries: 3
 
   web:
-    build:
-      context: .
-      dockerfile: apps/web/Dockerfile
-      # VITE_API_URL queda incrustado en el JS en tiempo de build (ver
-      # apps/web/Dockerfile) — Dokploy/Coolify deben pasar este build arg
-      # con la URL pública real de `api` (p. ej. https://api.tudominio.com)
-      # antes de construir la imagen; no puede cambiarse luego en runtime.
-      args:
-        VITE_API_URL: ${VITE_API_URL:?falta VITE_API_URL}
-        # Fase 8 (UC-27) — Umami, OPCIONAL y también en tiempo de build: si
-        # alguna queda vacía el sitio sale sin tracker. Al activarlas hay que
-        # reconstruir la imagen `web` (y poner ANALITICA_ORIGIN abajo).
-        VITE_UMAMI_URL: ${VITE_UMAMI_URL:-}
-        VITE_UMAMI_WEBSITE_ID: ${VITE_UMAMI_WEBSITE_ID:-}
+    # VITE_API_URL (y VITE_UMAMI_*) van incrustados en el JS en tiempo de
+    # build: los fija el job `build-and-push-web` de ci.yml con los secretos
+    # del repositorio (`VITE_API_URL_PRODUCCION`, `VITE_UMAMI_URL`,
+    # `VITE_UMAMI_WEBSITE_ID`). Cambiarlos = nueva imagen.
+    image: ghcr.io/${GHCR_REPO:-trashercx/cv-portafolio}/web:${IMAGE_TAG:-latest}
+    pull_policy: always
     restart: unless-stopped
     # Fase 6 — `web` espera a que `api` responda /health antes de arrancar:
     # así un despliegue nuevo no expone el frontend mientras la API todavía
@@ -121,8 +125,11 @@ services:
       # Fase 6 — orígenes externos de la Content-Security-Policy de nginx
       # (apps/web/nginx/cabeceras-seguridad.conf). Se resuelven en RUNTIME
       # (envsubst de la imagen nginx), a diferencia de VITE_API_URL.
-      #   API_ORIGIN: origen público de `api` (connect-src). Normalmente el
-      #     mismo valor que VITE_API_URL, sin ruta ni barra final.
+      #   API_ORIGIN: origen público de `api` (connect-src). Fijarlo
+      #     explícito en el panel, igual al secreto VITE_API_URL_PRODUCCION
+      #     con el que se construyó la imagen (sin ruta ni barra final): si
+      #     difieren, la CSP bloquea los fetch. Si falta, cae a VITE_API_URL
+      #     del panel y, si tampoco está, a `https:`.
       #   MEDIA_ORIGIN: origen de S3 o CloudFront desde donde se incrustan
       #     los PDF (object-src/frame-src), p. ej.
       #     https://<bucket>.s3.<region>.amazonaws.com o https://<cloudfront>.
@@ -138,7 +145,7 @@ services:
       SEO_UPSTREAM: ${SEO_UPSTREAM:-http://api:3000}
       # Fase 8 (UC-27) — ANALITICA_ORIGIN: origen público de Umami para la
       # CSP (script-src/connect-src). Vacío = sin analítica, CSP sin cambios.
-      # Debe ser el mismo origen que VITE_UMAMI_URL del build arg de arriba.
+      # Debe ser el mismo origen que el secreto VITE_UMAMI_URL de ci.yml.
       ANALITICA_ORIGIN: ${ANALITICA_ORIGIN:-}
     ports:
       - "${WEB_PUBLIC_PORT:-8081}:80"
