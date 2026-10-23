@@ -24,10 +24,20 @@ import type {
 type EnvoltorioSeccionProps = {
   /**
    * `Seccion.id`, cuando ya existe (ausente para un bloque recién arrastrado
-   * en el lienzo del editor, todavía sin guardar). Fase 7: el DOM recibe
-   * `id="seccion-{id}"` (ver `anclaSeccion`), destino de la navegación.
+   * en el lienzo del editor, todavía sin guardar). Fase 7: sin `ancla`, el
+   * DOM recibe `id="seccion-{id}"` (ver `anclaSeccion`); es lo que usa el
+   * lienzo del editor.
    */
   id?: string
+  /**
+   * Fase 7n (#73): slug legible que el sitio público usa como `id` del DOM
+   * (`sobre-mi`, `insignias`), calculado por `RenderizadorSecciones` con
+   * `generarAnclasSecciones`. Tiene prioridad sobre `id`; cuando ambos
+   * llegan, la sección incluye además un alias vacío con el id antiguo
+   * (`seccion-{id}`) para que los enlaces ya guardados o compartidos con
+   * ese formato sigan llevando al mismo sitio sin JavaScript.
+   */
+  ancla?: string
   visible: boolean
   /**
    * Los campos de `BloqueConfiguracionBase` que le tocan a este componente —
@@ -71,8 +81,8 @@ type EnvoltorioSeccionProps = {
  * clase Tailwind literal) más un `<div>` interno `mx-auto` + `ancho_contenido`
  * que envuelve `children`.
  *
- * Fase 7 (7.3, UC-12): `id="seccion-{id}"` + `scroll-mt-24` (ancla de la
- * navegación), `animacion_entrada` con `m.section` (una sola vez al entrar en
+ * Fase 7 (7.3, UC-12): `id` de ancla + `scroll-mt-24` (destino de la
+ * navegación; desde la Fase 7n el sitio pasa un slug legible en `ancla`), `animacion_entrada` con `m.section` (una sola vez al entrar en
  * el viewport; desactivada en el lienzo del editor y con movimiento
  * reducido, ver `useAnimacionesActivas`), `separador_forma` como SVG al pie
  * y los fondos `degradado`/`vidrio` (en `FONDO_BLOQUE_CLASE`).
@@ -93,6 +103,7 @@ export function EnvoltorioSeccion({
   animacion_entrada,
   separador_forma,
   borde_bloque,
+  ancla,
   diferirPintado = false,
   children,
 }: EnvoltorioSeccionProps) {
@@ -112,7 +123,7 @@ export function EnvoltorioSeccion({
 
   return (
     <m.section
-      id={id ? anclaSeccion(id) : undefined}
+      id={ancla ?? (id ? anclaSeccion(id) : undefined)}
       aria-hidden={!visible}
       // Fase 7c (UC-12): contorno opcional vía variables CSS que leen los contenedores y tarjetas del bloque.
       style={BORDE_BLOQUE_VARIABLES[borde_bloque ?? 'sutil'] as CSSProperties}
@@ -129,6 +140,11 @@ export function EnvoltorioSeccion({
         diferirPintado && CLASE_PINTADO_DIFERIDO,
       )}
     >
+      {ancla && id ? (
+        // Fase 7n (#73): alias del ancla anterior; `scroll-mt-24` como la
+        // sección para aterrizar a la misma altura.
+        <span id={anclaSeccion(id)} aria-hidden="true" className="absolute top-0 scroll-mt-24" />
+      ) : null}
       {forma !== 'ninguno' ? (
         <svg
           aria-hidden="true"
