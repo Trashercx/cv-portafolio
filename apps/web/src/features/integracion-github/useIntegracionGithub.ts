@@ -4,12 +4,10 @@ import { apiFetch } from '@/lib/api-client'
 import type {
   IntegracionGithub,
   IntegracionGithubPayload,
-  ReadmeGithubRespuesta,
   ResultadoSincronizacionGithub,
 } from './types'
 
 export const INTEGRACION_GITHUB_QUERY_KEY = ['integracion-github'] as const
-export const README_GITHUB_QUERY_KEY = ['integracion-github', 'readme'] as const
 
 /** `GET /admin/integraciones/github`: la integración o `null` si todavía no existe. */
 export function useIntegracionGithub() {
@@ -33,7 +31,6 @@ export function useGuardarIntegracionGithub() {
       mensajeError: 'No se pudo guardar la integración con GitHub. Intenta de nuevo.',
     },
     onSuccess: () => {
-      // Incluye la caché del README: `INTEGRACION_GITHUB_QUERY_KEY` es prefijo de su clave.
       queryClient.invalidateQueries({ queryKey: INTEGRACION_GITHUB_QUERY_KEY })
     },
   })
@@ -75,31 +72,6 @@ export function useSincronizarGithub() {
       // Pueden haberse creado o actualizado proyectos, y `ultima_sincronizacion_en`/`ultimo_error` cambian.
       queryClient.invalidateQueries({ queryKey: PROYECTOS_QUERY_KEY })
       queryClient.invalidateQueries({ queryKey: INTEGRACION_GITHUB_QUERY_KEY })
-    },
-  })
-}
-
-/** `GET /admin/integraciones/github/readme`: README en caché (sin red) (Fase 7m, #66, UC-36). */
-export function useReadmeGithub() {
-  return useQuery({
-    queryKey: README_GITHUB_QUERY_KEY,
-    queryFn: () => apiFetch<ReadmeGithubRespuesta>('/admin/integraciones/github/readme'),
-  })
-}
-
-/** `POST /admin/integraciones/github/readme/actualizar`: descarga el README y devuelve el estado (nunca 5xx). */
-export function useActualizarReadmeGithub() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: () =>
-      apiFetch<ReadmeGithubRespuesta>('/admin/integraciones/github/readme/actualizar', {
-        method: 'POST',
-      }),
-    meta: {
-      mensajeError: 'No se pudo actualizar el README. Intenta de nuevo.',
-    },
-    onSuccess: (respuesta) => {
-      queryClient.setQueryData(README_GITHUB_QUERY_KEY, respuesta)
     },
   })
 }

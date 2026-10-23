@@ -16,8 +16,8 @@ import { CLASES_BORDE_INFERIOR_BLOQUE } from '@/lib/escalas-bloque'
  */
 
 const ENLACES: EnlaceNavegacion[] = [
-  { id: 'a', titulo: 'Sobre mí' },
-  { id: 'b', titulo: 'Proyectos' },
+  { id: 'a', titulo: 'Sobre mí', ancla: 'sobre-mi' },
+  { id: 'b', titulo: 'Proyectos', ancla: 'proyectos' },
 ]
 
 const PERFIL: PerfilPublico = {
@@ -100,14 +100,14 @@ function renderNav(
 }
 
 describe('BloqueNavegacion — enlaces (Fase 7)', () => {
-  it('pinta un enlace por sección con ancla #seccion-{id}', () => {
+  it('pinta un enlace por sección con su ancla legible (Fase 7n, #73)', () => {
     renderNav()
     const nav = screen.getByRole('navigation', { name: 'Navegación principal' })
     const sobreMi = within(nav).getAllByRole('link', { name: 'Sobre mí' })[0]
-    expect(sobreMi).toHaveAttribute('href', '#seccion-a')
+    expect(sobreMi).toHaveAttribute('href', '#sobre-mi')
     expect(within(nav).getAllByRole('link', { name: 'Proyectos' })[0]).toHaveAttribute(
       'href',
-      '#seccion-b',
+      '#proyectos',
     )
   })
 
@@ -118,7 +118,7 @@ describe('BloqueNavegacion — enlaces (Fase 7)', () => {
 
   it('marca con aria-current la sección activa que detecta el IntersectionObserver', () => {
     const destino = document.createElement('section')
-    destino.id = 'seccion-b'
+    destino.id = 'proyectos'
     document.body.append(destino)
 
     renderNav()
@@ -288,7 +288,7 @@ describe('BloqueNavegacion — menú compacto (Fase 7)', () => {
     await user.click(boton)
     expect(screen.getByRole('button', { name: 'Cerrar menú' })).toHaveAttribute('aria-expanded', 'true')
     const panel = document.getElementById('menu-navegacion-movil') as HTMLElement
-    expect(within(panel).getByRole('link', { name: 'Proyectos' })).toHaveAttribute('href', '#seccion-b')
+    expect(within(panel).getByRole('link', { name: 'Proyectos' })).toHaveAttribute('href', '#proyectos')
 
     await user.click(within(panel).getByRole('link', { name: 'Proyectos' }))
     expect(document.getElementById('menu-navegacion-movil')).not.toBeInTheDocument()

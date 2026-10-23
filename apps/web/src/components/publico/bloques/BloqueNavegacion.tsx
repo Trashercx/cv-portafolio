@@ -6,7 +6,7 @@ import type { NavegacionConfiguracion } from '@/features/secciones/types'
 import { API_BASE_URL } from '@/lib/api-client'
 import { useAnimacionesActivas } from '@/lib/animaciones'
 import { registrarEvento } from '@/lib/analitica'
-import { anclaSeccion, type EnlaceNavegacion } from '@/lib/navegacion'
+import type { EnlaceNavegacion } from '@/lib/navegacion'
 import {
   BORDE_BLOQUE_VARIABLES,
   CLASES_BORDE_BLOQUE,
@@ -76,13 +76,13 @@ const ENLACE_ACTIVO_CLASE = 'bg-[var(--color-primario)]/15 font-semibold'
 
 /**
  * Sección actualmente "en pantalla": `IntersectionObserver` sobre las anclas
- * `#seccion-{id}` con una banda de detección en el centro del viewport. Solo
+ * de los enlaces (slugs, Fase 7n) con una banda de detección en el centro del viewport. Solo
  * en el sitio público (en el lienzo el observador del documento padre no
  * correspondería al scroll del iframe).
  */
-function useSeccionActiva(ids: string[], habilitado: boolean): string | null {
+function useSeccionActiva(anclas: string[], habilitado: boolean): string | null {
   const [activo, setActivo] = useState<string | null>(null)
-  const clave = ids.join('|')
+  const clave = anclas.join('|')
 
   useEffect(() => {
     if (!habilitado || clave === '' || typeof IntersectionObserver === 'undefined') return
@@ -90,14 +90,14 @@ function useSeccionActiva(ids: string[], habilitado: boolean): string | null {
       (entradas) => {
         for (const entrada of entradas) {
           if (entrada.isIntersecting) {
-            setActivo(entrada.target.id.replace(/^seccion-/, ''))
+            setActivo(entrada.target.id)
           }
         }
       },
       { rootMargin: '-40% 0px -55% 0px' },
     )
-    for (const id of clave.split('|')) {
-      const elemento = document.getElementById(anclaSeccion(id))
+    for (const ancla of clave.split('|')) {
+      const elemento = document.getElementById(ancla)
       if (elemento) observador.observe(elemento)
     }
     return () => observador.disconnect()
@@ -188,7 +188,7 @@ export function BloqueNavegacion({
   const botonMenuRef = useRef<HTMLButtonElement>(null)
   const publico = !esEditor && !enFlujo
   const activo = useSeccionActiva(
-    enlaces.map((enlace) => enlace.id),
+    enlaces.map((enlace) => enlace.ancla),
     publico,
   )
   useScrollSuave(publico)
@@ -223,10 +223,10 @@ export function BloqueNavegacion({
       {enlaces.map((enlace) => (
         <li key={enlace.id}>
           <EnlaceBloque
-            href={`#${anclaSeccion(enlace.id)}`}
-            aria-current={activo === enlace.id ? 'location' : undefined}
+            href={`#${enlace.ancla}`}
+            aria-current={activo === enlace.ancla ? 'location' : undefined}
             onClick={alCerrar}
-            className={cn(ENLACE_BASE_CLASE, activo === enlace.id && ENLACE_ACTIVO_CLASE)}
+            className={cn(ENLACE_BASE_CLASE, activo === enlace.ancla && ENLACE_ACTIVO_CLASE)}
           >
             {enlace.titulo}
           </EnlaceBloque>

@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SnapshotSitio } from '@/features/publico/types'
 import type { Seccion } from '@/features/secciones/types'
 import { PublicHomePage } from './PublicHomePage'
@@ -112,24 +112,83 @@ describe('PublicHomePage — navegación (Fase 7)', () => {
     const nav = screen.getByRole('navigation', { name: 'Navegación principal' })
     const enlaces = within(nav)
       .getAllByRole('link')
-      .filter((enlace) => enlace.getAttribute('href')?.startsWith('#seccion-'))
-    expect(enlaces.map((enlace) => enlace.getAttribute('href'))).toEqual(['#seccion-sm'])
+      // El enlace del nombre apunta a #top: aquí solo interesan las secciones.
+      .filter((enlace) => {
+        const href = enlace.getAttribute('href') ?? ''
+        return href.startsWith('#') && href !== '#top'
+      })
+    expect(enlaces.map((enlace) => enlace.getAttribute('href'))).toEqual(['#sobre-mi'])
     expect(within(nav).queryByText('Portada')).not.toBeInTheDocument()
     expect(within(nav).queryByText('Logros ocultos')).not.toBeInTheDocument()
   })
 
-  it('cada sección lleva su ancla #seccion-{id} y la navegación no se envuelve en una <section>', () => {
+  it('cada sección lleva su ancla legible (slug del título, Fase 7n #73) y la navegación no se envuelve en una <section>', () => {
     const { container } = renderHome([seccion('nav', 'navegacion', 'Navegación', 0, {}), HERO, SOBRE_MI])
-    expect(container.querySelector('section#seccion-sm')).toBeInTheDocument()
-    expect(container.querySelector('section#seccion-hero')).toBeInTheDocument()
-    expect(container.querySelector('section#seccion-nav')).not.toBeInTheDocument()
+    expect(container.querySelector('section#sobre-mi')).toBeInTheDocument()
+    expect(container.querySelector('section#portada')).toBeInTheDocument()
+    expect(container.querySelector('section#navegacion')).not.toBeInTheDocument()
+    expect(container.querySelector('section[id^="seccion-"]')).not.toBeInTheDocument()
+    // Alias del formato anterior dentro de la sección (enlaces ya guardados o compartidos).
+    expect(container.querySelector('section#sobre-mi > span#seccion-sm')).toBeInTheDocument()
   })
 
   it('el indicador de scroll del hero enlaza a la sección siguiente', () => {
     renderHome([HERO, SOBRE_MI])
     expect(screen.getByRole('link', { name: 'Ir a la siguiente sección' })).toHaveAttribute(
       'href',
-      '#seccion-sm',
+      '#sobre-mi',
     )
+  })
+})
+
+/**
+ * Fase 7n (#73): al cargar con un hash en la URL, la home salta a la sección
+ * cuando el snapshot ya está pintado (el navegador lo intentó antes de que
+ * existiera) y traduce los enlaces antiguos `#seccion-{uuid}` al slug.
+ */
+describe('PublicHomePage — ancla inicial (Fase 7n, #73)', () => {
+  const scrollIntoViewOriginal = window.HTMLElement.prototype.scrollIntoView
+  let scrollIntoView: ReturnType<typeof vi.fn>
+
+  beforeEach(() => {
+    scrollIntoView = vi.fn()
+    window.HTMLElement.prototype.scrollIntoView = scrollIntoView as unknown as typeof scrollIntoViewOriginal
+  })
+
+  afterEach(() => {
+    window.HTMLElement.prototype.scrollIntoView = scrollIntoViewOriginal
+    window.history.replaceState(null, '', window.location.pathname)
+  })
+
+  it('con #sobre-mi en la URL hace scroll a esa sección al pintar el snapshot', () => {
+    window.history.replaceState(null, '', '#sobre-mi')
+    const { container } = renderHome([HERO, SOBRE_MI])
+    expect(scrollIntoView).toHaveBeenCalledTimes(1)
+    expect(scrollIntoView.mock.instances[0]).toBe(container.querySelector('section#sobre-mi'))
+    expect(window.location.hash).toBe('#sobre-mi')
+  })
+
+  it('traduce un enlace antiguo #seccion-{id} al slug, corrige la URL y hace scroll', () => {
+    window.history.replaceState(null, '', '#seccion-sm')
+    const { container } = renderHome([HERO, SOBRE_MI])
+    expect(window.location.hash).toBe('#sobre-mi')
+    expect(scrollIntoView).toHaveBeenCalledTimes(1)
+    expect(scrollIntoView.mock.instances[0]).toBe(container.querySelector('section#sobre-mi'))
+  })
+
+  it('si un enlace interno antiguo cambia el hash a #seccion-{id}, corrige la URL al slug sin volver a hacer scroll', () => {
+    renderHome([HERO, SOBRE_MI])
+    expect(scrollIntoView).not.toHaveBeenCalled()
+    window.history.replaceState(null, '', '#seccion-sm')
+    window.dispatchEvent(new HashChangeEvent('hashchange'))
+    expect(window.location.hash).toBe('#sobre-mi')
+    expect(scrollIntoView).not.toHaveBeenCalled()
+  })
+
+  it('un hash que no es de ninguna sección no hace nada', () => {
+    window.history.replaceState(null, '', '#contenido')
+    renderHome([HERO, SOBRE_MI])
+    expect(scrollIntoView).not.toHaveBeenCalled()
+    expect(window.location.hash).toBe('#contenido')
   })
 })

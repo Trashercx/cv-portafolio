@@ -334,7 +334,7 @@ export type DisposicionGaleria = 'carousel' | 'grid' | 'mosaico' | 'masonry' | '
  * `configuracion` para `tipo_seccion = 'navegacion'` (Fase 7, 7.2/7.3). Espeja
  * `NavegacionConfiguracionDto`. Los enlaces no se configuran: se generan con las
  * secciones visibles con título (excepto `hero` y `navegacion`), ancla
- * `#seccion-{id}`. Nunca se admite dentro de `columnas` (igual que `hero`).
+ * `#<slug del título>` (Fase 7n, #73; antes `#seccion-{id}`). Nunca se admite dentro de `columnas` (igual que `hero`).
  */
 export type NavegacionConfiguracion = BloqueConfiguracionBase & {
   /** @default 'flotante' */

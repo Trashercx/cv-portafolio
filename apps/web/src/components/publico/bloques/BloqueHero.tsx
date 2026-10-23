@@ -31,7 +31,7 @@ type BloqueHeroProps = {
    */
   redesSociales?: RedSocial[]
   /**
-   * Ancla (`#seccion-{id}`) de la sección siguiente, destino del indicador de
+   * Ancla (`#<slug>`, Fase 7n; antes `#seccion-{id}`) de la sección siguiente, destino del indicador de
    * scroll (`mostrar_indicador_scroll`). Sin ella el indicador es solo
    * decorativo (lienzo del editor).
    */

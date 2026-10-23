@@ -10,9 +10,6 @@ export type IntegracionGithub = {
   destacar_nuevos: boolean
   ultima_sincronizacion_en: string | null
   ultimo_error: string | null
-  /** README del perfil (Fase 7m, #66): `owner/repo` y rama; `null` = sin configurar (rama por defecto `main`). */
-  readme_repositorio?: string | null
-  readme_rama?: string | null
 }
 
 /** Campos editables, cuerpo de `PUT /admin/integraciones/github`. */
@@ -25,8 +22,7 @@ export type IntegracionGithubPayload = Pick<
   | 'incluir_forks'
   | 'incluir_archivados'
   | 'destacar_nuevos'
-> &
-  Partial<Pick<IntegracionGithub, 'readme_repositorio' | 'readme_rama'>>
+>
 
 /** Respuesta de `POST /admin/integraciones/github/sincronizar`. */
 export type ResultadoSincronizacionGithub = {
@@ -37,17 +33,4 @@ export type ResultadoSincronizacionGithub = {
   /** `true` si, por `publicar_automaticamente`, se publicó una versión nueva. */
   publicado: boolean
   sincronizado_en: string
-}
-
-/**
- * Respuesta de `GET /admin/integraciones/github/readme` y de
- * `POST .../readme/actualizar` (Fase 7m, #66, UC-36). El Markdown viene crudo:
- * el saneado es del cliente (`ReadmeGithub`).
- */
-export type ReadmeGithubRespuesta = {
-  repositorio: string | null
-  rama: string | null
-  markdown: string | null
-  actualizado_en: string | null
-  error: string | null
 }

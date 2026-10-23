@@ -9,7 +9,7 @@ import type {
 } from '@/features/secciones/types'
 import type { SnapshotSitio } from '@/features/publico/types'
 import { ALINEACION_TEXTO_CLASE } from '@/lib/escalas-bloque'
-import { anclaSeccion, generarEnlacesNavegacion } from '@/lib/navegacion'
+import { generarAnclasSecciones, generarEnlacesNavegacion } from '@/lib/navegacion'
 import { EnvoltorioSeccion } from './EnvoltorioSeccion'
 import { ProveedorMotion } from './ProveedorMotion'
 import { BloqueColumnas, BloqueHero, BloqueNavegacion } from './bloques'
@@ -75,6 +75,9 @@ export function RenderizadorSecciones({
   const secciones = [...snapshot.secciones].sort((a, b) => a.orden - b.orden)
   const pintadas = secciones.filter((seccion) => !soloVisibles || seccion.visible)
   const enlaces = generarEnlacesNavegacion(secciones, soloVisibles)
+  // Fase 7n (#73): ancla legible por sección (`#sobre-mi`), la misma función y
+  // argumentos que usa `generarEnlacesNavegacion` para que menú y DOM coincidan.
+  const anclas = generarAnclasSecciones(secciones, soloVisibles)
 
   return (
     <ProveedorMotion>
@@ -125,6 +128,7 @@ export function RenderizadorSecciones({
             <EnvoltorioSeccion
               key={seccion.id}
               id={seccion.id}
+              ancla={anclas[seccion.id]}
               visible={seccion.visible}
               espaciado_vertical={espaciado_vertical}
               ancho_contenido={anchoContenidoEfectivo}
@@ -139,7 +143,7 @@ export function RenderizadorSecciones({
                 seccion={seccion}
                 snapshot={snapshot}
                 soloVisibles={soloVisibles}
-                hrefSiguiente={siguiente ? `#${anclaSeccion(siguiente.id)}` : undefined}
+                hrefSiguiente={siguiente ? `#${anclas[siguiente.id]}` : undefined}
               />
             </EnvoltorioSeccion>
           )

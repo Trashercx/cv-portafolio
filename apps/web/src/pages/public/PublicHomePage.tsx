@@ -11,6 +11,7 @@ import { Footer } from '@/components/publico/Footer'
 import { RenderizadorSecciones } from '@/components/publico/RenderizadorSecciones'
 import { ToggleModoTema } from '@/components/publico/ToggleModoTema'
 import { useSitio } from '@/features/publico/usePublico'
+import { useAnclaInicial } from '@/hooks/useAnclaInicial'
 import { useModoTema } from '@/hooks/useModoTema'
 import { ApiError } from '@/lib/api-client'
 import { recortarDescripcion } from '@/lib/seo'
@@ -50,6 +51,9 @@ export function PublicHomePage() {
   const { modo } = useModoTema()
   // Fase 7 (UC-08): descarga bajo demanda la fuente variable del tema publicado.
   useFuenteTema(snapshot?.tema?.fuente_principal)
+  // Fase 7n (#73): con `#sobre-mi` (o un `#seccion-{uuid}` antiguo) en la URL,
+  // salta a la sección cuando el snapshot ya está pintado.
+  useAnclaInicial(snapshot?.secciones)
   // Nodo DOM del `<div>` raíz temado, expuesto como estado reactivo (no
   // `useRef`, cuyo `.current` no dispara re-render) para que
   // `ProveedorDetallePublico` pueda pasarlo como `container` del modal de

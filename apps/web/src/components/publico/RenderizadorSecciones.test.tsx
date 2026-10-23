@@ -92,7 +92,7 @@ describe('RenderizadorSecciones — ancho_contenido por defecto cuando falta en 
   ] as const)('%s sin ancho_contenido guardado usa %s (aspecto previo a esta fase)', (tipo, claseEsperada) => {
     renderSnapshot([seccion(tipo, tipo)])
 
-    const section = document.getElementById(`seccion-${tipo}`) as HTMLElement
+    const section = document.getElementById(tipo) as HTMLElement
     const divInterno = section.querySelector(':scope > div')
     expect(divInterno).toHaveClass(claseEsperada)
   })
@@ -112,10 +112,10 @@ describe('RenderizadorSecciones — pintado diferido de las secciones bajo el pl
       seccion('contacto', 'contacto'),
     ])
 
-    expect(document.getElementById('seccion-hero')).not.toHaveClass('[content-visibility:auto]')
-    expect(document.getElementById('seccion-sobre-mi')).not.toHaveClass('[content-visibility:auto]')
-    expect(document.getElementById('seccion-proyectos')).toHaveClass('[content-visibility:auto]')
-    expect(document.getElementById('seccion-contacto')).toHaveClass('[content-visibility:auto]')
+    expect(document.getElementById('hero')).not.toHaveClass('[content-visibility:auto]')
+    expect(document.getElementById('sobre-mi')).not.toHaveClass('[content-visibility:auto]')
+    expect(document.getElementById('proyectos')).toHaveClass('[content-visibility:auto]')
+    expect(document.getElementById('contacto')).toHaveClass('[content-visibility:auto]')
   })
 
   it('la navegación no cuenta como sección con contenido', () => {
@@ -126,7 +126,7 @@ describe('RenderizadorSecciones — pintado diferido de las secciones bajo el pl
       seccion('proyectos', 'proyectos'),
     ])
 
-    expect(document.getElementById('seccion-sobre-mi')).not.toHaveClass('[content-visibility:auto]')
-    expect(document.getElementById('seccion-proyectos')).toHaveClass('[content-visibility:auto]')
+    expect(document.getElementById('sobre-mi')).not.toHaveClass('[content-visibility:auto]')
+    expect(document.getElementById('proyectos')).toHaveClass('[content-visibility:auto]')
   })
 })
