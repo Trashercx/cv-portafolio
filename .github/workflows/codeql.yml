@@ -38,9 +38,9 @@ jobs:
       # del SARIF); sin esto falla con "Resource not accessible by integration".
       actions: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: github/codeql-action/init@v3
+      - uses: github/codeql-action/init@v4
         with:
           languages: javascript-typescript
           # security-extended añade consultas de menor precisión pero útiles
@@ -49,13 +49,13 @@ jobs:
 
       # JavaScript/TypeScript no requiere compilar: CodeQL extrae el código
       # fuente directamente (sin paso de autobuild).
-      - uses: github/codeql-action/analyze@v3
+      - uses: github/codeql-action/analyze@v4
         with:
           category: /language:javascript-typescript
           upload: never
           output: codeql-resultados
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: codeql-sarif
