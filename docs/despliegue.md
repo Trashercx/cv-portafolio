@@ -6,7 +6,7 @@ Guía de referencia para desplegar el portafolio en un VPS con Docker + Dokploy 
 
 - `apps/api/Dockerfile`: imagen de la API (NestJS). Corre migraciones (`prisma migrate deploy`) al arrancar y luego `node dist/src/main.js`.
 - `apps/web/Dockerfile`: imagen del frontend (build de Vite servido por nginx, con fallback de SPA). La config de nginx vive en `apps/web/nginx/` (plantilla + snippet de cabeceras de seguridad, ver sección 6).
-- `docker-compose.prod.yml`: define los tres servicios (`postgres`, `api`, `web`) para un despliegue "Docker Compose" en Dokploy/Coolify.
+- `docker-compose.prod.yml`: define los tres servicios (`postgres`, `api`, `web`) para un despliegue "Docker Compose" en Dokploy/Coolify. Desde la Fase 7m `api` y `web` usan las imágenes publicadas en GHCR (`image:` + `pull_policy: always`), no se construyen en el servidor; `docker-compose.build.yml` es el override opcional para construirlas en la propia máquina.
 - `docker-compose.umami.yml` (Fase 8, opcional): stack aparte con Umami (analítica sin cookies) y su propio Postgres — ver sección 7.4.
 - `apps/web/scripts/api-simulada.mjs` + `apps/web/scripts/fixtures/` (Fase 8): API pública simulada y snapshot de prueba que usa el workflow de Lighthouse CI; también sirven para probar la plantilla de nginx en local — ver sección 7.5.
 - `apps/api/scripts/backup-db.sh`: backup de la base de datos (`pg_dump`) con copia a la carpeta `backups/` del bucket S3.
@@ -28,7 +28,7 @@ Todas están documentadas con su propósito en `.env.example` (raíz). Antes de 
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD_SEED` | `apps/api/prisma/seed.ts` | Solo se usan al correr el seed inicial; cambiar la contraseña real desde el panel admin después. |
 | `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_REGION` / `S3_BUCKET_NAME` | Media (S3) y `backup-db.sh` | Credenciales reales de producción, con permisos acotados al bucket. |
 | `CLOUDFRONT_DOMAIN` | Media (opcional) | Vacío si no se usa CloudFront en v1. |
-| `VITE_API_URL` | Build de `apps/web` | **Build arg**, no variable de runtime — ver Dockerfile de `apps/web`. Debe ser la URL pública real de `api` antes de construir la imagen. |
+| `VITE_API_URL` | Build de `apps/web` | **Build arg**, no variable de runtime — ver Dockerfile de `apps/web`. Debe ser la URL pública real de `api` antes de construir la imagen. En producción lo fija el secreto `VITE_API_URL_PRODUCCION` de GitHub Actions (§3); en el panel de Dokploy sigue haciendo falta como respaldo de `API_ORIGIN`. |
 | `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | Servicio `postgres` de `docker-compose.prod.yml` | Deben coincidir con las credenciales embebidas en `DATABASE_URL`. |
 | `API_ORIGIN` / `MEDIA_ORIGIN` | CSP de nginx (`web`, runtime) | Fase 6, ver 6.1. Opcionales (caen a `https:`). |
 | `SEO_UPSTREAM` | nginx (`web`, runtime) | **Opcional** (Fase 8). URL interna del API para SSI de metadatos, sitemap y robots; default `http://api:3000`. Ver 7.2. |
@@ -41,9 +41,20 @@ En Dokploy/Coolify estas variables se cargan desde el panel del proyecto (no com
 
 ## 3. Despliegue con Dokploy o Coolify
 
-1. Crear un proyecto de tipo "Docker Compose" apuntando a este repositorio y a `docker-compose.prod.yml`.
+**Las imágenes se construyen en GitHub Actions, no en el VPS** (Fase 7m). Antes el servidor construía `api` y `web` con `docker compose up --build`: tres `npm ci` en paralelo que en un VPS de ~1 GB superaban la memoria y el despliegue moría a mitad del `npm ci` sin ningún mensaje de error. Ahora `docker-compose.prod.yml` tira de `ghcr.io/<owner>/<repo>/api` y `.../web`, que `ci.yml` publica en cada push a `main` (etiquetas `latest` y SHA) y, al terminar, dispara el webhook de despliegue. El servidor solo descarga capas y arranca contenedores.
+
+Requisitos una sola vez:
+
+- **Secreto `VITE_API_URL_PRODUCCION`** en GitHub (Settings → Secrets → Actions) con la URL pública del API (`https://api.tudominio.com`). Sin él la imagen `web` sale con la URL vacía y el sitio no carga datos. Cambiarlo exige volver a publicar la imagen (push a `main` o re-ejecutar el workflow).
+- **Credenciales de GHCR en el servidor**: el repositorio es privado, así que las imágenes también. En GitHub crear un token clásico (Settings → Developer settings → Personal access tokens → Tokens (classic)) solo con el permiso `read:packages`; en Dokploy, Settings → Registry → Add registry: URL `ghcr.io`, usuario de GitHub, contraseña = ese token. Dokploy hace el `docker login` antes de cada despliegue. En Coolify, "Docker registries" en la configuración del servidor. (Alternativa: hacer públicos los dos paquetes en GitHub; las imágenes contienen el código compilado del repo privado.)
+- **Umami (opcional)**: `VITE_UMAMI_URL` y `VITE_UMAMI_WEBSITE_ID` también son secretos de GitHub Actions (build args de la misma imagen); sin ellos el sitio sale sin tracker.
+- **Webhook de despliegue** (opcional pero recomendado): copiar la URL de webhook del servicio Compose en Dokploy (pestaña Deployments) al secreto `DEPLOY_WEBHOOK_URL`; el job `trigger-deploy` la llama solo después de publicar ambas imágenes, así el despliegue nunca baja una `latest` a medias.
+
+Variables nuevas del compose (opcionales): `GHCR_REPO` (owner/repo en minúsculas, default `trashercx/cv-portafolio`) e `IMAGE_TAG` (`latest` por defecto; poner un SHA de commit para fijar una versión o volver atrás sin tocar `main`).
+
+1. Crear un proyecto de tipo "Docker Compose" apuntando a este repositorio y a `docker-compose.prod.yml` (Dokploy sigue clonando el repo para leer el compose; es ligero).
 2. Cargar las variables de la tabla anterior en el panel de variables de entorno del proyecto.
-3. Desplegar. El primer arranque de `api` corre `prisma migrate deploy` automáticamente (ver `apps/api/docker-entrypoint.sh`) — no hace falta correr migraciones a mano.
+3. Desplegar. Compose descarga las imágenes (`pull_policy: always`) y el primer arranque de `api` corre `prisma migrate deploy` automáticamente (ver `apps/api/docker-entrypoint.sh`) — no hace falta correr migraciones a mano. El comando `up -d --build` que usa Dokploy es inofensivo: sin secciones `build:` no construye nada.
 4. Correr el seed inicial una sola vez (crea el administrador único): `docker compose -f docker-compose.prod.yml exec api npx prisma db seed` (o el comando equivalente del panel de la plataforma para ejecutar un comando dentro del contenedor `api`).
 5. Correr `scripts/smoke-test.sh` (ver sección 5) contra la URL pública real.
 
@@ -90,7 +101,7 @@ Cambios de infraestructura de la Fase 6 (no tocan casos de uso): usuario no root
 
 | Variable | Valor típico | Qué hace |
 |---|---|---|
-| `API_ORIGIN` | `https://api.tudominio.com` | Origen permitido en `connect-src` de la CSP (los `fetch()` del panel y del sitio). Debe coincidir con el `VITE_API_URL` con el que se construyó la imagen; `docker-compose.prod.yml` lo toma de `VITE_API_URL` si no se define. Sin ruta ni barra final. |
+| `API_ORIGIN` | `https://api.tudominio.com` | Origen permitido en `connect-src` de la CSP (los `fetch()` del panel y del sitio). Fijarlo explícito e igual al secreto `VITE_API_URL_PRODUCCION` con el que CI construyó la imagen (si difieren, la CSP bloquea los `fetch`); `docker-compose.prod.yml` cae a `VITE_API_URL` del panel si no se define. Sin ruta ni barra final. |
 | `MEDIA_ORIGIN` | `https://<bucket>.s3.<region>.amazonaws.com` o `https://<id>.cloudfront.net` | Origen permitido en `object-src`/`frame-src` para incrustar el PDF del CV (`<object type="application/pdf">` en `MediaPreview.tsx`). |
 
 Ambas se sustituyen al arrancar el contenedor (envsubst de la imagen `nginx:alpine` sobre `apps/web/nginx/default.conf.template`, limitado por `NGINX_ENVSUBST_FILTER` a esas dos variables). Si faltan, `apps/web/docker-entrypoint.d/10-defaults.envsh` cae a `https:` (cualquier origen HTTPS): el sitio sigue funcionando, solo con una política menos estricta. Desde la Fase 7m `MEDIA_ORIGIN` también entra en `connect-src` (las miniaturas de PDF descargan el archivo con `fetch`), así que sin `API_ORIGIN` ni `MEDIA_ORIGIN` concretos la CSP no restringe a qué hosts HTTPS puede conectar el frontend: en producción fija siempre los dos. El log de arranque del contenedor muestra los valores aplicados (`[10-defaults.envsh] CSP: API_ORIGIN=... MEDIA_ORIGIN=...`).

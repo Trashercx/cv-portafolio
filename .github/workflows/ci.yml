@@ -178,16 +178,28 @@ jobs:
       # lo que hacía fallar el tag con "repository name must be lowercase".
       - name: Nombre de repo en minúsculas para el tag de GHCR
         run: echo "REPO_LC=${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+      # Fase 7m: el VPS ya no construye (docker-compose.prod.yml tira de estas
+      # imágenes), así que la URL del API tiene que venir sí o sí del secreto;
+      # vacía produciría una imagen `web` que no carga datos, sin error de build.
+      - name: Comprobar VITE_API_URL_PRODUCCION
+        env:
+          VITE_API_URL_PRODUCCION: ${{ secrets.VITE_API_URL_PRODUCCION }}
+        run: |
+          if [ -z "${VITE_API_URL_PRODUCCION:-}" ]; then
+            echo "::error::Falta el secreto VITE_API_URL_PRODUCCION (URL pública del API) para construir la imagen web"
+            exit 1
+          fi
       - uses: docker/build-push-action@v6
         with:
           context: .
           file: apps/web/Dockerfile
           push: true
-          # VITE_API_URL queda incrustado en el JS en tiempo de build (ver
-          # apps/web/Dockerfile) — este secreto debe apuntar a la URL
-          # pública real de la API en producción.
+          # VITE_UMAMI_* son opcionales (Fase 8, UC-27): sin los secretos el
+          # sitio sale sin tracker, como hasta ahora.
           build-args: |
             VITE_API_URL=${{ secrets.VITE_API_URL_PRODUCCION }}
+            VITE_UMAMI_URL=${{ secrets.VITE_UMAMI_URL }}
+            VITE_UMAMI_WEBSITE_ID=${{ secrets.VITE_UMAMI_WEBSITE_ID }}
           tags: |
             ghcr.io/${{ env.REPO_LC }}/web:latest
             ghcr.io/${{ env.REPO_LC }}/web:${{ github.sha }}
